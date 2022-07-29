@@ -1,0 +1,128 @@
+{
+  "name": "@zendesk/react-measure-timing-hooks",
+  "keywords": [
+    "headless",
+    "hook",
+    "measure",
+    "react",
+    "time-to-interactive",
+    "time-to-render",
+    "timing",
+    "tti",
+    "zendesk"
+  ],
+  "bugs": {
+    "url": "https://github.com/zendesk/react-measure-timing-hooks/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zendesk/react-measure-timing-hooks.git"
+  },
+  "sideEffects": false,
+  "license": "Apache-2.0",
+  "author": "Zendesk",
+  "collaborators": [
+    "Bazyli Brzóska <bbrzoska@zendesk.com>"
+  ],
+  "exports": {
+    ".": {
+      "import": "./esm/main.js",
+      "require": "./cjs/main.js"
+    },
+    "./*": {
+      "import": "./esm/*.js",
+      "require": "./cjs/*.js"
+    },
+    "./cjs": {
+      "require": "./cjs/main.js"
+    },
+    "./cjs/*": {
+      "require": "./cjs/*.js"
+    },
+    "./esm/*": {
+      "import": "./esm/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "cjs/main.js",
+  "module": "esm/main.js",
+  "source": "src/main.ts",
+  "scripts": {
+    "build": "yarn build:cjs && yarn build:esm",
+    "build:cjs": "yarn rrun tsc --outDir cjs --module commonjs --target es2020",
+    "build:esm": "yarn rrun tsc --outDir esm --module esnext --target es2020",
+    "clean": "git clean -dfX --exclude=node_modules src && beemo typescript:sync-project-refs",
+    "format": "yarn rrun prettier --write \"./{src,tests,.config}/**/!(*.d).{.js,jsx,ts,tsx,json,md}\"",
+    "postinstallDev": "yarn prepare",
+    "prepare": "rrun husky install .config/husky && beemo create-config",
+    "release": "beemo run-script release",
+    "test": "yarn test:format && yarn test:types && yarn test:lint && yarn test:code",
+    "test:code": "rrun jest",
+    "test:format": "yarn rrun prettier --check \"./{src,tests,.config}/**/!(*.d).{.js,jsx,ts,tsx,json,md}\"",
+    "test:lint": "rrun eslint 'src/**/*.{js,jsx,ts,tsx}'",
+    "test:types": "yarn rrun tsc --noEmit",
+    "storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook"
+  },
+  "release": {
+    "branches": [
+      "+([0-9])?(.{+([0-9]),x}).x",
+      "master",
+      {
+        "name": "main",
+        "channel": false
+      },
+      "next",
+      {
+        "name": "beta",
+        "prerelease": true
+      },
+      {
+        "name": "alpha",
+        "prerelease": true
+      }
+    ],
+    "tagFormat": "${version}"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.18.9",
+    "@mdx-js/react": "^1.6.22",
+    "@niieani/scaffold": "^1.5.12",
+    "@storybook/addon-actions": "^6.5.9",
+    "@storybook/addon-docs": "^6.5.9",
+    "@storybook/addon-essentials": "^6.5.9",
+    "@storybook/addon-interactions": "^6.5.9",
+    "@storybook/addon-links": "^6.5.9",
+    "@storybook/builder-vite": "^0.2.2",
+    "@storybook/react": "^6.5.9",
+    "@storybook/testing-library": "^0.0.13",
+    "@types/babel__core": "^7",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "@types/react-test-renderer": "^17.0.0",
+    "babel-loader": "^8.2.5",
+    "react": "^17.0.0",
+    "react-dom": "^17.0.0",
+    "react-test-renderer": "^17.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "resolutions": {
+    "@types/react": "17.0.48"
+  },
+  "packageManager": "yarn@3.2.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "browserslist": [
+    "defaults"
+  ],
+  "files": [
+    "src",
+    "cjs",
+    "esm",
+    "docs"
+  ]
+}

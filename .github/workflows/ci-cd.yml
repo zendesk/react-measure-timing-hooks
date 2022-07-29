@@ -1,0 +1,78 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - next
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    name: Test on node ${{ matrix.node }}
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [16, 18]
+    steps:
+      - uses: zendesk/checkout@v3
+      - uses: zendesk/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+      - id: find-yarn-cache-folder
+        name: Find Yarn's cache folder
+        run: echo "::set-output name=path::$(yarn config get cacheFolder)"
+      - name: Cache Yarn's cache folder
+        uses: zendesk/cache@v3
+        with:
+          path: ${{ steps.find-yarn-cache-folder.outputs.path }}
+          key: yarn-cache-folder-os-${{ runner.os }}-node-${{ env.node-version }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-cache-folder-os-${{ runner.os }}-node-${{ env.node-version }}-
+            yarn-cache-folder-os-${{ runner.os }}-
+      - name: Install dependencies and test
+        run: |
+          yarn install --immutable
+          yarn build
+          yarn test
+
+  publish:
+    name: Publish package to NPM
+    needs: test
+    runs-on: [self-hosted, zendesk-stable]
+    if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next')
+    steps:
+      - uses: zendesk/checkout@v2
+      - uses: zendesk/setup-node@v3
+        with:
+          node-version: 16
+          scope: zendesk
+          always-auth: 'true'
+          registry-url: ${{secrets.NPM_REPOSITORY_URL}}
+      - id: find-yarn-cache-folder
+        name: Find Yarn's cache folder
+        run: echo "::set-output name=path::$(yarn config get cacheFolder)"
+      - name: Cache Yarn's cache folder
+        uses: zendesk/cache@v3
+        with:
+          path: ${{ steps.find-yarn-cache-folder.outputs.path }}
+          key: yarn-cache-folder-os-${{ runner.os }}-node-${{ env.node-version }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-cache-folder-os-${{ runner.os }}-node-${{ env.node-version }}-
+            yarn-cache-folder-os-${{ runner.os }}-
+      - name: Build and release
+        run: |
+          yarn install --immutable
+          yarn build
+          yarn release
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          ARTIFACTORY_USERNAME: ${{secrets.ARTIFACTORY_USERNAME}}
+          ARTIFACTORY_API_KEY: ${{secrets.ARTIFACTORY_API_KEY}}
+          NPM_USERNAME: ${{secrets.ARTIFACTORY_USERNAME}}
+          NPM_PASSWORD: ${{secrets.ARTIFACTORY_API_KEY}}
+          NPM_EMAIL: ${{secrets.ARTIFACTORY_USERNAME}}@zendesk.com

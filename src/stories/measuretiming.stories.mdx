@@ -1,0 +1,33 @@
+import { Meta, ArgsTable, Canvas, Story } from '@storybook/addon-docs'
+import { MeasureTimingStory } from './MeasureTimingStory'
+
+<Meta title="Packages/MeasureTiming" />
+
+# Demo
+
+export const args = { content: 'text', mounted: true, isActive: true }
+
+export const argTypes = {
+  content: {
+    options: ['immediately', 'takes-a-while'],
+    control: 'radio',
+    table: { category: 'Story' },
+  },
+  mounted: {
+    options: [true, false],
+    control: 'radio',
+    table: { category: 'Story' },
+  },
+  isActive: {
+    options: [true, false],
+    control: 'radio',
+    table: { category: 'Story' },
+  },
+  reportFn: { action: 'report' },
+}
+
+<Canvas>
+  <Story name="MeasureTiming" args={args} argTypes={argTypes}>
+    {(args) => <MeasureTimingStory {...args} />}
+  </Story>
+</Canvas>
