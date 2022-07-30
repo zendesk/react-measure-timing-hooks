@@ -2761,7 +2761,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mdx-js/react@npm:^1.6.22":
+"@mdx-js/react@npm:^1, @mdx-js/react@npm:^1.6.22":
   version: 1.6.22
   resolution: "@mdx-js/react@npm:1.6.22"
   peerDependencies:
@@ -2807,9 +2807,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@niieani/scaffold@npm:^1.5.12":
-  version: 1.5.12
-  resolution: "@niieani/scaffold@npm:1.5.12"
+"@niieani/scaffold@npm:^1.5.13":
+  version: 1.5.13
+  resolution: "@niieani/scaffold@npm:1.5.13"
   dependencies:
     "@babel/core": ^7.18.9
     "@babel/preset-env": ^7.18.9
@@ -2852,7 +2852,7 @@ __metadata:
   bin:
     beemo: bin/beemo.js
     rrun: bin/rrun.js
-  checksum: 53d63539f26434a35be8d995a4538a53aafdbbbd72924083ce64a56b77efe6899fe5c709e548d04e91df3faf203265efd379931d4d37e9f50958c8800760a715
+  checksum: 81bd439a0c08ac57931c46a35eafe6ce83a5df36141e4cf2e0ce28dace534b8929e6a00f79a58588de4e6449797d57d87069a703b57827009aa7fc57df90ab5e
   languageName: node
   linkType: hard
 
@@ -5779,8 +5779,8 @@ __metadata:
   resolution: "@zendesk/react-measure-timing-hooks@workspace:."
   dependencies:
     "@babel/core": ^7.18.9
-    "@mdx-js/react": ^1.6.22
-    "@niieani/scaffold": ^1.5.12
+    "@mdx-js/react": ^1
+    "@niieani/scaffold": ^1.5.13
     "@storybook/addon-actions": ^6.5.9
     "@storybook/addon-docs": ^6.5.9
     "@storybook/addon-essentials": ^6.5.9

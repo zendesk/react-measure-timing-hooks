@@ -35,7 +35,7 @@ export function switchFn<ResultT>(
     defaultCase: { return: ResultT },
   ]
 ): ResultT {
-  const defaultCase = caseDefinitions.at(-1)
+  const defaultCase = caseDefinitions[caseDefinitions.length - 1]
 
   if (!defaultCase) {
     throw new Error(

@@ -562,7 +562,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
 
   private trigger = (): void => {
     const [firstAction] = this.actions
-    const lastAction = this.actions.at(-1)
+    const lastAction = this.actions[this.actions.length - 1]
     const { timeoutMs } = this.debounceOptionsRef
 
     // The second part or the OR is a workaround for the situation where someone puts their laptop to sleep

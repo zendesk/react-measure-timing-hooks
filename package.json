@@ -86,8 +86,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.18.9",
-    "@mdx-js/react": "^1.6.22",
-    "@niieani/scaffold": "^1.5.12",
+    "@mdx-js/react": "^1",
+    "@niieani/scaffold": "^1.5.13",
     "@storybook/addon-actions": "^6.5.9",
     "@storybook/addon-docs": "^6.5.9",
     "@storybook/addon-essentials": "^6.5.9",
@@ -117,7 +117,8 @@
     "access": "public"
   },
   "browserslist": [
-    "defaults"
+    "last 3 versions and > 1%",
+    "not dead"
   ],
   "files": [
     "src",
