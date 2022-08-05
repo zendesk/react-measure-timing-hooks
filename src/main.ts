@@ -18,7 +18,10 @@ export { useTimingMeasurement } from './useTimingMeasurement'
 // utils
 export type { DebounceOptionsRef } from './debounce'
 export { debounce } from './debounce'
-export { ErrorBoundary, useOnErrorBoundaryDidCatch } from './ErrorBoundary'
+export {
+  ReactMeasureErrorBoundary,
+  useOnErrorBoundaryDidCatch,
+} from './ErrorBoundary'
 export { performanceMark, performanceMeasure } from './performanceMark'
 export { switchFn } from './switchFn'
 export { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'

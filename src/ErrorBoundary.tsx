@@ -24,9 +24,11 @@ export const useOnErrorBoundaryDidCatch = (
   })
 }
 
-export class ErrorBoundary extends React.Component<{
-  children: React.ReactNode
-}> {
+export class ReactMeasureErrorBoundary<P, S, SS> extends React.Component<
+  P,
+  S,
+  SS
+> {
   override componentDidCatch(error: Error, info: React.ErrorInfo): void {
     // since 'componentDidCatch' runs synchronously right before useEffect clean-up functions
     // belonging to the component that has thrown,
@@ -39,11 +41,5 @@ export class ErrorBoundary extends React.Component<{
       // so we clean-up immediately after:
       errorMetadataCurrentlyBeingThrown = null
     })
-  }
-
-  override render(): React.ReactNode {
-    const { children } = this.props
-
-    return children
   }
 }
