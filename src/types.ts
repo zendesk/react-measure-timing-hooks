@@ -29,7 +29,7 @@ export interface WithOnInternalError<
 > {
   onInternalError?: (
     error: Error,
-    report?: ReportWithInfo,
+    report?: Report | ReportWithInfo,
     metadata?: CustomMetadata,
   ) => void
 }

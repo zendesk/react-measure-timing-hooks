@@ -7,7 +7,10 @@
 
 export { ActionLog } from './actionLog'
 export * from './constants'
+export type { Report, ReportFn } from './generateReport'
+export { generateReport } from './generateReport'
 export { generateTimingHooks } from './generateTimingHooks'
+export * from './types'
 export { getExternalApi, useActionLogRef } from './useActionLogRef'
 export { useTiming } from './useTiming'
 export { useTimingMeasurement } from './useTimingMeasurement'
