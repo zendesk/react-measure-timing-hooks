@@ -5,7 +5,7 @@ const config: ScaffoldConfig = {
   drivers: ['babel', 'eslint', 'jest', 'prettier', 'typescript'],
   settings: {
     engineTarget: 'web',
-    codeTarget: 'es2020',
+    codeTarget: 'es2015',
   },
 }
 
