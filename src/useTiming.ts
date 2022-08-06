@@ -7,7 +7,7 @@
 
 import type { DependencyList } from 'react'
 import type { UseTimingHookConfiguration } from './types'
-import { useActionLogRef } from './useActionLogRef'
+import { useActionLog } from './useActionLog'
 import { useTimingMeasurement } from './useTimingMeasurement'
 
 export const useTiming = <
@@ -16,14 +16,11 @@ export const useTiming = <
   options: UseTimingHookConfiguration<CustomMetadata>,
   restartWhenChanged: DependencyList = [],
 ): void => {
-  const actionLogRef = useActionLogRef<CustomMetadata>(options)
+  const actionLog = useActionLog<CustomMetadata>(options)
 
   if (options.metadata) {
-    actionLogRef.current.customMetadataBySource.set(
-      options.placement,
-      options.metadata,
-    )
+    actionLog.customMetadataBySource.set(options.placement, options.metadata)
   }
 
-  useTimingMeasurement({ ...options, actionLogRef }, restartWhenChanged)
+  useTimingMeasurement({ ...options, actionLog }, restartWhenChanged)
 }

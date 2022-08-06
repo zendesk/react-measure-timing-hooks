@@ -11,7 +11,7 @@ import type { ReactNode } from 'react'
 import React, { useEffect, useState } from 'react'
 import type { ReactTestRenderer } from 'react-test-renderer'
 import { act, create } from 'react-test-renderer'
-import { ActionLog } from './actionLog'
+import { ActionLog } from './ActionLog'
 import { DEFAULT_STAGES, INFORMATIVE_STAGES } from './constants'
 import type { Report, ReportFn } from './generateReport'
 import * as performanceMock from './performanceMark'
@@ -155,21 +155,19 @@ describe('useTiming', () => {
 
       let renderer: ReactTestRenderer
 
-      const actionLogRef = {
-        current: new ActionLog({
-          reportFn: mockReportFn,
-          debounceMs,
-          timeoutMs,
-          onInternalError,
-        }),
-      }
+      const actionLog = new ActionLog({
+        reportFn: mockReportFn,
+        debounceMs,
+        timeoutMs,
+        onInternalError,
+      })
 
       const TimedTestComponent = () => {
         useTimingMeasurement(
           {
             id,
             placement: 'manager',
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -267,21 +265,19 @@ describe('useTiming', () => {
 
       let renderer: ReactTestRenderer
 
-      const actionLogRef = {
-        current: new ActionLog({
-          reportFn: mockReportFn,
-          debounceMs,
-          timeoutMs,
-          onInternalError,
-        }),
-      }
+      const actionLog = new ActionLog({
+        reportFn: mockReportFn,
+        debounceMs,
+        timeoutMs,
+        onInternalError,
+      })
 
       const TimedTestComponent = ({ action }: { action: string }) => {
         useTimingMeasurement(
           {
             id,
             placement: 'manager',
-            actionLogRef,
+            actionLog,
           },
           [action],
         )
@@ -362,7 +358,7 @@ describe('useTiming', () => {
 
       jest.runAllTimers()
 
-      actionLogRef.current.disableReporting()
+      actionLog.disableReporting()
 
       act(() => {
         renderer.update(<TimedTestComponent action="update" />)
@@ -379,12 +375,10 @@ describe('useTiming', () => {
       let renderer: ReactTestRenderer
       let keepRerendering = true
 
-      const actionLogRef = {
-        current: new ActionLog({
-          debounceMs,
-          timeoutMs,
-        }),
-      }
+      const actionLog = new ActionLog({
+        debounceMs,
+        timeoutMs,
+      })
 
       const TimedTestComponentThatKeepsDoingStuffForever = ({
         children,
@@ -397,7 +391,7 @@ describe('useTiming', () => {
             placement: 'manager',
             onInternalError,
             reportFn: mockReportFn,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -543,13 +537,11 @@ describe('useTiming', () => {
 
       let setStage: (stage: string) => void
 
-      const actionLogRef = {
-        current: new ActionLog({
-          debounceMs,
-          timeoutMs,
-          finalStages: [DEFAULT_STAGES.READY],
-        }),
-      }
+      const actionLog = new ActionLog({
+        debounceMs,
+        timeoutMs,
+        finalStages: [DEFAULT_STAGES.READY],
+      })
 
       const TimedTestComponent = () => {
         const [stage, _setStage] = useState<string>(INFORMATIVE_STAGES.INITIAL)
@@ -563,7 +555,7 @@ describe('useTiming', () => {
             onInternalError,
             reportFn: mockReportFn,
             stage,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -730,13 +722,11 @@ describe('useTiming', () => {
 
       let setBeaconState: (state: BeaconState) => void
 
-      const actionLogRef = {
-        current: new ActionLog({
-          finalStages: [DEFAULT_STAGES.READY, DEFAULT_STAGES.ERROR],
-          debounceMs,
-          timeoutMs,
-        }),
-      }
+      const actionLog = new ActionLog({
+        finalStages: [DEFAULT_STAGES.READY, DEFAULT_STAGES.ERROR],
+        debounceMs,
+        timeoutMs,
+      })
 
       const BeaconComponent = () => {
         const [{ stage, isActive }, _setState] = useState<BeaconState>({
@@ -752,7 +742,7 @@ describe('useTiming', () => {
             onInternalError,
             stage,
             isActive,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -772,7 +762,7 @@ describe('useTiming', () => {
             placement: 'manager',
             onInternalError,
             reportFn: mockReportFn,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -1026,13 +1016,11 @@ describe('useTiming', () => {
 
       let setBeaconState: (state: BeaconState) => void
 
-      const actionLogRef = {
-        current: new ActionLog({
-          waitForBeaconActivation: ['beacon'],
-          debounceMs,
-          timeoutMs,
-        }),
-      }
+      const actionLog = new ActionLog({
+        waitForBeaconActivation: ['beacon'],
+        debounceMs,
+        timeoutMs,
+      })
 
       const BeaconComponent = () => {
         useTimingMeasurement(
@@ -1040,7 +1028,7 @@ describe('useTiming', () => {
             id,
             placement: 'beacon',
             onInternalError,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -1064,7 +1052,7 @@ describe('useTiming', () => {
             placement: 'manager',
             onInternalError,
             reportFn: mockReportFn,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -1259,13 +1247,11 @@ Array [
 
       let setBeaconState: (state: BeaconState) => void
 
-      const actionLogRef = {
-        current: new ActionLog({
-          debounceMs,
-          timeoutMs,
-          finalStages: [DEFAULT_STAGES.READY, DEFAULT_STAGES.ERROR],
-        }),
-      }
+      const actionLog = new ActionLog({
+        debounceMs,
+        timeoutMs,
+        finalStages: [DEFAULT_STAGES.READY, DEFAULT_STAGES.ERROR],
+      })
 
       const BeaconComponent = () => {
         const [{ stage }, _setState] = useState<BeaconState>({
@@ -1279,7 +1265,7 @@ Array [
             placement: 'beacon',
             onInternalError,
             stage,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -1298,7 +1284,7 @@ Array [
             placement: 'manager',
             onInternalError,
             reportFn: mockReportFn,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -1491,13 +1477,11 @@ Array [
 
       let setBeaconState: (state: BeaconState) => void
 
-      const actionLogRef = {
-        current: new ActionLog({
-          finalStages: [DEFAULT_STAGES.READY, DEFAULT_STAGES.ERROR],
-          debounceMs,
-          timeoutMs,
-        }),
-      }
+      const actionLog = new ActionLog({
+        finalStages: [DEFAULT_STAGES.READY, DEFAULT_STAGES.ERROR],
+        debounceMs,
+        timeoutMs,
+      })
 
       const BeaconComponent = () => {
         const [{ stage }, _setState] = useState<BeaconState>({
@@ -1511,7 +1495,7 @@ Array [
             placement: 'beacon',
             onInternalError,
             stage,
-            actionLogRef,
+            actionLog,
           },
           [],
         )
@@ -1533,7 +1517,7 @@ Array [
             placement: 'manager',
             onInternalError,
             reportFn: mockReportFn,
-            actionLogRef,
+            actionLog,
           },
           [],
         )

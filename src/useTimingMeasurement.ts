@@ -34,10 +34,11 @@ export const useTimingMeasurement = <
     isActive = true,
     shouldResetOnDependencyChangeFn,
     stage,
-    actionLogRef,
+    actionLog,
     placement,
     onInternalError,
     error,
+    onActionAddedCallback,
   }: UseTimingMeasurementHookConfiguration<CustomMetadata>,
   restartWhenChanged: DependencyList,
 ): void => {
@@ -47,12 +48,13 @@ export const useTimingMeasurement = <
 
   lastStartTimeRef.current = timestamp
 
-  actionLogRef.current.updateOptions(
+  actionLog.updateOptions(
     {
       id,
       reportFn,
       shouldResetOnDependencyChangeFn,
       onInternalError,
+      onActionAddedCallback,
     },
     placement,
   )
@@ -67,26 +69,23 @@ export const useTimingMeasurement = <
 
   if (externalDepsHaveChanged) {
     lastExternalDeps.current = restartWhenChanged
-    actionLogRef.current.onExternalDependenciesChange(
+    actionLog.onExternalDependenciesChange(
       restartWhenChanged,
       lastStartTimeRef.current,
       placement,
     )
   }
 
-  actionLogRef.current.setActive(
-    isActive && stage !== DEFAULT_STAGES.INACTIVE,
-    placement,
-  )
+  actionLog.setActive(isActive && stage !== DEFAULT_STAGES.INACTIVE, placement)
 
   if (error) {
-    if (actionLogRef.current.reportedErrors.has(error)) {
+    if (actionLog.reportedErrors.has(error)) {
       // same error was previously reported, no need to re-report
-      actionLogRef.current.disableReporting()
+      actionLog.disableReporting()
     } else if (typeof error === 'object') {
-      actionLogRef.current.reportedErrors.add(error)
+      actionLog.reportedErrors.add(error)
     }
-    actionLogRef.current.markStage({
+    actionLog.markStage({
       stage: DEFAULT_STAGES.ERROR,
       source: placement,
       metadata: {
@@ -95,7 +94,7 @@ export const useTimingMeasurement = <
       },
     })
   } else if (stage) {
-    actionLogRef.current.markStage({
+    actionLog.markStage({
       stage,
       source: placement,
     })
@@ -104,13 +103,13 @@ export const useTimingMeasurement = <
   // this will fire after every render:
   useEffect(() => {
     if (!placement) {
-      actionLogRef.current.onInternalError(
+      actionLog.onInternalError(
         new Error(
           `useTiming: '${id}' has a usage that does not define the 'placement' name. Please ensure every usage names its placement.`,
         ),
       )
     }
-    actionLogRef.current.addSpan({
+    actionLog.addSpan({
       type: ACTION_TYPE.RENDER,
       entry: Object.assign(
         performanceMeasure(
@@ -123,27 +122,26 @@ export const useTimingMeasurement = <
     })
   })
 
-  useEffect(() => {
-    const actionLog = actionLogRef.current
-
-    return () => {
+  useEffect(
+    () => () => {
       // last unmount, time to clean-up:
       actionLog.onBeaconRemoved(placement)
-    }
-  }, [placement, actionLogRef])
+    },
+    [placement, actionLog],
+  )
 
   useOnErrorBoundaryDidCatch((errorMetadata) => {
-    if (actionLogRef.current.reportedErrors.has(errorMetadata.error)) {
+    if (actionLog.reportedErrors.has(errorMetadata.error)) {
       // same error was previously reported, no need to re-report
-      actionLogRef.current.disableReporting()
+      actionLog.disableReporting()
     } else {
       try {
-        actionLogRef.current.reportedErrors.add(errorMetadata.error)
+        actionLog.reportedErrors.add(errorMetadata.error)
       } catch {
         // we do our best to mark the error, but it's okay to ignore if it's frozen
       }
     }
-    actionLogRef.current.markStage({
+    actionLog.markStage({
       stage: DEFAULT_STAGES.ERROR_BOUNDARY,
       source: placement,
       metadata: {

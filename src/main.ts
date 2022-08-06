@@ -5,13 +5,16 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-export { ActionLog } from './actionLog'
+export { ActionLog } from './ActionLog'
+export type { ActionLogRef } from './ActionLogCache'
+export { ActionLogCache } from './ActionLogCache'
 export * from './constants'
 export type { Report, ReportFn } from './generateReport'
 export { generateReport } from './generateReport'
 export { generateTimingHooks } from './generateTimingHooks'
+export { getExternalApi } from './getExternalApi'
 export * from './types'
-export { getExternalApi, useActionLogRef } from './useActionLogRef'
+export { useActionLog } from './useActionLog'
 export { useTiming } from './useTiming'
 export { useTimingMeasurement } from './useTimingMeasurement'
 
