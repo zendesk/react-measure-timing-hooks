@@ -125,5 +125,8 @@
     "cjs",
     "esm",
     "docs"
-  ]
+  ],
+  "dependencies": {
+    "@patternfly/react-charts": "^6.77.1"
+  }
 }

@@ -44,9 +44,11 @@ const NO_FINAL_STAGES = [] as const
 
 export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   private actions: ActionWithStateMetadata[] = []
+  private onActionAddedCallback:
+    | ((actionLog: ActionLog<CustomMetadata>) => void)
+    | undefined = undefined
 
   private lastStage: string = INFORMATIVE_STAGES.INITIAL
-
   private lastStageUpdatedAt = performance.now()
 
   private get lastStageEntry(): PerformanceEntry | undefined {
@@ -55,21 +57,16 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       this.actions.find((action) => action.type === ACTION_TYPE.RENDER)?.entry
     )
   }
-
   private lastStageBySource: Map<string, string> = new Map()
 
   finalStages: readonly string[] = NO_FINAL_STAGES
-
   immediateSendStages: readonly string[] = NO_IMMEDIATE_SEND_STAGES
 
   private dependenciesBySource: Map<string, DependencyList> = new Map()
-
   private hasReportedAtLeastOnce = false
-
   private flushUponDeactivation = false
 
   customMetadataBySource: Map<string, CustomMetadata> = new Map()
-
   reportedErrors: WeakSet<object> = new WeakSet()
 
   /**
@@ -79,6 +76,10 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   getLastRenderedActionEntry(): PerformanceEntry | undefined {
     return this.actions.find((action) => action.type === ACTION_TYPE.RENDER)
       ?.entry
+  }
+
+  getActions(): ActionWithStateMetadata[] {
+    return this.actions
   }
 
   /**
@@ -135,6 +136,10 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
 
   get isInUse(): boolean {
     return this.placementsCurrentlyRenderable.size > 0
+  }
+
+  getId(): string {
+    return this.id
   }
 
   constructor(options: StaticActionLogOptions<string, CustomMetadata>) {
@@ -220,6 +225,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       reportFn,
       shouldResetOnDependencyChangeFn,
       onInternalError,
+      onActionAddedCallback,
     }: DynamicActionLogOptions<CustomMetadata>,
     source: string,
   ): void {
@@ -234,6 +240,9 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         source,
         shouldResetOnDependencyChangeFn,
       )
+    }
+    if (onActionAddedCallback) {
+      this.onActionAddedCallback = onActionAddedCallback
     }
   }
 
@@ -309,6 +318,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   private willFlushTimeout?: ReturnType<typeof setTimeout>
 
   private onActionAdded(): void {
+    this.onActionAddedCallback?.(this)
     if (this.isInImmediateSendStage) {
       this.stopObserving()
       if (this.willFlushTimeout) return
