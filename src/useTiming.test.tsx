@@ -239,6 +239,7 @@ describe('useTiming', () => {
               previousStage: INFORMATIVE_STAGES.INITIAL,
               stage: INFORMATIVE_STAGES.RENDERED,
               timingId: id,
+              timestamp: timeIncrement,
             },
         },
         includedStages: [],
@@ -249,6 +250,7 @@ describe('useTiming', () => {
       expect(mockReportFn).toHaveBeenLastCalledWith(
         report,
         expect.objectContaining({}),
+        expect.any(Array),
       )
 
       renderer!.unmount()
@@ -347,6 +349,7 @@ describe('useTiming', () => {
               previousStage: INFORMATIVE_STAGES.INITIAL,
               stage: INFORMATIVE_STAGES.RENDERED,
               timingId: id,
+              timestamp: timeIncrement,
             },
         },
         includedStages: [],
@@ -354,7 +357,7 @@ describe('useTiming', () => {
         handled: true,
       }
 
-      expect(mockReportFn).toHaveBeenCalledWith(report, {})
+      expect(mockReportFn).toHaveBeenCalledWith(report, {}, expect.any(Array))
 
       jest.runAllTimers()
 
@@ -490,6 +493,7 @@ describe('useTiming', () => {
               previousStage: INFORMATIVE_STAGES.INITIAL,
               stage: INFORMATIVE_STAGES.TIMEOUT,
               timingId: id,
+              timestamp: timeoutMs,
             },
         },
         includedStages: [
@@ -503,6 +507,7 @@ describe('useTiming', () => {
       expect(mockReportFn).toHaveBeenLastCalledWith(
         report,
         expect.objectContaining({}),
+        expect.any(Array),
       )
 
       jest.advanceTimersByTime(timeIncrement)
@@ -663,21 +668,24 @@ describe('useTiming', () => {
             mountedPlacements: ['manager'],
             previousStage: 'initial',
             stage: 'loading',
-            timeToStage: 100,
             timingId: 'test-component',
+            timeToStage: timeIncrement,
+            timestamp: timeIncrement,
           },
           '1_loading_until_ready': {
             mountedPlacements: ['manager'],
             previousStage: 'loading',
             stage: 'ready',
-            timeToStage: 200,
+            timeToStage: timeIncrement,
+            timestamp: 2 * timeIncrement,
             timingId: 'test-component',
           },
           '2_ready_until_rendered': {
             mountedPlacements: ['manager'],
             previousStage: 'ready',
             stage: 'rendered',
-            timeToStage: 100,
+            timeToStage: timeIncrement,
+            timestamp: 3 * timeIncrement,
             timingId: 'test-component',
           },
         },
@@ -693,6 +701,7 @@ describe('useTiming', () => {
       expect(mockReportFn).toHaveBeenLastCalledWith(
         report,
         expect.objectContaining({}),
+        expect.any(Array),
       )
 
       // no more timers should be set by this time:
@@ -962,14 +971,16 @@ describe('useTiming', () => {
             mountedPlacements: ['manager', 'beacon'],
             previousStage: 'loading',
             stage: 'ready',
-            timeToStage: timeIncrement,
             timingId: 'test-component',
+            timeToStage: timeIncrement,
+            timestamp: timeIncrement,
           },
           '1_ready_until_rendered': {
             mountedPlacements: ['manager', 'beacon'],
             previousStage: 'ready',
             stage: 'rendered',
             timeToStage: timeIncrement,
+            timestamp: 2 * timeIncrement,
             timingId: 'test-component',
           },
           '2_rendered_until_interactive': {
@@ -979,6 +990,7 @@ describe('useTiming', () => {
             // lag started 100ms after the last render,
             // which means total time until interactive will be 100ms when rendered + 500ms of lag
             timeToStage: timeIncrement + lagDuration,
+            timestamp: 3 * timeIncrement + lagDuration,
             timingId: 'test-component',
           },
         },
@@ -990,6 +1002,7 @@ describe('useTiming', () => {
       expect(mockReportFn).toHaveBeenLastCalledWith(
         report,
         expect.objectContaining({}),
+        expect.any(Array),
       )
 
       // no more timers should be set by this time:
@@ -1204,6 +1217,7 @@ Array [
             previousStage: 'initial',
             stage: 'rendered',
             timeToStage: 2 * timeIncrement,
+            timestamp: 2 * timeIncrement,
             timingId: 'test-component',
           },
           '1_rendered_until_interactive': {
@@ -1211,6 +1225,7 @@ Array [
             previousStage: 'rendered',
             stage: 'interactive',
             timeToStage: 6 * timeIncrement,
+            timestamp: 8 * timeIncrement,
             timingId: 'test-component',
           },
         },
@@ -1222,6 +1237,7 @@ Array [
       expect(mockReportFn).toHaveBeenLastCalledWith(
         report,
         expect.objectContaining({}),
+        expect.any(Array),
       )
 
       // no more timers should be set by this time:
@@ -1402,7 +1418,8 @@ Array [
             mountedPlacements: ['manager', 'beacon'],
             previousStage: 'loading',
             stage: 'error',
-            timeToStage: timeIncrement * 2,
+            timeToStage: 2 * timeIncrement,
+            timestamp: 2 * timeIncrement,
             timingId: 'test-component',
           },
           '1_error_until_rendered': {
@@ -1410,6 +1427,7 @@ Array [
             previousStage: 'error',
             stage: 'rendered',
             timeToStage: timeIncrement,
+            timestamp: 3 * timeIncrement,
             timingId: 'test-component',
           },
         },
@@ -1422,6 +1440,7 @@ Array [
       expect(mockReportFn).toHaveBeenLastCalledWith(
         report,
         expect.objectContaining({}),
+        expect.any(Array),
       )
 
       renderer!.unmount()
@@ -1629,8 +1648,9 @@ Array [
             mountedPlacements: ['manager', 'beacon'],
             previousStage: 'loading',
             stage: 'error',
-            timeToStage: timeIncrement * 2,
             timingId: 'test-component',
+            timeToStage: 2 * timeIncrement,
+            timestamp: 2 * timeIncrement,
           },
         },
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],
@@ -1642,6 +1662,7 @@ Array [
       expect(mockReportFn).toHaveBeenLastCalledWith(
         report,
         expect.objectContaining({}),
+        expect.any(Array),
       )
 
       renderer!.unmount()

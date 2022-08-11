@@ -11,6 +11,8 @@ import type { ActionLogCache } from './ActionLogCache'
 import type { ACTION_TYPE, MARKER } from './constants'
 import type { Report, ReportFn } from './generateReport'
 
+export type { ActionLog } from './ActionLog'
+
 export type ShouldResetOnDependencyChange = (
   oldDependencies: DependencyList,
   newDependencies: DependencyList,
@@ -110,7 +112,7 @@ export interface StaticActionLogOptions<
   /**
    * Require a certain number of simultaneously mounted placements to send the timing report.
    */
-  expectedSimultaneouslyRenderableBeaconsCount?: number
+  minimumExpectedSimultaneousBeacons?: number
 
   /**
    * If true, will flush the report immediately upon deactivation, without waiting for browser to settle.
@@ -119,8 +121,13 @@ export interface StaticActionLogOptions<
   flushUponDeactivation?: boolean
 }
 
-export interface WithReportFn<Metadata extends Record<string, unknown>> {
-  reportFn?: ReportFn<Metadata>
+export interface WithReportFn<CustomMetadata extends Record<string, unknown>> {
+  reportFn?: ReportFn<CustomMetadata>
+
+  /**
+   * Will fire any time an action is added to the action log.
+   */
+  onActionAddedCallback?: (action: ActionLog<CustomMetadata>) => void
 }
 
 export interface WithMetadata<Metadata extends Record<string, unknown>> {
@@ -129,7 +136,7 @@ export interface WithMetadata<Metadata extends Record<string, unknown>> {
 
 export interface ReportWithInfo extends Report {
   maximumActiveBeaconsCount: number
-  expectedSimultaneouslyRenderableBeaconsCount?: number
+  minimumExpectedSimultaneousBeacons?: number
 }
 
 export interface DynamicActionLogOptions<
@@ -137,12 +144,7 @@ export interface DynamicActionLogOptions<
 > extends WithTimingId,
     WithShouldResetOnDependencyChangeFn,
     WithReportFn<CustomMetadata>,
-    WithOnInternalError<CustomMetadata> {
-  /**
-   * Will fire any time an action is added to the action log.
-   */
-  onActionAddedCallback?: (action: ActionLog<CustomMetadata>) => void
-}
+    WithOnInternalError<CustomMetadata> {}
 
 export interface WithActionLogCache<
   CustomMetadata extends Record<string, unknown>,
@@ -254,6 +256,8 @@ export type GeneratedTimingHooks<
   [K in `use${Name}TimingIn${Placements[number]}`]: GeneratedUseTimingBeacon
 } & {
   [K in `imperative${Placements[number]}TimingApi`]: ActionLogExternalApi<Metadata>
+} & {
+  actionLogCache: ActionLogCache<Metadata>
 }
 
 export type ActionType = typeof ACTION_TYPE[keyof typeof ACTION_TYPE]

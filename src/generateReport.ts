@@ -92,7 +92,7 @@ export function generateReport({
         break
       }
       case MARKER.POINT: {
-        const timeToStage = action.entry.duration
+        const timeToStage = action.timestamp - previousStageTime!
         const stage =
           action.type === ACTION_TYPE.DEPENDENCY_CHANGE
             ? INFORMATIVE_STAGES.DEPENDENCY_CHANGE

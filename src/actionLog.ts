@@ -130,7 +130,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     // eslint-disable-next-line no-console
     console.error
 
-  private expectedSimultaneouslyRenderableBeaconsCount?: number
+  private minimumExpectedSimultaneousBeacons?: number
 
   private placementsCurrentlyRenderable = new Set<string>()
 
@@ -153,18 +153,22 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     timeoutMs,
     finalStages,
     immediateSendStages,
-    expectedSimultaneouslyRenderableBeaconsCount,
+    minimumExpectedSimultaneousBeacons,
     waitForBeaconActivation,
     flushUponDeactivation,
     reportFn,
+    onActionAddedCallback,
     onInternalError,
   }: StaticActionLogOptions<string, CustomMetadata>): void {
-    if (typeof expectedSimultaneouslyRenderableBeaconsCount === 'number') {
-      this.expectedSimultaneouslyRenderableBeaconsCount =
-        expectedSimultaneouslyRenderableBeaconsCount
+    if (typeof minimumExpectedSimultaneousBeacons === 'number') {
+      this.minimumExpectedSimultaneousBeacons =
+        minimumExpectedSimultaneousBeacons
     }
     if (onInternalError) this.onInternalError = onInternalError
     if (reportFn) this.reportFn = reportFn
+    if (onActionAddedCallback) {
+      this.onActionAddedCallback = onActionAddedCallback
+    }
 
     this.debounceOptionsRef.debounceMs = debounceMs ?? DEFAULT_DEBOUNCE_MS
     this.debounceOptionsRef.timeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS
@@ -604,16 +608,16 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       return
     }
 
-    const maximumActiveBeaconsCount =
+    const highestNumberOfActiveBeaconsCountAtAnyGivenTime =
       this.actions
         .map((action) => action.mountedPlacements.length)
         .sort()
         .reverse()[0] ?? 0
 
     const hadReachedTheRequiredActiveBeaconsCount =
-      maximumActiveBeaconsCount ===
-        this.expectedSimultaneouslyRenderableBeaconsCount ||
-      typeof this.expectedSimultaneouslyRenderableBeaconsCount !== 'number'
+      typeof this.minimumExpectedSimultaneousBeacons !== 'number' ||
+      highestNumberOfActiveBeaconsCountAtAnyGivenTime >=
+        this.minimumExpectedSimultaneousBeacons
 
     const { lastRenderAction } = this
 
@@ -652,9 +656,10 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
 
     const reportWithMeta: ReportWithInfo = {
       ...report,
-      maximumActiveBeaconsCount,
-      expectedSimultaneouslyRenderableBeaconsCount:
-        this.expectedSimultaneouslyRenderableBeaconsCount,
+      maximumActiveBeaconsCount:
+        highestNumberOfActiveBeaconsCountAtAnyGivenTime,
+      minimumExpectedSimultaneousBeacons:
+        this.minimumExpectedSimultaneousBeacons,
     }
 
     if (
@@ -665,9 +670,8 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         new Error(
           `useTiming: ${
             // we've asserted this is a number in 'hadReachedTheRequiredActiveBeaconsCount'
-
-            maximumActiveBeaconsCount <
-            this.expectedSimultaneouslyRenderableBeaconsCount!
+            highestNumberOfActiveBeaconsCountAtAnyGivenTime <
+            this.minimumExpectedSimultaneousBeacons!
               ? 'did not reach'
               : 'exceeded'
           } the required number of active beacons during this timing lifecycle`,

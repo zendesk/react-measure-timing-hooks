@@ -57,21 +57,22 @@ export const generateTimingHooks = <
     Metadata
   >,
   ...placements: PlacementsArray
-): GeneratedTimingHooks<Name, PlacementsArray, Metadata> =>
-  (Object.fromEntries as FromEntriesStrict)(
+): GeneratedTimingHooks<Name, PlacementsArray, Metadata> => {
+  const actionLogCacheInstance =
+    actionLogCache ??
+    new ActionLogCache({
+      garbageCollectMs,
+      ...config,
+    })
+  return (Object.fromEntries as FromEntriesStrict)(
     placements.flatMap((placement) => {
       const options: GetPrefixedUseTimingHooksConfiguration<
         PlacementsArray[number],
         Metadata
       > = {
         idPrefix,
-        actionLogCache:
-          actionLogCache ??
-          new ActionLogCache({
-            garbageCollectMs,
-            ...config,
-          }),
-        expectedSimultaneouslyRenderableBeaconsCount: placements.length,
+        actionLogCache: actionLogCacheInstance,
+        minimumExpectedSimultaneousBeacons: placements.length,
         placement,
         garbageCollectMs,
         ...config,
@@ -83,6 +84,8 @@ export const generateTimingHooks = <
           getPrefixedUseTiming(options),
         ] as const,
         [`imperative${placement}TimingApi`, getExternalApi(options)] as const,
+        ['actionLogCache', actionLogCacheInstance] as const,
       ] as const
     }),
   ) as GeneratedTimingHooks<Name, PlacementsArray, Metadata>
+}

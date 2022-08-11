@@ -177,6 +177,7 @@ describe('generateReport', () => {
           stage: DEFAULT_STAGES.READY,
           timingId: id,
           mountedPlacements,
+          timestamp: timeIncrement,
         },
         [`1_${DEFAULT_STAGES.READY}_until_${INFORMATIVE_STAGES.RENDERED}`]: {
           timeToStage: timeIncrement,
@@ -184,6 +185,7 @@ describe('generateReport', () => {
           stage: INFORMATIVE_STAGES.RENDERED,
           timingId: id,
           mountedPlacements,
+          timestamp: timeIncrement * 2,
         },
         [`2_${INFORMATIVE_STAGES.RENDERED}_until_${INFORMATIVE_STAGES.INTERACTIVE}`]:
           {
@@ -192,6 +194,7 @@ describe('generateReport', () => {
             stage: INFORMATIVE_STAGES.INTERACTIVE,
             timingId: id,
             mountedPlacements,
+            timestamp: timeIncrement * 3 + noLagDuration + lagDuration,
           },
       },
       includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.READY],
