@@ -18,6 +18,7 @@ import { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilit
 export type ReportFn<Metadata extends Record<string, unknown>> = (
   report: Report,
   metadata: Metadata,
+  actions: ActionWithStateMetadata[],
 ) => void
 
 export interface Report {
@@ -38,13 +39,13 @@ export interface Report {
 export function generateReport({
   actions,
   timingId,
-  isFirstLoad,
-  immediateSendStages,
+  isFirstLoad = true,
+  immediateSendStages = [],
 }: {
   readonly actions: readonly ActionWithStateMetadata[]
-  readonly timingId: string
-  readonly isFirstLoad: boolean
-  readonly immediateSendStages: readonly string[]
+  readonly timingId?: string
+  readonly isFirstLoad?: boolean
+  readonly immediateSendStages?: readonly string[]
 }): Report {
   const lastStart: Record<string, number> = {}
   const lastEnd: Record<string, number> = {}
@@ -106,6 +107,7 @@ export function generateReport({
             previousStage,
             stage,
             timeToStage,
+            timestamp: action.timestamp - startTime!,
             ...(action.metadata
               ? {
                   metadata: action.metadata,
@@ -151,6 +153,9 @@ export function generateReport({
         mountedPlacements: lastAction.mountedPlacements,
         timingId: lastAction.timingId,
         timeToStage: lastStageToLastRender,
+        timestamp:
+          (lastRenderEnd > 0 ? lastRenderEnd : lastAction.timestamp) -
+          startTime!,
       })
       const lastRenderToEndTime = endTime - lastRenderEnd
 
@@ -160,6 +165,7 @@ export function generateReport({
         mountedPlacements: lastAction.mountedPlacements,
         timingId: lastAction.timingId,
         timeToStage: lastRenderToEndTime,
+        timestamp: lastAction.timestamp - startTime!,
       })
     } else if (lastStageToEnd > 0) {
       stageDescriptions.push({
@@ -170,6 +176,7 @@ export function generateReport({
         mountedPlacements: lastAction.mountedPlacements,
         timingId: lastAction.timingId,
         timeToStage: lastStageToEnd,
+        timestamp: lastAction.timestamp - startTime!,
       })
     }
   }
@@ -201,7 +208,7 @@ export function generateReport({
   )
 
   return {
-    id: timingId,
+    id: timingId ?? lastAction?.timingId ?? 'unknown',
     tti,
     ttr,
     isFirstLoad,

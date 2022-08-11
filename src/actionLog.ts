@@ -52,10 +52,12 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   private lastStageUpdatedAt = performance.now()
 
   private get lastStageEntry(): PerformanceEntry | undefined {
-    return (
-      this.lastStageChange?.entry ??
-      this.actions.find((action) => action.type === ACTION_TYPE.RENDER)?.entry
-    )
+    const lastStageChangeEntry = this.lastStageChange?.entry
+    if (lastStageChangeEntry) return lastStageChangeEntry
+    const lastRenderEntry = this.actions.find(
+      (action) => action.type === ACTION_TYPE.RENDER,
+    )?.entry
+    return lastRenderEntry?.startMark ?? lastRenderEntry
   }
   private lastStageBySource: Map<string, string> = new Map()
 
@@ -686,7 +688,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     }
 
     if (hadReachedTheRequiredActiveBeaconsCount) {
-      this.reportFn(report, metadata)
+      this.reportFn(report, metadata, this.actions)
     }
 
     // clear slate for next re-render (stop observing) and disable reporting
