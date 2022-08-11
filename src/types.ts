@@ -291,7 +291,7 @@ export type DependencyChangeAction = BaseAction<
   PointMarker
 >
 export type Action = SpanAction | StageChangeAction | DependencyChangeAction
-interface StateMeta {
+export interface StateMeta {
   mountedPlacements: readonly string[]
   timingId: string
 }
@@ -300,5 +300,6 @@ export interface StageDescription extends StateMeta {
   previousStage: string
   stage: string
   timeToStage: number
+  timestamp: number
   metadata?: Record<string, unknown>
 }

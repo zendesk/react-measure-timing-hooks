@@ -8,13 +8,32 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import ReactDOM from 'react-dom'
-import { ChartBullet, ChartThemeColor } from '@patternfly/react-charts'
-import type { Story } from '@storybook/react'
-import type { ReportFn } from '../generateReport'
 import {
+  ChartBar,
+  ChartBarProps,
+  ChartBullet,
+  ChartBulletComparativeWarningMeasure,
+  ChartBulletPrimarySegmentedMeasure,
+  ChartBulletPrimarySegmentedMeasureProps,
+  ChartBulletQualitativeRange,
+  ChartThemeColor,
+  getBulletTheme,
+  getPaddingForSide,
+} from '@patternfly/react-charts'
+import type { Story } from '@storybook/react'
+import { generateReport, ReportFn } from '../generateReport'
+import {
+  Action,
   ActionLog,
   ActionWithStateMetadata,
+  DEFAULT_STAGES,
+  DependencyChangeAction,
   generateTimingHooks,
+  RenderAction,
+  SpanAction,
+  StageChangeAction,
+  StateMeta,
+  UnresponsiveAction,
 } from '../main'
 import { throttle } from '../throttle'
 
@@ -29,6 +48,7 @@ const { useStoryTimingInA } = generateTimingHooks(
 interface IArgs {
   text: string
   content: 'immediately' | 'takes-a-while'
+  dependency: 'one' | 'two'
   mounted: boolean
   isActive: boolean
   reportFn: ReportFn<Record<string, unknown>>
@@ -56,20 +76,31 @@ const TakesAWhile = ({
   content,
   reportFn,
   isActive,
+  dependency,
   onActionAddedCallback,
 }: Omit<IArgs, 'mounted'>) => {
-  useStoryTimingInA({
-    idSuffix: content,
-    isActive,
-    reportFn,
-    onActionAddedCallback,
-  })
-
   const [progress, setProgress] = useState(0)
+  const [stage, setStage] = useState('initial')
+
+  useStoryTimingInA(
+    {
+      idSuffix: content,
+      isActive,
+      reportFn,
+      onActionAddedCallback,
+      shouldResetOnDependencyChangeFn: () => false,
+      stage,
+    },
+    [dependency],
+  )
 
   useEffect(() => {
-    if (progress >= 100) return
+    if (progress >= 100) {
+      setStage(DEFAULT_STAGES.READY)
+      return
+    }
     setTimeout(() => {
+      setStage(DEFAULT_STAGES.LOADING)
       setProgress((prev) => prev + 10)
     }, 300)
   }, [progress])
@@ -94,6 +125,87 @@ interface PersistedActionLog {
 let updateObservedTimings: () => void = () => {
   //
 }
+
+const WrapperChartBar: React.FunctionComponent<ChartBarProps> = (props) => (
+  // console.log('props', props)
+  // return <ChartBar {...props} />
+  <ChartBar
+    {...props}
+    // data={props.data?.map((data) =>
+    //   data.type === 'idle' ? { ...data, _color: 'white' } : data,
+    // )}
+    style={
+      props.data[0]?.type === 'idle' ? { data: { fill: 'white' } } : props.style
+    }
+  />
+)
+
+function getPoints<A extends Action>(
+  actions: (A & StateMeta)[],
+  startTimestamp: number,
+  totalDuration: number,
+  markIdle = false,
+) {
+  const actionSummary: {
+    start: number
+    duration: number
+    action: A & StateMeta
+  }[] = []
+  let lastStart: number | undefined = startTimestamp
+  actions.forEach((action) => {
+    if (
+      typeof lastStart === 'number' &&
+      (action.marker === 'end' || action.marker === 'point')
+    ) {
+      actionSummary.push({
+        start: lastStart - startTimestamp,
+        duration: action.timestamp - lastStart,
+        action,
+      })
+      lastStart = undefined
+    }
+    if (action.marker === 'start' || action.marker === 'point') {
+      lastStart = action.timestamp
+    }
+  })
+  const points = actionSummary.flatMap((val, index) => {
+    // padding ensures a minimum size for the bar
+    const padding =
+      (val.duration / totalDuration < 0.01
+        ? 0.01 * totalDuration - val.duration
+        : 0) / 2
+
+    const action = {
+      type: 'action',
+      y0: val.start - padding,
+      y: val.start + val.duration + padding,
+      duration: val.duration,
+      action: val.action,
+      name: val.action.type,
+    } as const
+    const prevVal = actionSummary[index - 1] ?? {
+      start: 0,
+      duration: val.start,
+    }
+    const prevValEnd = prevVal.start + prevVal.duration
+    const idleDuration = val.start - prevValEnd
+    if (markIdle && idleDuration > 0) {
+      return [
+        {
+          type: 'idle',
+          y0: prevValEnd,
+          y: val.start,
+          duration: idleDuration,
+          name: 'idle',
+        } as const,
+        action,
+      ] as const
+    }
+    return [action] as const
+  })
+  return points
+}
+const doRound = (n: number) => Math.round(n * 1_000) / 1_000
 
 function TimingDisplay() {
   const [actionLogs, setActionLogs] = useState<PersistedActionLog[]>([])
@@ -123,18 +235,97 @@ function TimingDisplay() {
         overflowY: 'auto',
       }}
     >
-      {[...actionLogs].reverse().map((actionLog, index) => {
+      {[...actionLogs].reverse().map((actionLog, logIndex) => {
         const { actions } = actionLog
+        const report = generateReport({ actions })
         const firstAction = actions.at(0)
         const lastAction = actions.at(-1)
-        const lastTimestamp = lastAction?.timestamp
-        const totalTime = lastTimestamp
-          ? lastTimestamp - (firstAction?.timestamp ?? lastTimestamp)
-          : 0
+        const firstTimestamp = firstAction?.timestamp ?? 0
+        const lastTimestamp = lastAction?.timestamp ?? 0
+        const totalTime = lastTimestamp - firstTimestamp
+        const stagePoints = Object.values(report.stages).map(
+          ({ stage, previousStage, timeToStage, timestamp }) => ({
+            name: `${previousStage} → ${stage}`,
+            duration: timeToStage,
+            y: timestamp,
+            y0: timestamp - timeToStage,
+          }),
+        )
+
+        const renderActions = actions.filter(
+          (action): action is RenderAction & StateMeta =>
+            action.type === 'render',
+        )
+
+        const unresponsiveActions = actions.filter(
+          (action): action is UnresponsiveAction & StateMeta =>
+            action.type === 'unresponsive',
+        )
+
+        const unresponsivePoints = getPoints(
+          unresponsiveActions,
+          firstTimestamp,
+          totalTime,
+        )
+        const renderPoints = getPoints(renderActions, firstTimestamp, totalTime)
+
+        // const stageChanges = actions.filter(
+        //   (action): action is StageChangeAction & StateMeta =>
+        //     action.type === 'stage-change',
+        // )
+        // const stageChangesPoints = getPoints(
+        //   stageChanges,
+        //   firstTimestamp,
+        //   totalTime,
+        //   true,
+        // ).map((point, index, points) => ({
+        //   ...point,
+        //   name: 'action' in point ? point.action.stage : 'initial',
+        // }))
+        // .map((action, index) => {
+        //   const y = action.timestamp - firstTimestamp
+        //   return [
+        //     {
+        //       y,
+        //       type: 'stage-change',
+        //       name: action.stage,
+        //     },
+        //   ]
+        // })
+        const theme = getBulletTheme(ChartThemeColor.default)
+        const dependencyChanges = actions
+          .filter(
+            (action): action is DependencyChangeAction & StateMeta =>
+              action.type === 'dependency-change',
+          )
+          .flatMap((action, index) => {
+            const y = action.timestamp - firstTimestamp
+            if (Number.isNaN(y)) {
+              console.log('action wtf', action)
+              return []
+            }
+            return [
+              {
+                y,
+                // y0: y,
+                type: 'dependency-change',
+                name: 'dependency-change',
+              },
+            ]
+          })
+        console.log({
+          actions,
+          report,
+          dependencyChanges,
+          renderPoints,
+          unresponsivePoints,
+          // stageChangesPoints,
+          stagePoints,
+        })
         return (
           <div
             style={{ height: '120px', width: '1000px', marginLeft: 'auto' }}
-            key={actionLogs.length - index}
+            key={actionLogs.length - logIndex}
           >
             <ChartBullet
               title={`${actionLog.id}`}
@@ -143,35 +334,70 @@ function TimingDisplay() {
               // ariaDesc="Measure details"
               constrainToVisibleArea
               height={120}
-              maxDomain={{ y: Math.round(totalTime) }}
+              maxDomain={{ y: doRound(totalTime) }}
               minDomain={{ y: 0 }}
-              // maxDomain={{ y: Math.round(lastAction?.timestamp ?? 1_000) }}
-              // minDomain={{ y: Math.round(firstAction?.timestamp ?? 0) }}
-              // primarySegmentedMeasureData={
-              //   actions.map((action) => ({name: `${action.type}`, y: action.timestamp}))
-              //   // [{ name: 'Measure', y: 60 }]
-              // }
-              // comparativeWarningMeasureData={[{ name: 'Warning', y: 88 }]}
-              // primaryDotMeasureData={[
-              //   { name: 'Measure', y: 25 },
-              //   { name: 'Measure', y: 60 },
-              // ]}
+              primarySegmentedMeasureComponent={
+                <ChartBulletPrimarySegmentedMeasure
+                  measureComponent={<WrapperChartBar />}
+                />
+              }
+              primarySegmentedMeasureData={
+                renderPoints
+                // stageChangesPoints
+                // [...unresponsivePoints, ...stageChangesPoints]
+                // actions.map((action) => ({name: `${action.type}`, y: action.timestamp}))
+                // [{ name: 'Measure', y: 60 }]
+              }
+              comparativeErrorMeasureData={dependencyChanges}
+              // comparativeErrorMeasureData={[{ name: 'Measure', y: 1_000 }]}
+              comparativeErrorMeasureComponent={
+                <ChartBulletComparativeWarningMeasure />
+              }
+              comparativeWarningMeasureData={unresponsivePoints}
+              comparativeWarningMeasureComponent={
+                // <ChartBulletComparativeWarningMeasure />
+                <ChartBulletPrimarySegmentedMeasure
+                  themeColor={ChartThemeColor.gold}
+                  barWidth={10}
+                  padding={{
+                    top:
+                      getPaddingForSide('top', {}, theme.chart?.padding ?? {}) -
+                      40,
+                    bottom: getPaddingForSide(
+                      'bottom',
+                      {},
+                      theme.chart?.padding ?? {},
+                    ),
+                    left: getPaddingForSide(
+                      'left',
+                      {},
+                      theme.chart?.padding ?? {},
+                    ),
+                    right: getPaddingForSide(
+                      'right',
+                      {},
+                      theme.chart?.padding ?? {},
+                    ),
+                  }}
+                />
+              }
+              // primaryDotMeasureData={stageChanges}
+              // primaryDotMeasureData={unresponsivePoints}
               // primaryDotMeasureLegendData={[{ name: 'Measure 1' }, { name: 'Measure 2' }]}
               qualitativeRangeData={
-                actions.map((action, index) => ({
-                  name: `${action.type}`,
-                  y: action.timestamp - (firstAction?.timestamp ?? 0),
-                  // TODO: actually, we should find last of the same TYPE, not just previous action
-                  duration:
-                    action.timestamp -
-                    (actions[index - 1]?.timestamp ?? action.timestamp),
-                }))
-                // [
-                //   { name: 'Range', y: 50 },
-                //   { name: 'Range', y: 75 },
-                // ]
+                stagePoints
+                // renderPoints
               }
-              labels={({ datum }) => `${datum.name}: ${datum.duration}ms`}
+              // qualitativeRangeComponent={
+              //   <ChartBulletQualitativeRange
+              //     measureComponent={<WrapperChartBar />}
+              //   />
+              // }
+              labels={({ datum }) =>
+                'duration' in datum
+                  ? `${datum.name}: ${doRound(datum.duration)}ms`
+                  : datum.name
+              }
               // themeColor={ChartThemeColor.default}
               width={600}
             />
@@ -217,7 +443,9 @@ export const MeasureTimingStory: Story<IArgs> = ({
     if (currActions.length > 0) {
       observedTimings.set(actionLog, currActions)
     }
-    updateObservedTimings()
+    setTimeout(() => {
+      updateObservedTimings()
+    })
     // doLog('run')
   }
   const renderProps = { ...props, onActionAddedCallback }

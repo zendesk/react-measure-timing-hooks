@@ -4,7 +4,6 @@ export const throttle = <Args extends any[]>(
   func: (...args: Args) => any,
   waitFor: number,
 ): ((...args: Args) => void) => {
-  console.log('would run')
   let previouslyRun: number
   let queuedToRun: NodeJS.Timeout
 
