@@ -155,7 +155,12 @@ function getPoints<A extends Action>(
   return points
 }
 
-function TimingDisplay() {
+interface VisualizerProps {
+  maxRefreshRate?: number
+  style?: React.CSSProperties
+}
+
+function TimingDisplay({ maxRefreshRate = 1_000, style }: VisualizerProps) {
   // TODO: add "clear" button to clear all persisted logs
   const [actionLogs, setActionLogs] = useState<PersistedActionLog[]>([])
   updateObservedTimings = useMemo(
@@ -168,8 +173,8 @@ function TimingDisplay() {
             inactive: log.getActions().length === 0,
           })),
         )
-      }, 1_000),
-    [setActionLogs],
+      }, maxRefreshRate),
+    [setActionLogs, maxRefreshRate],
   )
 
   const theme = getBulletTheme(ChartThemeColor.multiOrdered)
@@ -184,6 +189,7 @@ function TimingDisplay() {
         width: '1000px',
         background: 'aliceblue',
         overflowY: 'auto',
+        ...style,
       }}
     >
       {[...actionLogs].reverse().map((actionLog, logIndex) => {
@@ -378,7 +384,7 @@ function TimingDisplay() {
   )
 }
 
-export function useVisualizer() {
+export function useVisualizer(props: VisualizerProps = {}) {
   useEffect(() => {
     if (!rootInitialized) {
       if (!rootEl) {
@@ -388,7 +394,7 @@ export function useVisualizer() {
           Object.assign(document.createElement('div'), { id: 'timing__root' })
         if (document.body) {
           document.body.append(rootEl)
-          ReactDOM.render(<TimingDisplay />, rootEl)
+          ReactDOM.render(<TimingDisplay {...props} />, rootEl)
         }
       }
       rootInitialized = true
