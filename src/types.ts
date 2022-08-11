@@ -11,8 +11,6 @@ import type { ActionLogCache } from './ActionLogCache'
 import type { ACTION_TYPE, MARKER } from './constants'
 import type { Report, ReportFn } from './generateReport'
 
-export type { ActionLog } from './ActionLog'
-
 export type ShouldResetOnDependencyChange = (
   oldDependencies: DependencyList,
   newDependencies: DependencyList,

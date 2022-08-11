@@ -112,7 +112,7 @@ export const MeasureTimingStory: Story<IArgs> = ({
   mounted,
   ...props
 }: IArgs) => {
-  const { content, log: doLog } = props
+  const { content } = props
 
   useVisualizer()
 

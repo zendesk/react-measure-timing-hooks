@@ -17,11 +17,11 @@ import {
   ChartThemeColor,
   getBulletTheme,
 } from '@patternfly/react-charts'
+import type { ActionLog } from './ActionLog'
 import { generateReport } from './generateReport'
 import { throttle } from './throttle'
 import type {
   Action,
-  ActionLog,
   ActionWithStateMetadata,
   DependencyChangeAction,
   RenderAction,
