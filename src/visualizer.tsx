@@ -25,6 +25,7 @@ import type {
   ActionWithStateMetadata,
   DependencyChangeAction,
   RenderAction,
+  StageChangeAction,
   StateMeta,
   UnresponsiveAction,
 } from './types'
@@ -48,7 +49,8 @@ let rootInitialized = false
 let rootEl: HTMLDivElement | null = null
 
 const observedTimings: Map<
-  ActionLog<never>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ActionLog<any>,
   ActionWithStateMetadata[]
 > = new Map()
 
@@ -62,7 +64,8 @@ let updateObservedTimings: () => void = () => {
   //
 }
 
-export const onActionAddedCallback = (actionLog: ActionLog<never>) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const onActionAddedCallback = (actionLog: ActionLog<any>) => {
   const currActions = actionLog.getActions()
   if (currActions.length > 0) {
     observedTimings.set(actionLog, currActions)
@@ -270,18 +273,38 @@ function TimingDisplay({ maxRefreshRate = 1_000, style }: VisualizerProps) {
               },
             ]
           })
-        console.log({
-          actions,
-          report,
-          dependencyChanges,
-          renderPoints,
-          unresponsivePoints,
-          // stageChangesPoints,
-          stagePoints,
-        })
+        const stageChanges = actions
+          .filter(
+            (action): action is StageChangeAction & StateMeta =>
+              action.type === 'stage-change',
+          )
+          .flatMap((action, index): Point[] => {
+            const y = action.timestamp - firstTimestamp
+            if (Number.isNaN(y)) {
+              return []
+            }
+            return [
+              {
+                y,
+                type: 'action',
+                name: `stage: ${action.stage}`,
+                duration: 0,
+                action,
+              },
+            ]
+          })
+        // console.log({
+        //   actions,
+        //   report,
+        //   dependencyChanges,
+        //   renderPoints,
+        //   unresponsivePoints,
+        //   // stageChangesPoints,
+        //   stagePoints,
+        // })
         const padding = {
           bottom: 0,
-          left: 200, // Adjusted to accommodate labels
+          left: 300, // Adjusted to accommodate labels
           right: 30,
           top: 0,
         }
@@ -296,7 +319,7 @@ function TimingDisplay({ maxRefreshRate = 1_000, style }: VisualizerProps) {
               ariaTitle={`${actionLog.id}`}
               subTitle={`TTI: ${doRound(report.tti)} | TTR: ${doRound(
                 report.ttr,
-              )}`}
+              )} | S: ${report.lastStage}`}
               // ariaDesc="Measure details"
               constrainToVisibleArea
               height={120}
@@ -354,7 +377,7 @@ function TimingDisplay({ maxRefreshRate = 1_000, style }: VisualizerProps) {
                   }}
                 />
               }
-              // primaryDotMeasureData={stageChanges}
+              primaryDotMeasureData={stageChanges}
               // primaryDotMeasureData={unresponsivePoints}
               // primaryDotMeasureLegendData={[{ name: 'Measure 1' }, { name: 'Measure 2' }]}
               qualitativeRangeData={
