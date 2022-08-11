@@ -24,11 +24,12 @@ export const useOnErrorBoundaryDidCatch = (
   })
 }
 
-export class ReactMeasureErrorBoundary<P, S, SS> extends React.Component<
-  P,
-  S,
-  SS
-> {
+export class ReactMeasureErrorBoundary<
+  P = {},
+  S = {},
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  SS = any,
+> extends React.Component<P, S, SS> {
   override componentDidCatch(error: Error, info: React.ErrorInfo): void {
     // since 'componentDidCatch' runs synchronously right before useEffect clean-up functions
     // belonging to the component that has thrown,
