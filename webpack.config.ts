@@ -2,10 +2,16 @@
 
 import path from 'path'
 import { Compilation } from 'webpack'
+import type { Configuration, Compiler } from 'webpack'
 import { ReplaceSource, Source } from 'webpack-sources'
 
+type ExternalFn = Extract<
+  NonNullable<Configuration['externals']>,
+  (data: any) => Promise<any>
+>
+
 class PostProcessChunkWebpackPlugin {
-  apply(compiler: import('webpack').Compiler) {
+  apply(compiler: Compiler) {
     compiler.hooks.compilation.tap(
       'PostProcessChunkWebpackPlugin',
       (compilation) => {
@@ -57,7 +63,7 @@ export default ({
   engineTarget?: string
   filename?: string
   outDir?: string
-}): import('webpack').Configuration => {
+}): Configuration => {
   return {
     target: [codeTarget, engineTarget],
     experiments: {
@@ -70,6 +76,10 @@ export default ({
       extensions: ['.ts', '.tsx', '...'],
       alias: {
         '#image_overlay': path.join(__dirname, 'src/dummy.png'),
+        react: path.join(__dirname, 'src/reactInterop.js'),
+        'react-dom': path.join(__dirname, 'src/reactDomInterop.js'),
+        'external-react': 'react',
+        'external-react-dom': 'react-dom',
       },
     },
     mode: 'production',
@@ -133,7 +143,18 @@ export default ({
         module: /node_modules\/lodash\/_freeGlobal\.js$/,
       },
     ],
-    externals: ['react', 'react-dom'],
+    externals: [
+      (async (data) => {
+        const { request } = data
+        if (request === 'external-react') {
+          return 'react'
+        }
+        if (request === 'external-react-dom') {
+          return 'react-dom'
+        }
+        return false
+      }) as ExternalFn,
+    ],
     externalsType: 'module',
   }
 }
