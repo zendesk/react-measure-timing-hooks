@@ -6,7 +6,8 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import * as React from 'react'
 import type { Story } from '@storybook/react'
 import type { ReportFn } from '../generateReport'
 import { onActionAddedCallback, useVisualizer } from '../lazyVisualizer'

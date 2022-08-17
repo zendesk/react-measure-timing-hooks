@@ -1,5 +1,6 @@
-import React, { lazy, Suspense, useEffect } from 'react'
-import ReactDOM from 'react-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import * as React from 'react'
+import * as ReactDOM from 'react-dom'
 import type { ActionLog } from './ActionLog'
 import type { ActionWithStateMetadata } from './types'
 

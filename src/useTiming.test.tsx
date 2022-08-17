@@ -8,7 +8,8 @@
  */
 
 import type { ReactNode } from 'react'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import * as React from 'react'
 import type { ReactTestRenderer } from 'react-test-renderer'
 import { act, create } from 'react-test-renderer'
 import { ActionLog } from './ActionLog'
