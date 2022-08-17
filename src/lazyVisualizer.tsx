@@ -24,6 +24,7 @@ export interface VisualizerProps {
   targetElementId?: string
   initialPosition?: Position
   initialSize?: Size
+  enabled?: boolean
 }
 
 const LazyTimingDisplay = React.lazy(() => import('./TimingDisplay'))

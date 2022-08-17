@@ -463,6 +463,7 @@ export default function TimingDisplay({
   style,
   initialPosition = { x: 0, y: 0 },
   initialSize = { width: 800, height: 300 },
+  enabled = true,
 }: VisualizerProps) {
   // TODO: add "clear" button to clear all persisted logs
   const [actionLogs, setActionLogs] = useState<PersistedActionLog[]>([])
@@ -485,12 +486,14 @@ export default function TimingDisplay({
         setPosition({ x: position.x + e.delta.x, y: position.y + e.delta.y })
       }}
     >
-      <ActionLogsWindow
-        actionLogs={actionLogs}
-        style={style}
-        position={position}
-        initalSize={initialSize}
-      />
+      {enabled && (
+        <ActionLogsWindow
+          actionLogs={actionLogs}
+          style={style}
+          position={position}
+          initalSize={initialSize}
+        />
+      )}
     </DndContext>
   )
 }
