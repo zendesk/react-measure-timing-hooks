@@ -30,19 +30,16 @@ module.exports = {
           'npmAuthIdent',
           `${process.env.ARTIFACTORY_USERNAME}:${process.env.ARTIFACTORY_API_KEY}`,
         )
-      } else {
+      } else if (
+        !(process.argv.includes('--version') || process.argv[2] === 'config')
+      ) {
         // eslint-disable-next-line no-console
         console.log(`
-  You're not logged in to the Artifactory!
-  Make sure ARTIFACTORY_USERNAME and ARTIFACTORY_API_KEY are set in your environment.
-        `)
-        // eslint-disable-next-line no-process-exit
-        if (
-          isCi &&
-          !(process.argv.includes('--version') || process.argv[2] === 'config')
-        ) {
-          process.exit(1)
-        }
+    You're not logged in to the Artifactory!
+    Make sure ARTIFACTORY_USERNAME and ARTIFACTORY_API_KEY are set in your environment.
+          `)
+
+        if (isCi) process.exit(1)
       }
     }
 

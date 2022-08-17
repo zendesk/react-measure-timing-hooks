@@ -26,7 +26,6 @@ jobs:
           cache: 'yarn'
       - name: Install dependencies and test
         run: |
-          corepack enable
           yarn install --immutable
           yarn build
           yarn test
@@ -50,7 +49,6 @@ jobs:
           cache: 'yarn'
       - name: Build and release
         run: |
-          corepack enable
           yarn install --immutable
           yarn build
           yarn release
