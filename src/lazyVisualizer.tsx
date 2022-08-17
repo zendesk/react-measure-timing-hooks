@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react'
+import React, { lazy, Suspense, useEffect } from 'react'
 import ReactDOM from 'react-dom'
 import type { ActionLog } from './ActionLog'
 import type { ActionWithStateMetadata } from './types'
@@ -26,7 +26,8 @@ export interface VisualizerProps {
   enabled?: boolean
 }
 
-const LazyTimingDisplay = React.lazy(() => import('./TimingDisplay'))
+export const getTimingDisplayModule = () => import('./TimingDisplay')
+const LazyTimingDisplay = lazy(getTimingDisplayModule)
 
 const observedTimings: Map<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

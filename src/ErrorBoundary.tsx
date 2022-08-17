@@ -5,7 +5,7 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import React, { useEffect } from 'react'
+import { Component, useEffect } from 'react'
 
 interface ErrorMetadata {
   error: Error
@@ -29,7 +29,7 @@ export class ReactMeasureErrorBoundary<
   S = {},
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   SS = any,
-> extends React.Component<P, S, SS> {
+> extends Component<P, S, SS> {
   override componentDidCatch(error: Error, info: React.ErrorInfo): void {
     // since 'componentDidCatch' runs synchronously right before useEffect clean-up functions
     // belonging to the component that has thrown,

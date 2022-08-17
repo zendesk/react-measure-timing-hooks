@@ -1,6 +1,48 @@
 // call like: yarn webpack build --mode production --entry ./lib/hashids.ts --env moduleTarget=esm --env engineTarget=web --env outDir=dist/umd
 
 import path from 'path'
+import { Compilation } from 'webpack'
+import { ReplaceSource, Source } from 'webpack-sources'
+
+class PostProcessChunkWebpackPlugin {
+  apply(compiler: import('webpack').Compiler) {
+    compiler.hooks.compilation.tap(
+      'PostProcessChunkWebpackPlugin',
+      (compilation) => {
+        compilation.hooks.processAssets.tap(
+          {
+            name: 'PostProcessChunkWebpackPlugin',
+            stage: Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_COMPATIBILITY,
+          },
+          (assetRecord) => {
+            const jsAssets = Object.entries(
+              assetRecord as Record<string, Source>,
+            ).filter(([name]) => name.endsWith('.js'))
+            const mappedAssets = jsAssets.map(([name, source]) => {
+              const newSource = new ReplaceSource(source)
+              const contents = source.source().toString()
+              const regexp = /__webpack_require__/g
+              const matches = contents.matchAll(regexp)
+              for (const match of matches) {
+                const index = match.index!
+                const length = '__webpack_require__'.length
+                if (length) {
+                  newSource.replace(
+                    index,
+                    index + length - 1,
+                    '__interna_require__',
+                  )
+                }
+              }
+              return [name, newSource]
+            })
+            Object.assign(assetRecord, Object.fromEntries(mappedAssets))
+          },
+        )
+      },
+    )
+  }
+}
 
 // eslint-disable-next-line import/no-default-export
 export default ({
@@ -34,13 +76,13 @@ export default ({
     optimization: {
       concatenateModules: true,
     },
-    entry: {
-      main: {
-        import: './src/main',
-        // this should work, but doesn't for some reason:
-        baseUri: 'data:',
-      },
-    },
+    // entry: {
+    //   main: {
+    //     import: './src/main',
+    //     // this should work, but doesn't for some reason:
+    //     baseUri: 'data:',
+    //   },
+    // },
     output: {
       module: true,
       library: {
@@ -53,6 +95,7 @@ export default ({
       importMetaName: `({url: 'https://_'})`,
     },
     devtool: 'source-map',
+    plugins: [new PostProcessChunkWebpackPlugin()],
     module: {
       rules: [
         {
