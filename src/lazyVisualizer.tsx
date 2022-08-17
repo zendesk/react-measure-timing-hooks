@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom'
 import type { ActionLog } from './ActionLog'
 import type { ActionWithStateMetadata } from './types'
 
-let rootInitialized = false
 let rootEl: HTMLDivElement | null = null
 
 const DEFAULT_TIMING_ROOT_ELEMENT_ID = 'timing__root'
@@ -63,26 +62,25 @@ export const onActionAddedCallback = (actionLog: ActionLog<any>) => {
 
 export function useVisualizer({
   targetElementId = DEFAULT_TIMING_ROOT_ELEMENT_ID,
+  enabled = true,
   ...props
 }: VisualizerProps = {}) {
   useEffect(() => {
-    if (!rootInitialized) {
-      rootInitialized = true
-      if (!rootEl) {
-        rootEl =
-          // eslint-disable-next-line unicorn/prefer-query-selector
-          (document.getElementById(targetElementId) as HTMLDivElement) ||
-          Object.assign(document.createElement('div'), { id: targetElementId })
-      }
-      if (document.body) {
-        document.body.append(rootEl)
-        ReactDOM.render(
-          <Suspense fallback={null}>
-            <LazyTimingDisplay {...props} />
-          </Suspense>,
-          rootEl,
-        )
-      }
+    if (!rootEl) {
+      // eslint-disable-next-line unicorn/prefer-query-selector
+      const existingElement = document.getElementById(
+        targetElementId,
+      ) as HTMLDivElement
+      rootEl =
+        existingElement ||
+        Object.assign(document.createElement('div'), { id: targetElementId })
+      if (!existingElement) document.body?.append(rootEl)
     }
-  }, [])
+    ReactDOM.render(
+      <Suspense fallback={null}>
+        <LazyTimingDisplay {...props} />
+      </Suspense>,
+      rootEl,
+    )
+  }, [enabled])
 }
