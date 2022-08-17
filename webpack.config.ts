@@ -16,23 +16,14 @@ export default ({
   filename?: string
   outDir?: string
 }): import('webpack').Configuration => {
-  const selectedConfig: import('webpack').Configuration = {
+  return {
     target: [codeTarget, engineTarget],
-    output: {
-      module: true,
-      library: {
-        type: 'module',
-      },
-      chunkFormat: 'module',
-    },
     experiments: {
       outputModule: true,
-      topLevelAwait: true,
-      css: true,
-      futureDefaults: true,
+      // futureDefaults: true,
+      // topLevelAwait: true,
+      // css: false,
     },
-  }
-  return {
     resolve: {
       extensions: ['.ts', '.tsx', '...'],
       alias: {
@@ -43,11 +34,23 @@ export default ({
     optimization: {
       concatenateModules: true,
     },
-    ...selectedConfig,
+    entry: {
+      main: {
+        import: './src/main',
+        // this should work, but doesn't for some reason:
+        baseUri: 'data:',
+      },
+    },
     output: {
-      ...selectedConfig.output,
+      module: true,
+      library: {
+        type: 'module',
+      },
+      chunkFormat: 'module',
       filename,
       path: path.join(process.cwd(), outDir),
+      publicPath: '',
+      importMetaName: `({url: 'https://_'})`,
     },
     devtool: 'source-map',
     module: {
@@ -68,6 +71,17 @@ export default ({
               },
             },
           ],
+        },
+        {
+          test: /\.css$/i,
+          use: [
+            { loader: 'style-loader', options: { injectType: 'lazyStyleTag' } },
+            'css-loader',
+          ],
+        },
+        {
+          test: /\.svg$/i,
+          type: 'asset/inline',
         },
       ],
     },

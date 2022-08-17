@@ -5,13 +5,12 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import './TimingDisplay.css'
-import '@patternfly/patternfly/base/patternfly-common.css'
-import '@patternfly/patternfly/base/patternfly-variables.css'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Resizable } from 're-resizable'
 import { DndContext, useDndMonitor, useDraggable } from '@dnd-kit/core'
 import { restrictToWindowEdges } from '@dnd-kit/modifiers'
+import patternflyCommonStyles from '@patternfly/patternfly/base/patternfly-common.css'
+import patternflyVariableStyles from '@patternfly/patternfly/base/patternfly-variables.css'
 import {
   ChartBar,
   ChartBarProps,
@@ -34,6 +33,7 @@ import {
   VisualizerProps,
 } from './lazyVisualizer'
 import { throttle } from './throttle'
+import styles from './TimingDisplay.css'
 import type {
   Action,
   ActionWithStateMetadata,
@@ -467,6 +467,20 @@ export default function TimingDisplay({
 }: VisualizerProps) {
   // TODO: add "clear" button to clear all persisted logs
   const [actionLogs, setActionLogs] = useState<PersistedActionLog[]>([])
+
+  useEffect(() => {
+    if (enabled) {
+      styles.use()
+      patternflyCommonStyles.use()
+      patternflyVariableStyles.use()
+      return () => {
+        styles.unuse()
+        patternflyCommonStyles.unuse()
+        patternflyVariableStyles.unuse()
+      }
+    }
+    return undefined
+  }, [enabled])
 
   const updateObservedTimings = useMemo(
     () =>

@@ -54,7 +54,7 @@
   "scripts": {
     "build": "yarn build:cjs && yarn build:esm && yarn bundle:css",
     "build:cjs": "yarn rrun tsc --outDir cjs --module commonjs --target es2015",
-    "build:esm": "yarn build:esm:ts && yarn build:esm:webpack",
+    "build:esm": "rm -rf esm && yarn build:esm:ts && yarn build:esm:webpack",
     "build:esm:webpack": "yarn webpack build --mode development --entry ./src/main",
     "build:esm:ts": "yarn rrun tsc --outDir esm --module esnext --target es2015 --emitDeclarationOnly",
     "clean": "git clean -dfX --exclude=node_modules src && beemo typescript:sync-project-refs",
@@ -110,10 +110,12 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/react-test-renderer": "^17.0.0",
+    "css-loader": "^6.7.1",
     "react": "^17.0.0",
     "react-dom": "^17.0.0",
     "react-test-renderer": "^17.0.0",
     "require-from-string": "^2.0.2",
+    "style-loader": "^3.3.1",
     "webpack": "^5.74.0",
     "webpack-cli": "^4.10.0"
   },
