@@ -5,13 +5,14 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import '@patternfly/patternfly/base/patternfly-common.css'
+import '@patternfly/patternfly/base/patternfly-variables.css'
+import './TimingDisplay.css'
+import { useMemo, useState } from 'react'
 import * as React from 'react'
 import { Resizable } from 're-resizable'
 import { DndContext, useDndMonitor, useDraggable } from '@dnd-kit/core'
 import { restrictToWindowEdges } from '@dnd-kit/modifiers'
-import patternflyCommonStyles from '@patternfly/patternfly/base/patternfly-common.css'
-import patternflyVariableStyles from '@patternfly/patternfly/base/patternfly-variables.css'
 import {
   ChartBar,
   ChartBarProps,
@@ -34,7 +35,6 @@ import {
   VisualizerProps,
 } from './lazyVisualizer'
 import { throttle } from './throttle'
-import styles from './TimingDisplay.css'
 import type {
   Action,
   ActionWithStateMetadata,
@@ -405,55 +405,57 @@ function ActionLogsWindow({
           : {}),
       }}
     >
-      <Stack ref={setNodeRef}>
-        <StackItem>
-          <Button
-            isBlock
-            variant="secondary"
-            icon={folded ? <PlusCircleIcon /> : <MinusCircleIcon />}
-            iconPosition="left"
-            style={{
-              height: `${TOP_BAR_HEIGHT}px`,
-              textAlign: 'left',
-              cursor: 'grab',
-              touchAction: 'none',
-            }}
-            {...listeners}
-            {...attributes}
-          >
-            React Measure Timing visualization
-          </Button>
-        </StackItem>
-        {!folded && (
-          <>
-            <StackItem style={{ padding: '10px', paddingBottom: 0 }}>
-              <SearchInput
-                placeholder="Filter by ID"
-                value={filter}
-                onChange={(value) => void setFilter(value)}
-                onClear={() => void setFilter(undefined)}
-                resultsCount={filteredActionLogs.length}
-              />
-            </StackItem>
-            <StackItem
-              isFilled
+      <div ref={setNodeRef} style={{ height: '100%' }}>
+        <Stack>
+          <StackItem>
+            <Button
+              isBlock
+              variant="secondary"
+              icon={folded ? <PlusCircleIcon /> : <MinusCircleIcon />}
+              iconPosition="left"
               style={{
-                overflowY: 'auto',
+                height: `${TOP_BAR_HEIGHT}px`,
+                textAlign: 'left',
+                cursor: 'grab',
+                touchAction: 'none',
               }}
+              {...listeners}
+              {...attributes}
             >
-              <div>
-                {filteredActionLogs.map((actionLog, logIndex) => (
-                  <ActionLogView
-                    actionLog={actionLog}
-                    size={size}
-                    key={actionLogs.length - logIndex}
-                  />
-                ))}
-              </div>
-            </StackItem>
-          </>
-        )}
-      </Stack>
+              React Measure Timing visualization
+            </Button>
+          </StackItem>
+          {!folded && (
+            <>
+              <StackItem style={{ padding: '10px', paddingBottom: 0 }}>
+                <SearchInput
+                  placeholder="Filter by ID"
+                  value={filter}
+                  onChange={(value) => void setFilter(value)}
+                  onClear={() => void setFilter(undefined)}
+                  resultsCount={filteredActionLogs.length}
+                />
+              </StackItem>
+              <StackItem
+                isFilled
+                style={{
+                  overflowY: 'auto',
+                }}
+              >
+                <div>
+                  {filteredActionLogs.map((actionLog, logIndex) => (
+                    <ActionLogView
+                      actionLog={actionLog}
+                      size={size}
+                      key={actionLogs.length - logIndex}
+                    />
+                  ))}
+                </div>
+              </StackItem>
+            </>
+          )}
+        </Stack>
+      </div>
     </Resizable>
   )
 }
@@ -468,20 +470,6 @@ export default function TimingDisplay({
 }: VisualizerProps) {
   // TODO: add "clear" button to clear all persisted logs
   const [actionLogs, setActionLogs] = useState<PersistedActionLog[]>([])
-
-  useEffect(() => {
-    if (enabled) {
-      styles.use()
-      patternflyCommonStyles.use()
-      patternflyVariableStyles.use()
-      return () => {
-        styles.unuse()
-        patternflyCommonStyles.unuse()
-        patternflyVariableStyles.unuse()
-      }
-    }
-    return undefined
-  }, [enabled])
 
   const updateObservedTimings = useMemo(
     () =>

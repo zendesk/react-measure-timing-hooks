@@ -80,7 +80,7 @@ export function useVisualizer({
     }
     ReactDOM.render(
       <Suspense fallback={null}>
-        <LazyTimingDisplay {...props} />
+        <LazyTimingDisplay {...props} enabled={enabled} />
       </Suspense>,
       rootEl,
     )

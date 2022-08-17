@@ -32,6 +32,7 @@ interface IArgs {
   isActive: boolean
   reportFn: ReportFn<Record<string, unknown>>
   log: (...args: any[]) => void
+  visualizer: boolean
 }
 
 const RenderImmediately = ({
@@ -113,9 +114,9 @@ export const MeasureTimingStory: Story<IArgs> = ({
   mounted,
   ...props
 }: IArgs) => {
-  const { content } = props
+  const { content, visualizer } = props
 
-  useVisualizer()
+  useVisualizer({ enabled: visualizer })
 
   const renderProps = { ...props }
   const render =

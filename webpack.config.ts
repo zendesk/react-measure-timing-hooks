@@ -127,10 +127,7 @@ export default ({
         },
         {
           test: /\.css$/i,
-          use: [
-            { loader: 'style-loader', options: { injectType: 'lazyStyleTag' } },
-            'css-loader',
-          ],
+          use: ['style-loader', 'css-loader'],
         },
         {
           test: /\.svg$/i,
