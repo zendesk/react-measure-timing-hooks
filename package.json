@@ -27,18 +27,10 @@
   ],
   "exports": {
     ".": {
-      "import": "./esm/main.js",
-      "require": "./cjs/main.js"
+      "import": "./esm/main.js"
     },
     "./*": {
-      "import": "./esm/*.js",
-      "require": "./cjs/*.js"
-    },
-    "./cjs": {
-      "require": "./cjs/main.js"
-    },
-    "./cjs/*": {
-      "require": "./cjs/*.js"
+      "import": "./esm/*.js"
     },
     "./esm/*": {
       "import": "./esm/*.js"
@@ -48,18 +40,16 @@
     },
     "./package.json": "./package.json"
   },
-  "main": "cjs/main.js",
+  "main": "esm/main.js",
   "module": "esm/main.js",
   "source": "src/main.ts",
   "scripts": {
-    "build": "yarn build:cjs && yarn build:esm && yarn bundle:css",
-    "build:cjs": "yarn rrun tsc --outDir cjs --module commonjs --target es2015",
+    "build": "yarn build:esm",
     "build:esm": "rm -rf esm && yarn build:esm:ts && yarn build:esm:webpack",
     "build:esm:webpack": "yarn webpack build --mode development --entry ./src/main",
     "build:esm:ts": "yarn rrun tsc --outDir esm --module esnext --target es2015 --emitDeclarationOnly",
     "clean": "git clean -dfX --exclude=node_modules src && beemo typescript:sync-project-refs",
     "format": "yarn rrun prettier --write \"./{src,tests,.config}/**/!(*.d).{.js,jsx,ts,tsx,json,md}\"",
-    "bundle:css": "cp -f src/TimingDisplay.css cjs/TimingDisplay.css",
     "postinstallDev": "yarn prepare",
     "prepare": "rrun husky install .config/husky && beemo create-config",
     "release": "beemo run-script release",
@@ -140,7 +130,6 @@
   ],
   "files": [
     "src",
-    "cjs",
     "esm",
     "docs"
   ],
