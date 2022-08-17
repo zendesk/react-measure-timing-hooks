@@ -10,4 +10,5 @@ export default {
       module: 'commonjs',
     },
   },
+  include: ['src/**/*'],
 } as typeof TypeScript
