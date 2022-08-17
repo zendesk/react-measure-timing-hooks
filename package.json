@@ -54,10 +54,12 @@
   "scripts": {
     "build": "yarn build:cjs && yarn build:esm && yarn bundle:css",
     "build:cjs": "yarn rrun tsc --outDir cjs --module commonjs --target es2015",
-    "build:esm": "yarn rrun tsc --outDir esm --module esnext --target es2015",
+    "build:esm": "yarn build:esm:ts && yarn build:esm:webpack",
+    "build:esm:webpack": "yarn webpack build --mode production --entry ./src/main",
+    "build:esm:ts": "yarn rrun tsc --outDir esm --module esnext --target es2015 --emitDeclarationOnly",
     "clean": "git clean -dfX --exclude=node_modules src && beemo typescript:sync-project-refs",
     "format": "yarn rrun prettier --write \"./{src,tests,.config}/**/!(*.d).{.js,jsx,ts,tsx,json,md}\"",
-    "bundle:css": "echo > newline.local && cat node_modules/@patternfly/patternfly/base/patternfly-common.css newline.local node_modules/@patternfly/patternfly/base/patternfly-variables.css newline.local src/TimingDisplay.css > cjs/TimingDisplay.css && cp -f cjs/TimingDisplay.css esm/TimingDisplay.css && rm -f newline.local",
+    "bundle:css": "cp -f src/TimingDisplay.css cjs/TimingDisplay.css",
     "postinstallDev": "yarn prepare",
     "prepare": "rrun husky install .config/husky && beemo create-config",
     "release": "beemo run-script release",
@@ -111,7 +113,9 @@
     "react": "^17.0.0",
     "react-dom": "^17.0.0",
     "react-test-renderer": "^17.0.0",
-    "require-from-string": "^2.0.2"
+    "require-from-string": "^2.0.2",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0"
   },
   "peerDependencies": {
     "react": ">=16.8.0",

@@ -6444,6 +6444,8 @@ __metadata:
     react-dom: ^17.0.0
     react-test-renderer: ^17.0.0
     require-from-string: ^2.0.2
+    webpack: ^5.74.0
+    webpack-cli: ^4.10.0
   peerDependencies:
     react: ">=16.8.0"
     react-dom: ">=16.8.0"
