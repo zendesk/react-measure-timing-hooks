@@ -28,3 +28,6 @@ export {
 export { performanceMark, performanceMeasure } from './performanceMark'
 export { switchFn } from './switchFn'
 export { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
+
+// visualizer
+export { onActionAddedCallback, useVisualizer } from './lazyVisualizer'

@@ -9,8 +9,8 @@
 import React, { useEffect, useState } from 'react'
 import type { Story } from '@storybook/react'
 import type { ReportFn } from '../generateReport'
+import { onActionAddedCallback, useVisualizer } from '../lazyVisualizer'
 import { DEFAULT_STAGES, generateTimingHooks } from '../main'
-import { onActionAddedCallback, useVisualizer } from '../visualizer'
 
 const { useStoryTimingInA, useStoryTimingInB } = generateTimingHooks(
   {
@@ -115,10 +115,6 @@ export const MeasureTimingStory: Story<IArgs> = ({
   const { content } = props
 
   useVisualizer()
-
-  // const setActionLogsThrottled = useCallback(throttle(setActionLogs, 100), [
-  //   setActionLogs,
-  // ])
 
   const renderProps = { ...props }
   const render =

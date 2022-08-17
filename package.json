@@ -131,6 +131,12 @@
     "docs"
   ],
   "dependencies": {
-    "@patternfly/react-charts": "^6.77.1"
+    "@dnd-kit/core": "^6.0.5",
+    "@dnd-kit/modifiers": "^6.0.0",
+    "@patternfly/patternfly": "^4.206.3",
+    "@patternfly/react-charts": "^6.77.1",
+    "@patternfly/react-core": "^4.231.8",
+    "@patternfly/react-icons": "^4.82.8",
+    "re-resizable": "^6.9.9"
   }
 }
