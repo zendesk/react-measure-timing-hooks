@@ -43,17 +43,21 @@
     "./esm/*": {
       "import": "./esm/*.js"
     },
+    "./src/*": {
+      "default": "./src/*"
+    },
     "./package.json": "./package.json"
   },
   "main": "cjs/main.js",
   "module": "esm/main.js",
   "source": "src/main.ts",
   "scripts": {
-    "build": "yarn build:cjs && yarn build:esm",
+    "build": "yarn build:cjs && yarn build:esm && yarn bundle:css",
     "build:cjs": "yarn rrun tsc --outDir cjs --module commonjs --target es2015",
     "build:esm": "yarn rrun tsc --outDir esm --module esnext --target es2015",
     "clean": "git clean -dfX --exclude=node_modules src && beemo typescript:sync-project-refs",
     "format": "yarn rrun prettier --write \"./{src,tests,.config}/**/!(*.d).{.js,jsx,ts,tsx,json,md}\"",
+    "bundle:css": "echo > newline.local && cat node_modules/@patternfly/patternfly/base/patternfly-common.css newline.local node_modules/@patternfly/patternfly/base/patternfly-variables.css newline.local src/TimingDisplay.css > cjs/TimingDisplay.css && cp -f cjs/TimingDisplay.css esm/TimingDisplay.css && rm -f newline.local",
     "postinstallDev": "yarn prepare",
     "prepare": "rrun husky install .config/husky && beemo create-config",
     "release": "beemo run-script release",

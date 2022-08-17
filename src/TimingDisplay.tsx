@@ -5,9 +5,6 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import './TimingDisplay.css'
-import '@patternfly/patternfly/base/patternfly-common.css'
-import '@patternfly/patternfly/base/patternfly-variables.css'
 import React, { useMemo, useState } from 'react'
 import { Resizable } from 're-resizable'
 import { DndContext, useDndMonitor, useDraggable } from '@dnd-kit/core'

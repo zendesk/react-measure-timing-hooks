@@ -22,6 +22,12 @@ multiple stages, and time those stages individually.
 npm install @zendesk/react-measure-timing-hooks
 ```
 
+If you wish to use the visualizer, you will additionally need to include the following CSS files in your application:
+
+```ts
+import '@zendesk/react-measure-timing-hooks/esm/TimingDisplay.css'
+```
+
 ## Usage
 
 Check out storybook in this repo for live examples.
