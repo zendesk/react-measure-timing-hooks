@@ -37,7 +37,7 @@ module.exports = {
   Make sure ARTIFACTORY_USERNAME and ARTIFACTORY_API_KEY are set in your environment.
         `)
         // eslint-disable-next-line no-process-exit
-        if (isCi) process.exit(1)
+        if (isCi && !process.argv.includes('--version')) process.exit(1)
       }
     }
 
