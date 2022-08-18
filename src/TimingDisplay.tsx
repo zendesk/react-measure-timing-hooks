@@ -5,14 +5,20 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
+// eslint-disable-next-line import/no-extraneous-dependencies
 import '@patternfly/patternfly/base/patternfly-common.css'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import '@patternfly/patternfly/base/patternfly-variables.css'
 import './patternfly-globals.css'
 import { memo, useMemo, useState } from 'react'
 import * as React from 'react'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { Resizable } from 're-resizable'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { DndContext, useDndMonitor, useDraggable } from '@dnd-kit/core'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { restrictToWindowEdges } from '@dnd-kit/modifiers'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import {
   ChartBar,
   ChartBarProps,
@@ -23,8 +29,11 @@ import {
   ChartThemeColor,
   getBulletTheme,
 } from '@patternfly/react-charts'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { Button, SearchInput, Stack, StackItem } from '@patternfly/react-core'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import MinusCircleIcon from '@patternfly/react-icons/dist/esm/icons/minus-circle-icon'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import PlusCircleIcon from '@patternfly/react-icons/dist/esm/icons/plus-circle-icon'
 import { generateReport } from './generateReport'
 import {
