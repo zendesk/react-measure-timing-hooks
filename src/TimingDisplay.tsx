@@ -7,8 +7,8 @@
 
 import '@patternfly/patternfly/base/patternfly-common.css'
 import '@patternfly/patternfly/base/patternfly-variables.css'
-import './TimingDisplay.css'
-import { useMemo, useState } from 'react'
+import './patternfly-globals.css'
+import { memo, useMemo, useState } from 'react'
 import * as React from 'react'
 import { Resizable } from 're-resizable'
 import { DndContext, useDndMonitor, useDraggable } from '@dnd-kit/core'
@@ -55,16 +55,28 @@ interface Point {
   readonly color?: string
 }
 
-const MINIMAL_BLOCK_SIZE_PERCENTAGE = 0.01
-
-const doRound = (n: number | null | undefined) =>
-  typeof n === 'number' ? Math.round(n * 1_000) / 1_000 : 0
-
 interface PersistedActionLog {
   id: string
   actions: ActionWithStateMetadata[]
   inactive: boolean
 }
+
+const MINIMAL_BLOCK_SIZE_PERCENTAGE = 0.01
+const THEME = getBulletTheme(ChartThemeColor.multiOrdered)
+
+const PADDING = {
+  bottom: 0,
+  left: 300, // Adjusted to accommodate labels
+  right: 30,
+  top: 0,
+}
+
+const MAIN_BAR_HEIGHT = 42
+const CHART_HEIGHT = 120
+const TOP_BAR_HEIGHT = 35
+
+const doRound = (n: number | null | undefined) =>
+  typeof n === 'number' ? Math.round(n * 1_000) / 1_000 : 0
 
 const CustomColorChartBar: React.FunctionComponent<ChartBarProps> = ({
   style,
@@ -148,8 +160,6 @@ function getPoints<A extends Action>(
   })
   return points
 }
-
-const THEME = getBulletTheme(ChartThemeColor.multiOrdered)
 
 function getChartPoints(actions: ActionWithStateMetadata[]) {
   const report = generateReport({ actions })
@@ -255,86 +265,70 @@ function getChartPoints(actions: ActionWithStateMetadata[]) {
   }
 }
 
-const PADDING = {
-  bottom: 0,
-  left: 300, // Adjusted to accommodate labels
-  right: 30,
-  top: 0,
-}
+const ActionLogView = memo(
+  ({ actionLog, size }: { actionLog: PersistedActionLog; size: Size }) => {
+    const {
+      report,
+      totalTime,
+      renderPoints,
+      dependencyChanges,
+      unresponsivePoints,
+      stageChanges,
+      stagePoints,
+    } = useMemo(() => getChartPoints(actionLog.actions), [actionLog.actions])
 
-const MAIN_BAR_HEIGHT = 42
-const CHART_HEIGHT = 120
-
-function ActionLogView({
-  actionLog,
-  size,
-}: {
-  actionLog: PersistedActionLog
-  size: Size
-}) {
-  const {
-    report,
-    totalTime,
-    renderPoints,
-    dependencyChanges,
-    unresponsivePoints,
-    stageChanges,
-    stagePoints,
-  } = useMemo(() => getChartPoints(actionLog.actions), [actionLog.actions])
-
-  return (
-    <ChartBullet
-      title={`${actionLog.id}`}
-      ariaTitle={`${actionLog.id}`}
-      subTitle={`TTI: ${doRound(report.tti)} | TTR: ${doRound(
-        report.ttr,
-      )} | S: ${report.lastStage}`}
-      constrainToVisibleArea
-      height={CHART_HEIGHT}
-      maxDomain={{ y: doRound(totalTime) }}
-      minDomain={{ y: 0 }}
-      primarySegmentedMeasureComponent={
-        <ChartBulletPrimarySegmentedMeasure
-          measureComponent={<CustomColorChartBar />}
-          padding={{
-            ...PADDING,
-            top: PADDING.top + MAIN_BAR_HEIGHT / 2,
-          }}
-        />
-      }
-      primarySegmentedMeasureData={renderPoints}
-      comparativeErrorMeasureData={dependencyChanges}
-      comparativeErrorMeasureComponent={
-        <ChartBulletComparativeWarningMeasure />
-      }
-      comparativeWarningMeasureData={unresponsivePoints}
-      comparativeWarningMeasureComponent={
-        <ChartBulletPrimarySegmentedMeasure
-          themeColor={ChartThemeColor.gold}
-          barWidth={10}
-          padding={{
-            ...PADDING,
-            top: PADDING.top - MAIN_BAR_HEIGHT / 2,
-          }}
-        />
-      }
-      primaryDotMeasureData={stageChanges}
-      qualitativeRangeData={stagePoints}
-      qualitativeRangeComponent={
-        <ChartBulletQualitativeRange themeColor={ChartThemeColor.cyan} />
-      }
-      labels={({ datum }: { datum: Point }) =>
-        'duration' in datum
-          ? `${datum.name}: ${doRound(datum.duration)}ms`
-          : datum.name
-      }
-      width={size.width}
-      padding={PADDING}
-    />
-  )
-}
-
-const TOP_BAR_HEIGHT = 35
+    return (
+      <ChartBullet
+        title={`${actionLog.id}`}
+        ariaTitle={`${actionLog.id}`}
+        subTitle={`TTI: ${doRound(report.tti)} | TTR: ${doRound(
+          report.ttr,
+        )} | S: ${report.lastStage}`}
+        constrainToVisibleArea
+        height={CHART_HEIGHT}
+        maxDomain={{ y: doRound(totalTime) }}
+        minDomain={{ y: 0 }}
+        primarySegmentedMeasureComponent={
+          <ChartBulletPrimarySegmentedMeasure
+            measureComponent={<CustomColorChartBar />}
+            padding={{
+              ...PADDING,
+              top: PADDING.top + MAIN_BAR_HEIGHT / 2,
+            }}
+          />
+        }
+        primarySegmentedMeasureData={renderPoints}
+        comparativeErrorMeasureData={dependencyChanges}
+        comparativeErrorMeasureComponent={
+          <ChartBulletComparativeWarningMeasure />
+        }
+        comparativeWarningMeasureData={unresponsivePoints}
+        comparativeWarningMeasureComponent={
+          <ChartBulletPrimarySegmentedMeasure
+            themeColor={ChartThemeColor.gold}
+            barWidth={10}
+            padding={{
+              ...PADDING,
+              top: PADDING.top - MAIN_BAR_HEIGHT / 2,
+            }}
+          />
+        }
+        primaryDotMeasureData={stageChanges}
+        qualitativeRangeData={stagePoints}
+        qualitativeRangeComponent={
+          <ChartBulletQualitativeRange themeColor={ChartThemeColor.cyan} />
+        }
+        labels={({ datum }: { datum: Point }) =>
+          'duration' in datum
+            ? `${datum.name}: ${doRound(datum.duration)}ms`
+            : datum.name
+        }
+        width={size.width}
+        padding={PADDING}
+      />
+    )
+  },
+)
 
 function ActionLogsWindow({
   style,
@@ -347,17 +341,18 @@ function ActionLogsWindow({
   position: Position
   initalSize: Size
 }) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: 'ActionLogsWindow',
-  })
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: 'ActionLogsWindow',
+    })
   const [size, setSize] = useState(initalSize)
   const [filter, setFilter] = useState<string>()
-  const [folded, setFolded] = useState(false)
+  const [isFolded, setFolded] = useState(false)
 
   useDndMonitor({
     onDragEnd(event) {
       if (event.delta.x === 0 && event.delta.y === 0) {
-        setFolded(!folded)
+        setFolded(!isFolded)
       }
     },
   })
@@ -374,7 +369,7 @@ function ActionLogsWindow({
 
   return (
     <Resizable
-      size={folded ? { height: TOP_BAR_HEIGHT, width: size.width } : size}
+      size={isFolded ? { height: TOP_BAR_HEIGHT, width: size.width } : size}
       onResizeStop={(e, direction, ref, delta) => {
         setSize({
           width: size.width + delta.width,
@@ -382,11 +377,11 @@ function ActionLogsWindow({
         })
       }}
       enable={{
-        bottom: !folded,
-        right: !folded,
-        bottomLeft: !folded,
-        bottomRight: !folded,
-        left: !folded,
+        bottom: !isFolded,
+        right: !isFolded,
+        bottomLeft: !isFolded,
+        bottomRight: !isFolded,
+        left: !isFolded,
         top: false,
         topLeft: false,
         topRight: false,
@@ -399,9 +394,7 @@ function ActionLogsWindow({
         left: position.x,
         top: position.y,
         ...(transform
-          ? {
-              transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-            }
+          ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
           : {}),
       }}
     >
@@ -411,7 +404,7 @@ function ActionLogsWindow({
             <Button
               isBlock
               variant="secondary"
-              icon={folded ? <PlusCircleIcon /> : <MinusCircleIcon />}
+              icon={isFolded ? <PlusCircleIcon /> : <MinusCircleIcon />}
               iconPosition="left"
               style={{
                 height: `${TOP_BAR_HEIGHT}px`,
@@ -425,7 +418,7 @@ function ActionLogsWindow({
               React Measure Timing visualization
             </Button>
           </StackItem>
-          {!folded && (
+          {!isFolded && !isDragging && (
             <>
               <StackItem style={{ padding: '10px', paddingBottom: 0 }}>
                 <SearchInput
@@ -436,12 +429,7 @@ function ActionLogsWindow({
                   resultsCount={filteredActionLogs.length}
                 />
               </StackItem>
-              <StackItem
-                isFilled
-                style={{
-                  overflowY: 'auto',
-                }}
-              >
+              <StackItem isFilled style={{ overflowY: 'auto' }}>
                 <div>
                   {filteredActionLogs.map((actionLog, logIndex) => (
                     <ActionLogView
