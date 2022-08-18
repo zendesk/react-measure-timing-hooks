@@ -5,8 +5,9 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import type { ActionLog } from './actionLog'
+import { ActionLogCache } from './ActionLogCache'
 import { DEFAULT_GARBAGE_COLLECT_MS } from './constants'
+import { getExternalApi } from './getExternalApi'
 import type {
   GeneratedTimingHooks,
   GeneratedUseTimingBeaconHook,
@@ -14,8 +15,12 @@ import type {
   GenerateUseTimingHooksConfiguration,
   GetPrefixedUseTimingHooksConfiguration,
 } from './types'
-import { getExternalApi } from './useActionLogRef'
 import { useTiming } from './useTiming'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FromEntriesStrict = <KeyValue extends readonly [any, any]>(
+  entries: Iterable<KeyValue>,
+) => { [K in KeyValue[0]]: KeyValue extends readonly [K, infer V] ? V : never }
 
 export const getPrefixedUseTiming =
   <Placements extends string, Metadata extends Record<string, unknown>>({
@@ -43,8 +48,8 @@ export const generateTimingHooks = <
   {
     name,
     idPrefix,
-    actionLogCache = new Map<string, ActionLog<Metadata>>(),
     garbageCollectMs = DEFAULT_GARBAGE_COLLECT_MS,
+    actionLogCache,
     ...config
   }: GenerateUseTimingHooksConfiguration<
     Name,
@@ -52,19 +57,24 @@ export const generateTimingHooks = <
     Metadata
   >,
   ...placements: PlacementsArray
-): GeneratedTimingHooks<Name, PlacementsArray> =>
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  Object.fromEntries(
+): GeneratedTimingHooks<Name, PlacementsArray, Metadata> => {
+  const actionLogCacheInstance =
+    actionLogCache ??
+    new ActionLogCache({
+      garbageCollectMs,
+      ...config,
+    })
+  return (Object.fromEntries as FromEntriesStrict)(
     placements.flatMap((placement) => {
       const options: GetPrefixedUseTimingHooksConfiguration<
         PlacementsArray[number],
         Metadata
       > = {
         idPrefix,
-        actionLogCache,
-        garbageCollectMs,
-        expectedSimultaneouslyRenderableBeaconsCount: placements.length,
+        actionLogCache: actionLogCacheInstance,
+        minimumExpectedSimultaneousBeacons: placements.length,
         placement,
+        garbageCollectMs,
         ...config,
       }
 
@@ -74,6 +84,8 @@ export const generateTimingHooks = <
           getPrefixedUseTiming(options),
         ] as const,
         [`imperative${placement}TimingApi`, getExternalApi(options)] as const,
-      ]
+        ['actionLogCache', actionLogCacheInstance] as const,
+      ] as const
     }),
-  )
+  ) as GeneratedTimingHooks<Name, PlacementsArray, Metadata>
+}

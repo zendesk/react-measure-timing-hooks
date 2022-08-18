@@ -5,9 +5,20 @@ import { MeasureTimingStory } from './MeasureTimingStory'
 
 # Demo
 
-export const args = { content: 'text', mounted: true, isActive: true }
+export const args = {
+  visualizer: false,
+  content: 'text',
+  mounted: true,
+  isActive: true,
+  dependency: 'one',
+}
 
 export const argTypes = {
+  visualizer: {
+    options: [false, true],
+    control: 'radio',
+    table: { category: 'Story' },
+  },
   content: {
     options: ['immediately', 'takes-a-while'],
     control: 'radio',
@@ -18,12 +29,18 @@ export const argTypes = {
     control: 'radio',
     table: { category: 'Story' },
   },
+  dependency: {
+    options: ['one', 'two'],
+    control: 'radio',
+    table: { category: 'Story' },
+  },
   isActive: {
     options: [true, false],
     control: 'radio',
     table: { category: 'Story' },
   },
   reportFn: { action: 'report' },
+  log: { action: 'log' },
 }
 
 <Canvas>

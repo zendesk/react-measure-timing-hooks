@@ -44,32 +44,31 @@ const NO_FINAL_STAGES = [] as const
 
 export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   private actions: ActionWithStateMetadata[] = []
+  private onActionAddedCallback:
+    | ((actionLog: ActionLog<CustomMetadata>) => void)
+    | undefined = undefined
 
   private lastStage: string = INFORMATIVE_STAGES.INITIAL
-
   private lastStageUpdatedAt = performance.now()
 
   private get lastStageEntry(): PerformanceEntry | undefined {
-    return (
-      this.lastStageChange?.entry ??
-      this.actions.find((action) => action.type === ACTION_TYPE.RENDER)?.entry
-    )
+    const lastStageChangeEntry = this.lastStageChange?.entry
+    if (lastStageChangeEntry) return lastStageChangeEntry
+    const lastRenderEntry = this.actions.find(
+      (action) => action.type === ACTION_TYPE.RENDER,
+    )?.entry
+    return lastRenderEntry?.startMark ?? lastRenderEntry
   }
-
   private lastStageBySource: Map<string, string> = new Map()
 
   finalStages: readonly string[] = NO_FINAL_STAGES
-
   immediateSendStages: readonly string[] = NO_IMMEDIATE_SEND_STAGES
 
   private dependenciesBySource: Map<string, DependencyList> = new Map()
-
   private hasReportedAtLeastOnce = false
-
   private flushUponDeactivation = false
 
   customMetadataBySource: Map<string, CustomMetadata> = new Map()
-
   reportedErrors: WeakSet<object> = new WeakSet()
 
   /**
@@ -79,6 +78,10 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   getLastRenderedActionEntry(): PerformanceEntry | undefined {
     return this.actions.find((action) => action.type === ACTION_TYPE.RENDER)
       ?.entry
+  }
+
+  getActions(): ActionWithStateMetadata[] {
+    return this.actions
   }
 
   /**
@@ -127,7 +130,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     // eslint-disable-next-line no-console
     console.error
 
-  private expectedSimultaneouslyRenderableBeaconsCount?: number
+  private minimumExpectedSimultaneousBeacons?: number
 
   private placementsCurrentlyRenderable = new Set<string>()
 
@@ -135,6 +138,10 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
 
   get isInUse(): boolean {
     return this.placementsCurrentlyRenderable.size > 0
+  }
+
+  getId(): string {
+    return this.id
   }
 
   constructor(options: StaticActionLogOptions<string, CustomMetadata>) {
@@ -146,18 +153,22 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     timeoutMs,
     finalStages,
     immediateSendStages,
-    expectedSimultaneouslyRenderableBeaconsCount,
+    minimumExpectedSimultaneousBeacons,
     waitForBeaconActivation,
     flushUponDeactivation,
     reportFn,
+    onActionAddedCallback,
     onInternalError,
   }: StaticActionLogOptions<string, CustomMetadata>): void {
-    if (typeof expectedSimultaneouslyRenderableBeaconsCount === 'number') {
-      this.expectedSimultaneouslyRenderableBeaconsCount =
-        expectedSimultaneouslyRenderableBeaconsCount
+    if (typeof minimumExpectedSimultaneousBeacons === 'number') {
+      this.minimumExpectedSimultaneousBeacons =
+        minimumExpectedSimultaneousBeacons
     }
     if (onInternalError) this.onInternalError = onInternalError
     if (reportFn) this.reportFn = reportFn
+    if (onActionAddedCallback) {
+      this.onActionAddedCallback = onActionAddedCallback
+    }
 
     this.debounceOptionsRef.debounceMs = debounceMs ?? DEFAULT_DEBOUNCE_MS
     this.debounceOptionsRef.timeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS
@@ -220,6 +231,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       reportFn,
       shouldResetOnDependencyChangeFn,
       onInternalError,
+      onActionAddedCallback,
     }: DynamicActionLogOptions<CustomMetadata>,
     source: string,
   ): void {
@@ -234,6 +246,9 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         source,
         shouldResetOnDependencyChangeFn,
       )
+    }
+    if (onActionAddedCallback) {
+      this.onActionAddedCallback = onActionAddedCallback
     }
   }
 
@@ -309,6 +324,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   private willFlushTimeout?: ReturnType<typeof setTimeout>
 
   private onActionAdded(): void {
+    this.onActionAddedCallback?.(this)
     if (this.isInImmediateSendStage) {
       this.stopObserving()
       if (this.willFlushTimeout) return
@@ -592,16 +608,16 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       return
     }
 
-    const maximumActiveBeaconsCount =
+    const highestNumberOfActiveBeaconsCountAtAnyGivenTime =
       this.actions
         .map((action) => action.mountedPlacements.length)
         .sort()
         .reverse()[0] ?? 0
 
     const hadReachedTheRequiredActiveBeaconsCount =
-      maximumActiveBeaconsCount ===
-        this.expectedSimultaneouslyRenderableBeaconsCount ||
-      typeof this.expectedSimultaneouslyRenderableBeaconsCount !== 'number'
+      typeof this.minimumExpectedSimultaneousBeacons !== 'number' ||
+      highestNumberOfActiveBeaconsCountAtAnyGivenTime >=
+        this.minimumExpectedSimultaneousBeacons
 
     const { lastRenderAction } = this
 
@@ -640,9 +656,10 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
 
     const reportWithMeta: ReportWithInfo = {
       ...report,
-      maximumActiveBeaconsCount,
-      expectedSimultaneouslyRenderableBeaconsCount:
-        this.expectedSimultaneouslyRenderableBeaconsCount,
+      maximumActiveBeaconsCount:
+        highestNumberOfActiveBeaconsCountAtAnyGivenTime,
+      minimumExpectedSimultaneousBeacons:
+        this.minimumExpectedSimultaneousBeacons,
     }
 
     if (
@@ -653,9 +670,8 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         new Error(
           `useTiming: ${
             // we've asserted this is a number in 'hadReachedTheRequiredActiveBeaconsCount'
-
-            maximumActiveBeaconsCount <
-            this.expectedSimultaneouslyRenderableBeaconsCount!
+            highestNumberOfActiveBeaconsCountAtAnyGivenTime <
+            this.minimumExpectedSimultaneousBeacons!
               ? 'did not reach'
               : 'exceeded'
           } the required number of active beacons during this timing lifecycle`,
@@ -676,7 +692,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     }
 
     if (hadReachedTheRequiredActiveBeaconsCount) {
-      this.reportFn(report, metadata)
+      this.reportFn(report, metadata, this.actions)
     }
 
     // clear slate for next re-render (stop observing) and disable reporting

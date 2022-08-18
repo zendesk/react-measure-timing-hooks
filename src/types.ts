@@ -5,8 +5,9 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import type { DependencyList, MutableRefObject } from 'react'
-import type { ActionLog } from './actionLog'
+import type { DependencyList } from 'react'
+import type { ActionLog } from './ActionLog'
+import type { ActionLogCache } from './ActionLogCache'
 import type { ACTION_TYPE, MARKER } from './constants'
 import type { Report, ReportFn } from './generateReport'
 
@@ -42,13 +43,11 @@ export interface WithBeaconConfig<Placements extends string = string> {
   placement: Placements
 }
 
-export interface WithActionLogRef<
-  CustomMetadata extends Record<string, unknown>,
-> {
+export interface WithActionLog<CustomMetadata extends Record<string, unknown>> {
   /**
    * An instance of ActionLog in a ref object (must be provided so it can be cached externally)
    */
-  actionLogRef: MutableRefObject<ActionLog<CustomMetadata>>
+  actionLog: ActionLog<CustomMetadata>
 }
 
 export interface WithShouldResetOnDependencyChangeFn {
@@ -60,7 +59,7 @@ export interface WithShouldResetOnDependencyChangeFn {
   shouldResetOnDependencyChangeFn?: ShouldResetOnDependencyChange
 }
 
-export interface MeasurementBeaconState
+export interface WithMeasurementBeaconState
   extends WithShouldResetOnDependencyChangeFn {
   /**
    * Time different rendering stages by changing the value of this property.
@@ -111,7 +110,7 @@ export interface StaticActionLogOptions<
   /**
    * Require a certain number of simultaneously mounted placements to send the timing report.
    */
-  expectedSimultaneouslyRenderableBeaconsCount?: number
+  minimumExpectedSimultaneousBeacons?: number
 
   /**
    * If true, will flush the report immediately upon deactivation, without waiting for browser to settle.
@@ -120,8 +119,13 @@ export interface StaticActionLogOptions<
   flushUponDeactivation?: boolean
 }
 
-export interface WithReportFn<Metadata extends Record<string, unknown>> {
-  reportFn?: ReportFn<Metadata>
+export interface WithReportFn<CustomMetadata extends Record<string, unknown>> {
+  reportFn?: ReportFn<CustomMetadata>
+
+  /**
+   * Will fire any time an action is added to the action log.
+   */
+  onActionAddedCallback?: (action: ActionLog<CustomMetadata>) => void
 }
 
 export interface WithMetadata<Metadata extends Record<string, unknown>> {
@@ -130,7 +134,7 @@ export interface WithMetadata<Metadata extends Record<string, unknown>> {
 
 export interface ReportWithInfo extends Report {
   maximumActiveBeaconsCount: number
-  expectedSimultaneouslyRenderableBeaconsCount?: number
+  minimumExpectedSimultaneousBeacons?: number
 }
 
 export interface DynamicActionLogOptions<
@@ -139,9 +143,6 @@ export interface DynamicActionLogOptions<
     WithShouldResetOnDependencyChangeFn,
     WithReportFn<CustomMetadata>,
     WithOnInternalError<CustomMetadata> {}
-
-export type ActionLogCache<CustomMetadata extends Record<string, unknown>> =
-  Map<string, ActionLog<CustomMetadata>>
 
 export interface WithActionLogCache<
   CustomMetadata extends Record<string, unknown>,
@@ -169,32 +170,34 @@ export interface ActionLogExternalApi<
   setMetadata: (idSuffix: string, metadata: CustomMetadata) => void
 }
 
-export interface UseActionLogRefOptions<
+export interface UseActionLogCacheOptions<
   CustomMetadata extends Record<string, unknown>,
   Placements extends string = string,
-> extends WithTimingId,
-    StaticActionLogOptions<Placements, CustomMetadata>,
-    WithActionLogCache<CustomMetadata> {
+> extends StaticActionLogOptions<Placements, CustomMetadata> {
   garbageCollectMs: number
 }
 
+export interface UseActionLogOptions<
+  CustomMetadata extends Record<string, unknown>,
+  Placements extends string = string,
+> extends WithTimingId,
+    UseActionLogCacheOptions<CustomMetadata, Placements>,
+    WithActionLogCache<CustomMetadata> {}
+
 export interface UseTimingMeasurementHookConfiguration<
   CustomMetadata extends Record<string, unknown>,
-> extends WithTimingId,
+> extends DynamicActionLogOptions<CustomMetadata>,
     WithBeaconConfig,
-    WithOnInternalError<CustomMetadata>,
-    WithActionLogRef<CustomMetadata>,
-    WithReportFn<CustomMetadata>,
-    MeasurementBeaconState {}
+    WithMeasurementBeaconState,
+    WithActionLog<CustomMetadata> {}
 
 export interface UseTimingHookConfiguration<
   CustomMetadata extends Record<string, unknown>,
-> extends WithBeaconConfig,
-    WithOnInternalError<CustomMetadata>,
-    WithReportFn<CustomMetadata>,
+> extends DynamicActionLogOptions<CustomMetadata>,
+    WithBeaconConfig,
+    WithMeasurementBeaconState,
     WithMetadata<CustomMetadata>,
-    MeasurementBeaconState,
-    UseActionLogRefOptions<CustomMetadata> {}
+    UseActionLogOptions<CustomMetadata> {}
 
 export interface WithIdSuffix {
   idSuffix?: string
@@ -202,20 +205,18 @@ export interface WithIdSuffix {
 
 export interface UseTimingBeaconHookOptions<
   CustomMetadata extends Record<string, unknown>,
-> extends MeasurementBeaconState,
+> extends Omit<DynamicActionLogOptions<CustomMetadata>, 'id'>,
+    WithMeasurementBeaconState,
     WithBeaconConfig,
-    WithOnInternalError<CustomMetadata>,
     WithMetadata<CustomMetadata>,
     WithIdSuffix {}
 
 export interface GeneratedUseTimingBeaconHookConfiguration<
   CustomMetadata extends Record<string, unknown>,
 > extends Omit<
-      UseTimingBeaconHookOptions<CustomMetadata>,
-      'placement' | 'type'
-    >,
-    WithMetadata<CustomMetadata>,
-    WithReportFn<CustomMetadata> {}
+    UseTimingBeaconHookOptions<CustomMetadata>,
+    'placement' | 'type'
+  > {}
 
 export type GeneratedUseTimingBeaconHook = <
   CustomMetadata extends Record<string, unknown>,
@@ -228,7 +229,7 @@ export interface GenerateUseTimingHooksConfiguration<
   Name extends string,
   Placements extends string,
   CustomMetadata extends Record<string, unknown>,
-> extends Partial<UseActionLogRefOptions<CustomMetadata, Placements>>,
+> extends Partial<UseActionLogOptions<CustomMetadata, Placements>>,
     WithIdPrefix {
   name: Name
 }
@@ -240,18 +241,21 @@ export interface WithIdPrefix {
 export interface GetPrefixedUseTimingHooksConfiguration<
   Placements extends string,
   Metadata extends Record<string, unknown>,
-> extends Omit<UseActionLogRefOptions<Metadata, Placements>, 'id'>,
+> extends Omit<UseActionLogOptions<Metadata, Placements>, 'id'>,
     WithIdPrefix,
     WithBeaconConfig<Placements> {}
 
 export type GeneratedTimingHooks<
   Name extends string,
   Placements extends readonly string[],
+  Metadata extends Record<string, unknown> = Record<string, unknown>,
   GeneratedUseTimingBeacon = GeneratedUseTimingBeaconHook,
 > = {
   [K in `use${Name}TimingIn${Placements[number]}`]: GeneratedUseTimingBeacon
 } & {
-  [K in `imperative${Placements[number]}TimingApi`]: ActionLogExternalApi
+  [K in `imperative${Placements[number]}TimingApi`]: ActionLogExternalApi<Metadata>
+} & {
+  actionLogCache: ActionLogCache<Metadata>
 }
 
 export type ActionType = typeof ACTION_TYPE[keyof typeof ACTION_TYPE]
@@ -289,7 +293,7 @@ export type DependencyChangeAction = BaseAction<
   PointMarker
 >
 export type Action = SpanAction | StageChangeAction | DependencyChangeAction
-interface StateMeta {
+export interface StateMeta {
   mountedPlacements: readonly string[]
   timingId: string
 }
@@ -298,5 +302,6 @@ export interface StageDescription extends StateMeta {
   previousStage: string
   stage: string
   timeToStage: number
+  timestamp: number
   metadata?: Record<string, unknown>
 }

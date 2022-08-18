@@ -1,0 +1,125 @@
+/* adapted from '@patternfly/patternfly/base/patternfly-globals.css' */
+
+#timing__root html,
+#timing__root body,
+#timing__root p,
+#timing__root ol,
+#timing__root ul,
+#timing__root li,
+#timing__root dl,
+#timing__root dt,
+#timing__root dd,
+#timing__root blockquote,
+#timing__root figure,
+#timing__root fieldset,
+#timing__root legend,
+#timing__root textarea,
+#timing__root pre,
+#timing__root iframe,
+#timing__root hr,
+#timing__root h1,
+#timing__root h2,
+#timing__root h3,
+#timing__root h4,
+#timing__root h5,
+#timing__root h6 {
+  padding: 0;
+  margin: 0;
+}
+
+#timing__root html,
+#timing__root body {
+  height: 100%;
+}
+
+#timing__root h1,
+#timing__root h2,
+#timing__root h3,
+#timing__root h4,
+#timing__root h5,
+#timing__root h6 {
+  font-size: 100%;
+  font-weight: var(--pf-global--FontWeight--normal);
+}
+
+#timing__root ul {
+  list-style: none;
+}
+
+#timing__root button,
+#timing__root input,
+#timing__root optgroup,
+#timing__root select,
+#timing__root textarea {
+  margin: 0;
+  font-family: inherit;
+  font-size: 100%;
+  line-height: var(--pf-global--LineHeight--md);
+  color: var(--pf-global--Color--100);
+}
+
+#timing__root img,
+#timing__root embed,
+#timing__root iframe,
+#timing__root object,
+#timing__root audio,
+#timing__root video {
+  max-width: 100%;
+  height: auto;
+}
+
+#timing__root iframe {
+  border: 0;
+}
+
+#timing__root table {
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+#timing__root td,
+#timing__root th {
+  padding: 0;
+  text-align: left;
+}
+
+#timing__root code,
+#timing__root pre {
+  font-family: var(--pf-global--FontFamily--monospace);
+}
+
+#timing__root *,
+#timing__root *::before,
+#timing__root *::after {
+  box-sizing: border-box;
+}
+
+#timing__root {
+  font-family: var(--pf-global--FontFamily--sans-serif);
+  font-size: var(--pf-global--FontSize--md);
+  font-weight: var(--pf-global--FontWeight--normal);
+  line-height: var(--pf-global--LineHeight--md);
+  text-align: left;
+  background-color: var(--pf-global--BackgroundColor--100);
+}
+
+#timing__root a {
+  font-weight: var(--pf-global--link--FontWeight);
+  color: var(--pf-global--link--Color);
+  text-decoration: var(--pf-global--link--TextDecoration);
+}
+#timing__root a:hover {
+  --pf-global--link--Color: var(--pf-global--link--Color--hover);
+  --pf-global--link--TextDecoration: var(
+    --pf-global--link--TextDecoration--hover
+  );
+}
+
+#timing__root button,
+#timing__root a {
+  cursor: pointer;
+}
+
+.pf-m-overpass-font a {
+  font-weight: var(--pf-global--FontWeight--semi-bold);
+}

@@ -11,6 +11,15 @@ export interface DebounceOptionsRef<T> {
   timeoutMs?: number
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DebouncedFn<Args extends any[]> = ((...args: Args) => void) & {
+  cancel: () => Args | undefined
+  flush: () => boolean
+  getHasTimedOut: () => boolean
+  getIsScheduled: () => boolean
+  resetTimedOutState: () => void
+}
+
 /**
  * A simple debounce function that is easier to test against than the lodash one.
  * In addition it offers a way to check whether the last call was due to a timeout or not,
@@ -20,13 +29,7 @@ export interface DebounceOptionsRef<T> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const debounce = <Args extends any[], T extends (...args: Args) => any>(
   optionsRef: DebounceOptionsRef<T>,
-): ((...args: Args) => void) & {
-  cancel: () => Args | undefined
-  flush: () => boolean
-  getHasTimedOut: () => boolean
-  getIsScheduled: () => boolean
-  resetTimedOutState: () => void
-} => {
+): DebouncedFn<Args> => {
   let timeoutTimer: number | undefined
   let debounceTimer: number | undefined
   let lastArgs: Args | undefined
