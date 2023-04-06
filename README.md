@@ -99,6 +99,10 @@ const Conversation = ({ conversationId }) => {
 }
 ```
 
+An `idSuffix` is required in two cases:
+* When the same component is rendered multiple times on a page.
+* A component is expected to vary its content (re-render) based on an object variable - e.g. contents change based on which item is selected/opened/visible
+
 ### Report
 
 Each metric provided in the report is captured in the report, in milliseconds. The two key, summary
@@ -190,6 +194,8 @@ const MyComponent = () => {
 ```
 
 ### Timing component loading stages
+
+To configure the testing stages both `finalStages` in the hook generator and `stage` in the component need to be specified.
 
 ```tsx
 import {
