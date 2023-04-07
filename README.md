@@ -99,7 +99,7 @@ const Conversation = ({ conversationId }) => {
 }
 ```
 
-An `idSuffix` is required in two cases:
+An `idSuffix` is required when the component is not expected to be a singleton. If you're uncertain, the following heuristic should help you make the decision whether to add one:
 * When the same component is rendered multiple times on a page.
 * We expect the component will vary its content (re-render) based on some object variable. For example, its contents change based on another item's selection/visibility, or an action, like opening.
 
