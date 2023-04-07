@@ -101,7 +101,7 @@ const Conversation = ({ conversationId }) => {
 
 An `idSuffix` is required in two cases:
 * When the same component is rendered multiple times on a page.
-* A component is expected to vary its content (re-render) based on an object variable - e.g. contents change based on which item is selected/opened/visible
+* We expect the component will vary its content (re-render) based on some object variable. For example, its contents change based on another item's selection/visibility, or an action, like opening.
 
 ### Report
 
