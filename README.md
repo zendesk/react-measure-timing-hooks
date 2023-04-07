@@ -195,7 +195,7 @@ const MyComponent = () => {
 
 ### Timing component loading stages
 
-To configure the testing stages both `finalStages` in the hook generator and `stage` in the component need to be specified.
+To make use of the measurement stages, both `finalStages` in the hook generator and `stage` in the component need to be specified.
 
 ```tsx
 import {
