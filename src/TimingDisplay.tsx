@@ -10,7 +10,7 @@ import '@patternfly/patternfly/base/patternfly-common.css'
 // eslint-disable-next-line import/no-extraneous-dependencies
 import '@patternfly/patternfly/base/patternfly-variables.css'
 import './patternfly-globals.css'
-import { memo, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import * as React from 'react'
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { Resizable } from 're-resizable'
@@ -35,6 +35,8 @@ import { Button, SearchInput, Stack, StackItem } from '@patternfly/react-core'
 import MinusCircleIcon from '@patternfly/react-icons/dist/esm/icons/minus-circle-icon'
 // eslint-disable-next-line import/no-extraneous-dependencies
 import PlusCircleIcon from '@patternfly/react-icons/dist/esm/icons/plus-circle-icon'
+// eslint-disable-next-line import/no-extraneous-dependencies
+import RemoveIcon from '@patternfly/react-icons/dist/esm/icons/remove2-icon'
 import { generateReport } from './generateReport'
 import {
   getObservedTimings,
@@ -330,7 +332,7 @@ const ActionLogView = memo(
         labels={({ datum }: { datum: Point }) =>
           'duration' in datum
             ? `${datum.name}: ${doRound(datum.duration)}ms`
-            : datum.name
+            : ''
         }
         width={size.width}
         padding={PADDING}
@@ -344,11 +346,13 @@ function ActionLogsWindow({
   actionLogs,
   position,
   initalSize,
+  onClear,
 }: {
   style: React.CSSProperties | undefined
   actionLogs: PersistedActionLog[]
   position: Position
   initalSize: Size
+  onClear: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -433,9 +437,19 @@ function ActionLogsWindow({
                 <SearchInput
                   placeholder="Filter by ID"
                   value={filter}
-                  onChange={(value) => void setFilter(value)}
+                  onChange={(event) =>
+                    void setFilter((event.target as HTMLInputElement).value)
+                  }
                   onClear={() => void setFilter(undefined)}
                   resultsCount={filteredActionLogs.length}
+                />
+              </StackItem>
+              <StackItem style={{ padding: '10px', paddingBottom: 0 }}>
+                <Button
+                  isBlock
+                  variant="secondary"
+                  icon={<RemoveIcon />}
+                  onClick={onClear}
                 />
               </StackItem>
               <StackItem isFilled style={{ overflowY: 'auto' }}>
@@ -476,6 +490,10 @@ export default function TimingDisplay({
     [setActionLogs, maxRefreshRate],
   )
 
+  const onClear = useCallback(() => {
+    setActionLogs([])
+  }, [setActionLogs])
+
   setObservedTimingsUpdater(updateObservedTimings)
 
   const [position, setPosition] = useState(initialPosition)
@@ -492,6 +510,7 @@ export default function TimingDisplay({
           style={style}
           position={position}
           initalSize={initialSize}
+          onClear={onClear}
         />
       )}
     </DndContext>

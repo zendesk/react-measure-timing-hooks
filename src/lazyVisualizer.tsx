@@ -27,7 +27,8 @@ export interface VisualizerProps {
   enabled?: boolean
 }
 
-export const getTimingDisplayModule = () => import('./TimingDisplay')
+export const getTimingDisplayModule = () =>
+  import(/* @vite-ignore */ './TimingDisplay')
 const LazyTimingDisplay = lazy(getTimingDisplayModule)
 
 const observedTimings: Map<
