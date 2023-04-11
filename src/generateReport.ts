@@ -12,7 +12,7 @@ import {
   MARKER,
   OBSERVER_SOURCE,
 } from './constants'
-import type { ActionWithStateMetadata, StageDescription } from './types'
+import type { ActionWithStateMetadata, Span, StageDescription } from './types'
 import { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
 
 export type ReportFn<Metadata extends Record<string, unknown>> = (
@@ -34,6 +34,7 @@ export interface Report {
   includedStages: string[]
   hadError: boolean
   handled: boolean
+  spans: Span[]
 }
 
 export function generateReport({
@@ -48,7 +49,7 @@ export function generateReport({
   readonly immediateSendStages?: readonly string[]
 }): Report {
   const lastStart: Record<string, number> = {}
-  const lastEnd: Record<string, number> = {}
+  let lastRenderEnd: number | null = null
   const timeSpent: Record<string, number> = {}
   let startTime: number | null = null
   let endTime: number | null = null
@@ -65,6 +66,7 @@ export function generateReport({
   ]
   const lastAction = [...actions].reverse()[0]
   const includedStages = new Set<string>()
+  const spans: Span[] = []
 
   actions.forEach((action, index) => {
     if (index === 0) {
@@ -81,14 +83,36 @@ export function generateReport({
         break
       }
       case MARKER.END: {
-        lastEnd[action.source] = action.timestamp
+        if (action.source !== OBSERVER_SOURCE) lastRenderEnd = action.timestamp
+
         counts[action.source] = (counts[action.source] ?? 0) + 1
-        const { duration } = action.entry
         const sourceDurations = durations[action.source] ?? []
+        let { duration } = action.entry
+
+        if (action.timestamp < startTime!) {
+          // the special case where the observer is initialized before the first action
+          duration -= startTime! - action.timestamp
+        }
 
         sourceDurations.push(duration)
         durations[action.source] = sourceDurations
         timeSpent[action.source] = (timeSpent[action.source] ?? 0) + duration
+
+        spans.push({
+          type: action.type,
+          description:
+            action.type === ACTION_TYPE.UNRESPONSIVE
+              ? 'unresponsive'
+              : `<${action.source}> (${sourceDurations.length})`,
+          startTime: performance.timeOrigin + action.timestamp - duration,
+          endTime: performance.timeOrigin + action.timestamp,
+          data: {
+            mountedPlacements: action.mountedPlacements,
+            timingId: action.timingId,
+            source: action.source,
+            metadata: action.metadata ?? {},
+          },
+        })
         break
       }
       case MARKER.POINT: {
@@ -107,6 +131,7 @@ export function generateReport({
             previousStage,
             stage,
             timeToStage,
+            previousStageTimestamp: (previousStageTime ?? 0) - startTime!,
             timestamp: action.timestamp - startTime!,
             ...(action.metadata
               ? {
@@ -116,6 +141,19 @@ export function generateReport({
             mountedPlacements: action.mountedPlacements,
             timingId: action.timingId,
           })
+
+          spans.push({
+            type: action.type,
+            description: `${previousStage} to ${stage}`,
+            startTime: previousStageTime! + performance.timeOrigin,
+            endTime: action.timestamp + performance.timeOrigin,
+            data: {
+              mountedPlacements: action.mountedPlacements,
+              timingId: action.timingId,
+              source: action.source,
+              metadata: action.metadata ?? {},
+            },
+          })
         }
         previousStage = stage
         previousStageTime = action.timestamp
@@ -124,11 +162,7 @@ export function generateReport({
     }
   })
 
-  const lastRenderEnd =
-    Object.entries(lastEnd)
-      .filter(([source]) => source !== OBSERVER_SOURCE)
-      .map(([, time]) => time)
-      .sort((a, b) => b - a)[0] ?? 0
+  if (!lastRenderEnd) lastRenderEnd = 0
 
   const lastTimedEvent = Math.max(lastRenderEnd, previousStageTime ?? 0)
   const isInCompleteState = Boolean(
@@ -136,55 +170,6 @@ export function generateReport({
   )
 
   const didImmediateSend = allImmediateSendStages.includes(previousStage)
-
-  if (
-    lastAction &&
-    endTime !== null &&
-    previousStageTime !== null &&
-    previousStage !== INFORMATIVE_STAGES.TIMEOUT
-  ) {
-    const lastStageToLastRender = lastRenderEnd - previousStageTime
-    const lastStageToEnd = endTime - previousStageTime
-
-    if (hasObserverSupport && isInCompleteState && !didImmediateSend) {
-      stageDescriptions.push({
-        previousStage,
-        stage: INFORMATIVE_STAGES.RENDERED,
-        mountedPlacements: lastAction.mountedPlacements,
-        timingId: lastAction.timingId,
-        timeToStage: lastStageToLastRender,
-        timestamp:
-          (lastRenderEnd > 0 ? lastRenderEnd : lastAction.timestamp) -
-          startTime!,
-      })
-      const lastRenderToEndTime = endTime - lastRenderEnd
-
-      stageDescriptions.push({
-        previousStage: INFORMATIVE_STAGES.RENDERED,
-        stage: INFORMATIVE_STAGES.INTERACTIVE,
-        mountedPlacements: lastAction.mountedPlacements,
-        timingId: lastAction.timingId,
-        timeToStage: lastRenderToEndTime,
-        timestamp: lastAction.timestamp - startTime!,
-      })
-    } else if (lastStageToEnd > 0) {
-      stageDescriptions.push({
-        previousStage,
-        stage: isInCompleteState
-          ? INFORMATIVE_STAGES.RENDERED
-          : INFORMATIVE_STAGES.INCOMPLETE_RENDER,
-        mountedPlacements: lastAction.mountedPlacements,
-        timingId: lastAction.timingId,
-        timeToStage: lastStageToEnd,
-        timestamp: lastAction.timestamp - startTime!,
-      })
-    }
-  }
-
-  const { timestamp: firstRenderStart } = actions.find(
-    (action) =>
-      action.type === ACTION_TYPE.RENDER && action.marker === MARKER.START,
-  ) ?? { timestamp: startTime }
 
   const tti =
     startTime !== null &&
@@ -196,9 +181,79 @@ export function generateReport({
       : null
 
   const ttr =
-    firstRenderStart !== null && previousStage !== INFORMATIVE_STAGES.TIMEOUT
-      ? lastTimedEvent - firstRenderStart
+    startTime !== null && previousStage !== INFORMATIVE_STAGES.TIMEOUT
+      ? lastTimedEvent - startTime
       : null
+
+  if (
+    lastAction &&
+    endTime !== null &&
+    previousStageTime !== null &&
+    previousStage !== INFORMATIVE_STAGES.TIMEOUT
+  ) {
+    const lastStageToLastRender = lastRenderEnd - previousStageTime
+    const lastStageToEnd = endTime - previousStageTime
+
+    spans.push({
+      type: 'ttr',
+      description: 'render',
+      startTime: (startTime as unknown as number) + performance.timeOrigin,
+      endTime: lastRenderEnd + performance.timeOrigin,
+      data: {
+        mountedPlacements: lastAction.mountedPlacements,
+        timingId: lastAction.timingId,
+      },
+    })
+
+    if (hasObserverSupport && isInCompleteState && !didImmediateSend) {
+      stageDescriptions.push({
+        previousStage,
+        stage: INFORMATIVE_STAGES.RENDERED,
+        mountedPlacements: lastAction.mountedPlacements,
+        timingId: lastAction.timingId,
+        timeToStage: lastStageToLastRender,
+        previousStageTimestamp: 0,
+        timestamp:
+          (lastRenderEnd > 0 ? lastRenderEnd : lastAction.timestamp) -
+          startTime!,
+      })
+
+      const lastRenderToEndTime = endTime - lastRenderEnd
+
+      stageDescriptions.push({
+        previousStage: INFORMATIVE_STAGES.RENDERED,
+        stage: INFORMATIVE_STAGES.INTERACTIVE,
+        mountedPlacements: lastAction.mountedPlacements,
+        timingId: lastAction.timingId,
+        timeToStage: lastRenderToEndTime,
+        previousStageTimestamp: 0,
+        timestamp: lastAction.timestamp - startTime!,
+      })
+
+      spans.push({
+        type: 'tti',
+        description: 'interactive',
+        startTime: (startTime as unknown as number) + performance.timeOrigin,
+        endTime: (endTime as unknown as number) + performance.timeOrigin,
+        data: {
+          mountedPlacements: lastAction.mountedPlacements,
+          timingId: lastAction.timingId,
+        },
+      })
+    } else if (lastStageToEnd > 0) {
+      stageDescriptions.push({
+        previousStage,
+        stage: isInCompleteState
+          ? INFORMATIVE_STAGES.RENDERED
+          : INFORMATIVE_STAGES.INCOMPLETE_RENDER,
+        mountedPlacements: lastAction.mountedPlacements,
+        timingId: lastAction.timingId,
+        timeToStage: lastStageToEnd,
+        previousStageTimestamp: 0,
+        timestamp: lastAction.timestamp - startTime!,
+      })
+    }
+  }
 
   const stages = Object.fromEntries(
     stageDescriptions.map((description, index) => [
@@ -220,5 +275,6 @@ export function generateReport({
     includedStages: [...includedStages],
     handled: isInCompleteState,
     hadError: ERROR_STAGES.includes(previousStage),
+    spans,
   }
 }

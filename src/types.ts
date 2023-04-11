@@ -135,6 +135,7 @@ export interface WithMetadata<Metadata extends Record<string, unknown>> {
 export interface ReportWithInfo extends Report {
   maximumActiveBeaconsCount: number
   minimumExpectedSimultaneousBeacons?: number
+  flushReason: string
 }
 
 export interface DynamicActionLogOptions<
@@ -170,18 +171,22 @@ export interface ActionLogExternalApi<
   setMetadata: (idSuffix: string, metadata: CustomMetadata) => void
 }
 
+export interface WithGarbageCollectMs {
+  garbageCollectMs: number
+}
+
 export interface UseActionLogCacheOptions<
   CustomMetadata extends Record<string, unknown>,
   Placements extends string = string,
-> extends StaticActionLogOptions<Placements, CustomMetadata> {
-  garbageCollectMs: number
-}
+> extends StaticActionLogOptions<Placements, CustomMetadata>,
+    WithGarbageCollectMs {}
 
 export interface UseActionLogOptions<
   CustomMetadata extends Record<string, unknown>,
   Placements extends string = string,
 > extends WithTimingId,
-    UseActionLogCacheOptions<CustomMetadata, Placements>,
+    StaticActionLogOptions<Placements, CustomMetadata>,
+    Partial<WithGarbageCollectMs>,
     WithActionLogCache<CustomMetadata> {}
 
 export interface UseTimingMeasurementHookConfiguration<
@@ -245,6 +250,13 @@ export interface GetPrefixedUseTimingHooksConfiguration<
     WithIdPrefix,
     WithBeaconConfig<Placements> {}
 
+export interface GetExternalApiConfiguration<
+  Placements extends string,
+  Metadata extends Record<string, unknown>,
+> extends WithActionLogCache<Metadata>,
+    WithIdPrefix,
+    WithBeaconConfig<Placements> {}
+
 export type GeneratedTimingHooks<
   Name extends string,
   Placements extends readonly string[],
@@ -298,10 +310,27 @@ export interface StateMeta {
   timingId: string
 }
 export type ActionWithStateMetadata = Action & StateMeta
+
 export interface StageDescription extends StateMeta {
   previousStage: string
   stage: string
   timeToStage: number
+  /** relative timestamp of previous stage */
+  previousStageTimestamp: number
+  /** relative timestamp (ms since the beginning of the first action) */
   timestamp: number
   metadata?: Record<string, unknown>
+}
+
+export interface Span {
+  type: ActionType | 'ttr' | 'tti'
+  description: string
+  /** relative timestamp of when render begun */
+  startTime: number
+  /** relative timestamp of when render ended (ms since the beginning of the first action) */
+  endTime: number
+  data: StateMeta & {
+    source?: string
+    metadata?: Record<string, unknown>
+  }
 }

@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import * as React from 'react'
-import type { Story } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/react'
 import type { ReportFn } from '../generateReport'
 import { onActionAddedCallback, useVisualizer } from '../lazyVisualizer'
 import { DEFAULT_STAGES, generateTimingHooks } from '../main'
@@ -26,7 +26,7 @@ const { useStoryTimingInA, useStoryTimingInB } = generateTimingHooks(
 
 interface IArgs {
   text: string
-  content: 'immediately' | 'takes-a-while'
+  content?: 'immediately' | 'takes-a-while'
   dependency: 'one' | 'two'
   mounted: boolean
   isActive: boolean
@@ -110,13 +110,10 @@ const TakesAWhile = ({
   )
 }
 
-export const MeasureTimingStory: Story<IArgs> = ({
-  mounted,
-  ...props
-}: IArgs) => {
+const VisualizerExample = ({ mounted, ...props }: IArgs) => {
   const { content, visualizer } = props
 
-  useVisualizer({ enabled: visualizer })
+  useVisualizer({ enabled: visualizer, initialPosition: { x: 50, y: 300 } })
 
   const renderProps = { ...props }
   const render =
@@ -130,3 +127,55 @@ export const MeasureTimingStory: Story<IArgs> = ({
     <>{mounted ? render : <div>Nothing to show, element unmounted.</div>}</>
   )
 }
+
+export const MeasureTimingStory: StoryObj<IArgs> = {
+  render: (props) => <VisualizerExample {...props} />,
+  args: {
+    visualizer: true,
+    content: 'immediately',
+    mounted: true,
+    isActive: true,
+    dependency: 'one',
+  } as const,
+  argTypes: {
+    visualizer: {
+      options: [false, true],
+      control: 'radio',
+      table: { category: 'Story' },
+    },
+    content: {
+      options: ['immediately', 'takes-a-while'],
+      control: 'radio',
+      table: { category: 'Story' },
+    },
+    mounted: {
+      options: [true, false],
+      control: 'radio',
+      table: { category: 'Story' },
+    },
+    dependency: {
+      options: ['one', 'two'],
+      control: 'radio',
+      table: { category: 'Story' },
+    },
+    isActive: {
+      options: [true, false],
+      control: 'radio',
+      table: { category: 'Story' },
+    },
+    reportFn: { action: 'report' },
+    log: { action: 'log' },
+  },
+}
+
+const Component: React.FunctionComponent<{}> = () => <>'Hello world'</>
+
+const meta: Meta<{}> = {
+  // title: 'Packages/MeasureTiming',
+  component: Component,
+  // args,
+  // argTypes,
+}
+
+// eslint-disable-next-line import/no-default-export
+export default meta

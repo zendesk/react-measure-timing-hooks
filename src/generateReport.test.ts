@@ -144,6 +144,26 @@ const actionsFixture: ActionWithStateMetadata[] = [
 ]
 
 describe('generateReport', () => {
+  const originalTimeOrigin = performance.timeOrigin
+  beforeEach(() => {
+    Object.defineProperty(performance, 'timeOrigin', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return 0
+      },
+    })
+  })
+  afterEach(() => {
+    Object.defineProperty(performance, 'timeOrigin', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return originalTimeOrigin
+      },
+    })
+  })
+
   it('correctly generates a report', () => {
     const expectedBeaconRenderCount = 2
     const timeIncrement = 100
@@ -152,7 +172,8 @@ describe('generateReport', () => {
     const noLagDuration = 200
     const lagDuration = 300
     const tti = ttr + timeIncrement + noLagDuration + lagDuration
-    const report: Report = {
+    const data = { mountedPlacements, timingId: 'test' }
+    const expectedReport: Report = {
       id,
       isFirstLoad,
       tti,
@@ -172,6 +193,7 @@ describe('generateReport', () => {
       },
       stages: {
         [`0_${DEFAULT_STAGES.LOADING}_until_${DEFAULT_STAGES.READY}`]: {
+          previousStageTimestamp: 0,
           timeToStage: timeIncrement,
           previousStage: DEFAULT_STAGES.LOADING,
           stage: DEFAULT_STAGES.READY,
@@ -180,6 +202,7 @@ describe('generateReport', () => {
           timestamp: timeIncrement,
         },
         [`1_${DEFAULT_STAGES.READY}_until_${INFORMATIVE_STAGES.RENDERED}`]: {
+          previousStageTimestamp: 0,
           timeToStage: timeIncrement,
           previousStage: DEFAULT_STAGES.READY,
           stage: INFORMATIVE_STAGES.RENDERED,
@@ -189,6 +212,7 @@ describe('generateReport', () => {
         },
         [`2_${INFORMATIVE_STAGES.RENDERED}_until_${INFORMATIVE_STAGES.INTERACTIVE}`]:
           {
+            previousStageTimestamp: 0,
             timeToStage: timeIncrement + noLagDuration + lagDuration,
             previousStage: INFORMATIVE_STAGES.RENDERED,
             stage: INFORMATIVE_STAGES.INTERACTIVE,
@@ -197,18 +221,78 @@ describe('generateReport', () => {
             timestamp: timeIncrement * 3 + noLagDuration + lagDuration,
           },
       },
+      spans: [
+        {
+          type: 'render',
+          description: '<beacon> (1)',
+          startTime: 100,
+          endTime: 200,
+          data: {
+            ...data,
+            source: 'beacon',
+            metadata: {},
+          },
+        },
+        {
+          type: 'stage-change',
+          description: 'loading to ready',
+          startTime: 100,
+          endTime: 200,
+          data: {
+            ...data,
+            source: 'beacon',
+            metadata: {},
+          },
+        },
+        {
+          type: 'render',
+          description: '<beacon> (2)',
+          startTime: 200,
+          endTime: 300,
+          data: {
+            ...data,
+            source: 'beacon',
+            metadata: {},
+          },
+        },
+        {
+          type: 'unresponsive',
+          description: 'unresponsive',
+          startTime: 600,
+          endTime: 900,
+          data: {
+            ...data,
+            source: 'observer',
+            metadata: {},
+          },
+        },
+        {
+          type: 'ttr',
+          description: 'render',
+          startTime: 100,
+          endTime: 300,
+          data,
+        },
+        {
+          type: 'tti',
+          description: 'interactive',
+          startTime: 100,
+          endTime: 900,
+          data,
+        },
+      ],
       includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.READY],
       hadError: false,
       handled: true,
     }
 
-    expect(
-      generateReport({
-        actions: actionsFixture,
-        timingId: id,
-        isFirstLoad,
-        immediateSendStages: [],
-      }),
-    ).toStrictEqual(report)
+    const report = generateReport({
+      actions: actionsFixture,
+      timingId: id,
+      isFirstLoad,
+      immediateSendStages: [],
+    })
+
+    expect(report).toStrictEqual(expectedReport)
   })
 })
