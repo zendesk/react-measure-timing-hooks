@@ -96,6 +96,7 @@ describe('useTiming', () => {
 
   let stageChangeDuration: number
 
+  const originalTimeOrigin = performance.timeOrigin
   beforeAll(() => {
     performanceMarkMock.mockImplementation((name) => ({
       name,
@@ -125,12 +126,27 @@ describe('useTiming', () => {
 
     globalThis.PerformanceObserver = PerformanceObserverMock as never
     jest.useFakeTimers()
+    Object.defineProperty(performance, 'timeOrigin', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return 0
+      },
+    })
   })
   afterAll(() => {
     jest.useRealTimers()
 
     console.error = originalConsoleError
     globalThis.PerformanceObserver = originalPerformanceObserver
+
+    Object.defineProperty(performance, 'timeOrigin', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return originalTimeOrigin
+      },
+    })
   })
 
   beforeEach(() => {
@@ -231,6 +247,7 @@ describe('useTiming', () => {
         timeSpent: {
           manager: timeIncrement,
         },
+        spans: expect.anything(),
         // no stages were defined:
         stages: {
           [`0_${INFORMATIVE_STAGES.INITIAL}_until_${INFORMATIVE_STAGES.RENDERED}`]:
@@ -241,6 +258,7 @@ describe('useTiming', () => {
               stage: INFORMATIVE_STAGES.RENDERED,
               timingId: id,
               timestamp: timeIncrement,
+              previousStageTimestamp: 0,
             },
         },
         includedStages: [],
@@ -248,11 +266,11 @@ describe('useTiming', () => {
         handled: true,
       }
 
-      expect(mockReportFn).toHaveBeenLastCalledWith(
+      expect(mockReportFn.mock.calls.at(-1)).toEqual([
         report,
         expect.objectContaining({}),
         expect.any(Array),
-      )
+      ])
 
       renderer!.unmount()
 
@@ -341,6 +359,7 @@ describe('useTiming', () => {
         timeSpent: {
           manager: timeIncrement,
         },
+        spans: expect.anything(),
         // no stages were defined:
         stages: {
           [`0_${INFORMATIVE_STAGES.INITIAL}_until_${INFORMATIVE_STAGES.RENDERED}`]:
@@ -351,6 +370,7 @@ describe('useTiming', () => {
               stage: INFORMATIVE_STAGES.RENDERED,
               timingId: id,
               timestamp: timeIncrement,
+              previousStageTimestamp: 0,
             },
         },
         includedStages: [],
@@ -482,6 +502,7 @@ describe('useTiming', () => {
             ),
           ],
         },
+        spans: expect.anything(),
         timeSpent: {
           manager: startToEndTime,
         },
@@ -495,6 +516,7 @@ describe('useTiming', () => {
               stage: INFORMATIVE_STAGES.TIMEOUT,
               timingId: id,
               timestamp: timeoutMs,
+              previousStageTimestamp: 0,
             },
         },
         includedStages: [
@@ -505,11 +527,11 @@ describe('useTiming', () => {
         handled: false,
       }
 
-      expect(mockReportFn).toHaveBeenLastCalledWith(
+      expect(mockReportFn.mock.calls.at(-1)).toEqual([
         report,
         expect.objectContaining({}),
         expect.any(Array),
-      )
+      ])
 
       jest.advanceTimersByTime(timeIncrement)
 
@@ -663,6 +685,7 @@ describe('useTiming', () => {
         timeSpent: {
           manager: timeSpent,
         },
+        spans: expect.anything(),
         // no stages were defined:
         stages: {
           '0_initial_until_loading': {
@@ -672,6 +695,7 @@ describe('useTiming', () => {
             timingId: 'test-component',
             timeToStage: timeIncrement,
             timestamp: timeIncrement,
+            previousStageTimestamp: 0,
           },
           '1_loading_until_ready': {
             mountedPlacements: ['manager'],
@@ -680,6 +704,7 @@ describe('useTiming', () => {
             timeToStage: timeIncrement,
             timestamp: 2 * timeIncrement,
             timingId: 'test-component',
+            previousStageTimestamp: timeIncrement,
           },
           '2_ready_until_rendered': {
             mountedPlacements: ['manager'],
@@ -688,6 +713,7 @@ describe('useTiming', () => {
             timeToStage: timeIncrement,
             timestamp: 3 * timeIncrement,
             timingId: 'test-component',
+            previousStageTimestamp: 0,
           },
         },
         includedStages: [
@@ -700,7 +726,7 @@ describe('useTiming', () => {
       }
 
       expect(mockReportFn).toHaveBeenLastCalledWith(
-        report,
+        expect.objectContaining(report),
         expect.objectContaining({}),
         expect.any(Array),
       )
@@ -967,6 +993,7 @@ describe('useTiming', () => {
           beacon: ttr,
           observer: lagDuration,
         },
+        spans: expect.anything(),
         stages: {
           '0_loading_until_ready': {
             mountedPlacements: ['manager', 'beacon'],
@@ -975,6 +1002,7 @@ describe('useTiming', () => {
             timingId: 'test-component',
             timeToStage: timeIncrement,
             timestamp: timeIncrement,
+            previousStageTimestamp: 0,
           },
           '1_ready_until_rendered': {
             mountedPlacements: ['manager', 'beacon'],
@@ -983,6 +1011,7 @@ describe('useTiming', () => {
             timeToStage: timeIncrement,
             timestamp: 2 * timeIncrement,
             timingId: 'test-component',
+            previousStageTimestamp: 0,
           },
           '2_rendered_until_interactive': {
             mountedPlacements: ['manager', 'beacon'],
@@ -993,6 +1022,7 @@ describe('useTiming', () => {
             timeToStage: timeIncrement + lagDuration,
             timestamp: 3 * timeIncrement + lagDuration,
             timingId: 'test-component',
+            previousStageTimestamp: 0,
           },
         },
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.READY],
@@ -1000,11 +1030,11 @@ describe('useTiming', () => {
         handled: true,
       }
 
-      expect(mockReportFn).toHaveBeenLastCalledWith(
+      expect(mockReportFn.mock.calls.at(-1)).toEqual([
         report,
         expect.objectContaining({}),
         expect.any(Array),
-      )
+      ])
 
       // no more timers should be set by this time:
       expect(jest.getTimerCount()).toBe(0)
@@ -1212,6 +1242,7 @@ Array [
           observer: lagDuration,
           manager: ttr,
         },
+        spans: expect.anything(),
         stages: {
           '0_initial_until_rendered': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1220,6 +1251,7 @@ Array [
             timeToStage: 2 * timeIncrement,
             timestamp: 2 * timeIncrement,
             timingId: 'test-component',
+            previousStageTimestamp: 0,
           },
           '1_rendered_until_interactive': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1228,6 +1260,7 @@ Array [
             timeToStage: 6 * timeIncrement,
             timestamp: 8 * timeIncrement,
             timingId: 'test-component',
+            previousStageTimestamp: 0,
           },
         },
         includedStages: [],
@@ -1235,11 +1268,11 @@ Array [
         handled: true,
       }
 
-      expect(mockReportFn).toHaveBeenLastCalledWith(
+      expect(mockReportFn.mock.calls.at(-1)).toEqual([
         report,
         expect.objectContaining({}),
         expect.any(Array),
-      )
+      ])
 
       // no more timers should be set by this time:
       expect(jest.getTimerCount()).toBe(0)
@@ -1414,6 +1447,7 @@ Array [
           manager: timeIncrement * 2,
           beacon: 200,
         },
+        spans: expect.anything(),
         stages: {
           '0_loading_until_error': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1422,6 +1456,7 @@ Array [
             timeToStage: 2 * timeIncrement,
             timestamp: 2 * timeIncrement,
             timingId: 'test-component',
+            previousStageTimestamp: 0,
           },
           '1_error_until_rendered': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1430,6 +1465,7 @@ Array [
             timeToStage: timeIncrement,
             timestamp: 3 * timeIncrement,
             timingId: 'test-component',
+            previousStageTimestamp: 0,
           },
         },
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],
@@ -1438,11 +1474,11 @@ Array [
       }
 
       expect(mockReportFn).toHaveBeenCalledTimes(1)
-      expect(mockReportFn).toHaveBeenLastCalledWith(
+      expect(mockReportFn.mock.calls.at(-1)).toEqual([
         report,
         expect.objectContaining({}),
         expect.any(Array),
-      )
+      ])
 
       renderer!.unmount()
 
@@ -1644,6 +1680,7 @@ Array [
           manager: timeIncrement * 2,
           beacon: timeIncrement,
         },
+        spans: expect.anything(),
         stages: {
           '0_loading_until_error': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1652,6 +1689,7 @@ Array [
             timingId: 'test-component',
             timeToStage: 2 * timeIncrement,
             timestamp: 2 * timeIncrement,
+            previousStageTimestamp: 0,
           },
         },
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],
@@ -1660,11 +1698,11 @@ Array [
       }
 
       expect(mockReportFn).toHaveBeenCalledTimes(1)
-      expect(mockReportFn).toHaveBeenLastCalledWith(
+      expect(mockReportFn.mock.calls.at(-1)).toEqual([
         report,
         expect.objectContaining({}),
         expect.any(Array),
-      )
+      ])
 
       renderer!.unmount()
 

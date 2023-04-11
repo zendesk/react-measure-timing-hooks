@@ -5,19 +5,27 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-export interface DebounceOptionsRef<T> {
-  fn: T
+export const DebounceReason = Symbol('debounce')
+export const TimeoutReason = Symbol('timeout')
+
+export type FlushReason = typeof DebounceReason | typeof TimeoutReason | string
+type FnToBeDebounced<Args extends readonly unknown[]> = (
+  ...args: [...args: Args, flushReason: FlushReason]
+) => boolean | undefined | void
+
+export interface DebounceOptionsRef<Args extends readonly unknown[]> {
+  fn: FnToBeDebounced<Args>
   debounceMs: number
   timeoutMs?: number
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DebouncedFn<Args extends any[]> = ((...args: Args) => void) & {
-  cancel: () => Args | undefined
-  flush: () => boolean
-  getHasTimedOut: () => boolean
+export type DebouncedFn<Args extends readonly unknown[]> = ((
+  ...args: Args
+) => void) & {
+  cancel: () => void
+  reset: () => Args | undefined
+  flush: (reason?: FlushReason) => boolean
   getIsScheduled: () => boolean
-  resetTimedOutState: () => void
 }
 
 /**
@@ -26,61 +34,65 @@ export type DebouncedFn<Args extends any[]> = ((...args: Args) => void) & {
  * and a way to manually clear that timeout state.
  * Options may change even after the debounce was created by the means of a ref.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const debounce = <Args extends any[], T extends (...args: Args) => any>(
-  optionsRef: DebounceOptionsRef<T>,
+export const debounce = <Args extends readonly unknown[]>(
+  optionsRef: DebounceOptionsRef<Args>,
 ): DebouncedFn<Args> => {
   let timeoutTimer: number | undefined
   let debounceTimer: number | undefined
   let lastArgs: Args | undefined
-  let timedOut = false
   const cancel = () => {
     if (debounceTimer) window.clearTimeout(debounceTimer)
     debounceTimer = undefined
+  }
+  const reset = () => {
+    cancel()
+
     if (timeoutTimer) window.clearTimeout(timeoutTimer)
     timeoutTimer = undefined
-    const args = lastArgs
 
+    const args = lastArgs
     lastArgs = undefined
 
     return args
   }
-  const resetTimedOutState = () => {
-    timedOut = false
-  }
-  const flush = () => {
+  const flush = (reason: FlushReason = 'manual') => {
     const args = lastArgs
-
-    cancel()
     if (args) {
-      optionsRef.fn(...args)
+      const shouldKeepTimeout = optionsRef.fn(...args, reason)
+      if (shouldKeepTimeout) {
+        cancel()
+      } else {
+        reset()
+      }
 
       return true
     }
 
+    reset()
     return false
   }
-  const getHasTimedOut = () => timedOut
-  const getIsScheduled = () => Boolean(debounceTimer)
+
+  const getIsScheduled = () => Boolean(debounceTimer) || Boolean(timeoutTimer)
 
   return Object.assign(
     (...args: Args) => {
-      if (timedOut) {
-        cancel()
-
-        // previously timed out and didn't reset; this call will be ignored
-        return
-      }
       lastArgs = args
       if (debounceTimer) window.clearTimeout(debounceTimer)
-      debounceTimer = window.setTimeout(flush, optionsRef.debounceMs)
+      debounceTimer = window.setTimeout(
+        () => flush(DebounceReason),
+        optionsRef.debounceMs,
+      )
       if (!timeoutTimer && typeof optionsRef.timeoutMs === 'number') {
         timeoutTimer = window.setTimeout(() => {
-          timedOut = true
-          flush()
+          flush(TimeoutReason)
         }, optionsRef.timeoutMs)
       }
     },
-    { flush, cancel, getHasTimedOut, getIsScheduled, resetTimedOutState },
+    {
+      flush,
+      cancel,
+      reset,
+      getIsScheduled,
+    },
   )
 }

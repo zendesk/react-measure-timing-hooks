@@ -49,7 +49,6 @@ export function generateReport({
   readonly immediateSendStages?: readonly string[]
 }): Report {
   const lastStart: Record<string, number> = {}
-  // const lastEnd: Record<string, number> = {}
   let lastRenderEnd: number | null = null
   const timeSpent: Record<string, number> = {}
   let startTime: number | null = null
@@ -84,7 +83,6 @@ export function generateReport({
         break
       }
       case MARKER.END: {
-        // lastEnd[action.source] = action.timestamp
         if (action.source !== OBSERVER_SOURCE) lastRenderEnd = action.timestamp
 
         counts[action.source] = (counts[action.source] ?? 0) + 1
@@ -106,9 +104,7 @@ export function generateReport({
             action.type === ACTION_TYPE.UNRESPONSIVE
               ? 'unresponsive'
               : `<${action.source}> (${sourceDurations.length})`,
-          // eslint-disable-next-line compat/compat
           startTime: performance.timeOrigin + action.timestamp - duration,
-          // eslint-disable-next-line compat/compat
           endTime: performance.timeOrigin + action.timestamp,
           data: {
             mountedPlacements: action.mountedPlacements,

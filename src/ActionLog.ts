@@ -17,7 +17,7 @@ import {
   OBSERVER_SOURCE,
 } from './constants'
 import type { DebounceOptionsRef } from './debounce'
-import { debounce } from './debounce'
+import { debounce, FlushReason, TimeoutReason } from './debounce'
 import type { ReportFn } from './generateReport'
 import { generateReport } from './generateReport'
 import { performanceMark, performanceMeasure } from './performanceMark'
@@ -91,6 +91,11 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     if (this.willFlushTimeout) {
       clearTimeout(this.willFlushTimeout)
       this.willFlushTimeout = undefined
+
+      // flush immediately
+      this.debouncedTrigger.flush('clear')
+    } else {
+      this.debouncedTrigger.cancel()
     }
     this.stopObserving()
     this.actions = []
@@ -104,8 +109,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
    * except for configuration options which are always updated on render.
    */
   reset(): void {
-    this.debouncedTrigger.cancel()
-    this.debouncedTrigger.resetTimedOutState()
+    this.debouncedTrigger.reset()
     this.clear()
     this.ensureReporting()
     this.hasReportedAtLeastOnce = false
@@ -219,7 +223,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
 
   setAsImported(): void {
     this.wasImported = true
-    this.debouncedTrigger.cancel()
+    this.debouncedTrigger.reset()
     this.clear()
     this.disableReporting()
     this.dispose()
@@ -300,7 +304,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
 
   private addStageChange(
     info: Omit<StageChangeAction, 'type' | 'marker' | 'entry' | 'timestamp'>,
-    previousStage: string,
+    previousStage: string = INFORMATIVE_STAGES.INITIAL,
   ) {
     const { stage } = info
     const previousStageEntry = this.lastStageEntry
@@ -332,8 +336,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       // if an error is thrown, the component will unmount and we have a more complete picture
       this.willFlushTimeout = setTimeout(() => {
         this.willFlushTimeout = undefined
-        this.debouncedTrigger.flush()
-        this.debouncedTrigger.resetTimedOutState()
+        this.debouncedTrigger.flush('immediate send')
       }, 0)
     } else {
       this.observe()
@@ -356,8 +359,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   ): void {
     const { stage, source } = info
 
-    const previousStageForThisSource =
-      this.lastStageBySource.get(source) ?? INFORMATIVE_STAGES.INITIAL
+    const previousStageForThisSource = this.lastStageBySource.get(source)
 
     // we don't want different beacons racing with one another with re-renders and switching stages
     if (previousStageForThisSource === stage) return
@@ -377,7 +379,10 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     if (!this.isCapturingData) return
 
     if (previousStage !== stage || this.actions.length === 0) {
-      this.addStageChange(info, previousStage)
+      this.addStageChange(
+        info,
+        this.actions.length === 0 ? INFORMATIVE_STAGES.INITIAL : previousStage,
+      )
     }
   }
 
@@ -388,13 +393,12 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   }
 
   ensureReporting(): void {
-    if (!this._shouldReport) {
-      // should enable reporting if not in final stage!
-      this._shouldReport = true
-      // and starting from scratch:
-      this.clear()
-      this.debouncedTrigger.resetTimedOutState()
-    }
+    if (this._shouldReport) return
+
+    // should enable reporting if not in final stage!
+    this._shouldReport = true
+    // and starting from scratch:
+    this.clear()
   }
 
   disableReporting(): void {
@@ -492,7 +496,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       this.lastStage !== INFORMATIVE_STAGES.INITIAL
     ) {
       // flush any previous measurements
-      this.debouncedTrigger.flush()
+      this.debouncedTrigger.flush('deactivation')
     }
 
     this.isCapturingDataBySource.set(source, active)
@@ -572,12 +576,12 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     if (!shouldReset) return
 
     // we can flush previous measurement (if any) and completely reset
-    this.debouncedTrigger.flush()
+    this.debouncedTrigger.flush('dependency change')
     this.reset()
   }
 
-  private trigger = (): void => {
-    const [firstAction] = this.actions
+  private trigger = (flushReason: FlushReason): boolean | undefined => {
+    const firstAction = this.actions[0]
     const lastAction = this.actions[this.actions.length - 1]
     const { timeoutMs } = this.debounceOptionsRef
 
@@ -586,26 +590,27 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     // Timer fires a looong long time after and may not be timed out.
     // For this reason we calculate the actual time that passed as an additional guard.
     const timedOut =
-      this.debouncedTrigger.getHasTimedOut() ||
-      (timeoutMs &&
+      flushReason === TimeoutReason ||
+      (typeof timeoutMs === 'number' &&
         (lastAction?.timestamp ?? 0) - (firstAction?.timestamp ?? 0) >
           timeoutMs)
 
     const shouldContinue =
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       timedOut || this.isInFinalStage || this.isInImmediateSendStage
 
     if (!shouldContinue) {
       // UI is not ready yet (probably data loading),
       // there's gonna be more renders soon...
-      return
+
+      // return true to keep the timeout
+      return true
     }
 
     if (this.actions.length === 0 || !firstAction || !lastAction) {
       // nothing to report:
       this.stopObserving()
 
-      return
+      return undefined
     }
 
     const highestNumberOfActiveBeaconsCountAtAnyGivenTime =
@@ -660,25 +665,10 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         highestNumberOfActiveBeaconsCountAtAnyGivenTime,
       minimumExpectedSimultaneousBeacons:
         this.minimumExpectedSimultaneousBeacons,
-    }
-
-    if (
-      !hadReachedTheRequiredActiveBeaconsCount &&
-      !ERROR_STAGES.includes(this.lastStage)
-    ) {
-      this.onInternalError(
-        new Error(
-          `useTiming: ${
-            // we've asserted this is a number in 'hadReachedTheRequiredActiveBeaconsCount'
-            highestNumberOfActiveBeaconsCountAtAnyGivenTime <
-            this.minimumExpectedSimultaneousBeacons!
-              ? 'did not reach'
-              : 'exceeded'
-          } the required number of active beacons during this timing lifecycle`,
-        ),
-        reportWithMeta,
-        metadata,
-      )
+      flushReason:
+        typeof flushReason === 'symbol'
+          ? flushReason.description ?? 'manual'
+          : flushReason,
     }
 
     if (this.reportFn === noop) {
@@ -699,12 +689,14 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     this.clear()
     this.disableReporting()
 
-    if (!timedOut) {
+    if (!timedOut && hadReachedTheRequiredActiveBeaconsCount) {
       this.hasReportedAtLeastOnce = true
     }
+
+    return undefined
   }
 
-  private debounceOptionsRef: DebounceOptionsRef<() => void> = {
+  private debounceOptionsRef: DebounceOptionsRef<[]> = {
     fn: this.trigger,
     // these are just the defaults and can be overwritten by the options passed to the constructor:
     debounceMs: DEFAULT_DEBOUNCE_MS,

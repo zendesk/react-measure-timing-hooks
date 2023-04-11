@@ -135,6 +135,7 @@ export interface WithMetadata<Metadata extends Record<string, unknown>> {
 export interface ReportWithInfo extends Report {
   maximumActiveBeaconsCount: number
   minimumExpectedSimultaneousBeacons?: number
+  flushReason: string
 }
 
 export interface DynamicActionLogOptions<
@@ -170,18 +171,22 @@ export interface ActionLogExternalApi<
   setMetadata: (idSuffix: string, metadata: CustomMetadata) => void
 }
 
+export interface WithGarbageCollectMs {
+  garbageCollectMs: number
+}
+
 export interface UseActionLogCacheOptions<
   CustomMetadata extends Record<string, unknown>,
   Placements extends string = string,
-> extends StaticActionLogOptions<Placements, CustomMetadata> {
-  garbageCollectMs: number
-}
+> extends StaticActionLogOptions<Placements, CustomMetadata>,
+    WithGarbageCollectMs {}
 
 export interface UseActionLogOptions<
   CustomMetadata extends Record<string, unknown>,
   Placements extends string = string,
 > extends WithTimingId,
-    UseActionLogCacheOptions<CustomMetadata, Placements>,
+    StaticActionLogOptions<Placements, CustomMetadata>,
+    Partial<WithGarbageCollectMs>,
     WithActionLogCache<CustomMetadata> {}
 
 export interface UseTimingMeasurementHookConfiguration<
@@ -242,6 +247,13 @@ export interface GetPrefixedUseTimingHooksConfiguration<
   Placements extends string,
   Metadata extends Record<string, unknown>,
 > extends Omit<UseActionLogOptions<Metadata, Placements>, 'id'>,
+    WithIdPrefix,
+    WithBeaconConfig<Placements> {}
+
+export interface GetExternalApiConfiguration<
+  Placements extends string,
+  Metadata extends Record<string, unknown>,
+> extends WithActionLogCache<Metadata>,
     WithIdPrefix,
     WithBeaconConfig<Placements> {}
 

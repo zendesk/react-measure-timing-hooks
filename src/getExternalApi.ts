@@ -1,16 +1,13 @@
 import { ACTION_TYPE } from './constants'
 import { performanceMark, performanceMeasure } from './performanceMark'
-import type {
-  ActionLogExternalApi,
-  GetPrefixedUseTimingHooksConfiguration,
-} from './types'
+import type { ActionLogExternalApi, GetExternalApiConfiguration } from './types'
 
 /** used to generate timing API that can be used outside of React, or together with React */
 export const getExternalApi = <CustomMetadata extends Record<string, unknown>>({
   actionLogCache,
   idPrefix,
   placement,
-}: GetPrefixedUseTimingHooksConfiguration<
+}: GetExternalApiConfiguration<
   string,
   CustomMetadata
 >): ActionLogExternalApi<CustomMetadata> => {
@@ -18,12 +15,16 @@ export const getExternalApi = <CustomMetadata extends Record<string, unknown>>({
   const getActionLogForIdIfExists = (idSuffix: string) => {
     const id = getFullId(idSuffix)
 
-    return actionLogCache.get(id)
+    const actionLog = actionLogCache.get(id)
+    actionLog?.updateOptions({ id }, placement)
+    return actionLog
   }
   const getActionLogForId = (idSuffix: string) => {
     const id = getFullId(idSuffix)
     const getActionLog = actionLogCache.makeGetOrCreateFn(id)
-    return getActionLog(id)
+    const actionLog = getActionLog(id)
+    actionLog.updateOptions({ id }, placement)
+    return actionLog
   }
   let renderStartMark: PerformanceMark | null = null
 
@@ -74,6 +75,7 @@ export const getExternalApi = <CustomMetadata extends Record<string, unknown>>({
     ) => {
       const actionLog = getActionLogForId(idSuffix)
 
+      actionLog.ensureReporting()
       actionLog.setActive(true, placement)
       actionLog.markStage({ stage, source: placement, metadata: stageMeta })
     },

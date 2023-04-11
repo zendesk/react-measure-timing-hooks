@@ -5,6 +5,7 @@ const config: ESLintConfig = {
     '@typescript-eslint/member-ordering': 'off',
     // just in case we want to support older browsers
     'unicorn/prefer-at': 'off',
+    'compat/compat': 'off',
   },
 }
 

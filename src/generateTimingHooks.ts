@@ -62,6 +62,7 @@ export const generateTimingHooks = <
     actionLogCache ??
     new ActionLogCache({
       garbageCollectMs,
+      minimumExpectedSimultaneousBeacons: placements.length,
       ...config,
     })
   return (Object.fromEntries as FromEntriesStrict)(
@@ -72,9 +73,7 @@ export const generateTimingHooks = <
       > = {
         idPrefix,
         actionLogCache: actionLogCacheInstance,
-        minimumExpectedSimultaneousBeacons: placements.length,
         placement,
-        garbageCollectMs,
         ...config,
       }
 

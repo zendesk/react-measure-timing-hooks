@@ -17,7 +17,7 @@ export class ActionLogCache<
   private readonly options: StaticActionLogOptions<string, CustomMetadata>
   private readonly cache = new Map<string, ActionLogRef<CustomMetadata>>()
   private garbageCollectUnusedIdLater: DebouncedFn<
-    [ActionLogRef<CustomMetadata>]
+    readonly [ActionLogRef<CustomMetadata>]
   >
 
   makeWrapperRef(actionLog: ActionLog<CustomMetadata>, initialId: string) {
@@ -80,16 +80,18 @@ export class ActionLogCache<
     ...actionLogOptions
   }: UseActionLogCacheOptions<CustomMetadata>) {
     this.options = actionLogOptions
-    this.garbageCollectUnusedIdLater = debounce({
-      fn: (ref: ActionLogRef<CustomMetadata>) => {
-        ref.ids.forEach((id) => {
-          if (id !== ref.activeId && this.cache.get(id) === ref) {
-            this.cache.delete(id)
-            ref.ids.delete(id)
-          }
-        })
+    this.garbageCollectUnusedIdLater = debounce<[ActionLogRef<CustomMetadata>]>(
+      {
+        fn: (ref: ActionLogRef<CustomMetadata>) => {
+          ref.ids.forEach((id) => {
+            if (id !== ref.activeId && this.cache.get(id) === ref) {
+              this.cache.delete(id)
+              ref.ids.delete(id)
+            }
+          })
+        },
+        debounceMs: garbageCollectMs,
       },
-      debounceMs: garbageCollectMs,
-    })
+    )
   }
 }
