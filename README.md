@@ -173,7 +173,6 @@ If `isActive` is present in at least one of the beacons, timing will start from 
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
 export const {
-  // the name of the hook(s) are generated based on the `name` and the placement names
   useSomethingLoadingTimingInMyComponent,
 } = generateTimingHooks(
   {
@@ -181,7 +180,6 @@ export const {
     idPrefix: 'some/identifier',
     reportFn: myCustomReportFunction,
   },
-  // name of the placement
   'MyComponent',
 )
 
@@ -204,7 +202,6 @@ import {
 } from '@zendesk/react-measure-timing-hooks'
 
 export const {
-  // the name of the hook(s) are generated based on the `name` and the placement names
   useSomethingLoadingTimingInMyComponent,
 } = generateTimingHooks(
   {
@@ -214,7 +211,6 @@ export const {
     finalStages: [DEFAULT_STAGES.READY],
     reportFn: myCustomReportFunction,
   },
-  // name of the placement
   'MyComponent',
 )
 
@@ -242,7 +238,6 @@ import {
 } from '@zendesk/react-measure-timing-hooks'
 
 export const {
-  // the name of the hook(s) are generated based on the `name` and the placement names
   useSomethingLoadingTimingInMyComponent,
 } = generateTimingHooks(
   {
@@ -252,7 +247,6 @@ export const {
     finalStages: [DEFAULT_STAGES.READY],
     reportFn: myCustomReportFunction,
   },
-  // name of the placement
   'MyComponent',
 )
 
@@ -365,7 +359,6 @@ to reset.
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
 export const {
-  // the name of the hook(s) are generated based on the `name` and the placement names
   useSomethingLoadingTimingInSomeComponentName,
 } = generateTimingHooks(
   {
@@ -401,7 +394,6 @@ this case, the timer should only start once the dropdown starts opening.
 ```tsx
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
-// the name of the hook(s) are generated based on the `name` and the placement names (subsequent arguments)
 export const {
   useAssigneeDropdownOpeningTimingInAssignee,
   useAssigneeDropdownOpeningTimingInMenu,
@@ -412,8 +404,7 @@ export const {
     waitForBeaconActivation: ['Menu'],
     reportFn: myCustomReportFunction,
   },
-  // name of the first placement
-  // usually the component that mounts first, from which timing should start
+  // the component that starts the timing is listed first, typically the component that mounts first
   'Assignee',
   'Menu',
 )
@@ -441,7 +432,6 @@ a dependency has changed (e.g. `ticketId` flipping from `-1` to the actual ID). 
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
 export const {
-  // the name of the hook(s) are generated based on the `name` and the placement names
   useSomethingLoadingTimingInSomeComponentName,
 } = generateTimingHooks(
   {
@@ -450,8 +440,6 @@ export const {
     finalStages: [DEFAULT_STAGES.READY],
     reportFn: myCustomReportFunction,
   },
-  // name of the first placement
-  // usually the component that mounts first, from which timing should start
   'SomeComponentName',
 )
 
@@ -484,7 +472,6 @@ end immediately with the `lastStage: 'error'` and send out a report.
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
 export const {
-  // the name of the hook(s) are generated based on the `name` and the placement names
   useSomethingLoadingTimingInSomeComponentName,
 } = generateTimingHooks(
   {
@@ -493,8 +480,6 @@ export const {
     finalStages: [DEFAULT_STAGES.READY],
     reportFn: myCustomReportFunction,
   },
-  // name of the first placement
-  // usually the component that mounts first, from which timing should start
   'SomeComponentName',
 )
 
@@ -546,8 +531,7 @@ export const { useOpeningPopupTimingInPanel, imperativePopupTimingApi } =
       waitForBeaconActivation: ['Popup'],
       reportFn: myCustomReportFunction,
     },
-    // name of the first placement
-    // usually the component that mounts first, from which timing should start
+    // the component that starts the timing is listed first, typically the component that mounts first
     'Panel',
     'Popup',
   )
@@ -584,7 +568,7 @@ manager and the beacon hooks as close to the `return` statement as possible in y
 There may be situations when you want to track the same metric of multiple objects at the same time.
 For example when loading is starting or finishing in the background. In this case, you may provide
 an `idSuffix` to both hooks, however, if using the beacon, you must ensure that it has the same
-value in both the manager hook and the beacon.
+value in both the manager hook and the beacon. The `idSuffix` needs to be unique to each instantiation; e.g. the `id` of some object.
 
 Any numeric parts of the id will be stripped out from the metric name, before being reported to your
 provided `reportFn`.
@@ -597,7 +581,6 @@ import {
 } from '@zendesk/react-measure-timing-hooks'
 
 export const {
-  // the name of the hook(s) are generated based on the `name` and the placement names
   useSomethingLoadingTimingInMyComponent,
   useSomethingLoadingTimingInMyChildComponent,
 } = generateTimingHooks(
@@ -607,7 +590,6 @@ export const {
     finalStages: [DEFAULT_STAGES.READY],
     reportFn: myCustomReportFunction,
   },
-  // names of the placements:
   'MyComponent',
   'MyChildComponent',
 )
