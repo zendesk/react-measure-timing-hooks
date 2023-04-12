@@ -29,14 +29,11 @@ jobs:
           yarn install --immutable
           yarn build
           yarn test
-        env:
-          ARTIFACTORY_USERNAME: ${{secrets.ARTIFACTORY_USERNAME}}
-          ARTIFACTORY_API_KEY: ${{secrets.ARTIFACTORY_API_KEY}}
 
   publish:
     name: Publish package to NPM
     needs: test
-    runs-on: [self-hosted, zendesk-stable]
+    runs-on: ubuntu-latest
     if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next')
     steps:
       - uses: zendesk/checkout@v3
@@ -45,7 +42,6 @@ jobs:
           node-version: 16
           scope: zendesk
           always-auth: 'true'
-          registry-url: ${{secrets.NPM_REPOSITORY_URL}}
           cache: 'yarn'
       - name: Build and release
         run: |
@@ -53,9 +49,5 @@ jobs:
           yarn build
           yarn release
         env:
+          NPM_TOKEN: ${{secrets.NPM_TOKEN}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          ARTIFACTORY_USERNAME: ${{secrets.ARTIFACTORY_USERNAME}}
-          ARTIFACTORY_API_KEY: ${{secrets.ARTIFACTORY_API_KEY}}
-          NPM_USERNAME: ${{secrets.ARTIFACTORY_USERNAME}}
-          NPM_PASSWORD: ${{secrets.ARTIFACTORY_API_KEY}}
-          NPM_EMAIL: ${{secrets.ARTIFACTORY_USERNAME}}@zendesk.com

@@ -1,6 +1,7 @@
 {
   "name": "@zendesk/react-measure-timing-hooks",
   "version": "0.0.0",
+  "description": "react hooks for measuring time to interactive and time to render of components",
   "keywords": [
     "headless",
     "hook",
