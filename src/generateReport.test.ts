@@ -200,6 +200,7 @@ describe('generateReport', () => {
           timingId: id,
           mountedPlacements,
           timestamp: timeIncrement,
+          dependencyChanges: 0,
         },
         [`1_${DEFAULT_STAGES.READY}_until_${INFORMATIVE_STAGES.RENDERED}`]: {
           previousStageTimestamp: 0,
@@ -209,6 +210,7 @@ describe('generateReport', () => {
           timingId: id,
           mountedPlacements,
           timestamp: timeIncrement * 2,
+          dependencyChanges: 0,
         },
         [`2_${INFORMATIVE_STAGES.RENDERED}_until_${INFORMATIVE_STAGES.INTERACTIVE}`]:
           {
@@ -219,6 +221,7 @@ describe('generateReport', () => {
             timingId: id,
             mountedPlacements,
             timestamp: timeIncrement * 3 + noLagDuration + lagDuration,
+            dependencyChanges: 0,
           },
       },
       spans: [

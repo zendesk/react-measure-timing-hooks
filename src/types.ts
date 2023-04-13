@@ -320,6 +320,7 @@ export interface StageDescription extends StateMeta {
   /** relative timestamp (ms since the beginning of the first action) */
   timestamp: number
   metadata?: Record<string, unknown>
+  dependencyChanges: number
 }
 
 export interface Span {

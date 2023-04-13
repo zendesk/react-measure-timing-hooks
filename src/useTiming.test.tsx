@@ -259,6 +259,7 @@ describe('useTiming', () => {
               timingId: id,
               timestamp: timeIncrement,
               previousStageTimestamp: 0,
+              dependencyChanges: 0,
             },
         },
         includedStages: [],
@@ -371,6 +372,7 @@ describe('useTiming', () => {
               timingId: id,
               timestamp: timeIncrement,
               previousStageTimestamp: 0,
+              dependencyChanges: 0,
             },
         },
         includedStages: [],
@@ -517,6 +519,7 @@ describe('useTiming', () => {
               timingId: id,
               timestamp: timeoutMs,
               previousStageTimestamp: 0,
+              dependencyChanges: 0,
             },
         },
         includedStages: [
@@ -696,6 +699,7 @@ describe('useTiming', () => {
             timeToStage: timeIncrement,
             timestamp: timeIncrement,
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
           '1_loading_until_ready': {
             mountedPlacements: ['manager'],
@@ -705,6 +709,7 @@ describe('useTiming', () => {
             timestamp: 2 * timeIncrement,
             timingId: 'test-component',
             previousStageTimestamp: timeIncrement,
+            dependencyChanges: 0,
           },
           '2_ready_until_rendered': {
             mountedPlacements: ['manager'],
@@ -714,6 +719,7 @@ describe('useTiming', () => {
             timestamp: 3 * timeIncrement,
             timingId: 'test-component',
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
         },
         includedStages: [
@@ -1003,6 +1009,7 @@ describe('useTiming', () => {
             timeToStage: timeIncrement,
             timestamp: timeIncrement,
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
           '1_ready_until_rendered': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1012,6 +1019,7 @@ describe('useTiming', () => {
             timestamp: 2 * timeIncrement,
             timingId: 'test-component',
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
           '2_rendered_until_interactive': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1023,6 +1031,7 @@ describe('useTiming', () => {
             timestamp: 3 * timeIncrement + lagDuration,
             timingId: 'test-component',
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
         },
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.READY],
@@ -1252,6 +1261,7 @@ Array [
             timestamp: 2 * timeIncrement,
             timingId: 'test-component',
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
           '1_rendered_until_interactive': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1261,6 +1271,7 @@ Array [
             timestamp: 8 * timeIncrement,
             timingId: 'test-component',
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
         },
         includedStages: [],
@@ -1457,6 +1468,7 @@ Array [
             timestamp: 2 * timeIncrement,
             timingId: 'test-component',
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
           '1_error_until_rendered': {
             mountedPlacements: ['manager', 'beacon'],
@@ -1466,6 +1478,7 @@ Array [
             timestamp: 3 * timeIncrement,
             timingId: 'test-component',
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
         },
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],
@@ -1690,6 +1703,7 @@ Array [
             timeToStage: 2 * timeIncrement,
             timestamp: 2 * timeIncrement,
             previousStageTimestamp: 0,
+            dependencyChanges: 0,
           },
         },
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],

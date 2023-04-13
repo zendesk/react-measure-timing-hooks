@@ -53,6 +53,8 @@ export function generateReport({
   const timeSpent: Record<string, number> = {}
   let startTime: number | null = null
   let endTime: number | null = null
+  let lastDependencyChange: number | null = null
+  let dependencyChanges = 0
   const counts: Record<string, number> = {}
   let previousStageTime: number | null = null
   let previousStage: string = INFORMATIVE_STAGES.INITIAL
@@ -96,6 +98,7 @@ export function generateReport({
           : {}),
         mountedPlacements: action.mountedPlacements,
         timingId: action.timingId,
+        dependencyChanges,
       })
 
       spans.push({
@@ -121,12 +124,14 @@ export function generateReport({
     }
     // update for next time
     previousStageTime = action.timestamp
+    dependencyChanges = 0
   }
 
   actions.forEach((action, index) => {
     if (index === 0) {
       startTime = action.timestamp
       previousStageTime = action.timestamp
+      lastDependencyChange = action.timestamp
     } else {
       endTime = action.timestamp
     }
@@ -135,9 +140,6 @@ export function generateReport({
     switch (action.marker) {
       case MARKER.START: {
         lastStart[action.source] = action.timestamp
-        if (lastStageMarkedAsDependencyChange) {
-          markStage({ stage: previousStage, action })
-        }
         break
       }
       case MARKER.END: {
@@ -171,9 +173,6 @@ export function generateReport({
             metadata: action.metadata ?? {},
           },
         })
-        if (lastStageMarkedAsDependencyChange) {
-          markStage({ stage: previousStage, action })
-        }
         break
       }
       case MARKER.POINT: {
@@ -182,7 +181,24 @@ export function generateReport({
             ? INFORMATIVE_STAGES.DEPENDENCY_CHANGE
             : action.stage
 
-        markStage({ stage, action })
+        if (action.type === ACTION_TYPE.DEPENDENCY_CHANGE) {
+          dependencyChanges++
+          spans.push({
+            type: action.type,
+            description: 'dependency change',
+            startTime: lastDependencyChange! + performance.timeOrigin,
+            endTime: action.timestamp + performance.timeOrigin,
+            data: {
+              mountedPlacements: action.mountedPlacements,
+              timingId: action.timingId,
+              source: action.source,
+              metadata: action.metadata ?? {},
+            },
+          })
+          lastDependencyChange = action.timestamp
+        } else {
+          markStage({ stage, action })
+        }
         break
       }
     }
@@ -242,6 +258,7 @@ export function generateReport({
         timestamp:
           (lastRenderEnd > 0 ? lastRenderEnd : lastAction.timestamp) -
           startTime!,
+        dependencyChanges,
       })
 
       const lastRenderToEndTime = endTime - lastRenderEnd
@@ -254,6 +271,7 @@ export function generateReport({
         timeToStage: lastRenderToEndTime,
         previousStageTimestamp: 0,
         timestamp: lastAction.timestamp - startTime!,
+        dependencyChanges: 0,
       })
 
       spans.push({
@@ -277,6 +295,7 @@ export function generateReport({
         timeToStage: lastStageToEnd,
         previousStageTimestamp: 0,
         timestamp: lastAction.timestamp - startTime!,
+        dependencyChanges,
       })
     }
   }
