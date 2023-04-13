@@ -56,6 +56,7 @@ export function generateReport({
   const counts: Record<string, number> = {}
   let previousStageTime: number | null = null
   let previousStage: string = INFORMATIVE_STAGES.INITIAL
+  let lastStageMarkedAsDependencyChange = false
   const stageDescriptions: StageDescription[] = []
   const durations: Record<string, number[]> = {}
   const hasObserverSupport =
@@ -67,6 +68,60 @@ export function generateReport({
   const lastAction = [...actions].reverse()[0]
   const includedStages = new Set<string>()
   const spans: Span[] = []
+
+  const markStage = ({
+    stage,
+    action,
+  }: {
+    stage: string
+    action: ActionWithStateMetadata
+  }) => {
+    const lastStageTime = previousStageTime ?? startTime
+    const timeToStage = action.timestamp - lastStageTime!
+
+    // guard for the case where the initial stage is customized by the initial render
+    if (action.timestamp !== startTime) {
+      includedStages.add(previousStage)
+
+      stageDescriptions.push({
+        previousStage,
+        stage,
+        timeToStage,
+        previousStageTimestamp: (lastStageTime ?? 0) - startTime!,
+        timestamp: action.timestamp - startTime!,
+        ...(action.metadata
+          ? {
+              metadata: action.metadata,
+            }
+          : {}),
+        mountedPlacements: action.mountedPlacements,
+        timingId: action.timingId,
+      })
+
+      spans.push({
+        type: action.type,
+        description: `${previousStage} to ${stage}`,
+        startTime: (lastStageTime ?? 0) + performance.timeOrigin,
+        endTime: action.timestamp + performance.timeOrigin,
+        data: {
+          mountedPlacements: action.mountedPlacements,
+          timingId: action.timingId,
+          source: action.source,
+          metadata: action.metadata ?? {},
+        },
+      })
+    }
+
+    includedStages.add(stage)
+
+    lastStageMarkedAsDependencyChange =
+      action.type === ACTION_TYPE.DEPENDENCY_CHANGE
+    if (!lastStageMarkedAsDependencyChange) {
+      previousStage = stage
+    }
+    // update for next time
+    previousStageTime = action.timestamp
+  }
 
   actions.forEach((action, index) => {
     if (index === 0) {
@@ -80,6 +135,9 @@ export function generateReport({
     switch (action.marker) {
       case MARKER.START: {
         lastStart[action.source] = action.timestamp
+        if (lastStageMarkedAsDependencyChange) {
+          markStage({ stage: previousStage, action })
+        }
         break
       }
       case MARKER.END: {
@@ -113,50 +171,18 @@ export function generateReport({
             metadata: action.metadata ?? {},
           },
         })
+        if (lastStageMarkedAsDependencyChange) {
+          markStage({ stage: previousStage, action })
+        }
         break
       }
       case MARKER.POINT: {
-        const timeToStage = action.timestamp - previousStageTime!
         const stage =
           action.type === ACTION_TYPE.DEPENDENCY_CHANGE
             ? INFORMATIVE_STAGES.DEPENDENCY_CHANGE
             : action.stage
 
-        // guard for the case where the initial stage is customized by the initial render
-        if (action.timestamp !== startTime) {
-          includedStages.add(previousStage)
-          includedStages.add(stage)
-
-          stageDescriptions.push({
-            previousStage,
-            stage,
-            timeToStage,
-            previousStageTimestamp: (previousStageTime ?? 0) - startTime!,
-            timestamp: action.timestamp - startTime!,
-            ...(action.metadata
-              ? {
-                  metadata: action.metadata,
-                }
-              : {}),
-            mountedPlacements: action.mountedPlacements,
-            timingId: action.timingId,
-          })
-
-          spans.push({
-            type: action.type,
-            description: `${previousStage} to ${stage}`,
-            startTime: previousStageTime! + performance.timeOrigin,
-            endTime: action.timestamp + performance.timeOrigin,
-            data: {
-              mountedPlacements: action.mountedPlacements,
-              timingId: action.timingId,
-              source: action.source,
-              metadata: action.metadata ?? {},
-            },
-          })
-        }
-        previousStage = stage
-        previousStageTime = action.timestamp
+        markStage({ stage, action })
         break
       }
     }
