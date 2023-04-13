@@ -55,7 +55,7 @@
   "scripts": {
     "build": "yarn build:cjs && yarn build:esm && yarn copy:css",
     "build:cjs": "yarn rrun tsc --outDir cjs --module commonjs --target es2015",
-    "build:esm": "rm -rf esm && yarn build:esm:ts && yarn build:esm:webpack",
+    "build:esm": "rm -rf esm && yarn build:esm:ts && yarn build:esm:webpack && cp package.esm.json esm/package.json",
     "build:esm:webpack": "yarn webpack build --mode development --entry ./src/main",
     "build:esm:ts": "yarn rrun tsc --outDir esm --module esnext --target es2015 --emitDeclarationOnly",
     "clean": "git clean -dfX --exclude=node_modules src && beemo typescript:sync-project-refs",

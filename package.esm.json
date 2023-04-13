@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json.schemastore.org/package",
+  "name": "@zendesk/react-measure-timing-hooks",
+  "version": "0.0.0",
+  "type": "module"
+}
