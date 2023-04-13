@@ -37,6 +37,10 @@ const observedTimings: Map<
   ActionWithStateMetadata[]
 > = new Map()
 
+export const clearObservedTimings = () => {
+  observedTimings.clear()
+}
+
 let updateObservedTimings: () => void = () => {
   //
 }
@@ -58,7 +62,7 @@ export const onActionAddedCallback = (actionLog: ActionLog<any>) => {
   if (currActions.length > 0) {
     observedTimings.set(actionLog, currActions)
   }
-  setTimeout(() => {
+  requestIdleCallback(() => {
     updateObservedTimings()
   })
 }

@@ -39,6 +39,7 @@ import PlusCircleIcon from '@patternfly/react-icons/dist/esm/icons/plus-circle-i
 import RemoveIcon from '@patternfly/react-icons/dist/esm/icons/remove2-icon'
 import { generateReport } from './generateReport'
 import {
+  clearObservedTimings,
   getObservedTimings,
   Position,
   setObservedTimingsUpdater,
@@ -491,6 +492,7 @@ export default function TimingDisplay({
   )
 
   const onClear = useCallback(() => {
+    clearObservedTimings()
     setActionLogs([])
   }, [setActionLogs])
 
