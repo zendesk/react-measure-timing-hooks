@@ -7,7 +7,7 @@ index 4a846a7e4ef1c454379b1983c37ac25baa93766e..a16aa2c88ec07de810198e73abdbf21f
  												Template.indent([
  													"// setup Promise in chunk cache",
 -													`var promise = ${importFunctionName}(${JSON.stringify(
-+													`var promise = ${importFunctionName}(/* webpackInclude: /\.js$/ */ ${JSON.stringify(
++													`var promise = ${importFunctionName}(/* webpackInclude: /\\.js$/ */ ${JSON.stringify(
  														rootOutputDir
  													)} + ${
  														RuntimeGlobals.getChunkScriptFilename

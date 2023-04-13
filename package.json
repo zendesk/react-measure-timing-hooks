@@ -142,7 +142,7 @@
   },
   "resolutions": {
     "@types/react": "17.0.48",
-    "webpack@5.74.0": "patch:webpack@npm:5.74.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch",
+    "webpack": "patch:webpack@npm:5.78.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch",
     "@storybook/node-logger": "7.0.2"
   },
   "packageManager": "yarn@3.2.2",

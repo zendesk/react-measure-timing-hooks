@@ -18528,9 +18528,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"webpack@npm:^5.74.0":
-  version: 5.74.0
-  resolution: "webpack@npm:5.74.0"
+"webpack@patch:webpack@npm:5.78.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch::locator=%40zendesk%2Freact-measure-timing-hooks%40workspace%3A.":
+  version: 5.78.0
+  resolution: "webpack@patch:webpack@npm%3A5.78.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch::version=5.78.0&hash=1775c0&locator=%40zendesk%2Freact-measure-timing-hooks%40workspace%3A."
   dependencies:
     "@types/eslint-scope": ^3.7.3
     "@types/estree": ^0.0.51
@@ -18561,7 +18561,7 @@ __metadata:
       optional: true
   bin:
     webpack: bin/webpack.js
-  checksum: 320c41369a75051b19e18c63f408b3dcc481852e992f83d311771c5ec0f05f2946385e8ebef62030cf3587f0a3d2f12779ffdb191569a966847289ba7313f946
+  checksum: a85105b06e8c38a1000ed594847e53ab8f62a7614953063cc8871ba7ec291a195ed26e7ba02f1f67632969303a4972cf9c19ab63cc1a9a79bb6ba20a9ff64ac8
   languageName: node
   linkType: hard
 
