@@ -62,7 +62,11 @@ export const onActionAddedCallback = (actionLog: ActionLog<any>) => {
   if (currActions.length > 0) {
     observedTimings.set(actionLog, currActions)
   }
-  requestIdleCallback(() => {
+  const callback =
+    typeof requestIdleCallback === 'undefined'
+      ? setTimeout
+      : requestIdleCallback
+  callback(() => {
     updateObservedTimings()
   })
 }
