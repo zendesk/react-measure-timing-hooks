@@ -56,17 +56,20 @@ export const getObservedTimings = () =>
     inactive: log.getActions().length === 0,
   }))
 
+const callback =
+  typeof requestIdleCallback === 'undefined' ? setTimeout : requestIdleCallback
+
+let callbackPending: ReturnType<typeof callback> | undefined
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const onActionAddedCallback = (actionLog: ActionLog<any>) => {
   const currActions = actionLog.getActions()
   if (currActions.length > 0) {
     observedTimings.set(actionLog, currActions)
   }
-  const callback =
-    typeof requestIdleCallback === 'undefined'
-      ? setTimeout
-      : requestIdleCallback
-  callback(() => {
+  if (callbackPending) return
+  callbackPending = callback(() => {
+    callbackPending = undefined
     updateObservedTimings()
   })
 }
