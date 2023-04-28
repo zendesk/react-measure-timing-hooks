@@ -5,7 +5,7 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import { DEFAULT_STAGES, INFORMATIVE_STAGES } from './constants'
+import { DEFAULT_STAGES } from './constants'
 import type { Report } from './generateReport'
 import { generateReport } from './generateReport'
 import type { ActionWithStateMetadata } from './types'
@@ -191,60 +191,19 @@ describe('generateReport', () => {
         beacon: ttr,
         observer: lagDuration,
       },
-      stages: {
-        [`0_${DEFAULT_STAGES.LOADING}_until_${DEFAULT_STAGES.READY}`]: {
-          previousStageTimestamp: 0,
-          timeToStage: timeIncrement,
-          previousStage: DEFAULT_STAGES.LOADING,
-          stage: DEFAULT_STAGES.READY,
-          timingId: id,
-          mountedPlacements,
-          timestamp: timeIncrement,
-          dependencyChanges: 0,
-        },
-        [`1_${DEFAULT_STAGES.READY}_until_${INFORMATIVE_STAGES.RENDERED}`]: {
-          previousStageTimestamp: 0,
-          timeToStage: timeIncrement,
-          previousStage: DEFAULT_STAGES.READY,
-          stage: INFORMATIVE_STAGES.RENDERED,
-          timingId: id,
-          mountedPlacements,
-          timestamp: timeIncrement * 2,
-          dependencyChanges: 0,
-        },
-        [`2_${INFORMATIVE_STAGES.RENDERED}_until_${INFORMATIVE_STAGES.INTERACTIVE}`]:
-          {
-            previousStageTimestamp: 0,
-            timeToStage: timeIncrement + noLagDuration + lagDuration,
-            previousStage: INFORMATIVE_STAGES.RENDERED,
-            stage: INFORMATIVE_STAGES.INTERACTIVE,
-            timingId: id,
-            mountedPlacements,
-            timestamp: timeIncrement * 3 + noLagDuration + lagDuration,
-            dependencyChanges: 0,
-          },
-      },
+      loadingStagesDuration: timeIncrement,
       spans: [
         {
           type: 'render',
           description: '<beacon> (1)',
           startTime: 100,
           endTime: 200,
+          relativeEndTime: 100,
           data: {
             ...data,
             source: 'beacon',
             metadata: {},
-          },
-        },
-        {
-          type: 'stage-change',
-          description: 'loading to ready',
-          startTime: 100,
-          endTime: 200,
-          data: {
-            ...data,
-            source: 'beacon',
-            metadata: {},
+            stage: 'loading',
           },
         },
         {
@@ -252,10 +211,12 @@ describe('generateReport', () => {
           description: '<beacon> (2)',
           startTime: 200,
           endTime: 300,
+          relativeEndTime: 200,
           data: {
             ...data,
             source: 'beacon',
             metadata: {},
+            stage: 'ready',
           },
         },
         {
@@ -263,10 +224,28 @@ describe('generateReport', () => {
           description: 'unresponsive',
           startTime: 600,
           endTime: 900,
+          relativeEndTime: 800,
           data: {
             ...data,
             source: 'observer',
             metadata: {},
+            stage: 'ready',
+          },
+        },
+        {
+          type: 'stage-change',
+          description: 'loading to ready',
+          startTime: 100,
+          endTime: 200,
+          relativeEndTime: 100,
+          data: {
+            ...data,
+            source: 'beacon',
+            metadata: {},
+            previousStage: 'loading',
+            stage: 'ready',
+            timeToStage: 100,
+            dependencyChanges: 0,
           },
         },
         {
@@ -274,14 +253,28 @@ describe('generateReport', () => {
           description: 'render',
           startTime: 100,
           endTime: 300,
-          data,
+          relativeEndTime: 200,
+          data: {
+            ...data,
+            previousStage: 'ready',
+            stage: 'rendered',
+            timeToStage: 100,
+            dependencyChanges: 0,
+          },
         },
         {
           type: 'tti',
           description: 'interactive',
           startTime: 100,
           endTime: 900,
-          data,
+          relativeEndTime: 800,
+          data: {
+            ...data,
+            previousStage: 'rendered',
+            stage: 'interactive',
+            timeToStage: 600,
+            dependencyChanges: 0,
+          },
         },
       ],
       includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.READY],

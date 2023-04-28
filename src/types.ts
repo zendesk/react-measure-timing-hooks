@@ -312,6 +312,8 @@ export interface StateMeta {
 export type ActionWithStateMetadata = Action & StateMeta
 
 export interface StageDescription extends StateMeta {
+  type: ActionType
+  source: string
   previousStage: string
   stage: string
   timeToStage: number
@@ -326,12 +328,18 @@ export interface StageDescription extends StateMeta {
 export interface Span {
   type: ActionType | 'ttr' | 'tti'
   description: string
-  /** relative timestamp of when render begun */
+  /** absolute timestamp of when render begun */
   startTime: number
-  /** relative timestamp of when render ended (ms since the beginning of the first action) */
+  /** absolute timestamp of when render ended (ms since the beginning of the first action) */
   endTime: number
+  /** relative endTime (ms since the beginning of the first action) */
+  relativeEndTime: number
   data: StateMeta & {
     source?: string
     metadata?: Record<string, unknown>
+    dependencyChanges?: number
+    stage: string
+    previousStage?: string
+    timeToStage?: number
   }
 }

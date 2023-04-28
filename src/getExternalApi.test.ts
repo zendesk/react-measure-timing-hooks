@@ -410,15 +410,20 @@ describe('getExternalApi', () => {
       Array [
         Object {
           "data": Object {
+            "dependencyChanges": 0,
             "metadata": Object {},
             "mountedPlacements": Array [
               "beacon1",
             ],
+            "previousStage": "first",
             "source": "timeout",
+            "stage": "timeout",
+            "timeToStage": 45000,
             "timingId": "test/1",
           },
           "description": "first to timeout",
           "endTime": 45000,
+          "relativeEndTime": 45000,
           "startTime": 0,
           "type": "stage-change",
         },

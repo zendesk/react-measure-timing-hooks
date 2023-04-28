@@ -188,17 +188,22 @@ function getChartPoints(actions: ActionWithStateMetadata[]) {
   const firstTimestamp = firstAction?.timestamp ?? 0
   const lastTimestamp = lastAction?.timestamp ?? 0
   const totalTime = lastTimestamp - firstTimestamp
-  const stagePoints = Object.values(report.stages).map(
-    ({ stage, previousStage, timeToStage, timestamp }) => {
-      const padding = calculateBarPadding(timeToStage, totalTime)
-      return {
-        name: `${previousStage} → ${stage}`,
-        duration: timeToStage,
-        y: timestamp + padding,
-        y0: timestamp - timeToStage - padding,
-      }
-    },
-  )
+  const stagePoints = Object.values(report.spans)
+    .filter(({ data: { timeToStage } }) => typeof timeToStage === 'number')
+    .map(
+      ({
+        data: { stage, previousStage, timeToStage = 0 },
+        relativeEndTime,
+      }) => {
+        const padding = calculateBarPadding(timeToStage, totalTime)
+        return {
+          name: `${previousStage} → ${stage}`,
+          duration: timeToStage,
+          y: relativeEndTime + padding,
+          y0: relativeEndTime - timeToStage - padding,
+        }
+      },
+    )
 
   const renderActions = actions.filter(
     (action): action is RenderAction & StateMeta => action.type === 'render',

@@ -248,20 +248,7 @@ describe('useTiming', () => {
           manager: timeIncrement,
         },
         spans: expect.anything(),
-        // no stages were defined:
-        stages: {
-          [`0_${INFORMATIVE_STAGES.INITIAL}_until_${INFORMATIVE_STAGES.RENDERED}`]:
-            {
-              timeToStage: timeIncrement,
-              mountedPlacements: ['manager'],
-              previousStage: INFORMATIVE_STAGES.INITIAL,
-              stage: INFORMATIVE_STAGES.RENDERED,
-              timingId: id,
-              timestamp: timeIncrement,
-              previousStageTimestamp: 0,
-              dependencyChanges: 0,
-            },
-        },
+        loadingStagesDuration: 0,
         includedStages: [],
         hadError: false,
         handled: true,
@@ -272,6 +259,43 @@ describe('useTiming', () => {
         expect.objectContaining({}),
         expect.any(Array),
       ])
+      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (1)",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "previousStage": "initial",
+              "stage": "rendered",
+              "timeToStage": 100,
+              "timingId": "test-component",
+            },
+            "description": "render",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "ttr",
+          },
+        ]
+      `)
 
       renderer!.unmount()
 
@@ -360,27 +384,51 @@ describe('useTiming', () => {
         timeSpent: {
           manager: timeIncrement,
         },
+        loadingStagesDuration: 0,
         spans: expect.anything(),
-        // no stages were defined:
-        stages: {
-          [`0_${INFORMATIVE_STAGES.INITIAL}_until_${INFORMATIVE_STAGES.RENDERED}`]:
-            {
-              timeToStage: timeIncrement,
-              mountedPlacements: ['manager'],
-              previousStage: INFORMATIVE_STAGES.INITIAL,
-              stage: INFORMATIVE_STAGES.RENDERED,
-              timingId: id,
-              timestamp: timeIncrement,
-              previousStageTimestamp: 0,
-              dependencyChanges: 0,
-            },
-        },
         includedStages: [],
         hadError: false,
         handled: true,
       }
 
       expect(mockReportFn).toHaveBeenCalledWith(report, {}, expect.any(Array))
+      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (1)",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "previousStage": "initial",
+              "stage": "rendered",
+              "timeToStage": 100,
+              "timingId": "test-component",
+            },
+            "description": "render",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "ttr",
+          },
+        ]
+      `)
 
       jest.runAllTimers()
 
@@ -508,20 +556,7 @@ describe('useTiming', () => {
         timeSpent: {
           manager: startToEndTime,
         },
-        // no stages were defined:
-        stages: {
-          [`0_${INFORMATIVE_STAGES.INITIAL}_until_${INFORMATIVE_STAGES.TIMEOUT}`]:
-            {
-              timeToStage: timeoutMs,
-              mountedPlacements: ['manager'],
-              previousStage: INFORMATIVE_STAGES.INITIAL,
-              stage: INFORMATIVE_STAGES.TIMEOUT,
-              timingId: id,
-              timestamp: timeoutMs,
-              previousStageTimestamp: 0,
-              dependencyChanges: 0,
-            },
-        },
+        loadingStagesDuration: 0,
         includedStages: [
           INFORMATIVE_STAGES.INITIAL,
           INFORMATIVE_STAGES.TIMEOUT,
@@ -535,6 +570,189 @@ describe('useTiming', () => {
         expect.objectContaining({}),
         expect.any(Array),
       ])
+      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (1)",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (2)",
+            "endTime": 200,
+            "relativeEndTime": 200,
+            "startTime": 100,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (3)",
+            "endTime": 300,
+            "relativeEndTime": 300,
+            "startTime": 200,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (4)",
+            "endTime": 400,
+            "relativeEndTime": 400,
+            "startTime": 300,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (5)",
+            "endTime": 500,
+            "relativeEndTime": 500,
+            "startTime": 400,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (6)",
+            "endTime": 600,
+            "relativeEndTime": 600,
+            "startTime": 500,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (7)",
+            "endTime": 700,
+            "relativeEndTime": 700,
+            "startTime": 600,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (8)",
+            "endTime": 800,
+            "relativeEndTime": 800,
+            "startTime": 700,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (9)",
+            "endTime": 900,
+            "relativeEndTime": 900,
+            "startTime": 800,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (10)",
+            "endTime": 1000,
+            "relativeEndTime": 1000,
+            "startTime": 900,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "previousStage": "initial",
+              "source": "timeout",
+              "stage": "timeout",
+              "timeToStage": 1000,
+              "timingId": "test-component",
+            },
+            "description": "initial to timeout",
+            "endTime": 1000,
+            "relativeEndTime": 1000,
+            "startTime": 0,
+            "type": "stage-change",
+          },
+        ]
+      `)
 
       jest.advanceTimersByTime(timeIncrement)
 
@@ -689,39 +907,7 @@ describe('useTiming', () => {
           manager: timeSpent,
         },
         spans: expect.anything(),
-        // no stages were defined:
-        stages: {
-          '0_initial_until_loading': {
-            mountedPlacements: ['manager'],
-            previousStage: 'initial',
-            stage: 'loading',
-            timingId: 'test-component',
-            timeToStage: timeIncrement,
-            timestamp: timeIncrement,
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-          '1_loading_until_ready': {
-            mountedPlacements: ['manager'],
-            previousStage: 'loading',
-            stage: 'ready',
-            timeToStage: timeIncrement,
-            timestamp: 2 * timeIncrement,
-            timingId: 'test-component',
-            previousStageTimestamp: timeIncrement,
-            dependencyChanges: 0,
-          },
-          '2_ready_until_rendered': {
-            mountedPlacements: ['manager'],
-            previousStage: 'ready',
-            stage: 'rendered',
-            timeToStage: timeIncrement,
-            timestamp: 3 * timeIncrement,
-            timingId: 'test-component',
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-        },
+        loadingStagesDuration: timeIncrement,
         includedStages: [
           INFORMATIVE_STAGES.INITIAL,
           DEFAULT_STAGES.LOADING,
@@ -732,10 +918,117 @@ describe('useTiming', () => {
       }
 
       expect(mockReportFn).toHaveBeenLastCalledWith(
-        expect.objectContaining(report),
+        report,
         expect.objectContaining({}),
         expect.any(Array),
       )
+      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (1)",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "loading",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (2)",
+            "endTime": 200,
+            "relativeEndTime": 200,
+            "startTime": 100,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "source": "manager",
+              "stage": "ready",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (3)",
+            "endTime": 300,
+            "relativeEndTime": 300,
+            "startTime": 200,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "previousStage": "initial",
+              "source": "manager",
+              "stage": "loading",
+              "timeToStage": 100,
+              "timingId": "test-component",
+            },
+            "description": "initial to loading",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "stage-change",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "previousStage": "loading",
+              "source": "manager",
+              "stage": "ready",
+              "timeToStage": 100,
+              "timingId": "test-component",
+            },
+            "description": "loading to ready",
+            "endTime": 200,
+            "relativeEndTime": 200,
+            "startTime": 100,
+            "type": "stage-change",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+              ],
+              "previousStage": "ready",
+              "stage": "rendered",
+              "timeToStage": 100,
+              "timingId": "test-component",
+            },
+            "description": "render",
+            "endTime": 300,
+            "relativeEndTime": 300,
+            "startTime": 0,
+            "type": "ttr",
+          },
+        ]
+      `)
 
       // no more timers should be set by this time:
       expect(jest.getTimerCount()).toBe(0)
@@ -1000,40 +1293,7 @@ describe('useTiming', () => {
           observer: lagDuration,
         },
         spans: expect.anything(),
-        stages: {
-          '0_loading_until_ready': {
-            mountedPlacements: ['manager', 'beacon'],
-            previousStage: 'loading',
-            stage: 'ready',
-            timingId: 'test-component',
-            timeToStage: timeIncrement,
-            timestamp: timeIncrement,
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-          '1_ready_until_rendered': {
-            mountedPlacements: ['manager', 'beacon'],
-            previousStage: 'ready',
-            stage: 'rendered',
-            timeToStage: timeIncrement,
-            timestamp: 2 * timeIncrement,
-            timingId: 'test-component',
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-          '2_rendered_until_interactive': {
-            mountedPlacements: ['manager', 'beacon'],
-            previousStage: 'rendered',
-            stage: 'interactive',
-            // lag started 100ms after the last render,
-            // which means total time until interactive will be 100ms when rendered + 500ms of lag
-            timeToStage: timeIncrement + lagDuration,
-            timestamp: 3 * timeIncrement + lagDuration,
-            timingId: 'test-component',
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-        },
+        loadingStagesDuration: timeIncrement,
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.READY],
         hadError: false,
         handled: true,
@@ -1044,6 +1304,117 @@ describe('useTiming', () => {
         expect.objectContaining({}),
         expect.any(Array),
       ])
+      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "beacon",
+              "stage": "loading",
+              "timingId": "test-component",
+            },
+            "description": "<beacon> (1)",
+            "endTime": 300,
+            "relativeEndTime": 100,
+            "startTime": 200,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "beacon",
+              "stage": "ready",
+              "timingId": "test-component",
+            },
+            "description": "<beacon> (2)",
+            "endTime": 400,
+            "relativeEndTime": 200,
+            "startTime": 300,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "observer",
+              "stage": "ready",
+              "timingId": "test-component",
+            },
+            "description": "unresponsive",
+            "endTime": 1000,
+            "relativeEndTime": 800,
+            "startTime": 500,
+            "type": "unresponsive",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "loading",
+              "source": "beacon",
+              "stage": "ready",
+              "timeToStage": 100,
+              "timingId": "test-component",
+            },
+            "description": "loading to ready",
+            "endTime": 300,
+            "relativeEndTime": 100,
+            "startTime": 200,
+            "type": "stage-change",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "ready",
+              "stage": "rendered",
+              "timeToStage": 100,
+              "timingId": "test-component",
+            },
+            "description": "render",
+            "endTime": 400,
+            "relativeEndTime": 200,
+            "startTime": 200,
+            "type": "ttr",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "rendered",
+              "stage": "interactive",
+              "timeToStage": 600,
+              "timingId": "test-component",
+            },
+            "description": "interactive",
+            "endTime": 1000,
+            "relativeEndTime": 800,
+            "startTime": 200,
+            "type": "tti",
+          },
+        ]
+      `)
 
       // no more timers should be set by this time:
       expect(jest.getTimerCount()).toBe(0)
@@ -1125,10 +1496,10 @@ describe('useTiming', () => {
       // the hook shouldn't affect the contents being rendered:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-<div>
-  Hello!
-</div>
-`)
+        <div>
+          Hello!
+        </div>
+      `)
 
       // exhaust React's next tick timer
       jest.advanceTimersToNextTimer()
@@ -1157,15 +1528,15 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-Array [
-  <div>
-    Hello!
-  </div>,
-  <div>
-    We are a beacon
-  </div>,
-]
-`)
+        Array [
+          <div>
+            Hello!
+          </div>,
+          <div>
+            We are a beacon
+          </div>,
+        ]
+      `)
 
       // exhaust React's next tick timer
       jest.advanceTimersToNextTimer()
@@ -1252,28 +1623,7 @@ Array [
           manager: ttr,
         },
         spans: expect.anything(),
-        stages: {
-          '0_initial_until_rendered': {
-            mountedPlacements: ['manager', 'beacon'],
-            previousStage: 'initial',
-            stage: 'rendered',
-            timeToStage: 2 * timeIncrement,
-            timestamp: 2 * timeIncrement,
-            timingId: 'test-component',
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-          '1_rendered_until_interactive': {
-            mountedPlacements: ['manager', 'beacon'],
-            previousStage: 'rendered',
-            stage: 'interactive',
-            timeToStage: 6 * timeIncrement,
-            timestamp: 8 * timeIncrement,
-            timingId: 'test-component',
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-        },
+        loadingStagesDuration: 0,
         includedStages: [],
         hadError: false,
         handled: true,
@@ -1284,6 +1634,97 @@ Array [
         expect.objectContaining({}),
         expect.any(Array),
       ])
+      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "beacon",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<beacon> (1)",
+            "endTime": 200,
+            "relativeEndTime": 100,
+            "startTime": 100,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "manager",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (1)",
+            "endTime": 300,
+            "relativeEndTime": 200,
+            "startTime": 100,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "observer",
+              "stage": "initial",
+              "timingId": "test-component",
+            },
+            "description": "unresponsive",
+            "endTime": 900,
+            "relativeEndTime": 800,
+            "startTime": 400,
+            "type": "unresponsive",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "initial",
+              "stage": "rendered",
+              "timeToStage": 200,
+              "timingId": "test-component",
+            },
+            "description": "render",
+            "endTime": 300,
+            "relativeEndTime": 200,
+            "startTime": 100,
+            "type": "ttr",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "rendered",
+              "stage": "interactive",
+              "timeToStage": 600,
+              "timingId": "test-component",
+            },
+            "description": "interactive",
+            "endTime": 900,
+            "relativeEndTime": 800,
+            "startTime": 100,
+            "type": "tti",
+          },
+        ]
+      `)
 
       // no more timers should be set by this time:
       expect(jest.getTimerCount()).toBe(0)
@@ -1459,28 +1900,7 @@ Array [
           beacon: 200,
         },
         spans: expect.anything(),
-        stages: {
-          '0_loading_until_error': {
-            mountedPlacements: ['manager', 'beacon'],
-            previousStage: 'loading',
-            stage: 'error',
-            timeToStage: 2 * timeIncrement,
-            timestamp: 2 * timeIncrement,
-            timingId: 'test-component',
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-          '1_error_until_rendered': {
-            mountedPlacements: ['manager', 'beacon'],
-            previousStage: 'error',
-            stage: 'rendered',
-            timeToStage: timeIncrement,
-            timestamp: 3 * timeIncrement,
-            timingId: 'test-component',
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-        },
+        loadingStagesDuration: 2 * timeIncrement,
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],
         hadError: true,
         handled: true,
@@ -1492,6 +1912,100 @@ Array [
         expect.objectContaining({}),
         expect.any(Array),
       ])
+
+      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "beacon",
+              "stage": "loading",
+              "timingId": "test-component",
+            },
+            "description": "<beacon> (1)",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "manager",
+              "stage": "loading",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (1)",
+            "endTime": 200,
+            "relativeEndTime": 200,
+            "startTime": 0,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "beacon",
+              "stage": "error",
+              "timingId": "test-component",
+            },
+            "description": "<beacon> (2)",
+            "endTime": 300,
+            "relativeEndTime": 300,
+            "startTime": 200,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "loading",
+              "source": "beacon",
+              "stage": "error",
+              "timeToStage": 200,
+              "timingId": "test-component",
+            },
+            "description": "loading to error",
+            "endTime": 200,
+            "relativeEndTime": 200,
+            "startTime": 0,
+            "type": "stage-change",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "error",
+              "stage": "rendered",
+              "timeToStage": 100,
+              "timingId": "test-component",
+            },
+            "description": "render",
+            "endTime": 300,
+            "relativeEndTime": 300,
+            "startTime": 0,
+            "type": "ttr",
+          },
+        ]
+      `)
 
       renderer!.unmount()
 
@@ -1694,18 +2208,7 @@ Array [
           beacon: timeIncrement,
         },
         spans: expect.anything(),
-        stages: {
-          '0_loading_until_error': {
-            mountedPlacements: ['manager', 'beacon'],
-            previousStage: 'loading',
-            stage: 'error',
-            timingId: 'test-component',
-            timeToStage: 2 * timeIncrement,
-            timestamp: 2 * timeIncrement,
-            previousStageTimestamp: 0,
-            dependencyChanges: 0,
-          },
-        },
+        loadingStagesDuration: timeIncrement * 2,
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],
         hadError: true,
         handled: false,
@@ -1717,6 +2220,82 @@ Array [
         expect.objectContaining({}),
         expect.any(Array),
       ])
+      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "beacon",
+              "stage": "loading",
+              "timingId": "test-component",
+            },
+            "description": "<beacon> (1)",
+            "endTime": 100,
+            "relativeEndTime": 100,
+            "startTime": 0,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "source": "manager",
+              "stage": "loading",
+              "timingId": "test-component",
+            },
+            "description": "<manager> (1)",
+            "endTime": 200,
+            "relativeEndTime": 200,
+            "startTime": 0,
+            "type": "render",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "metadata": Object {},
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "loading",
+              "source": "beacon",
+              "stage": "error",
+              "timeToStage": 200,
+              "timingId": "test-component",
+            },
+            "description": "loading to error",
+            "endTime": 200,
+            "relativeEndTime": 200,
+            "startTime": 0,
+            "type": "stage-change",
+          },
+          Object {
+            "data": Object {
+              "dependencyChanges": 0,
+              "mountedPlacements": Array [
+                "manager",
+                "beacon",
+              ],
+              "previousStage": "error",
+              "stage": "incomplete-render",
+              "timeToStage": 0,
+              "timingId": "test-component",
+            },
+            "description": "render",
+            "endTime": 200,
+            "relativeEndTime": 200,
+            "startTime": 0,
+            "type": "ttr",
+          },
+        ]
+      `)
 
       renderer!.unmount()
 
