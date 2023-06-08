@@ -5,27 +5,25 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-let uid = 0
-const getUniqueMarkName = (name: string) => `useTiming: ${name}/${uid++}`
+const getTimingMarkName = (name: string) => `useTiming: ${name}`
 
-export const performanceMark = (name: string): PerformanceMark => {
+export const performanceMark = (
+  name: string,
+  markOptions?: PerformanceMarkOptions,
+): PerformanceMark => {
   // We want to use performance.mark, instead of performance.now or Date.now,
   // because those named metrics will then show up in the profiler and in Lighthouse audits
   // see: https://web.dev/user-timings/
   // incidentally, this also makes testing waaay easier, because we don't have to deal with timestamps
 
-  // Since Firefox (Gecko) unfortunately behaves differently to other browsers,
+  // Since old browsers (like >1yr old Firefox/Gecko) unfortunately behaves differently to other browsers,
   // in that it doesn't immediately return the instance of PerformanceMark object
   // so we sort-of polyfill it cheaply below.
   // see: https://bugzilla.mozilla.org/show_bug.cgi?id=1724645
-  // It does mean we need unique mark names, though.
-  const markName = getUniqueMarkName(name)
+  const markName = getTimingMarkName(name)
 
   try {
-    // we know this entry exists, because we created it above
-    const mark =
-      performance.mark(markName) ?? performance.getEntriesByName(name)[0]
-
+    const mark = performance.mark(markName, markOptions)
     if (mark) return mark
   } catch {
     // do nothing, polyfill below
@@ -35,7 +33,7 @@ export const performanceMark = (name: string): PerformanceMark => {
   return {
     name: markName,
     duration: 0,
-    startTime: performance.now(),
+    startTime: markOptions?.startTime ?? performance.now(),
     entryType: 'mark',
     toJSON: () => ({}),
     detail: null,
@@ -48,19 +46,16 @@ export const performanceMeasure = (
   endMark?: PerformanceEntry,
 ): PerformanceMeasure => {
   // same story as above
-  const measureName = getUniqueMarkName(name)
+  const measureName = getTimingMarkName(name)
+  const end = endMark ? endMark.startTime + endMark.duration : performance.now()
 
   // some old browsers might not like performance.measure / performance.mark
   // we don't want to crash due to reporting, so we'll polyfill instead
   try {
-    // create a mark of the same name, so we can create future measures from this point:
-    performance.mark(measureName)
-
-    const measure =
-      performance.measure(measureName, startMark.name, endMark?.name) ??
-      // we know this object exists, because we created it above
-
-      performance.getEntriesByName(name)[0]
+    const measure = performance.measure(measureName, {
+      start: startMark.startTime,
+      end,
+    })
 
     if (measure) return measure
   } catch {
@@ -69,7 +64,7 @@ export const performanceMeasure = (
 
   return {
     name: measureName,
-    duration: performance.now() - startMark.startTime,
+    duration: end - startMark.startTime,
     startTime: startMark.startTime,
     entryType: 'measure',
     toJSON: () => ({}),

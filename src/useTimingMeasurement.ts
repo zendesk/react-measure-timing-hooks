@@ -42,11 +42,11 @@ export const useTimingMeasurement = <
   }: UseTimingMeasurementHookConfiguration<CustomMetadata>,
   restartWhenChanged: DependencyList,
 ): void => {
-  const timestamp = performanceMark(`${id}/${placement}/render-start`)
+  const timestampMark = performanceMark(`${id}/${placement}/render-start`)
 
-  const lastStartTimeRef = useRef<PerformanceMark>(timestamp)
+  const lastStartTimeRef = useRef<PerformanceMark>(timestampMark)
 
-  lastStartTimeRef.current = timestamp
+  lastStartTimeRef.current = timestampMark
 
   actionLog.updateOptions(
     {
@@ -92,11 +92,13 @@ export const useTimingMeasurement = <
         error,
         handled: true,
       },
+      renderEntry: timestampMark,
     })
   } else if (stage) {
     actionLog.markStage({
       stage,
       source: placement,
+      renderEntry: timestampMark,
     })
   }
 

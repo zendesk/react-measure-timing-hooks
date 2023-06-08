@@ -37,17 +37,17 @@ export type DebouncedFn<Args extends readonly unknown[]> = ((
 export const debounce = <Args extends readonly unknown[]>(
   optionsRef: DebounceOptionsRef<Args>,
 ): DebouncedFn<Args> => {
-  let timeoutTimer: number | undefined
-  let debounceTimer: number | undefined
+  let timeoutTimer: ReturnType<typeof setTimeout> | undefined
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let lastArgs: Args | undefined
   const cancel = () => {
-    if (debounceTimer) window.clearTimeout(debounceTimer)
+    if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = undefined
   }
   const reset = () => {
     cancel()
 
-    if (timeoutTimer) window.clearTimeout(timeoutTimer)
+    if (timeoutTimer) clearTimeout(timeoutTimer)
     timeoutTimer = undefined
 
     const args = lastArgs
@@ -77,13 +77,13 @@ export const debounce = <Args extends readonly unknown[]>(
   return Object.assign(
     (...args: Args) => {
       lastArgs = args
-      if (debounceTimer) window.clearTimeout(debounceTimer)
-      debounceTimer = window.setTimeout(
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(
         () => flush(DebounceReason),
         optionsRef.debounceMs,
       )
       if (!timeoutTimer && typeof optionsRef.timeoutMs === 'number') {
-        timeoutTimer = window.setTimeout(() => {
+        timeoutTimer = setTimeout(() => {
           flush(TimeoutReason)
         }, optionsRef.timeoutMs)
       }

@@ -9,7 +9,10 @@ import type { DependencyList } from 'react'
 import type { ActionLog } from './ActionLog'
 import type { ActionLogCache } from './ActionLogCache'
 import type { ACTION_TYPE, MARKER } from './constants'
-import type { Report, ReportFn } from './generateReport'
+
+export type ReportFn<Metadata extends Record<string, unknown>> = (
+  reportArgs: ReportArguments<Metadata>,
+) => void
 
 export type ShouldResetOnDependencyChange = (
   oldDependencies: DependencyList,
@@ -30,8 +33,7 @@ export interface WithOnInternalError<
 > {
   onInternalError?: (
     error: Error,
-    report?: Report | ReportWithInfo,
-    metadata?: CustomMetadata,
+    reportWithMetadata?: ReportArguments<CustomMetadata>,
   ) => void
 }
 
@@ -97,10 +99,15 @@ export interface StaticActionLogOptions<
    * */
   finalStages?: readonly string[]
   /**
-   * When one of these stages is reached, we will IMMEDIATELY send the report and reset.
-   * By default this is just the ERROR stage.
+   * List all the stages that will be considered as "loading stages".
+   * Used only for the reportFn. Does not affect other functionality.
    * */
-  immediateSendStages?: readonly string[]
+  loadingStages?: readonly string[]
+  /**
+   * When one of these stages is reached, we will IMMEDIATELY send the report and reset.
+   * This always includes the error stages.
+   * */
+  immediateSendReportStages?: readonly string[]
   /**
    * Will only activate the timing hook after *all* the placements listed in the array were mounted
    * Specifying this can be useful if you have conditional logic that means only some hooks will get mounted (e.g. timing of opening a menu).
@@ -132,11 +139,23 @@ export interface WithMetadata<Metadata extends Record<string, unknown>> {
   metadata?: Metadata
 }
 
-export interface ReportWithInfo extends Report {
-  maximumActiveBeaconsCount: number
-  minimumExpectedSimultaneousBeacons?: number
-  flushReason: string
+export interface ReportArguments<CustomMetadata extends Record<string, unknown>>
+  extends Pick<
+    StaticActionLogOptions<string, CustomMetadata>,
+    'finalStages' | 'loadingStages' | 'immediateSendReportStages'
+  > {
+  readonly actions: readonly ActionWithStateMetadata[]
+  readonly timingId?: string
+  readonly isFirstLoad?: boolean
+  readonly maximumActiveBeaconsCount?: number
+  readonly minimumExpectedSimultaneousBeacons?: number
+  readonly flushReason?: string
+  readonly metadata?: CustomMetadata
 }
+
+// TODO remove
+export interface ReportWithInfo<CustomMetadata extends Record<string, unknown>>
+  extends ReportArguments<CustomMetadata> {}
 
 export interface DynamicActionLogOptions<
   CustomMetadata extends Record<string, unknown>,
@@ -275,12 +294,14 @@ export type Marker = typeof MARKER[keyof typeof MARKER]
 export type SpanMarker = typeof MARKER['START' | 'END']
 export type PointMarker = typeof MARKER['POINT']
 
+export type CustomPerformanceEntry = PerformanceEntry & {
+  startMark?: PerformanceEntry
+  endMark?: PerformanceEntry
+}
+
 export interface BaseAction<NameT extends ActionType, MarkerT extends Marker> {
   timestamp: number
-  entry: PerformanceEntry & {
-    startMark?: PerformanceEntry
-    endMark?: PerformanceEntry
-  }
+  entry: CustomPerformanceEntry
   type: NameT
   marker: MarkerT
   source: string
@@ -297,6 +318,7 @@ export type StageChangeActionType = typeof ACTION_TYPE['STAGE_CHANGE']
 export interface StageChangeAction
   extends BaseAction<StageChangeActionType, PointMarker> {
   stage: string
+  renderEntry?: CustomPerformanceEntry
 }
 
 export type DependencyChangeActionType = typeof ACTION_TYPE['DEPENDENCY_CHANGE']

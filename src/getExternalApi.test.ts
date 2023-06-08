@@ -1,4 +1,5 @@
 import { ActionLogCache } from './ActionLogCache'
+import { generateReport } from './generateReport'
 import { getExternalApi } from './getExternalApi'
 
 const garbageCollectMs = 100_000
@@ -406,7 +407,8 @@ describe('getExternalApi', () => {
     expect(reportFn).toHaveBeenCalledTimes(1)
     expect(onInternalError).not.toHaveBeenCalled()
     expect(actionLog?.getActions()).toHaveLength(0)
-    expect(reportFn.mock.calls[0][0].spans).toMatchInlineSnapshot(`
+    expect(generateReport(reportFn.mock.calls[0][0]).spans)
+      .toMatchInlineSnapshot(`
       Array [
         Object {
           "data": Object {

@@ -9,9 +9,9 @@
 import { useEffect, useState } from 'react'
 import * as React from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
-import type { ReportFn } from '../generateReport'
 import { onActionAddedCallback, useVisualizer } from '../lazyVisualizer'
 import { DEFAULT_STAGES, generateTimingHooks } from '../main'
+import type { ReportFn } from '../types'
 
 const { useStoryTimingInA, useStoryTimingInB } = generateTimingHooks(
   {

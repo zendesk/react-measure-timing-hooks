@@ -7,28 +7,28 @@
 
 import {
   ACTION_TYPE,
-  DEFAULT_STAGES,
+  DEFAULT_LOADING_STAGES,
   ERROR_STAGES,
   INFORMATIVE_STAGES,
   MARKER,
   OBSERVER_SOURCE,
 } from './constants'
-import type { ActionWithStateMetadata, Span, StageDescription } from './types'
+import type {
+  ActionWithStateMetadata,
+  ReportArguments,
+  Span,
+  StageDescription,
+} from './types'
 import { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
 
-export type ReportFn<Metadata extends Record<string, unknown>> = (
-  report: Report,
-  metadata: Metadata,
-  actions: ActionWithStateMetadata[],
-) => void
-
 export interface Report {
+  id: string
   ttr: number | null
+  /** TTI will not be present in browsers that do not support tracking long tasks */
   tti: number | null
   timeSpent: Record<string, number>
   counts: Record<string, number>
   durations: Record<string, number[]>
-  id: string
   isFirstLoad: boolean
   lastStage: string
   includedStages: string[]
@@ -36,19 +36,17 @@ export interface Report {
   handled: boolean
   spans: Span[]
   loadingStagesDuration: number
+  flushReason: string
 }
 
-export function generateReport({
+export function generateReport<CustomMetadata extends Record<string, unknown>>({
   actions,
   timingId,
   isFirstLoad = true,
-  immediateSendStages = [],
-}: {
-  readonly actions: readonly ActionWithStateMetadata[]
-  readonly timingId?: string
-  readonly isFirstLoad?: boolean
-  readonly immediateSendStages?: readonly string[]
-}): Report {
+  immediateSendReportStages = [],
+  loadingStages = DEFAULT_LOADING_STAGES,
+  flushReason = 'auto',
+}: ReportArguments<CustomMetadata>): Report {
   const lastStart: Record<string, number> = {}
   let lastRenderEnd: number | null = null
   const timeSpent: Record<string, number> = {}
@@ -59,13 +57,12 @@ export function generateReport({
   const counts: Record<string, number> = {}
   let previousStageEndTime: number | null = null
   let previousStage: string = INFORMATIVE_STAGES.INITIAL
-  let lastStageMarkedAsDependencyChange = false
   const stageDescriptions: StageDescription[] = []
   const durations: Record<string, number[]> = {}
   const hasObserverSupport =
     getCurrentBrowserSupportForNonResponsiveStateDetection()
-  const allImmediateSendStages = [
-    ...immediateSendStages,
+  const allImmediateSendReportStages = [
+    ...immediateSendReportStages,
     INFORMATIVE_STAGES.TIMEOUT,
   ]
   const lastAction = [...actions].reverse()[0]
@@ -86,35 +83,38 @@ export function generateReport({
       const lastStageTime = previousStageEndTime ?? startTime
       const timeToStage = action.timestamp - lastStageTime!
 
-      const stageDescription: StageDescription = {
-        type: action.type,
-        source: action.source,
-        previousStage,
-        stage,
-        timeToStage,
-        previousStageTimestamp: (lastStageTime ?? 0) - startTime!,
-        timestamp: action.timestamp - startTime!,
-        ...(action.metadata
-          ? {
-              metadata: action.metadata,
-            }
-          : {}),
-        mountedPlacements: action.mountedPlacements,
-        timingId: action.timingId,
-        dependencyChanges,
-      }
       const lastStageDescription =
         stageDescriptions[stageDescriptions.length - 1]
       if (stage === previousStage && lastStageDescription) {
-        // update previous description
-        Object.assign(lastStageDescription, stageDescription, {
-          metadata: {
-            ...lastStageDescription.metadata,
-            ...stageDescription.metadata,
-          },
-        })
+        // since we're still in the same stage (possibly set by a different source this time),
+        // we just update previous stage description:
+        lastStageDescription.timeToStage = timeToStage
+        lastStageDescription.timestamp = action.timestamp - startTime!
+        lastStageDescription.metadata = Object.assign(
+          lastStageDescription.metadata ?? {},
+          action.metadata,
+        )
+        lastStageDescription.mountedPlacements = action.mountedPlacements
+        lastStageDescription.timingId = action.timingId
+        lastStageDescription.dependencyChanges = dependencyChanges
       } else if (stage !== previousStage) {
-        stageDescriptions.push(stageDescription)
+        stageDescriptions.push({
+          type: action.type,
+          source: action.source,
+          previousStage,
+          stage,
+          timeToStage,
+          previousStageTimestamp: (lastStageTime ?? 0) - startTime!,
+          timestamp: action.timestamp - startTime!,
+          ...(action.metadata
+            ? {
+                metadata: action.metadata,
+              }
+            : {}),
+          mountedPlacements: action.mountedPlacements,
+          timingId: action.timingId,
+          dependencyChanges,
+        })
       }
     }
 
@@ -125,12 +125,7 @@ export function generateReport({
     }
 
     includedStages.add(stage)
-
-    lastStageMarkedAsDependencyChange =
-      action.type === ACTION_TYPE.DEPENDENCY_CHANGE
-    if (!lastStageMarkedAsDependencyChange) {
-      previousStage = stage
-    }
+    previousStage = stage
   }
 
   actions.forEach((action, index) => {
@@ -172,8 +167,8 @@ export function generateReport({
             action.type === ACTION_TYPE.UNRESPONSIVE
               ? 'unresponsive'
               : `<${action.source}> (${sourceDurations.length})`,
-          startTime: performance.timeOrigin + action.timestamp - duration,
-          endTime: performance.timeOrigin + action.timestamp,
+          startTime: action.timestamp - duration,
+          endTime: action.timestamp,
           relativeEndTime: action.timestamp - (startTime ?? 0),
           data: {
             mountedPlacements: action.mountedPlacements,
@@ -191,8 +186,8 @@ export function generateReport({
           spans.push({
             type: action.type,
             description: 'dependency change',
-            startTime: lastDependencyChange! + performance.timeOrigin,
-            endTime: action.timestamp + performance.timeOrigin,
+            startTime: lastDependencyChange!,
+            endTime: action.timestamp,
             relativeEndTime: action.timestamp - (startTime ?? 0),
             data: {
               mountedPlacements: action.mountedPlacements,
@@ -218,23 +213,23 @@ export function generateReport({
     lastAction && lastAction.type !== ACTION_TYPE.STAGE_CHANGE,
   )
 
-  const didImmediateSend = allImmediateSendStages.includes(previousStage)
+  const didImmediateSend = allImmediateSendReportStages.includes(previousStage)
 
-  stageDescriptions.forEach(
-    ({
-      type,
-      previousStage: pStage,
-      stage,
-      previousStageTimestamp,
-      timestamp,
-      timeToStage,
-      ...data
-    }) => {
-      spans.push({
+  spans.push(
+    ...stageDescriptions.map(
+      ({
+        type,
+        previousStage: pStage,
+        stage,
+        previousStageTimestamp,
+        timestamp,
+        timeToStage,
+        ...data
+      }): Span => ({
         type,
         description: `${pStage} to ${stage}`,
-        startTime: startTime! + previousStageTimestamp + performance.timeOrigin,
-        endTime: startTime! + timestamp + performance.timeOrigin,
+        startTime: startTime! + previousStageTimestamp,
+        endTime: startTime! + timestamp,
         relativeEndTime: timestamp,
         data: {
           stage,
@@ -246,8 +241,8 @@ export function generateReport({
           metadata: data.metadata ?? {},
           dependencyChanges: data.dependencyChanges,
         },
-      })
-    },
+      }),
+    ),
   )
 
   const tti =
@@ -276,8 +271,8 @@ export function generateReport({
     spans.push({
       type: 'ttr',
       description: 'render',
-      startTime: (startTime as unknown as number) + performance.timeOrigin,
-      endTime: lastRenderEnd + performance.timeOrigin,
+      startTime: startTime as unknown as number,
+      endTime: lastRenderEnd,
       relativeEndTime: lastRenderEnd - (startTime ?? 0),
       data: {
         mountedPlacements: lastAction.mountedPlacements,
@@ -297,8 +292,8 @@ export function generateReport({
       spans.push({
         type: 'tti',
         description: 'interactive',
-        startTime: (startTime as unknown as number) + performance.timeOrigin,
-        endTime: (endTime as unknown as number) + performance.timeOrigin,
+        startTime: startTime as unknown as number,
+        endTime: endTime as unknown as number,
         relativeEndTime: (endTime as unknown as number) - (startTime ?? 0),
         data: {
           stage: INFORMATIVE_STAGES.INTERACTIVE,
@@ -314,8 +309,8 @@ export function generateReport({
       spans.push({
         type: 'render',
         description: 'incomplete render',
-        startTime: lastRenderEnd + performance.timeOrigin,
-        endTime: lastRenderEnd + difference + performance.timeOrigin,
+        startTime: lastRenderEnd,
+        endTime: lastRenderEnd + difference,
         relativeEndTime: lastRenderEnd + difference,
         data: {
           stage: INFORMATIVE_STAGES.INCOMPLETE_RENDER,
@@ -331,12 +326,11 @@ export function generateReport({
     }
   }
 
-  const loadingStages = Object.values(spans).filter(
+  const loadingStagesSpans = Object.values(spans).filter(
     ({ data: { previousStage: pStage } }) =>
-      pStage === DEFAULT_STAGES.LOADING ||
-      pStage === DEFAULT_STAGES.LOADING_MORE,
+      pStage && loadingStages.includes(pStage),
   )
-  const loadingStagesDuration = loadingStages.reduce(
+  const loadingStagesDuration = loadingStagesSpans.reduce(
     (total, { data: { timeToStage = 0 } }) => total + timeToStage,
     0,
   )
@@ -355,5 +349,6 @@ export function generateReport({
     hadError: ERROR_STAGES.includes(previousStage),
     loadingStagesDuration,
     spans,
+    flushReason,
   }
 }

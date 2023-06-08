@@ -32,7 +32,10 @@ First, create a file that generates and exports the hooks for your metric ID pre
 For example:
 
 ```typescript
-import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
+import {
+  generateTimingHooks,
+  defaultReport,
+} from '@zendesk/react-measure-timing-hooks'
 
 export const {
   // the name of the hook(s) are generated based on the `name` and the placement names
@@ -42,7 +45,8 @@ export const {
   {
     name: 'Conversation',
     idPrefix: 'ticket/conversation',
-    reportFn: (report, metadata) => {
+    reportFn: (reportArguments) => {
+      const defaultReport = generateReport(reportArguments)
       // do something with the report, e.g. send select data to Datadog RUM or other analytics
     },
   },
@@ -100,8 +104,9 @@ const Conversation = ({ conversationId }) => {
 ```
 
 An `idSuffix` is required when the component is not expected to be a singleton. If you're uncertain, the following heuristic should help you make the decision whether to add one:
-* When the same component is rendered multiple times on a page.
-* We expect the component will vary its content (re-render) based on some object variable. For example, its contents change based on another item's selection/visibility, or an action, like opening.
+
+- When the same component is rendered multiple times on a page.
+- We expect the component will vary its content (re-render) based on some object variable. For example, its contents change based on another item's selection/visibility, or an action, like opening.
 
 ### Report
 
@@ -172,9 +177,7 @@ If `isActive` is present in at least one of the beacons, timing will start from 
 ```tsx
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
-export const {
-  useSomethingLoadingTimingInMyComponent,
-} = generateTimingHooks(
+export const { useSomethingLoadingTimingInMyComponent } = generateTimingHooks(
   {
     name: 'SomethingLoading',
     idPrefix: 'some/identifier',
@@ -201,9 +204,7 @@ import {
   DEFAULT_STAGES,
 } from '@zendesk/react-measure-timing-hooks'
 
-export const {
-  useSomethingLoadingTimingInMyComponent,
-} = generateTimingHooks(
+export const { useSomethingLoadingTimingInMyComponent } = generateTimingHooks(
   {
     name: 'SomethingLoading',
     idPrefix: 'some/identifier',
@@ -237,9 +238,7 @@ import {
   switchFn,
 } from '@zendesk/react-measure-timing-hooks'
 
-export const {
-  useSomethingLoadingTimingInMyComponent,
-} = generateTimingHooks(
+export const { useSomethingLoadingTimingInMyComponent } = generateTimingHooks(
   {
     name: 'SomethingLoading',
     idPrefix: 'some/identifier',
@@ -260,6 +259,8 @@ const MyComponent = () => {
       { case: isLoading, return: DEFAULT_STAGES.LOADING },
       { return: DEFAULT_STAGES.READY },
     ),
+    // we want generateReport to count both of these stages as part of the "loading" process
+    loadingStages: [DEFAULT_STAGES.LOADING, 'searching'],
   })
   return <div>Hello!</div>
 }
@@ -358,19 +359,18 @@ to reset.
 ```tsx
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
-export const {
-  useSomethingLoadingTimingInSomeComponentName,
-} = generateTimingHooks(
-  {
-    name: 'SomethingLoading',
-    idPrefix: 'some/identifier',
-    finalStages: [DEFAULT_STAGES.READY],
-    reportFn: myCustomReportFunction,
-  },
-  // name of the first placement
-  // usually the component that mounts first, from which timing should start
-  'SomeComponentName',
-)
+export const { useSomethingLoadingTimingInSomeComponentName } =
+  generateTimingHooks(
+    {
+      name: 'SomethingLoading',
+      idPrefix: 'some/identifier',
+      finalStages: [DEFAULT_STAGES.READY],
+      reportFn: myCustomReportFunction,
+    },
+    // name of the first placement
+    // usually the component that mounts first, from which timing should start
+    'SomeComponentName',
+  )
 
 const MyComponent = () => {
   useSomethingLoadingTimingInSomeComponentName(
@@ -431,17 +431,16 @@ a dependency has changed (e.g. `ticketId` flipping from `-1` to the actual ID). 
 ```tsx
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
-export const {
-  useSomethingLoadingTimingInSomeComponentName,
-} = generateTimingHooks(
-  {
-    name: 'SomethingLoading',
-    idPrefix: 'some/identifier',
-    finalStages: [DEFAULT_STAGES.READY],
-    reportFn: myCustomReportFunction,
-  },
-  'SomeComponentName',
-)
+export const { useSomethingLoadingTimingInSomeComponentName } =
+  generateTimingHooks(
+    {
+      name: 'SomethingLoading',
+      idPrefix: 'some/identifier',
+      finalStages: [DEFAULT_STAGES.READY],
+      reportFn: myCustomReportFunction,
+    },
+    'SomeComponentName',
+  )
 
 const MyComponent = () => {
   useSomethingLoadingTimingInSomeComponentName(
@@ -471,17 +470,16 @@ end immediately with the `lastStage: 'error'` and send out a report.
 ```tsx
 import { generateTimingHooks } from '@zendesk/react-measure-timing-hooks'
 
-export const {
-  useSomethingLoadingTimingInSomeComponentName,
-} = generateTimingHooks(
-  {
-    name: 'SomethingLoading',
-    idPrefix: 'some/identifier',
-    finalStages: [DEFAULT_STAGES.READY],
-    reportFn: myCustomReportFunction,
-  },
-  'SomeComponentName',
-)
+export const { useSomethingLoadingTimingInSomeComponentName } =
+  generateTimingHooks(
+    {
+      name: 'SomethingLoading',
+      idPrefix: 'some/identifier',
+      finalStages: [DEFAULT_STAGES.READY],
+      reportFn: myCustomReportFunction,
+    },
+    'SomeComponentName',
+  )
 
 const MyComponent = () => {
   const { data, loading, error } = useQuery(myQuery)
