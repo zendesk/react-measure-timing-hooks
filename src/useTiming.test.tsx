@@ -14,8 +14,9 @@ import type { ReactTestRenderer } from 'react-test-renderer'
 import { act, create } from 'react-test-renderer'
 import { ActionLog } from './ActionLog'
 import { DEFAULT_STAGES, INFORMATIVE_STAGES } from './constants'
-import type { Report, ReportFn } from './generateReport'
+import { type Report, generateReport } from './generateReport'
 import * as performanceMock from './performanceMark'
+import type { ReportFn } from './types'
 import { useTimingMeasurement } from './useTimingMeasurement'
 import { resetMemoizedCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
 
@@ -252,14 +253,14 @@ describe('useTiming', () => {
         includedStages: [],
         hadError: false,
         handled: true,
+        flushReason: 'debounce',
       }
 
-      expect(mockReportFn.mock.calls.at(-1)).toEqual([
-        report,
-        expect.objectContaining({}),
-        expect.any(Array),
-      ])
-      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+      const reportArgs = mockReportFn.mock.calls.at(-1)?.[0]
+      expect(reportArgs).toBeDefined()
+      const generatedReport = generateReport(reportArgs!)
+      expect(generatedReport).toEqual(report)
+      expect(generatedReport.spans).toMatchInlineSnapshot(`
         Array [
           Object {
             "data": Object {
@@ -389,10 +390,15 @@ describe('useTiming', () => {
         includedStages: [],
         hadError: false,
         handled: true,
+        flushReason: 'debounce',
       }
 
-      expect(mockReportFn).toHaveBeenCalledWith(report, {}, expect.any(Array))
-      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+      expect(mockReportFn).toHaveBeenCalledTimes(1)
+      const reportArgs = mockReportFn.mock.calls.at(-1)?.[0]
+      expect(reportArgs).toBeDefined()
+      const generatedReport = generateReport(reportArgs!)
+      expect(generatedReport).toEqual(report)
+      expect(generatedReport.spans).toMatchInlineSnapshot(`
         Array [
           Object {
             "data": Object {
@@ -563,14 +569,15 @@ describe('useTiming', () => {
         ],
         hadError: false,
         handled: false,
+        flushReason: 'timeout',
       }
 
-      expect(mockReportFn.mock.calls.at(-1)).toEqual([
-        report,
-        expect.objectContaining({}),
-        expect.any(Array),
-      ])
-      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+      expect(mockReportFn).toHaveBeenCalledTimes(1)
+      const reportArgs = mockReportFn.mock.calls.at(-1)?.[0]
+      expect(reportArgs).toBeDefined()
+      const generatedReport = generateReport(reportArgs!)
+      expect(generatedReport).toEqual(report)
+      expect(generatedReport.spans).toMatchInlineSnapshot(`
         Array [
           Object {
             "data": Object {
@@ -915,14 +922,15 @@ describe('useTiming', () => {
         ],
         hadError: false,
         handled: true,
+        flushReason: 'debounce',
       }
 
-      expect(mockReportFn).toHaveBeenLastCalledWith(
-        report,
-        expect.objectContaining({}),
-        expect.any(Array),
-      )
-      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+      expect(mockReportFn).toHaveBeenCalledTimes(1)
+      const reportArgs = mockReportFn.mock.calls.at(-1)?.[0]
+      expect(reportArgs).toBeDefined()
+      const generatedReport = generateReport(reportArgs!)
+      expect(generatedReport).toEqual(report)
+      expect(generatedReport.spans).toMatchInlineSnapshot(`
         Array [
           Object {
             "data": Object {
@@ -1297,14 +1305,15 @@ describe('useTiming', () => {
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.READY],
         hadError: false,
         handled: true,
+        flushReason: 'debounce',
       }
 
-      expect(mockReportFn.mock.calls.at(-1)).toEqual([
-        report,
-        expect.objectContaining({}),
-        expect.any(Array),
-      ])
-      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+      expect(mockReportFn).toHaveBeenCalledTimes(1)
+      const reportArgs = mockReportFn.mock.calls.at(-1)?.[0]
+      expect(reportArgs).toBeDefined()
+      const generatedReport = generateReport(reportArgs!)
+      expect(generatedReport).toEqual(report)
+      expect(generatedReport.spans).toMatchInlineSnapshot(`
         Array [
           Object {
             "data": Object {
@@ -1627,14 +1636,15 @@ describe('useTiming', () => {
         includedStages: [],
         hadError: false,
         handled: true,
+        flushReason: 'debounce',
       }
 
-      expect(mockReportFn.mock.calls.at(-1)).toEqual([
-        report,
-        expect.objectContaining({}),
-        expect.any(Array),
-      ])
-      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+      expect(mockReportFn).toHaveBeenCalledTimes(1)
+      const reportArgs = mockReportFn.mock.calls.at(-1)?.[0]
+      expect(reportArgs).toBeDefined()
+      const generatedReport = generateReport(reportArgs!)
+      expect(generatedReport).toEqual(report)
+      expect(generatedReport.spans).toMatchInlineSnapshot(`
         Array [
           Object {
             "data": Object {
@@ -1904,16 +1914,15 @@ describe('useTiming', () => {
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],
         hadError: true,
         handled: true,
+        flushReason: 'immediate send',
       }
 
       expect(mockReportFn).toHaveBeenCalledTimes(1)
-      expect(mockReportFn.mock.calls.at(-1)).toEqual([
-        report,
-        expect.objectContaining({}),
-        expect.any(Array),
-      ])
-
-      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+      const reportArgs = mockReportFn.mock.calls.at(-1)?.[0]
+      expect(reportArgs).toBeDefined()
+      const generatedReport = generateReport(reportArgs!)
+      expect(generatedReport).toEqual(report)
+      expect(generatedReport.spans).toMatchInlineSnapshot(`
         Array [
           Object {
             "data": Object {
@@ -2212,15 +2221,15 @@ describe('useTiming', () => {
         includedStages: [DEFAULT_STAGES.LOADING, DEFAULT_STAGES.ERROR],
         hadError: true,
         handled: false,
+        flushReason: 'immediate send',
       }
 
       expect(mockReportFn).toHaveBeenCalledTimes(1)
-      expect(mockReportFn.mock.calls.at(-1)).toEqual([
-        report,
-        expect.objectContaining({}),
-        expect.any(Array),
-      ])
-      expect(mockReportFn.mock.calls.at(-1)?.[0].spans).toMatchInlineSnapshot(`
+      const reportArgs = mockReportFn.mock.calls.at(-1)?.[0]
+      expect(reportArgs).toBeDefined()
+      const generatedReport = generateReport(reportArgs!)
+      expect(generatedReport).toEqual(report)
+      expect(generatedReport.spans).toMatchInlineSnapshot(`
         Array [
           Object {
             "data": Object {

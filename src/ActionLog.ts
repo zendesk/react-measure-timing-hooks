@@ -10,6 +10,7 @@ import type { DependencyList } from 'react'
 import {
   ACTION_TYPE,
   DEFAULT_DEBOUNCE_MS,
+  DEFAULT_LOADING_STAGES,
   DEFAULT_TIMEOUT_MS,
   ERROR_STAGES,
   INFORMATIVE_STAGES,
@@ -18,14 +19,13 @@ import {
 } from './constants'
 import type { DebounceOptionsRef } from './debounce'
 import { debounce, FlushReason, TimeoutReason } from './debounce'
-import type { ReportFn } from './generateReport'
-import { generateReport } from './generateReport'
 import { performanceMark, performanceMeasure } from './performanceMark'
 import type {
   Action,
   ActionWithStateMetadata,
   DynamicActionLogOptions,
-  ReportWithInfo,
+  ReportArguments,
+  ReportFn,
   ShouldResetOnDependencyChange,
   SpanAction,
   StageChangeAction,
@@ -62,7 +62,8 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   private lastStageBySource: Map<string, string> = new Map()
 
   finalStages: readonly string[] = NO_FINAL_STAGES
-  immediateSendStages: readonly string[] = NO_IMMEDIATE_SEND_STAGES
+  loadingStages: readonly string[] = DEFAULT_LOADING_STAGES
+  immediateSendReportStages: readonly string[] = NO_IMMEDIATE_SEND_STAGES
 
   private dependenciesBySource: Map<string, DependencyList> = new Map()
   private hasReportedAtLeastOnce = false
@@ -156,7 +157,8 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     debounceMs,
     timeoutMs,
     finalStages,
-    immediateSendStages,
+    loadingStages,
+    immediateSendReportStages,
     minimumExpectedSimultaneousBeacons,
     waitForBeaconActivation,
     flushUponDeactivation,
@@ -177,7 +179,9 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     this.debounceOptionsRef.debounceMs = debounceMs ?? DEFAULT_DEBOUNCE_MS
     this.debounceOptionsRef.timeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS
     this.finalStages = finalStages ?? NO_FINAL_STAGES
-    this.immediateSendStages = immediateSendStages ?? NO_IMMEDIATE_SEND_STAGES
+    this.loadingStages = loadingStages ?? DEFAULT_LOADING_STAGES
+    this.immediateSendReportStages =
+      immediateSendReportStages ?? NO_IMMEDIATE_SEND_STAGES
     this.flushUponDeactivation = flushUponDeactivation ?? false
     this.waitForBeaconActivation = waitForBeaconActivation ?? []
   }
@@ -306,22 +310,22 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     info: Omit<StageChangeAction, 'type' | 'marker' | 'entry' | 'timestamp'>,
     previousStage: string = INFORMATIVE_STAGES.INITIAL,
   ) {
-    const { stage } = info
+    const { stage, renderEntry } = info
     const previousStageEntry = this.lastStageEntry
     const measureName = previousStageEntry
       ? `${this.id}/${info.source}/${previousStage}-till-${stage}`
       : `${this.id}/${info.source}/start-${stage}`
 
     const entry = previousStageEntry
-      ? performanceMeasure(measureName, previousStageEntry)
-      : performanceMark(measureName)
+      ? performanceMeasure(measureName, previousStageEntry, renderEntry)
+      : performanceMark(measureName, { startTime: renderEntry?.startTime })
 
     this.addAction({
+      ...info,
       type: ACTION_TYPE.STAGE_CHANGE,
       marker: MARKER.POINT,
       entry: Object.assign(entry, { startMark: previousStageEntry }),
       timestamp: entry.startTime + entry.duration,
-      ...info,
     })
   }
 
@@ -410,16 +414,13 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     new PerformanceObserver((entryList: PerformanceObserverEntryList) => {
       if (!this.isCapturingData) return
 
-      const mark = performanceMark(`${this.id}/longTaskEnd`)
-
       const entries = entryList.getEntries()
 
       for (const entry of entries) {
         this.addSpan({
           type: ACTION_TYPE.UNRESPONSIVE,
           source: OBSERVER_SOURCE,
-          // workaround for the fact that long-task performance measures do not have unique names:
-          entry: Object.assign(entry, { endMark: mark }),
+          entry,
         })
       }
     })
@@ -520,7 +521,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   get isInImmediateSendStage(): boolean {
     return (
       ERROR_STAGES.includes(this.lastStage) ||
-      this.immediateSendStages.includes(this.lastStage)
+      this.immediateSendReportStages.includes(this.lastStage)
     )
   }
 
@@ -648,19 +649,21 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       )
     }
 
-    const report = generateReport({
-      actions: this.actions,
-      timingId: this.id,
-      isFirstLoad: !this.hasReportedAtLeastOnce,
-      immediateSendStages: [...ERROR_STAGES, ...this.immediateSendStages],
-    })
-
     const metadataValues = [...this.customMetadataBySource.values()]
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const metadata: CustomMetadata = Object.assign({}, ...metadataValues)
 
-    const reportWithMeta: ReportWithInfo = {
-      ...report,
+    const reportArgs: ReportArguments<CustomMetadata> = {
+      actions: this.actions,
+      metadata,
+      loadingStages: this.loadingStages,
+      finalStages: this.finalStages,
+      immediateSendReportStages:
+        this.immediateSendReportStages.length > 0
+          ? [...ERROR_STAGES, ...this.immediateSendReportStages]
+          : ERROR_STAGES,
+      timingId: this.id,
+      isFirstLoad: !this.hasReportedAtLeastOnce,
       maximumActiveBeaconsCount:
         highestNumberOfActiveBeaconsCountAtAnyGivenTime,
       minimumExpectedSimultaneousBeacons:
@@ -676,13 +679,12 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         new Error(
           `useTiming: reportFn was not set, please set it to a function that will be called with the timing report`,
         ),
-        reportWithMeta,
-        metadata,
+        reportArgs,
       )
     }
 
     if (hadReachedTheRequiredActiveBeaconsCount) {
-      this.reportFn(report, metadata, this.actions)
+      this.reportFn(reportArgs)
     }
 
     // clear slate for next re-render (stop observing) and disable reporting

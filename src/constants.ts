@@ -14,6 +14,11 @@ export const DEFAULT_STAGES = {
   READY: 'ready',
 } as const
 
+export const DEFAULT_LOADING_STAGES = [
+  DEFAULT_STAGES.LOADING,
+  DEFAULT_STAGES.LOADING_MORE,
+] as const
+
 export const ERROR_STAGES: readonly string[] = [
   DEFAULT_STAGES.ERROR,
   DEFAULT_STAGES.ERROR_BOUNDARY,

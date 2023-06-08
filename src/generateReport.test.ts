@@ -5,143 +5,19 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import { DEFAULT_STAGES } from './constants'
+import { DEFAULT_LOADING_STAGES, DEFAULT_STAGES } from './constants'
+import {
+  actionsFixture,
+  id,
+  mountedPlacements,
+} from './fixtures/actionsFixture'
 import type { Report } from './generateReport'
 import { generateReport } from './generateReport'
-import type { ActionWithStateMetadata } from './types'
 
 jest.mock('./utilities', () => ({
   ...jest.requireActual<typeof import('./utilities')>('./utilities'),
   getCurrentBrowserSupportForNonResponsiveStateDetection: jest.fn(() => true),
 }))
-
-const id = 'test'
-const mountedPlacements = ['beacon']
-
-const actionsFixture: ActionWithStateMetadata[] = [
-  {
-    type: 'stage-change',
-    marker: 'point',
-    timestamp: 100,
-    stage: 'loading',
-    source: 'beacon',
-    mountedPlacements,
-    timingId: id,
-    entry: {
-      duration: 100,
-      startTime: 0,
-      entryType: 'mark',
-      name: id,
-      toJSON: () => ({}),
-    },
-  } as const,
-  {
-    type: 'render',
-    source: 'beacon',
-    marker: 'start',
-    timestamp: 100,
-    mountedPlacements,
-    timingId: id,
-    entry: {
-      duration: 0,
-      startTime: 0,
-      entryType: 'mark',
-      name: id,
-      toJSON: () => ({}),
-    },
-  } as const,
-  {
-    type: 'render',
-    source: 'beacon',
-    marker: 'end',
-    timestamp: 200,
-    mountedPlacements,
-    timingId: id,
-    entry: {
-      duration: 100,
-      startTime: 100,
-      entryType: 'mark',
-      name: id,
-      toJSON: () => ({}),
-    },
-  } as const,
-  {
-    type: 'stage-change',
-    marker: 'point',
-    timestamp: 200,
-    stage: 'ready',
-    source: 'beacon',
-    mountedPlacements,
-    timingId: id,
-    entry: {
-      duration: 100,
-      startTime: 100,
-      entryType: 'mark',
-      name: id,
-      toJSON: () => ({}),
-    },
-  } as const,
-  {
-    type: 'render',
-    source: 'beacon',
-    marker: 'start',
-    timestamp: 200,
-    mountedPlacements,
-    timingId: id,
-    entry: {
-      duration: 0,
-      startTime: 200,
-      entryType: 'mark',
-      name: id,
-      toJSON: () => ({}),
-    },
-  } as const,
-  {
-    type: 'render',
-    source: 'beacon',
-    marker: 'end',
-    timestamp: 300,
-    mountedPlacements,
-    timingId: id,
-    entry: {
-      duration: 100,
-      startTime: 200,
-      entryType: 'mark',
-      name: id,
-      toJSON: () => ({}),
-    },
-  } as const,
-  {
-    type: 'unresponsive',
-    source: 'observer',
-    marker: 'start',
-    timestamp: 400,
-    mountedPlacements,
-    timingId: id,
-    entry: {
-      duration: 0,
-      startTime: 300,
-      entryType: 'mark',
-      name: id,
-      toJSON: () => ({}),
-    },
-  } as const,
-  {
-    type: 'unresponsive',
-    source: 'observer',
-    marker: 'end',
-    timestamp: 900,
-    mountedPlacements,
-    timingId: id,
-    entry: {
-      duration: 300,
-      startTime: 600,
-      entryType: 'mark',
-      name: id,
-      toJSON: () => ({}),
-    },
-  } as const,
-]
 
 describe('generateReport', () => {
   const originalTimeOrigin = performance.timeOrigin
@@ -179,6 +55,7 @@ describe('generateReport', () => {
       tti,
       ttr,
       lastStage: DEFAULT_STAGES.READY,
+      flushReason: 'test',
       counts: {
         beacon: expectedBeaconRenderCount,
         observer: 1,
@@ -286,7 +163,13 @@ describe('generateReport', () => {
       actions: actionsFixture,
       timingId: id,
       isFirstLoad,
-      immediateSendStages: [],
+      immediateSendReportStages: [],
+      loadingStages: DEFAULT_LOADING_STAGES,
+      metadata: {},
+      finalStages: [],
+      flushReason: 'test',
+      maximumActiveBeaconsCount: 1,
+      minimumExpectedSimultaneousBeacons: 1,
     })
 
     expect(report).toStrictEqual(expectedReport)
