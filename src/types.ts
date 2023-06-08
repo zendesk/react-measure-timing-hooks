@@ -153,10 +153,6 @@ export interface ReportArguments<CustomMetadata extends Record<string, unknown>>
   readonly metadata?: CustomMetadata
 }
 
-// TODO remove
-export interface ReportWithInfo<CustomMetadata extends Record<string, unknown>>
-  extends ReportArguments<CustomMetadata> {}
-
 export interface DynamicActionLogOptions<
   CustomMetadata extends Record<string, unknown>,
 > extends WithTimingId,
