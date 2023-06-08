@@ -420,7 +420,6 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         this.addSpan({
           type: ACTION_TYPE.UNRESPONSIVE,
           source: OBSERVER_SOURCE,
-          // workaround for the fact that long-task performance measures do not have unique names:
           entry,
         })
       }

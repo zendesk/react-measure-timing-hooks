@@ -34,7 +34,7 @@ For example:
 ```typescript
 import {
   generateTimingHooks,
-  defaultReport,
+  generateReport,
 } from '@zendesk/react-measure-timing-hooks'
 
 export const {
