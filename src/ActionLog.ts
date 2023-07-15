@@ -86,6 +86,22 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
   }
 
   /**
+   * Clear performance marks that were added by this ActionLog instance.
+   */
+  private clearPerformanceMarks(): void {
+    this.actions.forEach((action) => {
+      if (!action.entry.name) return
+      try {
+        if (action.entry instanceof PerformanceMeasure) {
+          performance.clearMeasures(action.entry.name)
+        }
+      } catch {
+        // ignore
+      }
+    })
+  }
+
+  /**
    * Clear parts of the internal state, so it's ready for the next measurement.
    */
   clear(): void {
@@ -99,6 +115,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
       this.debouncedTrigger.cancel()
     }
     this.stopObserving()
+    this.clearPerformanceMarks()
     this.actions = []
     this.lastStage = INFORMATIVE_STAGES.INITIAL
     this.lastStageUpdatedAt = performance.now()
@@ -627,41 +644,12 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
 
     const { lastRenderAction } = this
 
-    if (timedOut) {
-      this.addStageChange(
-        {
-          stage: INFORMATIVE_STAGES.TIMEOUT,
-          source: 'timeout',
-        },
-        this.lastStage,
-      )
-    } else if (lastRenderAction) {
-      // add a measure so we can use it in Lighthouse runs
-      performanceMeasure(
-        `${this.id}/tti`,
-        firstAction.entry.startMark ?? firstAction.entry,
-        lastAction.entry.endMark ?? lastAction.entry,
-      )
-      performanceMeasure(
-        `${this.id}/ttr`,
-        firstAction.entry.startMark ?? firstAction.entry,
-        lastRenderAction.entry.endMark ?? lastRenderAction.entry,
-      )
-    }
-
     const metadataValues = [...this.customMetadataBySource.values()]
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const metadata: CustomMetadata = Object.assign({}, ...metadataValues)
 
-    const reportArgs: ReportArguments<CustomMetadata> = {
-      actions: this.actions,
+    const detail = {
       metadata,
-      loadingStages: this.loadingStages,
-      finalStages: this.finalStages,
-      immediateSendReportStages:
-        this.immediateSendReportStages.length > 0
-          ? [...ERROR_STAGES, ...this.immediateSendReportStages]
-          : ERROR_STAGES,
       timingId: this.id,
       isFirstLoad: !this.hasReportedAtLeastOnce,
       maximumActiveBeaconsCount:
@@ -672,6 +660,45 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         typeof flushReason === 'symbol'
           ? flushReason.description ?? 'manual'
           : flushReason,
+    }
+
+    let tti: PerformanceMeasure | undefined
+    let ttr: PerformanceMeasure | undefined
+
+    if (timedOut) {
+      this.addStageChange(
+        {
+          stage: INFORMATIVE_STAGES.TIMEOUT,
+          source: 'timeout',
+        },
+        this.lastStage,
+      )
+    } else if (lastRenderAction) {
+      // add a measure so we can use it in Lighthouse runs
+      tti = performanceMeasure(
+        `${this.id}/tti`,
+        firstAction.entry.startMark ?? firstAction.entry,
+        lastAction.entry.endMark ?? lastAction.entry,
+        detail,
+      )
+      ttr = performanceMeasure(
+        `${this.id}/ttr`,
+        firstAction.entry.startMark ?? firstAction.entry,
+        lastRenderAction.entry.endMark ?? lastRenderAction.entry,
+        detail,
+      )
+    }
+
+    const reportArgs: ReportArguments<CustomMetadata> = {
+      ...detail,
+      actions: this.actions,
+      loadingStages: this.loadingStages,
+      finalStages: this.finalStages,
+      immediateSendReportStages:
+        this.immediateSendReportStages.length > 0
+          ? [...ERROR_STAGES, ...this.immediateSendReportStages]
+          : ERROR_STAGES,
+      measures: { tti, ttr },
     }
 
     if (this.reportFn === noop) {

@@ -151,6 +151,10 @@ export interface ReportArguments<CustomMetadata extends Record<string, unknown>>
   readonly minimumExpectedSimultaneousBeacons?: number
   readonly flushReason?: string
   readonly metadata?: CustomMetadata
+  readonly measures: {
+    tti?: PerformanceMeasure
+    ttr?: PerformanceMeasure
+  }
 }
 
 export interface DynamicActionLogOptions<

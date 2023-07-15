@@ -174,7 +174,7 @@ function getPoints<A extends Action>(
 }
 
 function getChartPoints(actions: ActionWithStateMetadata[]) {
-  const report = generateReport({ actions })
+  const report = generateReport({ actions, measures: {} })
   const sources = Object.keys(report.counts)
   const sourceToColor = Object.fromEntries(
     sources.map((source, index) => [
