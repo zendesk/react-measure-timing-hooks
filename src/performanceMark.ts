@@ -60,7 +60,7 @@ export const performanceMeasure = (
   // we don't want to crash due to reporting, so we'll polyfill instead
   try {
     const measure = performance.measure(measureName, {
-      start: startMark.startTime,
+      start: startMark.startTime + startMark.duration,
       end,
       detail,
     })
