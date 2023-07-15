@@ -49,6 +49,8 @@ const RenderImmediately = ({
   return <div>Rendering immediately</div>
 }
 
+RenderImmediately.displayName = 'RenderImmediately'
+
 const TakesAWhileB = ({
   setStage,
 }: {
@@ -72,6 +74,8 @@ const TakesAWhileB = ({
 
   return <div>Something else that loads for a while... {progress}%</div>
 }
+
+TakesAWhileB.displayName = 'TakesAWhileB'
 
 const TakesAWhile = ({
   reportFn,
@@ -110,6 +114,8 @@ const TakesAWhile = ({
   )
 }
 
+TakesAWhile.displayName = 'TakesAWhile'
+
 const VisualizerExample = ({ mounted, ...props }: IArgs) => {
   const { content, visualizer } = props
 
@@ -127,6 +133,8 @@ const VisualizerExample = ({ mounted, ...props }: IArgs) => {
     <>{mounted ? render : <div>Nothing to show, element unmounted.</div>}</>
   )
 }
+
+VisualizerExample.displayName = 'VisualizerExample'
 
 export const MeasureTimingStory: StoryObj<IArgs> = {
   render: (props) => <VisualizerExample {...props} />,
@@ -168,7 +176,7 @@ export const MeasureTimingStory: StoryObj<IArgs> = {
   },
 }
 
-const Component: React.FunctionComponent<{}> = () => <>'Hello world'</>
+const Component: React.FunctionComponent<{}> = () => <>Hello world</>
 
 const meta: Meta<{}> = {
   // title: 'Packages/MeasureTiming',
