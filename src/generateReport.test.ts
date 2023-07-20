@@ -170,6 +170,7 @@ describe('generateReport', () => {
       flushReason: 'test',
       maximumActiveBeaconsCount: 1,
       minimumExpectedSimultaneousBeacons: 1,
+      measures: {},
     })
 
     expect(report).toStrictEqual(expectedReport)
