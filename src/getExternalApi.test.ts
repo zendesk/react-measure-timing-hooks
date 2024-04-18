@@ -58,11 +58,11 @@ describe('getExternalApi', () => {
     // start and end render expected:
     expect(actionLog?.getActions()).toHaveLength(2)
     expect(actionLog?.getActions()).toMatchInlineSnapshot(`
-      Array [
-        Object {
-          "entry": Object {},
+      [
+        {
+          "entry": {},
           "marker": "start",
-          "mountedPlacements": Array [
+          "mountedPlacements": [
             "beacon",
           ],
           "source": "beacon",
@@ -70,10 +70,10 @@ describe('getExternalApi', () => {
           "timingId": "test/1",
           "type": "render",
         },
-        Object {
-          "entry": Object {},
+        {
+          "entry": {},
           "marker": "end",
-          "mountedPlacements": Array [
+          "mountedPlacements": [
             "beacon",
           ],
           "source": "beacon",
@@ -132,11 +132,11 @@ describe('getExternalApi', () => {
     expect(reportFn).not.toHaveBeenCalled()
     expect(actionLog?.getActions()).toHaveLength(3)
     expect(actionLog?.getActions()[2]).toMatchInlineSnapshot(`
-      Object {
-        "entry": Object {},
+      {
+        "entry": {},
         "marker": "point",
         "metadata": undefined,
-        "mountedPlacements": Array [
+        "mountedPlacements": [
           "beacon",
         ],
         "source": "beacon",
@@ -190,12 +190,12 @@ describe('getExternalApi', () => {
     expect(reportFn).not.toHaveBeenCalled()
     expect(actionLog?.getActions()).toHaveLength(3)
     expect(actionLog?.getActions()).toMatchInlineSnapshot(`
-      Array [
-        Object {
-          "entry": Object {},
+      [
+        {
+          "entry": {},
           "marker": "point",
           "metadata": undefined,
-          "mountedPlacements": Array [
+          "mountedPlacements": [
             "beacon1",
           ],
           "source": "beacon1",
@@ -204,11 +204,11 @@ describe('getExternalApi', () => {
           "timingId": "test/1",
           "type": "stage-change",
         },
-        Object {
-          "entry": Object {},
+        {
+          "entry": {},
           "marker": "point",
           "metadata": undefined,
-          "mountedPlacements": Array [
+          "mountedPlacements": [
             "beacon1",
           ],
           "source": "beacon1",
@@ -217,11 +217,11 @@ describe('getExternalApi', () => {
           "timingId": "test/1",
           "type": "stage-change",
         },
-        Object {
-          "entry": Object {},
+        {
+          "entry": {},
           "marker": "point",
           "metadata": undefined,
-          "mountedPlacements": Array [
+          "mountedPlacements": [
             "beacon1",
             "beacon2",
           ],
@@ -284,12 +284,12 @@ describe('getExternalApi', () => {
     expect(reportFn).not.toHaveBeenCalled()
     expect(actionLog?.getActions()).toHaveLength(2)
     expect(actionLog?.getActions()).toMatchInlineSnapshot(`
-      Array [
-        Object {
-          "entry": Object {},
+      [
+        {
+          "entry": {},
           "marker": "point",
           "metadata": undefined,
-          "mountedPlacements": Array [
+          "mountedPlacements": [
             "beacon1",
             "beacon2",
           ],
@@ -299,11 +299,11 @@ describe('getExternalApi', () => {
           "timingId": "test/1",
           "type": "stage-change",
         },
-        Object {
-          "entry": Object {},
+        {
+          "entry": {},
           "marker": "point",
           "metadata": undefined,
-          "mountedPlacements": Array [
+          "mountedPlacements": [
             "beacon1",
             "beacon2",
           ],
@@ -409,12 +409,12 @@ describe('getExternalApi', () => {
     expect(actionLog?.getActions()).toHaveLength(0)
     expect(generateReport(reportFn.mock.calls[0][0]).spans)
       .toMatchInlineSnapshot(`
-      Array [
-        Object {
-          "data": Object {
+      [
+        {
+          "data": {
             "dependencyChanges": 0,
-            "metadata": Object {},
-            "mountedPlacements": Array [
+            "metadata": {},
+            "mountedPlacements": [
               "beacon1",
             ],
             "previousStage": "first",
@@ -439,12 +439,12 @@ describe('getExternalApi', () => {
     expect(actionLog?.isCapturingData).toBe(true)
     expect(actionLog?.getActions()).toHaveLength(1)
     expect(actionLog?.getActions()).toMatchInlineSnapshot(`
-      Array [
-        Object {
-          "entry": Object {},
+      [
+        {
+          "entry": {},
           "marker": "point",
           "metadata": undefined,
-          "mountedPlacements": Array [
+          "mountedPlacements": [
             "beacon1",
           ],
           "source": "beacon1",
