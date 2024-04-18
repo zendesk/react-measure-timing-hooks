@@ -21,6 +21,7 @@ const { useStoryTimingInA, useStoryTimingInB } = generateTimingHooks(
     onActionAddedCallback,
     minimumExpectedSimultaneousBeacons: 1,
     reportFn: (report) => {
+      // eslint-disable-next-line no-console
       console.log(generateReport(report))
     },
   },

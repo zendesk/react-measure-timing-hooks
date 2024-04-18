@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 export type SpanKind = 'fetch' | 'render' | 'operation' | 'compute'
 
 declare global {
