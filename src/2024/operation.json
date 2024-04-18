@@ -1,0 +1,259 @@
+{
+  "name": "story",
+  "entryType": "measure",
+  "startTime": 463.69999998807907,
+  "duration": 10966.900000035763,
+  "detail": {
+    "kind": "operation",
+    "metadata": {
+      "storyId": "example"
+    },
+    "operationId": "z3tx0x6gbd",
+    "operationName": "story",
+    "tasks": [
+      {
+        "metadata": {},
+        "timingId": "story/immediately",
+        "isFirstLoad": true,
+        "maximumActiveBeaconsCount": 1,
+        "minimumExpectedSimultaneousBeacons": 1,
+        "flushReason": "debounce",
+        "operationStartOffset": -2.399999976158142,
+        "kind": "compute",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/immediately/tti",
+        "occurrence": 1,
+        "duration": 415.19999998807907
+      },
+      {
+        "metadata": {},
+        "timingId": "story/immediately",
+        "isFirstLoad": true,
+        "maximumActiveBeaconsCount": 1,
+        "minimumExpectedSimultaneousBeacons": 1,
+        "flushReason": "debounce",
+        "operationStartOffset": -2.399999976158142,
+        "kind": "compute",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/immediately/ttr",
+        "occurrence": 1,
+        "duration": 0.8999999761581421
+      },
+      {
+        "operationStartOffset": 7436.800000011921,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 1,
+        "duration": 0.6000000238418579
+      },
+      {
+        "operationStartOffset": 7436.800000011921,
+        "kind": "compute",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/initial-till-loading",
+        "occurrence": 1,
+        "duration": 303.10000002384186
+      },
+      {
+        "operationStartOffset": 7739.900000035763,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 2,
+        "duration": 1.899999976158142
+      },
+      {
+        "operationStartOffset": 8043,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 3,
+        "duration": 0.40000003576278687
+      },
+      {
+        "operationStartOffset": 8344.300000011921,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 4,
+        "duration": 0.10000002384185791
+      },
+      {
+        "operationStartOffset": 8645,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 5,
+        "duration": 0.10000002384185791
+      },
+      {
+        "operationStartOffset": 8947.400000035763,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 6,
+        "duration": 0.5999999642372131
+      },
+      {
+        "operationStartOffset": 9250.199999988079,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 7,
+        "duration": 0.40000003576278687
+      },
+      {
+        "operationStartOffset": 9552,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 8,
+        "duration": 0.10000002384185791
+      },
+      {
+        "operationStartOffset": 9853.600000023842,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 9,
+        "duration": 0.5
+      },
+      {
+        "operationStartOffset": 10155.800000011921,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 10,
+        "duration": 1.5
+      },
+      {
+        "operationStartOffset": 10156.400000035763,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/B/render",
+        "occurrence": 1,
+        "duration": 0.5999999642372131
+      },
+      {
+        "operationStartOffset": 10359.300000011921,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/B/render",
+        "occurrence": 2,
+        "duration": 0.5
+      },
+      {
+        "operationStartOffset": 10459.5,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 11,
+        "duration": 0.699999988079071
+      },
+      {
+        "operationStartOffset": 10459.699999988079,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/B/render",
+        "occurrence": 3,
+        "duration": 0.20000004768371582
+      },
+      {
+        "operationStartOffset": 10561.199999988079,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/B/render",
+        "occurrence": 4,
+        "duration": 0.20000004768371582
+      },
+      {
+        "operationStartOffset": 10763.400000035763,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/B/render",
+        "occurrence": 5,
+        "duration": 0.19999998807907104
+      },
+      {
+        "operationStartOffset": 7739.900000035763,
+        "kind": "compute",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/loading-till-ready",
+        "occurrence": 1,
+        "duration": 3226.399999976158
+      },
+      {
+        "operationStartOffset": 10965.5,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/B/render",
+        "occurrence": 6,
+        "duration": 0.5
+      },
+      {
+        "operationStartOffset": 10966.300000011921,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/A/render",
+        "occurrence": 12,
+        "duration": 0.6000000238418579
+      },
+      {
+        "operationStartOffset": 10966.600000023842,
+        "kind": "render",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/B/render",
+        "occurrence": 7,
+        "duration": 0.19999998807907104
+      },
+      {
+        "metadata": {},
+        "timingId": "story/takes-a-while",
+        "isFirstLoad": true,
+        "maximumActiveBeaconsCount": 2,
+        "minimumExpectedSimultaneousBeacons": 1,
+        "flushReason": "debounce",
+        "operationStartOffset": 7436.800000011921,
+        "kind": "compute",
+        "operationId": "z3tx0x6gbd",
+        "operationName": "story",
+        "commonName": "story/takes-a-while/tti",
+        "occurrence": 1,
+        "duration": 3530.100000023842
+      }
+    ],
+    "includedOperationNames": [
+      "story/immediately/tti",
+      "story/immediately/ttr",
+      "story/takes-a-while/A/render",
+      "story/takes-a-while/A/initial-till-loading",
+      "story/takes-a-while/B/render",
+      "story/takes-a-while/A/loading-till-ready",
+      "story/takes-a-while/tti"
+    ]
+  }
+}
