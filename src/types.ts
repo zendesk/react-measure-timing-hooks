@@ -289,10 +289,10 @@ export type GeneratedTimingHooks<
   actionLogCache: ActionLogCache<Metadata>
 }
 
-export type ActionType = typeof ACTION_TYPE[keyof typeof ACTION_TYPE]
-export type Marker = typeof MARKER[keyof typeof MARKER]
-export type SpanMarker = typeof MARKER['START' | 'END']
-export type PointMarker = typeof MARKER['POINT']
+export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE]
+export type Marker = (typeof MARKER)[keyof typeof MARKER]
+export type SpanMarker = (typeof MARKER)['START' | 'END']
+export type PointMarker = (typeof MARKER)['POINT']
 
 export type CustomPerformanceEntry = PerformanceEntry & {
   startMark?: PerformanceEntry
@@ -308,12 +308,12 @@ export interface BaseAction<NameT extends ActionType, MarkerT extends Marker> {
   metadata?: Record<string, unknown>
 }
 
-export type RenderActionType = typeof ACTION_TYPE['RENDER']
+export type RenderActionType = (typeof ACTION_TYPE)['RENDER']
 export type RenderAction = BaseAction<RenderActionType, SpanMarker>
-export type UnresponsiveActionType = typeof ACTION_TYPE['UNRESPONSIVE']
+export type UnresponsiveActionType = (typeof ACTION_TYPE)['UNRESPONSIVE']
 export type UnresponsiveAction = BaseAction<UnresponsiveActionType, SpanMarker>
 export type SpanAction = RenderAction | UnresponsiveAction
-export type StageChangeActionType = typeof ACTION_TYPE['STAGE_CHANGE']
+export type StageChangeActionType = (typeof ACTION_TYPE)['STAGE_CHANGE']
 
 export interface StageChangeAction
   extends BaseAction<StageChangeActionType, PointMarker> {
@@ -321,7 +321,8 @@ export interface StageChangeAction
   renderEntry?: CustomPerformanceEntry
 }
 
-export type DependencyChangeActionType = typeof ACTION_TYPE['DEPENDENCY_CHANGE']
+export type DependencyChangeActionType =
+  (typeof ACTION_TYPE)['DEPENDENCY_CHANGE']
 export type DependencyChangeAction = BaseAction<
   DependencyChangeActionType,
   PointMarker
