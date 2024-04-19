@@ -357,6 +357,8 @@ export interface Span {
   endTime: number
   /** relative endTime (ms since the beginning of the first action) */
   relativeEndTime: number
+
+  entry?: PerformanceEntry
   data: StateMeta & {
     source?: string
     metadata?: Record<string, unknown>
