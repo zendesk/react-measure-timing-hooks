@@ -1,6 +1,8 @@
-/* eslint-disable no-magic-numbers */
+/* eslint-disable eslint-comments/no-unlimited-disable */
+/* eslint-disable */
 import React from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
+import {Label} from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
 import { localPoint } from '@visx/event'
 import { Grid } from '@visx/grid'
@@ -19,14 +21,27 @@ import {
 } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
 import OperationData from '../2024/operation.json'
+import TicketData from '../2024/ticket-fixtures/ticket-open-no-fetches-or-renders.json'
+import { SpanKind } from '../main'
+import { LegendOrdinal, LegendItem, LegendLabel } from '@visx/legend';
 
-const operation = OperationData
+const operation = TicketData;
+const ticketActivationOperation = TicketData.operations['ticket/activation']
 
-const data = operation.detail.tasks.map((task) => ({
+interface BarDataType {
+  start: number;
+  width: number;
+  commonName: string;
+  occurrence: number;
+  kind: SpanKind;
+}
+
+const data: BarDataType[] = ticketActivationOperation.tasks.map((task) => ({
   start: task.operationStartOffset,
   width: task.duration,
   commonName: task.commonName,
   occurrence: task.occurrence,
+  kind: task.kind
 }))
 
 export interface BarGroupHorizontalProps {
@@ -35,13 +50,20 @@ export interface BarGroupHorizontalProps {
   margin?: { top: number; right: number; bottom: number; left: number }
   events?: boolean
 }
+const DEFAULT_MARGIN = { top: 30, left: 200, right: 30, bottom: 30 }
 
-const defaultMargin = { top: 30, left: 200, right: 30, bottom: 30 }
+const BAR_FILL_COLOR = {
+  compute: "blue",
+  fetch: "purple",
+  render: "green",
+  operation: "red"
+
+}
 
 export function OperationVisualizer({
   width,
   height,
-  margin = defaultMargin,
+  margin = DEFAULT_MARGIN,
   events = false,
 }: BarGroupHorizontalProps) {
   // bounds
@@ -55,7 +77,8 @@ export function OperationVisualizer({
     range: [0, xMax],
   })
 
-  const taskNames = operation.detail.tasks.map((t) => `${t.commonName}`)
+  // const taskNames = ticketActivationOperation.tasks.map((t) => `${t.commonName}`)
+  const taskNames = ticketActivationOperation.includedCommonTaskNames
 
   const labelScale = scaleBand({
     domain: taskNames,
@@ -69,13 +92,30 @@ export function OperationVisualizer({
     tooltipTop,
     tooltipData,
     hideTooltip,
-    showTooltip,
-  } = useTooltip()
+    showTooltip
+  } = useTooltip<BarDataType>()
   let tooltipTimeout: number
 
+  const colorScale = scaleOrdinal({
+    domain: Object.keys(BAR_FILL_COLOR),
+    range: Object.values(BAR_FILL_COLOR),
+  });
+
   return width < 10 ? null : (
-    <svg width={width} height={height} fill="#c8c8c8">
-      <rect x={0} y={0} width={width} height={height} rx={14} />
+    <>
+    <svg width={width} height={height}>
+      {/* background: */}
+      {/* <rect x={0} y={0} width={width} height={height} rx={14} /> */}
+      <text
+          x={width / 2} // Centering the title
+          y={margin.top / 2} // Positioning it before the top of the chart (assuming there's enough top margin)
+          textAnchor="middle" // Center the text around its x coordinate
+          fill="#333" // Your desired title color
+          fontSize="24px" // Your desired font size
+          fontWeight="bold" // Optional: make the title bold
+        >
+          {operation.name}
+        </text>
       <Group top={margin.top} left={margin.left}>
         <Axis scale={xScale} top={yMax} />
         <Grid xScale={xScale} yScale={labelScale} width={xMax} height={yMax} />
@@ -86,8 +126,7 @@ export function OperationVisualizer({
             y={labelScale(`${d.commonName}`)}
             width={xScale(d.width)}
             height={labelScale.bandwidth()}
-            fill="#fce5cd"
-            stroke="blue"
+            fill={BAR_FILL_COLOR[d.kind]}
             onMouseLeave={() => {
               // Prevent tooltip from flickering.
               tooltipTimeout = window.setTimeout(() => {
@@ -99,10 +138,9 @@ export function OperationVisualizer({
               // Update tooltip position and data
               const coords = localPoint(event.target.ownerSVGElement, event)
               if (coords) {
-                console.log('# coords:', tooltipOpen, d)
                 showTooltip({
-                  tooltipLeft: coords.x,
-                  tooltipTop: coords.y,
+                  tooltipLeft: coords.x + 10,
+                  tooltipTop: coords.y + 10,
                   tooltipData: d,
                 })
               }
@@ -120,25 +158,55 @@ export function OperationVisualizer({
           }}
         />
       </Group>
-      {tooltipOpen && tooltipData && (
+
+    </svg>
+    <div
+        style={{
+          position: 'absolute',
+          top: height + 10, // Position below the chart
+          left: margin.left,
+          display: 'flex',
+          flexDirection: 'column',
+          flexWrap: 'wrap',
+        }}
+      >
+       <LegendOrdinal scale={colorScale} labelFormat={(label) => `${label.toUpperCase()}`}>
+        {(labels) => (
+          <div style={{ display: 'flex', flexDirection: 'row' }}>
+            {labels.map((label, i) => (
+              <LegendItem key={`legend-${i}`} margin="0 5px">
+                <svg width={15} height={15}>
+                  <rect fill={label.value} width={15} height={15} />
+                </svg>
+                <LegendLabel align="left" margin="0 0 0 4px">
+                  {label.text}
+                </LegendLabel>
+              </LegendItem>
+            ))}
+          </div>
+        )}
+      </LegendOrdinal>
+      </div>
+
+    {tooltipOpen && tooltipData && (
         <TooltipWithBounds
           top={tooltipTop}
           left={tooltipLeft}
-          style={{
-            ...defaultStyles,
-            padding: '0.5rem',
-            backgroundColor: '#283238',
-            color: 'white',
-            zIndex: 1_000,
-            visibility: 'visible',
-          }}
+          style={{ ...defaultTooltipStyles, backgroundColor: '#283238', color: 'white' }}
         >
           <div>
-            <strong>{'test'}</strong>
+            <strong>{tooltipData.commonName}</strong>
+            <div style={{ marginTop: '5px', fontSize: '12px', opacity: '80%' }}>
+              <div>kind: {tooltipData.kind}</div>   
+              <div>Occurance: {tooltipData.occurrence}</div>   
+              <div>Start: {tooltipData.start.toFixed(2)}</div>            
+              <div>Width: {tooltipData.width.toFixed(2)}</div>              
+            </div>
           </div>
         </TooltipWithBounds>
       )}
-    </svg>
+    </>
+    
   )
 }
 

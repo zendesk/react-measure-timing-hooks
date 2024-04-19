@@ -7006,7 +7006,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/annotation@npm:3.3.0":
+"@visx/annotation@npm:3.3.0, @visx/annotation@npm:^3.3.0":
   version: 3.3.0
   resolution: "@visx/annotation@npm:3.3.0"
   dependencies:
@@ -7237,7 +7237,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/legend@npm:3.5.0":
+"@visx/legend@npm:3.5.0, @visx/legend@npm:^3.5.0":
   version: 3.5.0
   resolution: "@visx/legend@npm:3.5.0"
   dependencies:
@@ -7919,10 +7919,12 @@ __metadata:
     "@types/react-dom": "npm:^18.2.25"
     "@types/react-test-renderer": "npm:^18.0.7"
     "@types/webpack-sources": "npm:^3.2.3"
+    "@visx/annotation": "npm:^3.3.0"
     "@visx/axis": "npm:^3.10.1"
     "@visx/event": "npm:^3.3.0"
     "@visx/gradient": "npm:^3.3.0"
     "@visx/group": "npm:^3.3.0"
+    "@visx/legend": "npm:^3.5.0"
     "@visx/mock-data": "npm:^3.3.0"
     "@visx/responsive": "npm:^3.10.2"
     "@visx/scale": "npm:^3.5.0"

@@ -1,6 +1,5 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-console */
-export type SpanKind = 'fetch' | 'render' | 'operation' | 'compute'
 
 declare global {
   interface PerformanceEntry {
@@ -8,6 +7,8 @@ declare global {
     operations?: Record<string, SpanMetadata<SpanKind>>
   }
 }
+
+export type SpanKind = 'fetch' | 'render' | 'operation' | 'compute'
 
 export interface SpanMetadata<Kind extends SpanKind> {
   kind: Kind
@@ -47,6 +48,10 @@ export interface TaskDataEmbeddedInOperation extends TaskSpanMetadata {
 
 export interface Span<Metadata extends SpanMetadata<SpanKind>>
   extends PerformanceEntry {
+  duration: number;
+  entryType: string;
+  name: string;
+  startTime: number;
   operations: Record<string, Metadata>
 }
 
