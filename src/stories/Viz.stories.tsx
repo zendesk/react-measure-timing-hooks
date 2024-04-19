@@ -1,8 +1,9 @@
 /* eslint-disable no-magic-numbers */
 import React from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
-import { AxisLeft } from '@visx/axis'
-import { localPoint } from '@visx/event';
+import { Axis, AxisLeft } from '@visx/axis'
+import { localPoint } from '@visx/event'
+import { Grid } from '@visx/grid'
 import { Group } from '@visx/group'
 import { useScreenSize } from '@visx/responsive'
 import ParentSize from '@visx/responsive/lib/components/ParentSize'
@@ -45,8 +46,8 @@ export function OperationVisualizer({
 }: BarGroupHorizontalProps) {
   // bounds
 
-  const xMax = width - margin.left - margin.right;
-  const yMax = height - margin.bottom - margin.top;
+  const xMax = width - margin.left - margin.right
+  const yMax = height - margin.bottom - margin.top
 
   const xScale = scaleLinear({
     // possible values of width
@@ -54,14 +55,12 @@ export function OperationVisualizer({
     range: [0, xMax],
   })
 
-  const taskNames = operation.detail.tasks.map(
-    (t) => `${t.commonName}-${t.occurrence}`,
-  )
+  const taskNames = operation.detail.tasks.map((t) => `${t.commonName}`)
 
   const labelScale = scaleBand({
     domain: taskNames,
     range: [0, yMax],
-    // padding: .2
+    padding: 0.2,
   })
 
   const {
@@ -78,11 +77,13 @@ export function OperationVisualizer({
     <svg width={width} height={height} fill="#c8c8c8">
       <rect x={0} y={0} width={width} height={height} rx={14} />
       <Group top={margin.top} left={margin.left}>
+        <Axis scale={xScale} top={yMax} />
+        <Grid xScale={xScale} yScale={labelScale} width={xMax} height={yMax} />
         {data.map((d, i) => (
           <Bar
             key={i}
             x={xScale(d.start)}
-            y={labelScale(`${d.commonName}-${d.occurrence}`)}
+            y={labelScale(`${d.commonName}`)}
             width={xScale(d.width)}
             height={labelScale.bandwidth()}
             fill="#fce5cd"
@@ -96,14 +97,14 @@ export function OperationVisualizer({
             onMouseMove={(event) => {
               if (tooltipTimeout) clearTimeout(tooltipTimeout)
               // Update tooltip position and data
-                const coords = localPoint(event.target.ownerSVGElement, event);
-                if (coords) {
-                  console.log('# coords:', tooltipOpen, d)
-                  showTooltip({
-                tooltipLeft: coords.x,
-                tooltipTop: coords.y,
-                tooltipData: d
-                });
+              const coords = localPoint(event.target.ownerSVGElement, event)
+              if (coords) {
+                console.log('# coords:', tooltipOpen, d)
+                showTooltip({
+                  tooltipLeft: coords.x,
+                  tooltipTop: coords.y,
+                  tooltipData: d,
+                })
               }
             }}
           />
@@ -129,7 +130,7 @@ export function OperationVisualizer({
             backgroundColor: '#283238',
             color: 'white',
             zIndex: 1_000,
-            visibility: 'visible'
+            visibility: 'visible',
           }}
         >
           <div>
