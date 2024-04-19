@@ -49,12 +49,12 @@ export function OperationVisualizer({
 }: BarGroupHorizontalProps) {
   // bounds
 
-  const xMax = width
+  const xMax = width - margin.left - margin.right;
   const yMax = height - margin.bottom - margin.top;
 
   const xScale = scaleLinear({
     // possible values of width
-    domain: [0, operation.duration + operation.startTime + 10000],
+    domain: [0, operation.duration + operation.startTime],
     range: [1, xMax],
     // round: true,
   })
