@@ -2,11 +2,10 @@
 import React from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 import { AxisLeft } from '@visx/axis'
+import { localPoint } from '@visx/event';
 import { Group } from '@visx/group'
-import { Stats } from '@visx/mock-data/lib/generators/genStats'
 import { useScreenSize } from '@visx/responsive'
 import ParentSize from '@visx/responsive/lib/components/ParentSize'
-// import { getSeededRandom, getRandomNormal } from "@visx/mock-data";
 import { scaleBand, scaleLinear, scaleOrdinal, scalePoint } from '@visx/scale'
 import { Bar, BarGroupHorizontal } from '@visx/shape'
 import {
@@ -18,16 +17,13 @@ import {
   withTooltip,
 } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
-import { timeFormat, timeParse } from '@visx/vendor/d3-time-format'
 import OperationData from '../2024/operation.json'
-import { localPoint } from '@visx/event';
 
 const operation = OperationData
 
 const data = operation.detail.tasks.map((task) => ({
   start: task.operationStartOffset,
   width: task.duration,
-  // width: task.duration,
   commonName: task.commonName,
   occurrence: task.occurrence,
 }))
@@ -54,9 +50,8 @@ export function OperationVisualizer({
 
   const xScale = scaleLinear({
     // possible values of width
-    domain: [0, operation.duration + operation.startTime],
-    range: [1, xMax],
-    // round: true,
+    domain: [0, operation.duration],
+    range: [0, xMax],
   })
 
   const taskNames = operation.detail.tasks.map(
@@ -133,7 +128,7 @@ export function OperationVisualizer({
             padding: '0.5rem',
             backgroundColor: '#283238',
             color: 'white',
-            zIndex: 1000,
+            zIndex: 1_000,
             visibility: 'visible'
           }}
         >
