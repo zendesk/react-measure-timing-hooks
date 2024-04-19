@@ -64,6 +64,8 @@ export type Operation = Span<OperationSpanMetadata>
  */
 export type Task = Span<TaskSpanMetadata>
 
+// TODO: interrupt operation when another operation (of the same name / any) starts
+// TODO: interrupt operation on any user interaction?
 export function startOperation({
   name,
   requiredMeasureNames,

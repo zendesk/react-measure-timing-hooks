@@ -1,8 +1,6 @@
 // TODO: maybe even a HOC/wrapper instead?
 export const useCaptureRenderBeaconTask = (opts: {
   componentName: string
-  // a map of object type to their ID, e.g. { 'ticket': '123' }
-  objects: Record<string, string | number | boolean>
   metadata: Record<string, unknown>
   error?: Error
 }) => {
@@ -29,8 +27,9 @@ export const useCaptureOperationTiming = (opts: {
             | 'mark'
             | 'resource'
             | 'render-start'
-            | 'render'
+            | 'render-end'
             | 'render-error'
+            | 'operation-start'
         }
       | ((entry: PerformanceEntry) => boolean)
 
@@ -50,11 +49,16 @@ export const useCaptureOperationTiming = (opts: {
 
     interruptWhenSeen?: boolean
   }[]
+
   // listening to events will start once 'active' is true, and stop once 'active' is false
   active: boolean
   error?: Error
   metadata: Record<string, unknown>
   timeout?: number
+  // interrupt capture when another operation of the same name starts
+  interruptSelf?: boolean
+
+  // TODO: think about this more
   // emit a 'measure' event when the operation ends:
   captureDone?: boolean
   // emit a 'measure' event when the operation ends and the page is interactive:
@@ -65,8 +69,6 @@ export const useCaptureOperationTiming = (opts: {
         timeout: number
         debounceLongTasksBy?: number
       }
-  // interrupt capture when another operation of the same name starts
-  interruptSelf?: boolean
 }) => {
   // starts an operation when:
   // - 'active' is true,
@@ -75,5 +77,12 @@ export const useCaptureOperationTiming = (opts: {
   // the resulting task will have metadata that explains why it ended:
   // - 'interrupted' if an interruptWhenSeen task was seen
   // - 'timeout' if the timeout was reached
+  // - 'error'
   // - 'interactive' if the captureInteractive timeout was reached
+  // if another operation of the same name starts,
+  // we need to mark the first operation as 'overwritten' or something like that
+  // so then it can be filtered out when displaying an aggregate view
 }
+
+// // a map of object type to their ID, e.g. { 'ticket': '123' }
+// objects: Record<string, string | number | boolean>
