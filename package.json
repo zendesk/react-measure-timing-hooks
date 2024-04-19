@@ -162,6 +162,7 @@
   ],
   "dependencies": {
     "@visx/axis": "^3.10.1",
+    "@visx/event": "^3.3.0",
     "@visx/gradient": "^3.3.0",
     "@visx/group": "^3.3.0",
     "@visx/mock-data": "^3.3.0",

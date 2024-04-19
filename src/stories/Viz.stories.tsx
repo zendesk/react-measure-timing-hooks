@@ -7,7 +7,7 @@ import { Stats } from '@visx/mock-data/lib/generators/genStats'
 import { useScreenSize } from '@visx/responsive'
 import ParentSize from '@visx/responsive/lib/components/ParentSize'
 // import { getSeededRandom, getRandomNormal } from "@visx/mock-data";
-import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale'
+import { scaleBand, scaleLinear, scaleOrdinal, scalePoint } from '@visx/scale'
 import { Bar, BarGroupHorizontal } from '@visx/shape'
 import {
   defaultStyles,
@@ -20,12 +20,13 @@ import {
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
 import { timeFormat, timeParse } from '@visx/vendor/d3-time-format'
 import OperationData from '../2024/operation.json'
+import { localPoint } from '@visx/event';
 
 const operation = OperationData
 
 const data = operation.detail.tasks.map((task) => ({
   start: task.operationStartOffset,
-  width: task.operationStartOffset + task.duration,
+  width: task.duration,
   // width: task.duration,
   commonName: task.commonName,
   occurrence: task.occurrence,
@@ -38,7 +39,7 @@ export interface BarGroupHorizontalProps {
   events?: boolean
 }
 
-const defaultMargin = { top: 40, left: 50, right: 40, bottom: 100 }
+const defaultMargin = { top: 30, left: 200, right: 30, bottom: 30 }
 
 export function OperationVisualizer({
   width,
@@ -49,12 +50,13 @@ export function OperationVisualizer({
   // bounds
 
   const xMax = width
-  //   const yMax = height - margin.bottom - margin.top;
+  const yMax = height - margin.bottom - margin.top;
 
   const xScale = scaleLinear({
-    domain: [operation.startTime, operation.startTime + operation.duration],
-    range: [xMax, 0],
-    round: true,
+    // possible values of width
+    domain: [0, operation.duration + operation.startTime + 10000],
+    range: [1, xMax],
+    // round: true,
   })
 
   const taskNames = operation.detail.tasks.map(
@@ -63,7 +65,7 @@ export function OperationVisualizer({
 
   const labelScale = scaleBand({
     domain: taskNames,
-    range: [0, height],
+    range: [0, yMax],
     // padding: .2
   })
 
@@ -99,13 +101,15 @@ export function OperationVisualizer({
             onMouseMove={(event) => {
               if (tooltipTimeout) clearTimeout(tooltipTimeout)
               // Update tooltip position and data
-              const top = 100 + i * 10
-              const left = xScale(d.start)
-              showTooltip({
-                tooltipData: d,
-                tooltipTop: event.clientY - labelScale.bandwidth() - 10,
-                tooltipLeft: 50,
-              })
+                const coords = localPoint(event.target.ownerSVGElement, event);
+                if (coords) {
+                  console.log('# coords:', tooltipOpen, d)
+                  showTooltip({
+                tooltipLeft: coords.x,
+                tooltipTop: coords.y,
+                tooltipData: d
+                });
+              }
             }}
           />
         ))}
@@ -129,6 +133,8 @@ export function OperationVisualizer({
             padding: '0.5rem',
             backgroundColor: '#283238',
             color: 'white',
+            zIndex: 1000,
+            visibility: 'visible'
           }}
         >
           <div>

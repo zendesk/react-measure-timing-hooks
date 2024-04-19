@@ -7122,7 +7122,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/event@npm:3.3.0":
+"@visx/event@npm:3.3.0, @visx/event@npm:^3.3.0":
   version: 3.3.0
   resolution: "@visx/event@npm:3.3.0"
   dependencies:
@@ -7920,6 +7920,7 @@ __metadata:
     "@types/react-test-renderer": "npm:^18.0.7"
     "@types/webpack-sources": "npm:^3.2.3"
     "@visx/axis": "npm:^3.10.1"
+    "@visx/event": "npm:^3.3.0"
     "@visx/gradient": "npm:^3.3.0"
     "@visx/group": "npm:^3.3.0"
     "@visx/mock-data": "npm:^3.3.0"
