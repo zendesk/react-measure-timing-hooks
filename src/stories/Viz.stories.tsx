@@ -1,6 +1,6 @@
 /* eslint-disable eslint-comments/no-unlimited-disable */
 /* eslint-disable */
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 import {Label} from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
@@ -10,7 +10,7 @@ import { Group } from '@visx/group'
 import { useScreenSize } from '@visx/responsive'
 import ParentSize from '@visx/responsive/lib/components/ParentSize'
 import { scaleBand, scaleLinear, scaleOrdinal, scalePoint } from '@visx/scale'
-import { Bar, BarGroupHorizontal } from '@visx/shape'
+import { Bar, BarGroupHorizontal, LinePath } from '@visx/shape'
 import {
   defaultStyles,
   defaultStyles as defaultTooltipStyles,
@@ -21,28 +21,15 @@ import {
 } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
 import OperationData from '../2024/operation.json'
-import TicketData from '../2024/ticket-fixtures/ticket-open-no-fetches-or-renders.json'
-import { SpanKind } from '../main'
+import TicketData from '../2024/ticket-fixtures/ticket-open-all-fetches-and-renders.json'
 import { LegendOrdinal, LegendItem, LegendLabel } from '@visx/legend';
-
-const operation = TicketData;
+import type { Operation, TaskDataEmbeddedInOperation } from '../2024/operationTracking'
+import { curveLinear } from '@visx/curve'
+const operation = TicketData as unknown as Operation;
 const ticketActivationOperation = TicketData.operations['ticket/activation']
 
-interface BarDataType {
-  start: number;
-  width: number;
-  commonName: string;
-  occurrence: number;
-  kind: SpanKind;
-}
-
-const data: BarDataType[] = ticketActivationOperation.tasks.map((task) => ({
-  start: task.operationStartOffset,
-  width: task.duration,
-  commonName: task.commonName,
-  occurrence: task.occurrence,
-  kind: task.kind
-}))
+// sort by commonName
+const data = [...ticketActivationOperation.tasks as TaskDataEmbeddedInOperation[]].sort((a, b) => b.commonName.localeCompare(a.commonName))
 
 export interface BarGroupHorizontalProps {
   width: number
@@ -53,20 +40,25 @@ export interface BarGroupHorizontalProps {
 const DEFAULT_MARGIN = { top: 30, left: 200, right: 30, bottom: 30 }
 
 const BAR_FILL_COLOR = {
-  compute: "blue",
-  fetch: "purple",
-  render: "green",
-  operation: "red"
+  compute: '#2ca02c',
+  fetch: '#1f77b4',
+  render: '#ff7f0e',
+  operation: "yellow"
+} 
 
-}
+const removeRenderNames = (name: string) => !name.includes('/render')
 
 export function OperationVisualizer({
   width,
-  height,
+  // height,
   margin = DEFAULT_MARGIN,
   events = false,
 }: BarGroupHorizontalProps) {
   // bounds
+  const [collapseRenders, setCollapseRenders] = useState(false)
+  const taskNames = collapseRenders ? ['renders', ...ticketActivationOperation.includedCommonTaskNames.filter(removeRenderNames)] : ticketActivationOperation.includedCommonTaskNames
+  const tickHeight = 20
+  const height = taskNames.length * tickHeight + margin.top + margin.bottom
 
   const xMax = width - margin.left - margin.right
   const yMax = height - margin.bottom - margin.top
@@ -77,14 +69,19 @@ export function OperationVisualizer({
     range: [0, xMax],
   })
 
-  // const taskNames = ticketActivationOperation.tasks.map((t) => `${t.commonName}`)
-  const taskNames = ticketActivationOperation.includedCommonTaskNames
+  const labelScale = useMemo(() => {
+    return scaleBand({
+      domain: taskNames,
+      range: [0, yMax],
+      padding: 0.2,
+    })
+  }, [taskNames, yMax])
 
-  const labelScale = scaleBand({
-    domain: taskNames,
-    range: [0, yMax],
-    padding: 0.2,
-  })
+  // const labelScale = scaleBand({
+  //   domain: taskNames,
+  //   range: [0, yMax],
+  //   padding: 0.2,
+  // })
 
   const {
     tooltipOpen,
@@ -93,7 +90,7 @@ export function OperationVisualizer({
     tooltipData,
     hideTooltip,
     showTooltip
-  } = useTooltip<BarDataType>()
+  } = useTooltip<TaskDataEmbeddedInOperation>()
   let tooltipTimeout: number
 
   const colorScale = scaleOrdinal({
@@ -104,8 +101,6 @@ export function OperationVisualizer({
   return width < 10 ? null : (
     <>
     <svg width={width} height={height}>
-      {/* background: */}
-      {/* <rect x={0} y={0} width={width} height={height} rx={14} /> */}
       <text
           x={width / 2} // Centering the title
           y={margin.top / 2} // Positioning it before the top of the chart (assuming there's enough top margin)
@@ -118,13 +113,15 @@ export function OperationVisualizer({
         </text>
       <Group top={margin.top} left={margin.left}>
         <Axis scale={xScale} top={yMax} />
-        <Grid xScale={xScale} yScale={labelScale} width={xMax} height={yMax} />
+        <Grid xScale={xScale} yScale={labelScale} width={xMax} height={yMax} numTicksRows={taskNames.length} />
         {data.map((d, i) => (
           <Bar
+            opacity={.4}
+            rx={4}
             key={i}
-            x={xScale(d.start)}
+            x={xScale(d.operationStartOffset)}
             y={labelScale(`${d.commonName}`)}
-            width={xScale(d.width)}
+            width={xScale(d.duration)}
             height={labelScale.bandwidth()}
             fill={BAR_FILL_COLOR[d.kind]}
             onMouseLeave={() => {
@@ -147,14 +144,35 @@ export function OperationVisualizer({
             }}
           />
         ))}
+        <LinePath
+            data={data}
+            x={1000}
+            y={100}
+            // Use appropriate stroke property to define the line color
+            stroke={"red"}
+            strokeWidth={20}
+            curve={curveLinear}
+          />
         <AxisLeft
           scale={labelScale}
+          numTicks={taskNames.length}
           tickLabelProps={{
-            fill: 'green',
-            fontSize: 11,
+            fill: '#888',
+            fontSize: 10,
             textAnchor: 'end',
             dy: '0.33em',
             width: 100,
+          }}
+          tickFormat={(value) => {
+            if (value.startsWith('http')) return value
+            const split = value.split(/\/|\./)
+            if (split.at(-1) === 'render') {
+              return split.at(-2)
+            }
+            if (split.at(-1)?.includes('-till-')) {
+              return split.at(-1)
+            }
+            return split.join('.')
           }}
         />
       </Group>
@@ -199,8 +217,20 @@ export function OperationVisualizer({
             <div style={{ marginTop: '5px', fontSize: '12px', opacity: '80%' }}>
               <div>kind: {tooltipData.kind}</div>   
               <div>Occurance: {tooltipData.occurrence}</div>   
-              <div>Start: {tooltipData.start.toFixed(2)}</div>            
-              <div>Width: {tooltipData.width.toFixed(2)}</div>              
+              <div>Start: {tooltipData.operationStartOffset.toFixed(2)}ms</div>
+              <div>Duration: {tooltipData.duration.toFixed(2)}ms</div>
+              {tooltipData.metadata && (
+                <div>
+                  <div>Metadata:</div>
+                  <pre>{JSON.stringify(tooltipData.metadata, null, 2)}</pre>
+                </div>
+              )}
+              {tooltipData.detail && (
+                <div>
+                  <div>Detail:</div>
+                  <pre>{JSON.stringify(tooltipData.detail, null, 2)}</pre>
+                </div>
+              )}
             </div>
           </div>
         </TooltipWithBounds>
@@ -220,10 +250,7 @@ export const OperationVisualizerStory: StoryObj<BarGroupHorizontalProps> = {
 const Component: React.FunctionComponent<{}> = () => <>Hello world</>
 
 const meta: Meta<{}> = {
-  // title: 'Packages/MeasureTiming',
   component: Component,
-  // args,
-  // argTypes,
 }
 
 // eslint-disable-next-line import/no-default-export

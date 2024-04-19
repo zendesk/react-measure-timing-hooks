@@ -7084,7 +7084,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/curve@npm:3.3.0":
+"@visx/curve@npm:3.3.0, @visx/curve@npm:^3.3.0":
   version: 3.3.0
   resolution: "@visx/curve@npm:3.3.0"
   dependencies:
@@ -7921,6 +7921,7 @@ __metadata:
     "@types/webpack-sources": "npm:^3.2.3"
     "@visx/annotation": "npm:^3.3.0"
     "@visx/axis": "npm:^3.10.1"
+    "@visx/curve": "npm:^3.3.0"
     "@visx/event": "npm:^3.3.0"
     "@visx/gradient": "npm:^3.3.0"
     "@visx/group": "npm:^3.3.0"

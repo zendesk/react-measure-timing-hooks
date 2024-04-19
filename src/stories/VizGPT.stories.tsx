@@ -1,17 +1,12 @@
 /* eslint-disable eslint-comments/no-unlimited-disable */
-/* eslint-disable */
-import React from 'react'
+/* eslint-disable */import React from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 import { AxisBottom, AxisLeft } from '@visx/axis'
 import { GridColumns } from '@visx/grid'
 import { Group } from '@visx/group'
 import { useScreenSize } from '@visx/responsive'
 import { scaleBand, scaleLinear } from '@visx/scale'
-import {
-  Tooltip,
-  withTooltip,
-} from '@visx/tooltip'
-import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
+import { useTooltip, TooltipWithBounds } from '@visx/tooltip'
 import OperationData from '../2024/operation.json'
 import TicketData from '../2024/ticket-fixtures/ticket-open-no-fetches-or-renders.json'
 import type { Operation, SpanKind, TaskDataEmbeddedInOperation } from '../2024/operationTracking'
@@ -45,17 +40,7 @@ const formatOffset = (offset: number) => {
   return `${(offset / 1000).toFixed(2)}s from start`;
 };
 
-const TimelineGraph: React.FC<TimelineGraphProps & WithTooltipProvidedProps<TaskDataEmbeddedInOperation>> = ({ 
-  operation, 
-  tooltipOpen, 
-  tooltipLeft, 
-  tooltipTop, 
-  tooltipData, 
-  hideTooltip, 
-  showTooltip, 
-  height, 
-  width 
-}) => {
+const TimelineGraph: React.FC<TimelineGraphProps> = ({ operation, height, width }) => {
   const tasks = operation.operations[operation.name].tasks;
   const commonNames = Array.from(new Set(tasks.map((task) => task.commonName)));
 
@@ -72,60 +57,76 @@ const TimelineGraph: React.FC<TimelineGraphProps & WithTooltipProvidedProps<Task
     padding: 0.4,
   });
 
+  const {
+    showTooltip,
+    hideTooltip,
+    tooltipOpen,
+    tooltipData,
+    tooltipTop = 0,
+    tooltipLeft = 0,
+  } = useTooltip<TaskDataEmbeddedInOperation>();
+
   const tasksByCommonName = commonNames.map((commonName) => {
     return tasks.filter((task) => task.commonName === commonName);
   });
 
   return (
-    <svg width={width} height={height}>
-      <GridColumns scale={xScale} height={height - margin.bottom} top={margin.top} left={margin.left} />
-      {tasksByCommonName.map((tasksGroup, index) => (
-        <Group key={index}>
-          {tasksGroup.map((task, taskIndex) => (
-            <rect
-              key={taskIndex}
-              x={xScale(task.operationStartOffset)}
-              y={yScale(task.commonName)!}
-              width={xScale(task.duration)}
-              height={yScale.bandwidth()}
-              fill={colorScale(task.kind)}
-              opacity={0.8}
-              onMouseEnter={() => {
-                showTooltip({
-                  tooltipTop: yScale(task.commonName)! + yScale.bandwidth() / 2,
-                  tooltipLeft: xScale(task.operationStartOffset),
-                  tooltipData: task,
-                });
-              }}
-              onMouseLeave={() => {
-                hideTooltip();
-              }}
-            />
-          ))}
-        </Group>
-      ))}
-      <AxisLeft 
-        scale={yScale} 
-        left={margin.left} 
-        hideAxisLine 
-        hideTicks 
-        numTicks={commonNames.length}
-        tickFormat={(value) => `${value}`} 
-        tickLabelProps={() => ({
-          fill: 'black',
-          fontSize: 11,
-          textAnchor: 'end',
-          dy: '0.33em',
-        })}
-      />
-      <AxisBottom
-        scale={xScale}
-        top={height - margin.bottom}
-        label="Time (ms)"
-        tickFormat={(value) => `${value}`}
-      />
+    <div style={{ position: 'relative' }}>
+      <svg width={width} height={height}>
+        <GridColumns scale={xScale} height={height - margin.bottom} top={margin.top} left={margin.left} />
+        {tasksByCommonName.map((tasksGroup, index) => (
+          <Group key={index}>
+            {tasksGroup.map((task, taskIndex) => (
+              <rect
+                key={taskIndex}
+                x={xScale(task.operationStartOffset)}
+                y={yScale(task.commonName)!}
+                width={xScale(task.duration)}
+                height={yScale.bandwidth()}
+                fill={colorScale(task.kind)}
+                opacity={0.8}
+                onMouseEnter={() => {
+                  showTooltip({
+                    tooltipTop: yScale(task.commonName)! + yScale.bandwidth() / 2,
+                    tooltipLeft: xScale(task.operationStartOffset),
+                    tooltipData: task,
+                  });
+                }}
+                onMouseLeave={() => {
+                  hideTooltip();
+                }}
+              />
+            ))}
+          </Group>
+        ))}
+        <AxisLeft
+          scale={yScale}
+          left={margin.left}
+          hideAxisLine
+          hideTicks
+          numTicks={commonNames.length}
+          tickFormat={(value) => `${value}`}
+          tickLabelProps={() => ({
+            fill: 'black',
+            fontSize: 11,
+            textAnchor: 'end',
+            dy: '0.33em',
+          })}
+        />
+        <AxisBottom
+          scale={xScale}
+          top={height - margin.bottom}
+          label="Time (ms)"
+          tickFormat={(value) => `${value}`}
+        />
+      </svg>
       {tooltipOpen && tooltipData && (
-        <Tooltip top={tooltipTop} left={tooltipLeft}>
+        <TooltipWithBounds
+          key={Math.random()}
+          top={tooltipTop}
+          left={tooltipLeft}
+          style={{ position: 'absolute', zIndex: 1 }}
+        >
           <div>
             <strong>Kind:</strong> {tooltipData.kind}
           </div>
@@ -150,18 +151,16 @@ const TimelineGraph: React.FC<TimelineGraphProps & WithTooltipProvidedProps<Task
           <div>
             <strong>Occurrence:</strong> {tooltipData.occurrence}
           </div>
-        </Tooltip>
+        </TooltipWithBounds>
       )}
-    </svg>
+    </div>
   );
 };
-
-const TimelineGraphWithTooltip = withTooltip<TimelineGraphProps, TaskDataEmbeddedInOperation>(TimelineGraph);
 
 export const OperationVisualizerStory: StoryObj<{}> = {
   render: () => {
     const { height, width } = useScreenSize()
-    return <TimelineGraphWithTooltip height={height} width={width} operation={operation as Operation} />
+    return <TimelineGraph height={height} width={width} operation={operation as Operation} />
   },
 }
 
