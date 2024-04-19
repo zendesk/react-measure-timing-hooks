@@ -7023,7 +7023,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/axis@npm:3.10.1":
+"@visx/axis@npm:3.10.1, @visx/axis@npm:^3.10.1":
   version: 3.10.1
   resolution: "@visx/axis@npm:3.10.1"
   dependencies:
@@ -7329,7 +7329,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/responsive@npm:3.10.2":
+"@visx/responsive@npm:3.10.2, @visx/responsive@npm:^3.10.2":
   version: 3.10.2
   resolution: "@visx/responsive@npm:3.10.2"
   dependencies:
@@ -7352,7 +7352,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/shape@npm:3.5.0":
+"@visx/shape@npm:3.5.0, @visx/shape@npm:^3.5.0":
   version: 3.5.0
   resolution: "@visx/shape@npm:3.5.0"
   dependencies:
@@ -7438,7 +7438,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/vendor@npm:3.5.0":
+"@visx/vendor@npm:3.5.0, @visx/vendor@npm:^3.5.0":
   version: 3.5.0
   resolution: "@visx/vendor@npm:3.5.0"
   dependencies:
@@ -7919,12 +7919,16 @@ __metadata:
     "@types/react-dom": "npm:^18.2.25"
     "@types/react-test-renderer": "npm:^18.0.7"
     "@types/webpack-sources": "npm:^3.2.3"
+    "@visx/axis": "npm:^3.10.1"
     "@visx/gradient": "npm:^3.3.0"
     "@visx/group": "npm:^3.3.0"
     "@visx/mock-data": "npm:^3.3.0"
+    "@visx/responsive": "npm:^3.10.2"
     "@visx/scale": "npm:^3.5.0"
+    "@visx/shape": "npm:^3.5.0"
     "@visx/stats": "npm:^3.5.0"
     "@visx/tooltip": "npm:^3.3.0"
+    "@visx/vendor": "npm:^3.5.0"
     "@visx/visx": "npm:^3.10.2"
     css-loader: "npm:^7.1.1"
     re-resizable: "npm:^6.9.11"
