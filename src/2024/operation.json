@@ -12,36 +12,6 @@
     "operationName": "story",
     "tasks": [
       {
-        "metadata": {},
-        "timingId": "story/immediately",
-        "isFirstLoad": true,
-        "maximumActiveBeaconsCount": 1,
-        "minimumExpectedSimultaneousBeacons": 1,
-        "flushReason": "debounce",
-        "operationStartOffset": -2.399999976158142,
-        "kind": "compute",
-        "operationId": "z3tx0x6gbd",
-        "operationName": "story",
-        "commonName": "story/immediately/tti",
-        "occurrence": 1,
-        "duration": 415.19999998807907
-      },
-      {
-        "metadata": {},
-        "timingId": "story/immediately",
-        "isFirstLoad": true,
-        "maximumActiveBeaconsCount": 1,
-        "minimumExpectedSimultaneousBeacons": 1,
-        "flushReason": "debounce",
-        "operationStartOffset": -2.399999976158142,
-        "kind": "compute",
-        "operationId": "z3tx0x6gbd",
-        "operationName": "story",
-        "commonName": "story/immediately/ttr",
-        "occurrence": 1,
-        "duration": 0.8999999761581421
-      },
-      {
         "operationStartOffset": 7436.800000011921,
         "kind": "render",
         "operationId": "z3tx0x6gbd",
@@ -246,9 +216,7 @@
         "duration": 3530.100000023842
       }
     ],
-    "includedOperationNames": [
-      "story/immediately/tti",
-      "story/immediately/ttr",
+    "includedCommonTaskNames": [
       "story/takes-a-while/A/render",
       "story/takes-a-while/A/initial-till-loading",
       "story/takes-a-while/B/render",

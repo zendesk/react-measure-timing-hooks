@@ -159,5 +159,14 @@
     "cjs",
     "esm",
     "docs"
-  ]
+  ],
+  "dependencies": {
+    "@visx/gradient": "^3.3.0",
+    "@visx/group": "^3.3.0",
+    "@visx/mock-data": "^3.3.0",
+    "@visx/scale": "^3.5.0",
+    "@visx/stats": "^3.5.0",
+    "@visx/tooltip": "^3.3.0",
+    "@visx/visx": "^3.10.2"
+  }
 }
