@@ -52,7 +52,7 @@ export function OperationVisualizer({
   //   const yMax = height - margin.bottom - margin.top;
 
   const xScale = scaleLinear({
-    domain: [0, operation.startTime + operation.duration],
+    domain: [operation.startTime, operation.startTime + operation.duration],
     range: [xMax, 0],
     round: true,
   })
