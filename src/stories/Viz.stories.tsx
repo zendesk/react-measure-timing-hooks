@@ -8,7 +8,6 @@ import { localPoint } from '@visx/event'
 import { Grid } from '@visx/grid'
 import { Group } from '@visx/group'
 import { useScreenSize } from '@visx/responsive'
-import ParentSize from '@visx/responsive/lib/components/ParentSize'
 import { scaleBand, scaleLinear, scaleOrdinal, scalePoint } from '@visx/scale'
 import { Bar, BarGroupHorizontal, LinePath } from '@visx/shape'
 import {
@@ -20,16 +19,23 @@ import {
   withTooltip,
 } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
-import OperationData from '../2024/operation.json'
 import TicketData from '../2024/ticket-fixtures/ticket-open-all-fetches-and-renders.json'
 import { LegendOrdinal, LegendItem, LegendLabel } from '@visx/legend'
 import type {
   Operation,
   TaskDataEmbeddedInOperation,
 } from '../2024/operationTracking'
-import { curveLinear } from '@visx/curve'
+import { Line } from '@visx/shape';
 const operation = TicketData as unknown as Operation
-const ticketActivationOperation = TicketData.operations['ticket/activation']
+
+// remove ttr bar to represent as a line
+const OPERATION_TTR_COMMON_NAME = 'performance/ticket/activation/ttr'
+const tempOperation = TicketData.operations['ticket/activation']
+const ttrData = tempOperation.tasks.find(task => task.commonName === OPERATION_TTR_COMMON_NAME) as TaskDataEmbeddedInOperation | undefined
+const ttrDuration = ttrData?.duration
+tempOperation.includedCommonTaskNames = tempOperation.includedCommonTaskNames.filter(name => name !== OPERATION_TTR_COMMON_NAME)
+tempOperation.tasks = tempOperation.tasks.filter(task => task.commonName !== OPERATION_TTR_COMMON_NAME)
+const ticketActivationOperation = tempOperation
 
 // sort by commonName
 const data = [
@@ -52,11 +58,11 @@ const BAR_FILL_COLOR = {
 
 const removeRenderNames = (name: string) => !name.includes('/render')
 
-export function OperationVisualizer({
+const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   width,
   margin = DEFAULT_MARGIN,
   events = false,
-}: OperationVisualizerProps) {
+}) => {
   // bounds
   const [collapseRenders, setCollapseRenders] = useState(true)
   const taskNames = collapseRenders
@@ -71,7 +77,7 @@ export function OperationVisualizer({
   const height = taskNames.length * tickHeight + margin.top + margin.bottom
 
   const xMax = width - margin.left - margin.right
-  const yMax = height - margin.bottom - margin.top
+  const yMax = height - margin.bottom - margin.top - 50
 
   const xScale = scaleLinear({
     // possible values of width
@@ -107,6 +113,8 @@ export function OperationVisualizer({
     [],
   )
 
+  const ttrXCoor = xScale(ttrDuration ?? 0)
+
   return width < 10 ? null : (
     <>
       <header>
@@ -140,9 +148,10 @@ export function OperationVisualizer({
                   hideTooltip()
                 }, 300)
               }}
-              onMouseMove={(event) => {
+              onMouseMove={(event: React.MouseEvent<SVGRectElement>) => {
                 if (tooltipTimeout) clearTimeout(tooltipTimeout)
                 // Update tooltip position and data
+                // const eventSvg = event.target;
                 const coords = localPoint(event.target.ownerSVGElement, event)
                 if (coords) {
                   showTooltip({
@@ -154,15 +163,32 @@ export function OperationVisualizer({
               }}
             />
           ))}
-          {/* <LinePath
-            data={data}
-            x={1000}
-            y={100}
-            // Use appropriate stroke property to define the line color
+          <Line
+            from={{ x: ttrXCoor, y: 0 }}
+            to={{ x: ttrXCoor, y: yMax }}
             stroke={'red'}
-            strokeWidth={20}
-            curve={curveLinear}
-          /> */}
+            strokeWidth={2}
+            opacity={0.8}
+            onMouseLeave={() => {
+              // Prevent tooltip from flickering.
+              tooltipTimeout = window.setTimeout(() => {
+                hideTooltip()
+              }, 300)
+            }}
+            onMouseMove={(event) => {
+              if (tooltipTimeout) clearTimeout(tooltipTimeout)
+              // Update tooltip position and data
+              // const eventSvg = event.target;
+              const coords = localPoint(event.target.ownerSVGElement, event)
+              if (coords) {
+                showTooltip({
+                  tooltipLeft: coords.x + 10,
+                  tooltipTop: coords.y + 10,
+                  tooltipData: ttrData,
+                })
+              }
+            }}
+          />
           <AxisLeft
             scale={labelScale}
             numTicks={taskNames.length}
