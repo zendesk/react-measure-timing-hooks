@@ -1,6 +1,6 @@
 /* eslint-disable eslint-comments/no-unlimited-disable */
 /* eslint-disable */
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState, useRef } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 import { Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
@@ -19,28 +19,20 @@ import {
   withTooltip,
 } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
-import TicketData from '../2024/ticket-fixtures/ticket-open-all-fetches-and-renders.json'
+import TicketData from '../2024/ticket-fixtures/ticket-open-no-fetches-or-renders.json'
 import { LegendOrdinal, LegendItem, LegendLabel } from '@visx/legend'
 import type {
   Operation,
   TaskDataEmbeddedInOperation,
 } from '../2024/operationTracking'
 import { Line } from '@visx/shape';
-const operation = TicketData as unknown as Operation
+import { Col, Row } from '@zendeskgarden/react-grid';
+import { Combobox, Field, Label as GardenLabel, Option, Tag } from '@zendeskgarden/react-dropdowns.next';
+import { ThemeProvider } from '@zendeskgarden/react-theming';
 
+const operation = TicketData as unknown as Operation
 // remove ttr bar to represent as a line
 const OPERATION_TTR_COMMON_NAME = 'performance/ticket/activation/ttr'
-const tempOperation = TicketData.operations['ticket/activation']
-const ttrData = tempOperation.tasks.find(task => task.commonName === OPERATION_TTR_COMMON_NAME) as TaskDataEmbeddedInOperation | undefined
-const ttrDuration = ttrData?.duration
-tempOperation.includedCommonTaskNames = tempOperation.includedCommonTaskNames.filter(name => name !== OPERATION_TTR_COMMON_NAME)
-tempOperation.tasks = tempOperation.tasks.filter(task => task.commonName !== OPERATION_TTR_COMMON_NAME)
-const ticketActivationOperation = tempOperation
-
-// sort by commonName
-const data = [
-  ...(ticketActivationOperation.tasks as TaskDataEmbeddedInOperation[]),
-].sort((a, b) => b.commonName.localeCompare(a.commonName))
 
 export interface OperationVisualizerProps {
   width: number
@@ -57,6 +49,13 @@ const BAR_FILL_COLOR = {
 }
 
 const removeRenderNames = (name: string) => !name.includes('/render')
+const sortTasks = (a: TaskDataEmbeddedInOperation, b: TaskDataEmbeddedInOperation) => b.commonName.localeCompare(a.commonName)
+
+const tempOperation = { ...TicketData.operations['ticket/activation']}
+const ttrData = tempOperation.tasks.find(task => task.commonName === OPERATION_TTR_COMMON_NAME) as TaskDataEmbeddedInOperation | undefined
+tempOperation.includedCommonTaskNames = tempOperation.includedCommonTaskNames.filter(name => name !== OPERATION_TTR_COMMON_NAME)
+tempOperation.tasks = tempOperation.tasks.filter(task => task.commonName !== OPERATION_TTR_COMMON_NAME)
+const ticketActivationOperation = tempOperation
 
 const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   width,
@@ -65,16 +64,19 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
 }) => {
   // bounds
   const [collapseRenders, setCollapseRenders] = useState(true)
-  const taskNames = collapseRenders
+  const [selectedUnfilteredTasks, setSelectedUnfilteredTasks] = useState<TaskDataEmbeddedInOperation[]>(ticketActivationOperation.tasks.sort(sortTasks))
+  const [selectedCommonTasks, setSelectedCommonTasks] = useState<string[]>(ticketActivationOperation.includedCommonTaskNames)
+
+  const filteredTaskNames = collapseRenders
     ? [
         'renders',
-        ...ticketActivationOperation.includedCommonTaskNames.filter(
+        ...selectedCommonTasks.filter(
           removeRenderNames,
         ),
       ]
-    : ticketActivationOperation.includedCommonTaskNames
+    : selectedCommonTasks
   const tickHeight = 20
-  const height = taskNames.length * tickHeight + margin.top + margin.bottom
+  const height = filteredTaskNames.length * tickHeight + margin.top + margin.bottom
 
   const xMax = width - margin.left - margin.right
   const yMax = height - margin.bottom - margin.top - 50
@@ -87,11 +89,11 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
 
   const labelScale = useMemo(() => {
     return scaleBand({
-      domain: taskNames,
+      domain: filteredTaskNames,
       range: [0, yMax],
       padding: 0.2,
     })
-  }, [taskNames, yMax])
+  }, [filteredTaskNames, yMax])
 
   const {
     tooltipOpen,
@@ -113,15 +115,74 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
     [],
   )
 
-  const ttrXCoor = xScale(ttrDuration ?? 0)
+  const ttrXCoor = xScale(ttrData?.duration ?? 0)
+
+  const SearchBar = () => {
+    // const getTagProps = (option: string) => {
+    //   const children = (
+    //     <>
+    //       <Tag.Avatar>
+    //         <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    //           {/* <AvatarIcon /> */}
+    //         </span>
+    //       </Tag.Avatar>{' '}
+    //       {option ? option.split(' ')[0] : ''}
+    //     </>
+    //   );
+  
+    //   return {
+    //     'aria-label': 'Press delete or backspace to remove',
+    //     children,
+    //     isPill: true,
+    //     removeLabel: 'Remove'
+    //   };
+    // };
+  
+    const onSelectionChange = (value) => {
+      console.log('# value', value)
+      if (value.type === 'option:click') {
+        setSelectedUnfilteredTasks(selectedUnfilteredTasks.filter(({ commonName }) => commonName !== value.selectionValue).sort(sortTasks))
+        setSelectedCommonTasks(value.selectionValue.filter(name => name !== value.selectionValue))
+      }
+      if(selectedUnfilteredTasks.find(({ commonName }) => commonName === value.selectionValue)) {
+        setSelectedUnfilteredTasks(selectedUnfilteredTasks.filter(({ commonName }) => commonName !== value.selectionValue).sort(sortTasks))
+        setSelectedCommonTasks(selectedCommonTasks.filter(name => name !== value.selectionValue))
+      }
+    }
+
+    return (
+      <Row justifyContent="center">
+        <Col sm={5}>
+          <Field>
+            <GardenLabel>Tasks Selected</GardenLabel>
+            <Combobox isMultiselectable isAutocomplete maxHeight="100px" onChange={onSelectionChange}>
+              {ticketActivationOperation.includedCommonTaskNames.map((option, i) => (
+                <Option
+                  key={`${option}-${i}`}
+                  isSelected={filteredTaskNames.includes(option)}
+                  // tagProps={getTagProps(option)}
+                  value={option}
+                >
+                  {option ? option.split(' ')[0] : ''}
+                  <Option.Meta>{option ? option.split(' ').slice(-1)[0]: ''}</Option.Meta>
+                </Option>
+              ))}
+            </Combobox>
+          </Field>
+        </Col>
+      </Row>
+    );
+  }
 
   return width < 10 ? null : (
-    <>
+    <ThemeProvider>
       <header>
         <h1 style={{ fontSize: '24px', color: '#333' }}>
           Operation: {operation.name}
         </h1>
+        <SearchBar />
       </header>
+
       <svg width={width - margin.right} height={height}>
         <Group top={margin.top} left={margin.left}>
           <Axis scale={xScale} top={yMax} />
@@ -130,9 +191,9 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
             yScale={labelScale}
             width={xMax}
             height={yMax}
-            numTicksRows={taskNames.length}
+            numTicksRows={filteredTaskNames.length}
           />
-          {data.map((d, i) => (
+          {selectedUnfilteredTasks.map((d, i) => (
             <Bar
               opacity={0.4}
               rx={4}
@@ -191,7 +252,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
           />
           <AxisLeft
             scale={labelScale}
-            numTicks={taskNames.length}
+            numTicks={filteredTaskNames.length}
             tickLabelProps={{
               fill: '#888',
               fontSize: 10,
@@ -288,7 +349,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
           </div>
         </TooltipWithBounds>
       )}
-    </>
+    </ThemeProvider>
   )
 }
 
