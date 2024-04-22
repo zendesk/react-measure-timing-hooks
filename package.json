@@ -119,6 +119,7 @@
     "@storybook/react-vite": "^7.6.17",
     "@storybook/testing-library": "^0.2.2",
     "@types/babel__core": "^7.20.5",
+    "@types/lodash.debounce": "^4",
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
     "@types/react-test-renderer": "^18.0.7",
@@ -175,6 +176,11 @@
     "@visx/stats": "^3.5.0",
     "@visx/tooltip": "^3.3.0",
     "@visx/vendor": "^3.5.0",
-    "@visx/visx": "^3.10.2"
+    "@visx/visx": "^3.10.2",
+    "@zendeskgarden/react-dropdowns.next": "^8.76.1",
+    "@zendeskgarden/react-grid": "^8.76.1",
+    "@zendeskgarden/react-theming": "^8.76.1",
+    "lodash.debounce": "^4.0.8",
+    "styled-components": "^6.1.8"
   }
 }

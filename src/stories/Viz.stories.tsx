@@ -1,6 +1,6 @@
 /* eslint-disable eslint-comments/no-unlimited-disable */
 /* eslint-disable */
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState, useEffect } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 import { Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
@@ -26,6 +26,17 @@ import type {
   TaskDataEmbeddedInOperation,
 } from '../2024/operationTracking'
 import { Line } from '@visx/shape';
+import debounce from 'lodash.debounce';
+import { Col, Row } from '@zendeskgarden/react-grid';
+import {
+  Combobox,
+  Field,
+  Hint,
+  IComboboxProps,
+  Label as GardenLabel,
+  Option
+} from '@zendeskgarden/react-dropdowns.next';
+import { ThemeProvider } from '@zendeskgarden/react-theming';
 
 // Assume TicketData has the right shape to match the Operation type,
 // if not, validate or transform the data to fit the Operation type.
@@ -78,38 +89,37 @@ const BAR_FILL_COLOR = {
   compute: '#2ca02c',
   fetch: '#1f77b4',
   render: '#ff7f0e',
-  operation: 'yellow',
 }
-import styles from './Table.module.css';
 const removeRenderNames = (name: string) => !name.includes('/render')
 export interface StyledTableProps {
-  taskNames: string[]
+  filteredTaskNames: string[]
 }
-const StyledTable: React.FC<StyledTableProps> = ({taskNames}) => {
+const StyledTable: React.FC<StyledTableProps> = ({filteredTaskNames}) => {
+  // {<thead>
+  //   <tr>
+  //     <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '1px', borderBottom: '1px solid #ccc' }}>Measurement</th>
+  //     <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '1px', borderBottom: '1px solid #ccc' }}>Value</th>
+  //     {/* <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '1px', borderBottom: '1px solid #ccc' }}>Description</th> */}
+  //   </tr>
+  // </thead>}
+
   return (
-    <table style={{ width: '40%', borderCollapse: 'collapse', marginTop: '5px' }}>
-      <thead>
-        <tr>
-          <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '2px', borderBottom: '1px solid #ccc' }}>Measurement</th>
-          <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '2px', borderBottom: '1px solid #ccc' }}>Value</th>
-          <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '2px', borderBottom: '1px solid #ccc' }}>Description</th>
-        </tr>
-      </thead>
+    <table style={{ width: '40%', borderCollapse: 'collapse', marginTop: '1px' }}>
       <tbody>
         <tr>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>ttr (ms)</td>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>{ttrDuration?.toFixed(2)}</td>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>Collective time to finish rendering</td>
+          <td style={{ textAlign: 'center', padding: '1px', borderBottom: '1px solid #eee' }}>ttr (ms)</td>
+          <td style={{ textAlign: 'center', padding: '1px', borderBottom: '1px solid #eee' }}>{ttrDuration?.toFixed(1)}</td>
+          {/* <td style={{ textAlign: 'center', padding: '1px', borderBottom: '1px solid #eee' }}>Collective time to finish rendering</td> */}
         </tr>
         <tr>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>tti (ms)</td>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>{ttiDuration?.toFixed(2)}</td>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>First time user is able to interact with the page</td>
+          <td style={{ textAlign: 'center', padding: '1px', borderBottom: '1px solid #eee' }}>tti (ms)</td>
+          <td style={{ textAlign: 'center', padding: '1px', borderBottom: '1px solid #eee' }}>{ttiDuration?.toFixed(1)}</td>
+          {/* <td style={{ textAlign: 'center', padding: '1px', borderBottom: '1px solid #eee' }}>First time user is able to interact with the page</td> */}
         </tr>
         <tr>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: 'none' }}>Unique Task Count</td>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: 'none' }}>{taskNames.length}</td>
-          <td style={{ textAlign: 'center', padding: '2px', borderBottom: 'none' }}>Number of unique tasks performed during the operation</td>
+          <td style={{ textAlign: 'center', padding: '1px', borderBottom: 'none' }}>unique task count</td>
+          <td style={{ textAlign: 'center', padding: '1px', borderBottom: 'none' }}>{filteredTaskNames.length}</td>
+          {/* <td style={{ textAlign: 'center', padding: '1px', borderBottom: 'none' }}>Number of unique tasks performed during the operation</td> */}
         </tr>
       </tbody>
     </table>
@@ -157,6 +167,84 @@ const TTLine: React.FC<TTLineProps> = ({hoverData, xCoordinate, yMax, showToolti
   
 }
 
+const FILTER_OPTIONS = [
+  'Collapse Render Spans',
+  'Fetch',
+  'Compute',
+];
+
+
+export interface MultiSelectProps {
+  setCollapseRenders: React.Dispatch<React.SetStateAction<boolean>>
+  setDisplayFetches: React.Dispatch<React.SetStateAction<boolean>>
+  setDisplayComputes: React.Dispatch<React.SetStateAction<boolean>>
+}
+const MultiSelect: React.FC<MultiSelectProps> = ({setCollapseRenders, setDisplayFetches, setDisplayComputes}) => {
+  const [options, setOptions] = useState(FILTER_OPTIONS);
+
+  const handleChange = useCallback<NonNullable<IComboboxProps['onChange']>>(({ selectionValue, inputValue, type }) => {
+    if (selectionValue?.includes('Collapse Render Spans')) {
+      setCollapseRenders(true);
+    } 
+    else if (!selectionValue?.includes('Collapse Render Spans') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
+      setCollapseRenders(false);
+    }
+
+    if (selectionValue?.includes('Fetch')) {
+      setDisplayFetches(true);
+    } 
+    else if (!selectionValue?.includes('Fetch') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
+      setDisplayFetches(false);
+    }
+
+    if (selectionValue?.includes('Compute')) {
+      setDisplayComputes(true);
+    } 
+    else if (!selectionValue?.includes('Compute') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
+      setDisplayComputes(false);
+    }
+    
+    if (inputValue !== undefined) {
+      if (inputValue === '') {
+        setOptions(FILTER_OPTIONS);
+      } else {
+        const regex = new RegExp(inputValue.replace(/[.*+?^${}()|[\]\\]/giu, '\\$&'), 'giu');
+
+        setOptions(FILTER_OPTIONS.filter(option => option.match(regex)));
+      }
+    }
+  }, [setCollapseRenders]);
+
+  const debounceHandleChange = useMemo(() => debounce(handleChange, 150), [handleChange]);
+
+  useEffect(() => {
+    return () => debounceHandleChange.cancel();
+  }, [debounceHandleChange]);
+
+  return (
+    <Row justifyContent="center">
+      <Col sm={7}>
+        <Field>
+          <GardenLabel>Filter</GardenLabel>
+          <Combobox
+            isAutocomplete
+            isMultiselectable
+            maxHeight="auto"
+            listboxMaxHeight='200px'
+            onChange={debounceHandleChange}
+          >
+            {options.length === 0 ? (
+              <Option isDisabled label="" value="No matches found" />
+            ) : (
+              options.map(value => <Option key={value} value={value} isSelected={true}/>)
+            )}
+          </Combobox>
+        </Field>
+      </Col>
+    </Row>
+  );
+};
+
 export interface OperationVisualizerProps {
   width: number
   margin?: { top: number; right: number; bottom: number; left: number }
@@ -168,6 +256,8 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   events = false,
 }) => {
   const [collapseRenders, setCollapseRenders] = useState(true)
+  const [displayFetches, setDisplayFetches] = useState(true)
+  const [displayComputes, setDisplayComputes] = useState(true)
   const taskNames = collapseRenders
     ? [
         'renders',
@@ -177,9 +267,19 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
       ]
     : ticketActivationOperation.includedCommonTaskNames
 
+  const commonNamesToBeRemoved = new Set();
+  const filteredTasks = ticketActivationOperation.tasks.filter(task => {
+    if ((!displayFetches && task.kind === 'fetch') || (!displayComputes && task.kind === 'compute')) {
+      commonNamesToBeRemoved.add(task.commonName);
+      return false
+    }
+    return true;
+  }) 
+  
+  const filteredTaskNames = taskNames.filter((taskName) => !commonNamesToBeRemoved.has(taskName))
   // Render proportions
   const tickHeight = 20
-  const height = taskNames.length * tickHeight + margin.top + margin.bottom
+  const height = filteredTaskNames.length * tickHeight + margin.top + margin.bottom
 
   const xMax = width - margin.left - margin.right
   const yMax = height - margin.bottom - margin.top - 50
@@ -191,21 +291,21 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
 
   const labelScale = useMemo(() => {
     return scaleBand({
-      domain: taskNames,
+      domain: filteredTaskNames,
       range: [0, yMax],
       padding: 0.2,
     })
-  }, [taskNames, yMax])
+  }, [filteredTaskNames, yMax])
 
   const colorScale = scaleOrdinal({
     domain: Object.keys(BAR_FILL_COLOR),
     range: Object.values(BAR_FILL_COLOR),
   })
 
-  const toggleRenderCollapse = useCallback(
-    () => setCollapseRenders((s) => !s),
-    [],
-  )
+  // const toggleRenderCollapse = useCallback(
+  //   () => setCollapseRenders((s) => !s),
+  //   [],
+  // )
   const ttiXCoor = xScale(ttiDuration ?? 0)
   const ttrXCoor = xScale(ttrDuration ?? 0)
 
@@ -220,12 +320,22 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   let tooltipTimeout: number
 
   return width < 10 ? null : (
-    <>
+    <ThemeProvider>
       <header>
-        <h1 style={{ fontSize: '24px', color: '#333' }}>
-          Operation: {rootOperation.name}
-        </h1>
-        {<StyledTable taskNames={taskNames} />}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row', // Align children in a row
+          justifyContent: 'center',
+          alignItems: 'center', // Center children vertically
+          padding: '10px',
+          gap: '20px' // Optional: set gap between children
+        }}>
+          <h1 style={{ fontSize: '24px', color: '#333' }}>
+            Operation: {rootOperation.name}
+          </h1>
+          <StyledTable filteredTaskNames={filteredTaskNames} />
+        </div>
+
       </header>
       <svg width={width - margin.right} height={height}>
         <Group top={margin.top} left={margin.left}>
@@ -235,9 +345,9 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
             yScale={labelScale}
             width={xMax}
             height={yMax}
-            numTicksRows={taskNames.length}
+            numTicksRows={filteredTaskNames.length}
           />
-          {ticketActivationOperation.tasks.map((task, i) => (
+          {filteredTasks.map((task, i) => (
             <Bar
               opacity={0.4}
               rx={4}
@@ -284,7 +394,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
           />
           <AxisLeft
             scale={labelScale}
-            numTicks={taskNames.length}
+            numTicks={filteredTaskNames.length}
             tickLabelProps={{
               fill: '#888',
               fontSize: 10,
@@ -311,13 +421,13 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
           position: 'fixed',
           bottom: 0,
           backgroundColor: 'white',
-          padding: '0 0 1em 0',
+          padding: '0 0 1em 0',          
         }}
       >
         <svg width={width - margin.right} height={60}>
           <Axis scale={xScale} top={1} left={margin.left} />
         </svg>
-        <div>
+        {/* <div>
           <input
             type="checkbox"
             checked={collapseRenders}
@@ -326,26 +436,38 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
             name="render-collapse-toggle"
           />
           <label htmlFor="#render-collapse-toggle">Collapse Render Spans</label>
+        </div> */}
+
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row', // Align children in a row
+          justifyContent: 'space-evenly',
+          alignItems: 'center', // Center children vertically
+          padding: '10px',
+          gap: '20px' // Optional: set gap between children
+        }}>
+          <MultiSelect setCollapseRenders={setCollapseRenders} setDisplayFetches={setDisplayFetches} setDisplayComputes={setDisplayComputes}/>
+
+          <LegendOrdinal
+            scale={colorScale}
+            labelFormat={(label) => `${label.toUpperCase()}`}
+          >
+            {(labels) => (
+              <div style={{ display: 'flex', flexDirection: 'row' }}>
+                {labels.map((label, i) => (
+                  <LegendItem key={`legend-${i}`} margin="0 5px">
+                    <svg width={15} height={15}>
+                      <rect fill={label.value} width={15} height={15} />
+                    </svg>
+                    <LegendLabel align="left" margin="0 0 0 4px">
+                      {label.text}
+                    </LegendLabel>
+                  </LegendItem>
+                ))}
+              </div>
+            )}
+          </LegendOrdinal>
         </div>
-        <LegendOrdinal
-          scale={colorScale}
-          labelFormat={(label) => `${label.toUpperCase()}`}
-        >
-          {(labels) => (
-            <div style={{ display: 'flex', flexDirection: 'row' }}>
-              {labels.map((label, i) => (
-                <LegendItem key={`legend-${i}`} margin="0 5px">
-                  <svg width={15} height={15}>
-                    <rect fill={label.value} width={15} height={15} />
-                  </svg>
-                  <LegendLabel align="left" margin="0 0 0 4px">
-                    {label.text}
-                  </LegendLabel>
-                </LegendItem>
-              ))}
-            </div>
-          )}
-        </LegendOrdinal>
       </footer>
       {tooltipOpen && tooltipData && (
         <TooltipWithBounds
@@ -381,7 +503,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
           </div>
         </TooltipWithBounds>
       )}
-    </>
+    </ThemeProvider>
   )
 }
 
