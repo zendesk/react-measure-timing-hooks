@@ -26,27 +26,52 @@ import type {
   TaskDataEmbeddedInOperation,
 } from '../2024/operationTracking'
 import { Line } from '@visx/shape';
-const operation = TicketData as unknown as Operation
 
-// remove ttr bar to represent as a line
-const OPERATION_TTR_COMMON_NAME = 'performance/ticket/activation/ttr'
-const tempOperation = {...TicketData.operations['ticket/activation']}
-const ttrData = tempOperation.tasks.find(task => task.commonName === OPERATION_TTR_COMMON_NAME) as TaskDataEmbeddedInOperation | undefined
-const ttrDuration = ttrData?.duration
-tempOperation.includedCommonTaskNames = tempOperation.includedCommonTaskNames.filter(name => name !== OPERATION_TTR_COMMON_NAME)
-tempOperation.tasks = tempOperation.tasks.filter(task => task.commonName !== OPERATION_TTR_COMMON_NAME)
-const ticketActivationOperation = tempOperation
+// Assume TicketData has the right shape to match the Operation type,
+// if not, validate or transform the data to fit the Operation type.
 
-// sort by commonName
-const data = [
-  ...(ticketActivationOperation.tasks as TaskDataEmbeddedInOperation[]),
-].sort((a, b) => b.commonName.localeCompare(a.commonName))
+const rootOperation = TicketData;
 
-export interface OperationVisualizerProps {
-  width: number
-  margin?: { top: number; right: number; bottom: number; left: number }
-  events?: boolean
+const filterOutTTR_TTI = () => {
+  const operation = TicketData.operations['ticket/activation'];
+
+  // Constants representing the common names for TTR and TTI tasks.
+  const OPERATION_TTR_COMMON_NAME = 'performance/ticket/activation/ttr';
+  const OPERATION_TTI_COMMON_NAME = 'performance/ticket/activation/tti';
+  
+  // Use helper functions to find the TTR and TTI data.
+  const ttrData = operation.tasks.find((task) => task.commonName === OPERATION_TTR_COMMON_NAME) as TaskDataEmbeddedInOperation | undefined;
+  const ttiData = operation.tasks.find((task) => task.commonName === OPERATION_TTI_COMMON_NAME) as TaskDataEmbeddedInOperation | undefined;
+  
+  // Extract durations if the tasks were found.
+  const ttrDuration = ttrData?.duration;
+  const ttiDuration = ttiData?.duration;
+  
+  // Make a deep copy of the tasks and includedCommonTaskNames to avoid mutating the original TicketData.
+  const tasks = operation.tasks
+    .filter((task) => task.commonName !== OPERATION_TTR_COMMON_NAME && task.commonName !== OPERATION_TTI_COMMON_NAME)
+    .sort((a, b) => b.commonName.localeCompare(a.commonName));
+  const includedCommonTaskNames = operation.includedCommonTaskNames.filter(
+    (name) => name !== OPERATION_TTR_COMMON_NAME && name !== OPERATION_TTI_COMMON_NAME,
+  );
+  
+  // Create a new operation object without the TTR and TTI tasks;
+  // this avoids any side effects from modifying tempOperation directly.
+  return {
+    ticketActivationOperation: {
+      ...operation,
+      tasks,
+      includedCommonTaskNames,
+    },
+    ttrData,
+    ttiData,
+    ttrDuration,
+    ttiDuration
+  };
 }
+
+const {ticketActivationOperation, ttrData, ttiData, ttrDuration, ttiDuration} = filterOutTTR_TTI();
+
 const DEFAULT_MARGIN = { top: 30, left: 200, right: 120, bottom: 30 }
 
 const BAR_FILL_COLOR = {
@@ -55,15 +80,93 @@ const BAR_FILL_COLOR = {
   render: '#ff7f0e',
   operation: 'yellow',
 }
-
+import styles from './Table.module.css';
 const removeRenderNames = (name: string) => !name.includes('/render')
+export interface StyledTableProps {
+  taskNames: string[]
+}
+const StyledTable: React.FC<StyledTableProps> = ({taskNames}) => {
+  return (
+    <table style={{ width: '40%', borderCollapse: 'collapse', marginTop: '5px' }}>
+      <thead>
+        <tr>
+          <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '2px', borderBottom: '1px solid #ccc' }}>Measurement</th>
+          <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '2px', borderBottom: '1px solid #ccc' }}>Value</th>
+          <th style={{ textAlign: 'center', background: '#f0f0f0', padding: '2px', borderBottom: '1px solid #ccc' }}>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>ttr (ms)</td>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>{ttrDuration?.toFixed(2)}</td>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>Collective time to finish rendering</td>
+        </tr>
+        <tr>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>tti (ms)</td>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>{ttiDuration?.toFixed(2)}</td>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: '1px solid #eee' }}>First time user is able to interact with the page</td>
+        </tr>
+        <tr>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: 'none' }}>Unique Task Count</td>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: 'none' }}>{taskNames.length}</td>
+          <td style={{ textAlign: 'center', padding: '2px', borderBottom: 'none' }}>Number of unique tasks performed during the operation</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+};
 
+export interface TTLineProps {
+  hoverData: TaskDataEmbeddedInOperation | undefined
+  xCoordinate: number
+  yMax: number
+  showTooltip: (data: Partial<WithTooltipProvidedProps<TaskDataEmbeddedInOperation>>) => void
+  hideTooltip: () => void
+}
+const TTLine: React.FC<TTLineProps> = ({hoverData, xCoordinate, yMax, showTooltip, hideTooltip}) => {
+  let tooltipTimeout: number
+
+  return (
+    <Line
+      from={{ x: xCoordinate, y: 0 }}
+      to={{ x: xCoordinate, y: yMax }}
+      stroke={'red'}
+      strokeWidth={2}
+      opacity={0.8}
+      onMouseLeave={() => {
+        // Prevent tooltip from flickering.
+        tooltipTimeout = window.setTimeout(() => {
+          hideTooltip()
+        }, 300)
+      }}
+      onMouseMove={(event) => {
+        if (tooltipTimeout) clearTimeout(tooltipTimeout)
+        // Update tooltip position and data
+        // const eventSvg = event.target;
+        const coords = localPoint(event.target.ownerSVGElement, event)
+        if (coords) {
+          showTooltip({
+            tooltipLeft: coords.x + 10,
+            tooltipTop: coords.y + 10,
+            tooltipData: hoverData,
+          })
+        }
+      }}
+  />
+  )
+  
+}
+
+export interface OperationVisualizerProps {
+  width: number
+  margin?: { top: number; right: number; bottom: number; left: number }
+  events?: boolean
+}
 const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   width,
   margin = DEFAULT_MARGIN,
   events = false,
 }) => {
-  // bounds
   const [collapseRenders, setCollapseRenders] = useState(true)
   const taskNames = collapseRenders
     ? [
@@ -73,6 +176,8 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
         ),
       ]
     : ticketActivationOperation.includedCommonTaskNames
+
+  // Render proportions
   const tickHeight = 20
   const height = taskNames.length * tickHeight + margin.top + margin.bottom
 
@@ -80,8 +185,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   const yMax = height - margin.bottom - margin.top - 50
 
   const xScale = scaleLinear({
-    // possible values of width
-    domain: [0, operation.duration],
+    domain: [0, rootOperation.duration + 10],
     range: [0, xMax],
   })
 
@@ -93,6 +197,18 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
     })
   }, [taskNames, yMax])
 
+  const colorScale = scaleOrdinal({
+    domain: Object.keys(BAR_FILL_COLOR),
+    range: Object.values(BAR_FILL_COLOR),
+  })
+
+  const toggleRenderCollapse = useCallback(
+    () => setCollapseRenders((s) => !s),
+    [],
+  )
+  const ttiXCoor = xScale(ttiDuration ?? 0)
+  const ttrXCoor = xScale(ttrDuration ?? 0)
+
   const {
     tooltipOpen,
     tooltipLeft,
@@ -103,24 +219,13 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   } = useTooltip<TaskDataEmbeddedInOperation>()
   let tooltipTimeout: number
 
-  const colorScale = scaleOrdinal({
-    domain: Object.keys(BAR_FILL_COLOR),
-    range: Object.values(BAR_FILL_COLOR),
-  })
-
-  const toggleRenderCollapse = useCallback(
-    () => setCollapseRenders((s) => !s),
-    [],
-  )
-
-  const ttrXCoor = xScale(ttrDuration ?? 0)
-
   return width < 10 ? null : (
     <>
       <header>
         <h1 style={{ fontSize: '24px', color: '#333' }}>
-          Operation: {operation.name}
+          Operation: {rootOperation.name}
         </h1>
+        {<StyledTable taskNames={taskNames} />}
       </header>
       <svg width={width - margin.right} height={height}>
         <Group top={margin.top} left={margin.left}>
@@ -132,16 +237,16 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
             height={yMax}
             numTicksRows={taskNames.length}
           />
-          {data.map((d, i) => (
+          {ticketActivationOperation.tasks.map((task, i) => (
             <Bar
               opacity={0.4}
               rx={4}
               key={i}
-              x={xScale(d.operationStartOffset)}
-              y={labelScale(`${d.commonName}`)}
-              width={xScale(d.duration)}
+              x={xScale(task.operationStartOffset)}
+              y={labelScale(`${task.commonName}`)}
+              width={xScale(task.duration)}
               height={labelScale.bandwidth()}
-              fill={BAR_FILL_COLOR[d.kind]}
+              fill={BAR_FILL_COLOR[task.kind]}
               onMouseLeave={() => {
                 // Prevent tooltip from flickering.
                 tooltipTimeout = window.setTimeout(() => {
@@ -157,37 +262,25 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
                   showTooltip({
                     tooltipLeft: coords.x + 10,
                     tooltipTop: coords.y + 10,
-                    tooltipData: d,
+                    tooltipData: task,
                   })
                 }
               }}
             />
           ))}
-          <Line
-            from={{ x: ttrXCoor, y: 0 }}
-            to={{ x: ttrXCoor, y: yMax }}
-            stroke={'red'}
-            strokeWidth={2}
-            opacity={0.8}
-            onMouseLeave={() => {
-              // Prevent tooltip from flickering.
-              tooltipTimeout = window.setTimeout(() => {
-                hideTooltip()
-              }, 300)
-            }}
-            onMouseMove={(event) => {
-              if (tooltipTimeout) clearTimeout(tooltipTimeout)
-              // Update tooltip position and data
-              // const eventSvg = event.target;
-              const coords = localPoint(event.target.ownerSVGElement, event)
-              if (coords) {
-                showTooltip({
-                  tooltipLeft: coords.x + 10,
-                  tooltipTop: coords.y + 10,
-                  tooltipData: ttrData,
-                })
-              }
-            }}
+          <TTLine
+            yMax={yMax}
+            xCoordinate={ttrXCoor}
+            hoverData={ttrData}
+            showTooltip={showTooltip}
+            hideTooltip={hideTooltip}
+          />
+          <TTLine
+            yMax={yMax}
+            xCoordinate={ttiXCoor}
+            hoverData={ttiData}
+            showTooltip={showTooltip}
+            hideTooltip={hideTooltip}
           />
           <AxisLeft
             scale={labelScale}
