@@ -2,7 +2,8 @@ import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
 
 // excludes long_task, since it exists as longtask in the global types
 export type RumKinds = 'action' | 'error' | 'view' | 'resource' | 'vital' // | "long_task"
-export type SpanKind = PerformanceEntryType | RumKinds | 'render' | 'operation'
+export type SpanKind = TaskSpanKind | 'operation'
+export type TaskSpanKind = PerformanceEntryType | RumKinds | 'render' | 'asset'
 export type PerformanceEntryLike = Omit<PerformanceEntry, 'toJSON'>
 
 export interface SpanMetadata<Kind extends SpanKind> {
@@ -15,8 +16,7 @@ export interface SpanMetadata<Kind extends SpanKind> {
   operationName: string
 }
 
-export interface TaskSpanMetadata
-  extends SpanMetadata<Exclude<SpanKind, 'operation'>> {
+export interface TaskSpanMetadata extends SpanMetadata<TaskSpanKind> {
   /* string used to aggregate data */
   commonName: string
 
@@ -36,7 +36,8 @@ export interface OperationSpanMetadata extends SpanMetadata<'operation'> {
   includedCommonTaskNames: string[]
 }
 
-export interface TaskDataEmbeddedInOperation extends TaskSpanMetadata {
+export interface TaskDataEmbeddedInOperation
+  extends Omit<TaskSpanMetadata, 'operationId' | 'operationName'> {
   duration: number
   detail?: Record<string, unknown>
 }

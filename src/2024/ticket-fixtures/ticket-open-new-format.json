@@ -1,0 +1,4509 @@
+{
+  "name": "ticket/activation",
+  "entryType": "measure",
+  "startTime": 9721.899999976158,
+  "duration": 1479.1000000238419,
+  "operations": {
+    "ticket/activation": {
+      "kind": "operation",
+      "metadata": {
+        "origin": "select-ticket",
+        "ticketId": "12986"
+      },
+      "operationId": "x7p54j8ky2e",
+      "operationName": "ticket/activation",
+      "tasks": [
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 39.60000002384186,
+          "operationStartOffset": 14.100000023841858,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 25.5
+        },
+        {
+          "kind": "render",
+          "commonName": "ProfileMenu",
+          "operationRelativeEndTime": 39.90000009536743,
+          "operationStartOffset": 18.90000009536743,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "toolbar/profile_menu_open"
+          },
+          "detail": {},
+          "duration": 21
+        },
+        {
+          "kind": "mark",
+          "commonName": "ticket/load_omnilog_from_new_workspace",
+          "operationRelativeEndTime": 69.60000002384186,
+          "operationStartOffset": 69.60000002384186,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {},
+          "duration": 0
+        },
+        {
+          "kind": "render",
+          "commonName": "TicketActivation",
+          "operationRelativeEndTime": 94,
+          "operationStartOffset": 0.8000000715255737,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "performance/ticket/activation"
+          },
+          "detail": {},
+          "duration": 93.19999992847443
+        },
+        {
+          "kind": "render",
+          "commonName": "Tabs",
+          "operationRelativeEndTime": 130.80000007152557,
+          "operationStartOffset": 114.70000004768372,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "toolbar/tabs"
+          },
+          "detail": {},
+          "duration": 16.100000023841858
+        },
+        {
+          "kind": "render",
+          "commonName": "ProfileMenu",
+          "operationRelativeEndTime": 131,
+          "operationStartOffset": 126.70000004768372,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "toolbar/profile_menu_open"
+          },
+          "detail": {},
+          "duration": 4.299999952316284
+        },
+        {
+          "kind": "longtask",
+          "commonName": "longtask/self",
+          "operationRelativeEndTime": 131.60000002384186,
+          "operationStartOffset": 68.60000002384186,
+          "occurrence": 1,
+          "metadata": {
+            "occurrenceMultiplier": 1
+          },
+          "detail": {},
+          "duration": 63
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://assets.zendesk.com/images/$ID/default-avatar-80.png",
+          "operationRelativeEndTime": 229.60000002384186,
+          "operationStartOffset": 229.60000002384186,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "img",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "0603019d-10b2-430a-b2a9-5c418a7f1a76",
+              "type": "image",
+              "url": "https://assets.zendesk.com/images/2016/default-avatar-80.png",
+              "duration": 0,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 0
+        },
+        {
+          "kind": "longtask",
+          "commonName": "longtask/self",
+          "operationRelativeEndTime": 237,
+          "operationStartOffset": 167,
+          "occurrence": 2,
+          "metadata": {
+            "occurrenceMultiplier": 1
+          },
+          "detail": {},
+          "duration": 70
+        },
+        {
+          "kind": "element",
+          "commonName": "element/text-paint",
+          "operationRelativeEndTime": 252.80000007152557,
+          "operationStartOffset": 252.80000007152557,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {},
+          "duration": 0
+        },
+        {
+          "kind": "measure",
+          "commonName": "open_ticket/paint/ticket_workspace",
+          "operationRelativeEndTime": 252.80000007152557,
+          "operationStartOffset": 45.10000002384186,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "isFirstSeen": true
+          },
+          "duration": 207.70000004768372
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2beta/tickets/$ID/related",
+          "operationRelativeEndTime": 286.60000002384186,
+          "operationStartOffset": 104.90000009536743,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 101,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "df267076-601a-43df-9cb5-c360fe4c8174",
+              "type": "xhr",
+              "duration": 181700000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2beta/tickets/12986/related",
+              "render_blocking_status": "non-blocking",
+              "size": 174,
+              "encoded_body_size": 101,
+              "decoded_body_size": 174,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1500000,
+                "start": 180200000
+              },
+              "first_byte": {
+                "duration": 177300000,
+                "start": 2900000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 181.69999992847443
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/sharing_agreements",
+          "operationRelativeEndTime": 289.7000000476837,
+          "operationStartOffset": 105.70000004768372,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 321,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "5cca5c87-c66e-464c-b01b-1f9ca1c412f5",
+              "type": "xhr",
+              "duration": 184000000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/sharing_agreements",
+              "render_blocking_status": "non-blocking",
+              "size": 1309,
+              "encoded_body_size": 321,
+              "decoded_body_size": 1309,
+              "transfer_size": 300,
+              "download": {
+                "duration": 2200000,
+                "start": 181800000
+              },
+              "first_byte": {
+                "duration": 178700000,
+                "start": 3100000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 184
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/services/read-receipts/read",
+          "operationRelativeEndTime": 298.10000002384186,
+          "operationStartOffset": 132.10000002384186,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 359,
+            "encodedBodySize": 59,
+            "query": {
+              "prefix": "zen:ticket:12986"
+            },
+            "feature": "ReadReceipt",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "cbbd6c14-aa70-4500-a447-11d10381c192",
+              "type": "fetch",
+              "duration": 166000000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/services/read-receipts/read?prefix=zen:ticket:12986#feature=ReadReceipt",
+              "render_blocking_status": "non-blocking",
+              "size": 66,
+              "encoded_body_size": 59,
+              "decoded_body_size": 66,
+              "transfer_size": 359,
+              "download": {
+                "duration": 2400000,
+                "start": 163600000
+              },
+              "first_byte": {
+                "duration": 162300000,
+                "start": 1300000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 166
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/lotus/tickets/$ID/conversations.json",
+          "operationRelativeEndTime": 298.40000009536743,
+          "operationStartOffset": 88.70000004768372,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 2200,
+            "query": {
+              "include": "users",
+              "sort_order": "desc"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "4f99078f-b062-4a09-8380-664b08661651",
+              "type": "xhr",
+              "duration": 209700000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/tickets/12986/conversations.json?include=users&sort_order=desc",
+              "render_blocking_status": "non-blocking",
+              "size": 9800,
+              "encoded_body_size": 2200,
+              "decoded_body_size": 9800,
+              "transfer_size": 300,
+              "download": {
+                "duration": 2500000,
+                "start": 207200000
+              },
+              "first_byte": {
+                "duration": 204300000,
+                "start": 2900000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 209.70000004768372
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/locales/agent",
+          "operationRelativeEndTime": 301.90000009536743,
+          "operationStartOffset": 108,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 2252,
+            "encodedBodySize": 1952,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "97546b58-d568-416b-bd04-4e740864e501",
+              "type": "xhr",
+              "duration": 193900000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/locales/agent",
+              "render_blocking_status": "non-blocking",
+              "size": 11123,
+              "encoded_body_size": 1952,
+              "decoded_body_size": 11123,
+              "transfer_size": 2252,
+              "download": {
+                "duration": 1700000,
+                "start": 192200000
+              },
+              "first_byte": {
+                "duration": 188100000,
+                "start": 4100000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 193.90000009536743
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/locales",
+          "operationRelativeEndTime": 311.60000002384186,
+          "operationStartOffset": 107.30000007152557,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 3631,
+            "encodedBodySize": 3331,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "b6be175e-c621-4a1a-a877-4e8d6e64974c",
+              "type": "xhr",
+              "duration": 204300000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/locales",
+              "render_blocking_status": "non-blocking",
+              "size": 20434,
+              "encoded_body_size": 3331,
+              "decoded_body_size": 20434,
+              "transfer_size": 3631,
+              "download": {
+                "duration": 1000000,
+                "start": 203300000
+              },
+              "first_byte": {
+                "duration": 200700000,
+                "start": 2600000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 204.29999995231628
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/workspaces",
+          "operationRelativeEndTime": 327.8000000715256,
+          "operationStartOffset": 102.20000004768372,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 910,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "e792f73b-c111-40e3-8a7e-66dc68fe522a",
+              "type": "xhr",
+              "duration": 225600000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/workspaces",
+              "render_blocking_status": "non-blocking",
+              "size": 3788,
+              "encoded_body_size": 910,
+              "decoded_body_size": 3788,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1100000,
+                "start": 224500000
+              },
+              "first_byte": {
+                "duration": 222100000,
+                "start": 2400000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 225.60000002384186
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/react/js/src_Omnipanel_components_OmnipanelPrechatFormDiscrepancySwitcher_index_tsx.chunk.js",
+          "operationRelativeEndTime": 348.60000002384186,
+          "operationStartOffset": 341.5,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "script",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "8b110796-ee8c-4874-a160-ff9b942cbfba",
+              "type": "js",
+              "url": "https://dev.zd-dev.com/agent/assets/react/js/src_Omnipanel_components_OmnipanelPrechatFormDiscrepancySwitcher_index_tsx.chunk.js",
+              "status_code": 200,
+              "duration": 7100000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 7.100000023841858
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/react/js/default-src_Omnipanel_components_Sidebar_index_tsx.chunk.js",
+          "operationRelativeEndTime": 350.40000009536743,
+          "operationStartOffset": 340.2000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "script",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "da6150bc-8359-4d51-8a62-30bfe33d02ff",
+              "type": "js",
+              "url": "https://dev.zd-dev.com/agent/assets/react/js/default-src_Omnipanel_components_Sidebar_index_tsx.chunk.js",
+              "status_code": 200,
+              "duration": 10200000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 10.200000047683716
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/react/js/src_Omnipanel_index_tsx.chunk.js",
+          "operationRelativeEndTime": 351.3000000715256,
+          "operationStartOffset": 340.5,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "script",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "49a768f4-ff06-4f78-881a-f5057e3bd6f3",
+              "type": "js",
+              "url": "https://dev.zd-dev.com/agent/assets/react/js/src_Omnipanel_index_tsx.chunk.js",
+              "status_code": 200,
+              "duration": 10800000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 10.800000071525574
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_SupportGraphEvaluation_index_tsx.chunk.js",
+          "operationRelativeEndTime": 352.5,
+          "operationStartOffset": 342.2000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "script",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "cfd5647d-5cd5-4c32-a041-2b3b459d73f8",
+              "type": "js",
+              "url": "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_SupportGraphEvaluation_index_tsx.chunk.js",
+              "status_code": 200,
+              "duration": 10300000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 10.299999952316284
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/tickets/$ID",
+          "operationRelativeEndTime": 396.8000000715256,
+          "operationStartOffset": 64.90000009536743,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 1634,
+            "query": {
+              "include": "brands,permissions,users,groups,organizations,sharing_agreements,incident_counts,tde_workspace,slas,lookup_relationship_fields,custom_statuses,group_slas"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "fbe8011c-95ff-477f-af10-f8f2dfb81f00",
+              "type": "xhr",
+              "duration": 331900000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/tickets/12986?include=brands%2Cpermissions%2Cusers%2Cgroups%2Corganizations%2Csharing_agreements%2Cincident_counts%2Ctde_workspace%2Cslas%2Clookup_relationship_fields%2Ccustom_statuses%2Cgroup_slas",
+              "render_blocking_status": "non-blocking",
+              "size": 5987,
+              "encoded_body_size": 1634,
+              "decoded_body_size": 5987,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1800000,
+                "start": 330100000
+              },
+              "first_byte": {
+                "duration": 321200000,
+                "start": 8900000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 331.89999997615814
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_NextTicketButton_index_tsx.chunk.js",
+          "operationRelativeEndTime": 416,
+          "operationStartOffset": 409.8000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "script",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "7cbd3877-2da8-40e6-aa2a-24a33b289dce",
+              "type": "js",
+              "url": "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_NextTicketButton_index_tsx.chunk.js",
+              "status_code": 200,
+              "duration": 6200000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 6.199999928474426
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 420.90000009536743,
+          "operationStartOffset": 288.5,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 132.40000009536743
+        },
+        {
+          "kind": "render",
+          "commonName": "Menu",
+          "operationRelativeEndTime": 423.5,
+          "operationStartOffset": 405,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 18.5
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 424.2000000476837,
+          "operationStartOffset": 393.3000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 30.899999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "TicketSidebar",
+          "operationRelativeEndTime": 425.2000000476837,
+          "operationStartOffset": 405.90000009536743,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "ticket/agent_collision"
+          },
+          "detail": {},
+          "duration": 19.299999952316284
+        },
+        {
+          "kind": "measure",
+          "commonName": "open_ticket.paint.ticket_workspace",
+          "operationRelativeEndTime": 450.90000009536743,
+          "operationStartOffset": 243.20000004768372,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "is_react_concurrent": "true",
+            "is_first_seen": "true",
+            "metric": {
+              "id": "open_ticket.paint.ticket_workspace",
+              "fullId": "open_ticket/paint/ticket_workspace/12986",
+              "duration": 207.70000004768372
+            },
+            "feature": "open_ticket/paint/ticket_workspace"
+          },
+          "duration": 207.70000004768372
+        },
+        {
+          "kind": "measure",
+          "commonName": "models.conversations.fetch",
+          "operationRelativeEndTime": 463.3000000715256,
+          "operationStartOffset": 87.70000004768372,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metric": {
+              "id": "models.conversations.fetch",
+              "fullId": "models/conversations/12986/fetch",
+              "duration": 375.60000002384186
+            },
+            "feature": "models/conversations/fetch"
+          },
+          "duration": 375.60000002384186
+        },
+        {
+          "kind": "measure",
+          "commonName": "models.ticket.fetch",
+          "operationRelativeEndTime": 475.90000009536743,
+          "operationStartOffset": 102.30000007152557,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metric": {
+              "id": "models.ticket.fetch",
+              "fullId": "models/ticket/12986/fetch",
+              "duration": 373.60000002384186
+            },
+            "feature": "models/ticket/fetch"
+          },
+          "duration": 373.60000002384186
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 534.3000000715256,
+          "operationStartOffset": 520.7000000476837,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 13.600000023841858
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 535.3000000715256,
+          "operationStartOffset": 521.4000000953674,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 13.899999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "Menu",
+          "operationRelativeEndTime": 535.3000000715256,
+          "operationStartOffset": 531.2000000476837,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 4.100000023841858
+        },
+        {
+          "kind": "render",
+          "commonName": "Menu",
+          "operationRelativeEndTime": 537.8000000715256,
+          "operationStartOffset": 537.5,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 0.30000007152557373
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/icons/brand_fallback.png",
+          "operationRelativeEndTime": 552.2000000476837,
+          "operationStartOffset": 538.1000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "img",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "fecd5f3c-73b5-408b-8b09-18a4ceae6c76",
+              "type": "image",
+              "url": "https://dev.zd-dev.com/agent/assets/icons/brand_fallback.png",
+              "duration": 14100000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 14.100000023841858
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_TicketPropertiesSidebar_Assignee_PolarisAssignee_Trigger_ChatTrigger_js.chunk.js",
+          "operationRelativeEndTime": 567.5,
+          "operationStartOffset": 563,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "script",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "03329988-4404-4755-bdf3-639c9618a440",
+              "type": "js",
+              "url": "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_TicketPropertiesSidebar_Assignee_PolarisAssignee_Trigger_ChatTrigger_js.chunk.js",
+              "status_code": 200,
+              "duration": 4500000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 4.5
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 574.2000000476837,
+          "operationStartOffset": 552.7000000476837,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 21.5
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 574.3000000715256,
+          "operationStartOffset": 562,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 12.300000071525574
+        },
+        {
+          "kind": "render",
+          "commonName": "Menu",
+          "operationRelativeEndTime": 574.3000000715256,
+          "operationStartOffset": 563.4000000953674,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 10.899999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "TicketSidebar",
+          "operationRelativeEndTime": 574.4000000953674,
+          "operationStartOffset": 563.7000000476837,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "ticket/agent_collision"
+          },
+          "detail": {},
+          "duration": 10.700000047683716
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 582.9000000953674,
+          "operationStartOffset": 576.9000000953674,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 6
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 583,
+          "operationStartOffset": 581.6000000238419,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 1.399999976158142
+        },
+        {
+          "kind": "measure",
+          "commonName": "workspace.contextual_workspace.resolution",
+          "operationRelativeEndTime": 589.6000000238419,
+          "operationStartOffset": 506.8000000715256,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "match": "false",
+            "metric": {
+              "id": "workspace.contextual_workspace.resolution",
+              "fullId": "workspace.contextual_workspace.resolution",
+              "duration": 82.79999995231628
+            },
+            "feature": "workspace/contextual_workspace/resolution"
+          },
+          "duration": 82.79999995231628
+        },
+        {
+          "kind": "render",
+          "commonName": "Tabs",
+          "operationRelativeEndTime": 599.2000000476837,
+          "operationStartOffset": 593.8000000715256,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "toolbar/tabs"
+          },
+          "detail": {},
+          "duration": 5.399999976158142
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/ticket",
+          "operationRelativeEndTime": 603.8000000715256,
+          "operationStartOffset": 164.20000004768372,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 1068,
+            "encodedBodySize": 768,
+            "query": {},
+            "commonName": "graphql/support_remote/query/ticket",
+            "graphql": {
+              "apolloClientName": "support_remote",
+              "operations": ["query/ticket"]
+            },
+            "feature": "lotus-react",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "1e868adf-0c20-45a4-affd-ffb5b1539cd0",
+              "type": "fetch",
+              "duration": 439600000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/graphql#gql=support_remote/query:ticket&feature=lotus-react",
+              "render_blocking_status": "non-blocking",
+              "size": 1867,
+              "encoded_body_size": 768,
+              "decoded_body_size": 1867,
+              "transfer_size": 1068,
+              "download": {
+                "duration": 700000,
+                "start": 438900000
+              },
+              "first_byte": {
+                "duration": 437200000,
+                "start": 1700000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 439.60000002384186
+        },
+        {
+          "kind": "measure",
+          "commonName": "performance/ticket/activation/ConversationPane/initial-till-loading",
+          "operationRelativeEndTime": 609.7000000476837,
+          "operationStartOffset": 0.8000000715255737,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {},
+          "duration": 608.8999999761581
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/omniheader/OmniHeader/loading-till-ready",
+          "operationRelativeEndTime": 610.5,
+          "operationStartOffset": 609.4000000953674,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {},
+          "duration": 1.0999999046325684
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/lotus/assignables/groups.json",
+          "operationRelativeEndTime": 635.6000000238419,
+          "operationStartOffset": 439,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 300,
+            "encodedBodySize": 834,
+            "query": {},
+            "feature": "AssigneeFieldAW",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "01de2d90-e9b8-4fe6-8ef5-eaa483a6dfb4",
+              "type": "fetch",
+              "duration": 196600000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/assignables/groups.json#feature=AssigneeFieldAW",
+              "render_blocking_status": "non-blocking",
+              "size": 3563,
+              "encoded_body_size": 834,
+              "decoded_body_size": 3563,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1000000,
+                "start": 195600000
+              },
+              "first_byte": {
+                "duration": 192600000,
+                "start": 3000000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 196.60000002384186
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID/organization_memberships",
+          "operationRelativeEndTime": 679.6000000238419,
+          "operationStartOffset": 511.90000009536743,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 70,
+            "query": {
+              "include": "organizations"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "380221c4-7d5c-4d6c-99e2-7d288eaf034c",
+              "type": "xhr",
+              "duration": 167700000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/7015998225690/organization_memberships?include=organizations",
+              "render_blocking_status": "non-blocking",
+              "size": 98,
+              "encoded_body_size": 70,
+              "decoded_body_size": 98,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1000000,
+                "start": 166700000
+              },
+              "first_byte": {
+                "duration": 164900000,
+                "start": 1800000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 167.69999992847443
+        },
+        {
+          "kind": "render",
+          "commonName": "OmniHeader",
+          "operationRelativeEndTime": 680.4000000953674,
+          "operationStartOffset": 610.5,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "ticket/omniheader"
+          },
+          "detail": {},
+          "duration": 69.90000009536743
+        },
+        {
+          "kind": "render",
+          "commonName": "OmniLog",
+          "operationRelativeEndTime": 682.3000000715256,
+          "operationStartOffset": 645.1000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "ticket/omnilog/conversation_log"
+          },
+          "detail": {},
+          "duration": 37.200000047683716
+        },
+        {
+          "kind": "render",
+          "commonName": "ConversationPane",
+          "operationRelativeEndTime": 690,
+          "operationStartOffset": 609.4000000953674,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "ticket/omniheader"
+          },
+          "detail": {},
+          "duration": 80.59999990463257
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/BFFConvoLogQuery",
+          "operationRelativeEndTime": 711.5,
+          "operationStartOffset": 166.80000007152557,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 1881,
+            "encodedBodySize": 1581,
+            "query": {},
+            "commonName": "graphql/support_remote/query/BFFConvoLogQuery",
+            "graphql": {
+              "apolloClientName": "support_remote",
+              "operations": ["query/BFFConvoLogQuery"]
+            },
+            "feature": "lotus-react",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "027cf3f0-a388-45d5-b26b-0f82919dc1dd",
+              "type": "fetch",
+              "duration": 544700000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/graphql#gql=support_remote/query:BFFConvoLogQuery&feature=lotus-react",
+              "render_blocking_status": "non-blocking",
+              "size": 7866,
+              "encoded_body_size": 1581,
+              "decoded_body_size": 7866,
+              "transfer_size": 1881,
+              "download": {
+                "duration": 1000000,
+                "start": 543700000
+              },
+              "first_byte": {
+                "duration": 542300000,
+                "start": 1400000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 544.6999999284744
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/macros/definitions",
+          "operationRelativeEndTime": 712.5,
+          "operationStartOffset": 436.10000002384186,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 300,
+            "encodedBodySize": 15315,
+            "query": {},
+            "feature": "Ticket/Footer",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "850d078c-b33b-4a5b-bcd7-bfbfd7be72eb",
+              "type": "fetch",
+              "duration": 276400000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/macros/definitions#feature=Ticket:Footer",
+              "render_blocking_status": "non-blocking",
+              "size": 102237,
+              "encoded_body_size": 15315,
+              "decoded_body_size": 102237,
+              "transfer_size": 300,
+              "download": {
+                "duration": 800000,
+                "start": 275600000
+              },
+              "first_byte": {
+                "duration": 272900000,
+                "start": 2700000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 276.39999997615814
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/tickets/$ID",
+          "operationRelativeEndTime": 717.8000000715256,
+          "operationStartOffset": 103.40000009536743,
+          "occurrence": 2,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 1634,
+            "query": {
+              "include": "brands,permissions,users,groups,organizations,sharing_agreements,incident_counts,tde_workspace,slas,lookup_relationship_fields,custom_statuses,group_slas"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "8c36dfde-c847-47e9-9bb3-7bb91cf25809",
+              "type": "xhr",
+              "duration": 614400000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/tickets/12986?include=brands%2Cpermissions%2Cusers%2Cgroups%2Corganizations%2Csharing_agreements%2Cincident_counts%2Ctde_workspace%2Cslas%2Clookup_relationship_fields%2Ccustom_statuses%2Cgroup_slas",
+              "render_blocking_status": "non-blocking",
+              "size": 5987,
+              "encoded_body_size": 1634,
+              "decoded_body_size": 5987,
+              "transfer_size": 300,
+              "download": {
+                "duration": 800000,
+                "start": 613600000
+              },
+              "first_byte": {
+                "duration": 321700000,
+                "start": 291900000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 614.3999999761581
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/groups/$ID.json",
+          "operationRelativeEndTime": 727.2000000476837,
+          "operationStartOffset": 541.1000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 300,
+            "encodedBodySize": 169,
+            "query": {},
+            "feature": "AssigneeFieldAW",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "fdbcb615-d510-48e6-b60d-048974bcf13f",
+              "type": "fetch",
+              "duration": 186100000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/groups/114095618674.json#feature=AssigneeFieldAW",
+              "render_blocking_status": "non-blocking",
+              "size": 262,
+              "encoded_body_size": 169,
+              "decoded_body_size": 262,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1100000,
+                "start": 185000000
+              },
+              "first_byte": {
+                "duration": 183600000,
+                "start": 1400000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 186.10000002384186
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID",
+          "operationRelativeEndTime": 736,
+          "operationStartOffset": 512.8000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 957,
+            "query": {
+              "include": "abilities,roles,lookup_relationship_fields"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "713db26a-c4b8-4410-8a72-838d57d9d0a1",
+              "type": "xhr",
+              "duration": 223200000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/7015998225690?include=abilities%2Croles%2Clookup_relationship_fields",
+              "render_blocking_status": "non-blocking",
+              "size": 2841,
+              "encoded_body_size": 957,
+              "decoded_body_size": 2841,
+              "transfer_size": 300,
+              "download": {
+                "duration": 900000,
+                "start": 222300000
+              },
+              "first_byte": {
+                "duration": 221000000,
+                "start": 1300000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 223.19999992847443
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/react/js/src_Editor_Shell_components_EditorMonitor_InstrumentForDebugging_js.chunk.js",
+          "operationRelativeEndTime": 751.3000000715256,
+          "operationStartOffset": 745.5,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "script",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "84c7b99e-57cc-41c6-9674-1c80afb05b70",
+              "type": "js",
+              "url": "https://dev.zd-dev.com/agent/assets/react/js/src_Editor_Shell_components_EditorMonitor_InstrumentForDebugging_js.chunk.js",
+              "status_code": 200,
+              "duration": 5800000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 5.800000071525574
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 760.6000000238419,
+          "operationStartOffset": 691.5,
+          "occurrence": 5,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 69.10000002384186
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID.json",
+          "operationRelativeEndTime": 769,
+          "operationStartOffset": 438,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 2280,
+            "encodedBodySize": 1980,
+            "query": {
+              "include": "abilities,roles,groups,organizations,identities,external_permissions"
+            },
+            "feature": "Ticket/Footer",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "4d456992-0208-43e1-ba02-a7b50c624f34",
+              "type": "fetch",
+              "duration": 331000000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/900139146403.json?include=abilities,roles,groups,organizations,identities,external_permissions#feature=Ticket:Footer",
+              "render_blocking_status": "non-blocking",
+              "size": 7853,
+              "encoded_body_size": 1980,
+              "decoded_body_size": 7853,
+              "transfer_size": 2280,
+              "download": {
+                "duration": 32000000,
+                "start": 299000000
+              },
+              "first_byte": {
+                "duration": 297400000,
+                "start": 1600000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 331
+        },
+        {
+          "kind": "measure",
+          "commonName": "macro_shortcuts.load_time",
+          "operationRelativeEndTime": 769.2000000476837,
+          "operationStartOffset": 744.7000000476837,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "hasChatShortcuts": "false",
+            "metric": {
+              "id": "macro_shortcuts.load_time",
+              "fullId": "macro_shortcuts/load_time",
+              "duration": 24.5
+            },
+            "feature": "macro_shortcuts/load_time"
+          },
+          "duration": 24.5
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 773.2000000476837,
+          "operationStartOffset": 749.9000000953674,
+          "occurrence": 5,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 23.299999952316284
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://dev.zd-dev.com/agent/assets/react/js/vendors-node_modules_zendesk_unicode-emoji-translations_data_translations_en_US_index_js.chunk.js",
+          "operationRelativeEndTime": 795.6000000238419,
+          "operationStartOffset": 767.8000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "script",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "e1edfb53-3fe6-499b-8a5e-2db7a615fa2c",
+              "type": "js",
+              "url": "https://dev.zd-dev.com/agent/assets/react/js/vendors-node_modules_zendesk_unicode-emoji-translations_data_translations_en_US_index_js.chunk.js",
+              "status_code": 200,
+              "duration": 27800000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 27.799999952316284
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/lotus/assignables/groups/$ID/agents.json",
+          "operationRelativeEndTime": 796.2000000476837,
+          "operationStartOffset": 541.9000000953674,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 300,
+            "encodedBodySize": 4454,
+            "query": {},
+            "feature": "AssigneeFieldAW",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "0e3f72ec-1f23-478d-b832-5711a625361a",
+              "type": "fetch",
+              "duration": 254300000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/assignables/groups/114095618674/agents.json#feature=AssigneeFieldAW",
+              "render_blocking_status": "non-blocking",
+              "size": 17163,
+              "encoded_body_size": 4454,
+              "decoded_body_size": 17163,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1200000,
+                "start": 253100000
+              },
+              "first_byte": {
+                "duration": 250100000,
+                "start": 3000000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 254.29999995231628
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/SkillTypes",
+          "operationRelativeEndTime": 815.2000000476837,
+          "operationStartOffset": 439.60000002384186,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 596,
+            "encodedBodySize": 296,
+            "query": {},
+            "commonName": "graphql/support_remote/query/SkillTypes",
+            "graphql": {
+              "apolloClientName": "support_remote",
+              "operations": ["query/SkillTypes"]
+            },
+            "feature": "Ticket/TicketPropertiesSidebar/SkillsContainer",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "67efc735-8a13-4aa1-acf5-b525627e7b28",
+              "type": "fetch",
+              "duration": 375600000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/graphql#gql=support_remote/query:SkillTypes&feature=Ticket:TicketPropertiesSidebar:SkillsContainer",
+              "render_blocking_status": "non-blocking",
+              "size": 629,
+              "encoded_body_size": 296,
+              "decoded_body_size": 629,
+              "transfer_size": 596,
+              "download": {
+                "duration": 1600000,
+                "start": 374000000
+              },
+              "first_byte": {
+                "duration": 372000000,
+                "start": 2000000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 375.60000002384186
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID/identities",
+          "operationRelativeEndTime": 819.6000000238419,
+          "operationStartOffset": 503.8000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 60,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "6ffd0cd3-b48c-458a-bc84-c7493cdf4ea4",
+              "type": "xhr",
+              "duration": 315800000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/7015998225690/identities",
+              "render_blocking_status": "non-blocking",
+              "size": 65,
+              "encoded_body_size": 60,
+              "decoded_body_size": 65,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1300000,
+                "start": 314500000
+              },
+              "first_byte": {
+                "duration": 311200000,
+                "start": 3300000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 315.7999999523163
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/entityReadReceipt",
+          "operationRelativeEndTime": 846.8000000715256,
+          "operationStartOffset": 131.20000004768372,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "entityReadReceipt",
+            "operationType": "query",
+            "feature": "ReadReceipt",
+            "status": "ok"
+          },
+          "duration": 715.6000000238419
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 859.2000000476837,
+          "operationStartOffset": 857.7000000476837,
+          "occurrence": 6,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 1.5
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 859.2000000476837,
+          "operationStartOffset": 858.2000000476837,
+          "occurrence": 6,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 1
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/user",
+          "operationRelativeEndTime": 896.3000000715256,
+          "operationStartOffset": 568.7000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 1556,
+            "encodedBodySize": 1256,
+            "query": {},
+            "commonName": "graphql/support_remote/query/user",
+            "graphql": {
+              "apolloClientName": "support_remote",
+              "operations": ["query/user"]
+            },
+            "feature": "Ticket/Footer",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "6b25e8fd-ff4f-46fd-afd6-cf704a32d367",
+              "type": "fetch",
+              "duration": 327600000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/graphql#gql=support_remote/query:user&feature=Ticket:Footer",
+              "render_blocking_status": "non-blocking",
+              "size": 5502,
+              "encoded_body_size": 1256,
+              "decoded_body_size": 5502,
+              "transfer_size": 1556,
+              "download": {
+                "duration": 800000,
+                "start": 326800000
+              },
+              "first_byte": {
+                "duration": 325800000,
+                "start": 1000000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 327.60000002384186
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/ticketForm",
+          "operationRelativeEndTime": 898.8000000715256,
+          "operationStartOffset": 585.9000000953674,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 609,
+            "encodedBodySize": 309,
+            "query": {},
+            "commonName": "graphql/support_remote/query/ticketForm",
+            "graphql": {
+              "apolloClientName": "support_remote",
+              "operations": ["query/ticketForm"]
+            },
+            "feature": "lotus-react",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "126dc3b3-f2da-486f-bfe8-13bbf4bebf02",
+              "type": "fetch",
+              "duration": 312900000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/graphql#gql=support_remote/query:ticketForm&feature=lotus-react",
+              "render_blocking_status": "non-blocking",
+              "size": 1012,
+              "encoded_body_size": 309,
+              "decoded_body_size": 1012,
+              "transfer_size": 609,
+              "download": {
+                "duration": 700000,
+                "start": 312200000
+              },
+              "first_byte": {
+                "duration": 311000000,
+                "start": 1200000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 312.89999997615814
+        },
+        {
+          "kind": "render",
+          "commonName": "TicketSidebar",
+          "operationRelativeEndTime": 909.7000000476837,
+          "operationStartOffset": 906.5,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "ticket/agent_collision"
+          },
+          "detail": {},
+          "duration": 3.200000047683716
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID.json",
+          "operationRelativeEndTime": 913,
+          "operationStartOffset": 540.1000000238419,
+          "occurrence": 2,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 300,
+            "encodedBodySize": 1846,
+            "query": {
+              "include": "abilities,roles,groups,organizations,identities,external_permissions"
+            },
+            "feature": "AssigneeFieldAW",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "0402250e-e363-458a-a790-0ba007295aed",
+              "type": "fetch",
+              "duration": 372900000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/902894269106.json?include=abilities,roles,groups,organizations,identities,external_permissions#feature=AssigneeFieldAW",
+              "render_blocking_status": "non-blocking",
+              "size": 7025,
+              "encoded_body_size": 1846,
+              "decoded_body_size": 7025,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1200000,
+                "start": 371700000
+              },
+              "first_byte": {
+                "duration": 369800000,
+                "start": 1900000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 372.89999997615814
+        },
+        {
+          "kind": "render",
+          "commonName": "Tabs",
+          "operationRelativeEndTime": 930,
+          "operationStartOffset": 927.8000000715256,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "toolbar/tabs"
+          },
+          "detail": {},
+          "duration": 2.1999999284744263
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID.json",
+          "operationRelativeEndTime": 941.4000000953674,
+          "operationStartOffset": 585,
+          "occurrence": 3,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 300,
+            "encodedBodySize": 1112,
+            "query": {
+              "include": "abilities,roles,groups,organizations,identities,external_permissions"
+            },
+            "feature": "Ticket/Footer",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "4c88b5af-d679-4f77-86d5-fe4d320a9e85",
+              "type": "fetch",
+              "duration": 356400000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/7015998225690.json?include=abilities,roles,groups,organizations,identities,external_permissions#feature=Ticket:Footer",
+              "render_blocking_status": "non-blocking",
+              "size": 3524,
+              "encoded_body_size": 1112,
+              "decoded_body_size": 3524,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1100000,
+                "start": 355300000
+              },
+              "first_byte": {
+                "duration": 353500000,
+                "start": 1800000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 356.40000009536743
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/chat/query/conversationServiceQuery",
+          "operationRelativeEndTime": 953.2000000476837,
+          "operationStartOffset": 585.3000000715256,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "conversationServiceQuery",
+            "operationType": "query",
+            "feature": "Chat/MessagingConversationService/Subscribe/QueryConversation",
+            "status": "partial-error"
+          },
+          "duration": 367.89999997615814
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/ticket",
+          "operationRelativeEndTime": 956.4000000953674,
+          "operationStartOffset": 163.30000007152557,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "ticket",
+            "operationType": "query",
+            "feature": "react",
+            "status": "ok"
+          },
+          "duration": 793.1000000238419
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/Groups",
+          "operationRelativeEndTime": 961.6000000238419,
+          "operationStartOffset": 438.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "Groups",
+            "operationType": "query",
+            "feature": "AssigneeFieldAW",
+            "status": "ok"
+          },
+          "duration": 523.1000000238419
+        },
+        {
+          "kind": "render",
+          "commonName": "Menu",
+          "operationRelativeEndTime": 973.5,
+          "operationStartOffset": 967.5,
+          "occurrence": 5,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 6
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 973.6000000238419,
+          "operationStartOffset": 964,
+          "occurrence": 7,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 9.600000023841858
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/platform-data-graph-gateway/query/Lotus__IntelligenceSettings",
+          "operationRelativeEndTime": 973.9000000953674,
+          "operationStartOffset": 810.4000000953674,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 393,
+            "encodedBodySize": 93,
+            "query": {},
+            "commonName": "graphql/platform-data-graph-gateway/query/Lotus__IntelligenceSettings",
+            "graphql": {
+              "apolloClientName": "platform-data-graph-gateway",
+              "operations": ["query/Lotus__IntelligenceSettings"]
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "8fb196b4-7c1b-45bd-9990-b7e86c656239",
+              "type": "fetch",
+              "duration": 163500000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/graphql#gql=platform-data-graph-gateway/query:Lotus__IntelligenceSettings",
+              "render_blocking_status": "non-blocking",
+              "size": 101,
+              "encoded_body_size": 93,
+              "decoded_body_size": 101,
+              "transfer_size": 393,
+              "download": {
+                "duration": 4300000,
+                "start": 159200000
+              },
+              "first_byte": {
+                "duration": 157700000,
+                "start": 1500000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 163.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/BFFConvoLogQuery",
+          "operationRelativeEndTime": 975.4000000953674,
+          "operationStartOffset": 163.30000007152557,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "BFFConvoLogQuery",
+            "operationType": "query",
+            "feature": "react",
+            "status": "ok"
+          },
+          "duration": 812.1000000238419
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/omnilog/conversation_log/ConversationPane/loading-till-ready",
+          "operationRelativeEndTime": 1008.6000000238419,
+          "operationStartOffset": 609.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {},
+          "duration": 399.10000002384186
+        },
+        {
+          "kind": "measure",
+          "commonName": "performance/serve/conversation/conversation_log/ConversationPane/loading-till-ready",
+          "operationRelativeEndTime": 1008.7000000476837,
+          "operationStartOffset": 609.7000000476837,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {},
+          "duration": 399
+        },
+        {
+          "kind": "measure",
+          "commonName": "performance/ticket/activation/ConversationPane/loading-till-ready",
+          "operationRelativeEndTime": 1008.8000000715256,
+          "operationStartOffset": 609.7000000476837,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {},
+          "duration": 399.10000002384186
+        },
+        {
+          "kind": "render",
+          "commonName": "ProfileMenu",
+          "operationRelativeEndTime": 1067.4000000953674,
+          "operationStartOffset": 987.6000000238419,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "toolbar/profile_menu_open"
+          },
+          "detail": {},
+          "duration": 79.80000007152557
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 1068.4000000953674,
+          "operationStartOffset": 989.1000000238419,
+          "occurrence": 7,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 79.30000007152557
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/load_omnilog_from_new_workspace",
+          "operationRelativeEndTime": 1071.5,
+          "operationStartOffset": 69.60000002384186,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "ticketId": "12986"
+          },
+          "duration": 1001.8999999761581
+        },
+        {
+          "kind": "mark",
+          "commonName": "ticket/load_omnilog_from_new_workspace/end",
+          "operationRelativeEndTime": 1071.5,
+          "operationStartOffset": 1071.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {},
+          "duration": 0
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket.load_omnilog_from_new_workspace",
+          "operationRelativeEndTime": 1071.8000000715256,
+          "operationStartOffset": 70.80000007152557,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "ticketId": "12986",
+            "ticketChannel": "chat",
+            "workspaceCount": 1,
+            "totalTicketWorkspacesUsedCount": 1,
+            "ticketFieldsCount": 8,
+            "zafAppsCount": 4,
+            "conversationState": "ENDED",
+            "omnilogEdgesLength": 8,
+            "isPodded": false,
+            "isOcbEnabled": false,
+            "isReactConcurrent": true,
+            "metric": {
+              "id": "ticket.load_omnilog_from_new_workspace",
+              "fullId": "ticket/load_omnilog_from_new_workspace",
+              "duration": 1001
+            },
+            "feature": "ticket/load_omnilog_from_new_workspace"
+          },
+          "duration": 1001
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 1079.3000000715256,
+          "operationStartOffset": 1057.3000000715256,
+          "occurrence": 8,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 22
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID/related.json",
+          "operationRelativeEndTime": 1095.5,
+          "operationStartOffset": 883.3000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 83,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "a1f782af-b130-43ef-85f5-987a7d43c356",
+              "type": "xhr",
+              "duration": 212200000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/7015998225690/related.json",
+              "render_blocking_status": "non-blocking",
+              "size": 130,
+              "encoded_body_size": 83,
+              "decoded_body_size": 130,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1100000,
+                "start": 211100000
+              },
+              "first_byte": {
+                "duration": 209100000,
+                "start": 2000000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 212.19999992847443
+        },
+        {
+          "kind": "render",
+          "commonName": "Tabs",
+          "operationRelativeEndTime": 1100.4000000953674,
+          "operationStartOffset": 1079.6000000238419,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "toolbar/tabs"
+          },
+          "detail": {},
+          "duration": 20.800000071525574
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 1100.5,
+          "operationStartOffset": 1081.6000000238419,
+          "occurrence": 8,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 18.899999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "OmniHeader",
+          "operationRelativeEndTime": 1100.6000000238419,
+          "operationStartOffset": 1083.1000000238419,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "ticket/omniheader"
+          },
+          "detail": {},
+          "duration": 17.5
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 1101,
+          "operationStartOffset": 1094.8000000715256,
+          "occurrence": 9,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 6.199999928474426
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/macroDefinitionsQuery",
+          "operationRelativeEndTime": 1118.3000000715256,
+          "operationStartOffset": 435.3000000715256,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "macroDefinitionsQuery",
+            "operationType": "query",
+            "feature": "Ticket/Footer",
+            "status": "ok"
+          },
+          "duration": 683
+        },
+        {
+          "kind": "element",
+          "commonName": "element/text-paint",
+          "operationRelativeEndTime": 1121.7000000476837,
+          "operationStartOffset": 1121.7000000476837,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {},
+          "duration": 0
+        },
+        {
+          "kind": "measure",
+          "commonName": "open_ticket/paint/omnilog",
+          "operationRelativeEndTime": 1121.7000000476837,
+          "operationStartOffset": 45.10000002384186,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "isFirstSeen": true
+          },
+          "duration": 1076.6000000238419
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/Group",
+          "operationRelativeEndTime": 1147.9000000953674,
+          "operationStartOffset": 540.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "Group",
+            "operationType": "query",
+            "feature": "AssigneeFieldAW",
+            "status": "ok"
+          },
+          "duration": 607.4000000953674
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/ticketPolicyMetrics",
+          "operationRelativeEndTime": 1148.6000000238419,
+          "operationStartOffset": 811.5,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 458,
+            "encodedBodySize": 158,
+            "query": {},
+            "commonName": "graphql/support_remote/query/ticketPolicyMetrics",
+            "graphql": {
+              "apolloClientName": "support_remote",
+              "operations": ["query/ticketPolicyMetrics"]
+            },
+            "feature": "ConversationPaneHeader",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "83f4fc80-d581-44bd-b37c-36bc7551f6d2",
+              "type": "fetch",
+              "duration": 337100000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/graphql#gql=support_remote/query:ticketPolicyMetrics&feature=ConversationPaneHeader",
+              "render_blocking_status": "non-blocking",
+              "size": 258,
+              "encoded_body_size": 158,
+              "decoded_body_size": 258,
+              "transfer_size": 458,
+              "download": {
+                "duration": 1000000,
+                "start": 336100000
+              },
+              "first_byte": {
+                "duration": 333800000,
+                "start": 2300000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 337.10000002384186
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/user",
+          "operationRelativeEndTime": 1149.4000000953674,
+          "operationStartOffset": 436.40000009536743,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "user",
+            "operationType": "query",
+            "feature": "Ticket/Footer",
+            "status": "ok"
+          },
+          "duration": 713
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/groupAgents",
+          "operationRelativeEndTime": 1153.6000000238419,
+          "operationStartOffset": 541.3000000715256,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "groupAgents",
+            "operationType": "query",
+            "feature": "AssigneeFieldAW",
+            "status": "ok"
+          },
+          "duration": 612.2999999523163
+        },
+        {
+          "kind": "render",
+          "commonName": "Menu",
+          "operationRelativeEndTime": 1165.7000000476837,
+          "operationStartOffset": 1165.2000000476837,
+          "occurrence": 6,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 0.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/SkillTypes",
+          "operationRelativeEndTime": 1169.1000000238419,
+          "operationStartOffset": 438.40000009536743,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "SkillTypes",
+            "operationType": "query",
+            "feature": "Ticket/TicketPropertiesSidebar/SkillsContainer",
+            "status": "ok"
+          },
+          "duration": 730.6999999284744
+        },
+        {
+          "kind": "render",
+          "commonName": "ServeButton",
+          "operationRelativeEndTime": 1221.9000000953674,
+          "operationStartOffset": 1184.1000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "performance/serve/conversation"
+          },
+          "detail": {},
+          "duration": 37.800000071525574
+        },
+        {
+          "kind": "render",
+          "commonName": "ProfileMenu",
+          "operationRelativeEndTime": 1221.9000000953674,
+          "operationStartOffset": 1187.2000000476837,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "toolbar/profile_menu_open"
+          },
+          "detail": {},
+          "duration": 34.700000047683716
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 1222.5,
+          "operationStartOffset": 1191.6000000238419,
+          "occurrence": 9,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 30.899999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "OmniHeader",
+          "operationRelativeEndTime": 1222.6000000238419,
+          "operationStartOffset": 1195.6000000238419,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "ticket/omniheader"
+          },
+          "detail": {},
+          "duration": 27
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 1226.1000000238419,
+          "operationStartOffset": 1211.6000000238419,
+          "occurrence": 10,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 14.5
+        },
+        {
+          "kind": "render",
+          "commonName": "TicketSidebar",
+          "operationRelativeEndTime": 1226.1000000238419,
+          "operationStartOffset": 1213.9000000953674,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "ticket/agent_collision"
+          },
+          "detail": {},
+          "duration": 12.199999928474426
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://z3n-iris-dev.zendesk.com/system/photos/$ID/profile_image_902894269106_2149413.png",
+          "operationRelativeEndTime": 1267.5,
+          "operationStartOffset": 1033.1000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "img",
+            "transferSize": 300,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "8168f89f-81aa-4f08-ac00-80f72624191b",
+              "type": "image",
+              "url": "https://z3n-iris-dev.zendesk.com/system/photos/6195978383898/profile_image_902894269106_2149413.png",
+              "status_code": 200,
+              "duration": 234400000,
+              "render_blocking_status": "non-blocking",
+              "size": 0,
+              "encoded_body_size": 0,
+              "decoded_body_size": 0,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1000000,
+                "start": 233400000
+              },
+              "first_byte": {
+                "duration": 231400000,
+                "start": 2000000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 234.39999997615814
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket.fetch",
+          "operationRelativeEndTime": 1267.9000000953674,
+          "operationStartOffset": 100.20000004768372,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metric": {
+              "id": "ticket.fetch",
+              "fullId": "ticket/12986/fetch",
+              "duration": 1167.7000000476837
+            },
+            "feature": "ticket/fetch"
+          },
+          "duration": 1167.7000000476837
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://z3n-iris-dev.zendesk.com/system/photos/$ID/profile-new-small.jpg",
+          "operationRelativeEndTime": 1268.5,
+          "operationStartOffset": 1042.7000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "img",
+            "transferSize": 300,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "8f289e28-329c-4c3f-925a-bce2d0628c09",
+              "type": "image",
+              "url": "https://z3n-iris-dev.zendesk.com/system/photos/5742409168026/profile-new-small.jpg",
+              "status_code": 200,
+              "duration": 225800000,
+              "render_blocking_status": "non-blocking",
+              "size": 0,
+              "encoded_body_size": 0,
+              "decoded_body_size": 0,
+              "transfer_size": 300,
+              "download": {
+                "duration": 600000,
+                "start": 225200000
+              },
+              "first_byte": {
+                "duration": 223800000,
+                "start": 1400000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 225.79999995231628
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket.open",
+          "operationRelativeEndTime": 1269.3000000715256,
+          "operationStartOffset": 69.40000009536743,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metric": {
+              "id": "ticket.open",
+              "fullId": "ticket/12986/open",
+              "duration": 1199.8999999761581
+            },
+            "feature": "ticket/open"
+          },
+          "duration": 1199.8999999761581
+        },
+        {
+          "kind": "render",
+          "commonName": "Tabs",
+          "operationRelativeEndTime": 1299.9000000953674,
+          "operationStartOffset": 1297.8000000715256,
+          "occurrence": 5,
+          "metadata": {
+            "metricId": "toolbar/tabs"
+          },
+          "detail": {},
+          "duration": 2.100000023841858
+        },
+        {
+          "kind": "measure",
+          "commonName": "toolbar/tabs/ttr",
+          "operationRelativeEndTime": 1299.9000000953674,
+          "operationStartOffset": 114.70000004768372,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "metadata": {
+                "visibleTabs": 1
+              },
+              "focused": true,
+              "feature": "Toolbar",
+              "fetch": false,
+              "mount": "subsequent",
+              "lastStage": "initial",
+              "visibleTabs": 1
+            },
+            "timingId": "toolbar/tabs",
+            "isFirstLoad": false,
+            "maximumActiveBeaconsCount": 1,
+            "minimumExpectedSimultaneousBeacons": 1,
+            "flushReason": "debounce"
+          },
+          "duration": 1185.2000000476837
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/chat/query/agentChatProfilesQuery",
+          "operationRelativeEndTime": 1300.8000000715256,
+          "operationStartOffset": 975.1000000238419,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "agentChatProfilesQuery",
+            "operationType": "query",
+            "feature": "Chat/AgentProfileService/Subscribe/QueryAgentChatProfiles",
+            "status": "ok"
+          },
+          "duration": 325.7000000476837
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/user",
+          "operationRelativeEndTime": 1303.2000000476837,
+          "operationStartOffset": 568.1000000238419,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "user",
+            "operationType": "query",
+            "feature": "Ticket/Footer",
+            "status": "ok"
+          },
+          "duration": 735.1000000238419
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/ticketForm",
+          "operationRelativeEndTime": 1306.6000000238419,
+          "operationStartOffset": 585.5,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "ticketForm",
+            "operationType": "query",
+            "feature": "react",
+            "status": "ok"
+          },
+          "duration": 721.1000000238419
+        },
+        {
+          "kind": "render",
+          "commonName": "AppSidebar",
+          "operationRelativeEndTime": 1394.7000000476837,
+          "operationStartOffset": 1358.3000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "metricId": "ticket/appSidebar"
+          },
+          "detail": {},
+          "duration": 36.39999997615814
+        },
+        {
+          "kind": "measure",
+          "commonName": "toolbar/tabs/tti",
+          "operationRelativeEndTime": 1404.4000000953674,
+          "operationStartOffset": 114.70000004768372,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "metadata": {
+                "visibleTabs": 1
+              },
+              "focused": true,
+              "feature": "Toolbar",
+              "fetch": false,
+              "mount": "subsequent",
+              "lastStage": "initial",
+              "visibleTabs": 1
+            },
+            "timingId": "toolbar/tabs",
+            "isFirstLoad": false,
+            "maximumActiveBeaconsCount": 1,
+            "minimumExpectedSimultaneousBeacons": 1,
+            "flushReason": "debounce"
+          },
+          "duration": 1289.7000000476837
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID.json",
+          "operationRelativeEndTime": 1412.3000000715256,
+          "operationStartOffset": 1404.2000000476837,
+          "occurrence": 4,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 0,
+            "encodedBodySize": 1112,
+            "query": {
+              "include": "abilities,roles,groups,organizations,identities,external_permissions"
+            },
+            "feature": "Omnipanel",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "5464ad69-d5b7-43ce-8baf-4bc3f4583e0a",
+              "type": "fetch",
+              "duration": 8100000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/7015998225690.json?include=abilities,roles,groups,organizations,identities,external_permissions#feature=Omnipanel",
+              "render_blocking_status": "non-blocking",
+              "size": 3524,
+              "encoded_body_size": 1112,
+              "decoded_body_size": 3524,
+              "transfer_size": 0,
+              "download": {
+                "duration": 1200000,
+                "start": 6900000
+              },
+              "first_byte": {
+                "duration": 500000,
+                "start": 6400000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 8.100000023841858
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/user",
+          "operationRelativeEndTime": 1412.9000000953674,
+          "operationStartOffset": 538.3000000715256,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "user",
+            "operationType": "query",
+            "feature": "AssigneeFieldAW",
+            "status": "ok"
+          },
+          "duration": 874.6000000238419
+        },
+        {
+          "kind": "measure",
+          "commonName": "open_ticket.paint.omnilog",
+          "operationRelativeEndTime": 1419.6000000238419,
+          "operationStartOffset": 343,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "is_react_concurrent": "true",
+            "is_first_seen": "true",
+            "metric": {
+              "id": "open_ticket.paint.omnilog",
+              "fullId": "open_ticket/paint/omnilog/12986",
+              "duration": 1076.6000000238419
+            },
+            "feature": "open_ticket/paint/omnilog"
+          },
+          "duration": 1076.6000000238419
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-c9b3463afc1a9fd65811acb0c1cc169b/support/icon_ticket_editor.svg",
+          "operationRelativeEndTime": 1420.7999511957169,
+          "operationStartOffset": 1269.7999511957169,
+          "occurrence": 1,
+          "metadata": {
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "resource": {
+              "id": "3ed68ac2-cb88-4f40-8551-895f870789a2",
+              "type": "xhr",
+              "duration": 151000000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://101101.apps.zdusercontent.com/101101/assets/1675213920-c9b3463afc1a9fd65811acb0c1cc169b/support/icon_ticket_editor.svg"
+            }
+          },
+          "detail": {},
+          "duration": 151
+        },
+        {
+          "kind": "measure",
+          "commonName": "workspace.contextual_workspace.resolution",
+          "operationRelativeEndTime": 1422.3000000715256,
+          "operationStartOffset": 1268.2000000476837,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "match": "false",
+            "metric": {
+              "id": "workspace.contextual_workspace.resolution",
+              "fullId": "workspace.contextual_workspace.resolution",
+              "duration": 154.10000002384186
+            },
+            "feature": "workspace/contextual_workspace/resolution"
+          },
+          "duration": 154.10000002384186
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 1441.4000000953674,
+          "operationStartOffset": 1432.7000000476837,
+          "occurrence": 10,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 8.700000047683716
+        },
+        {
+          "kind": "render",
+          "commonName": "Assignee",
+          "operationRelativeEndTime": 1441.4000000953674,
+          "operationStartOffset": 1433.3000000715256,
+          "occurrence": 11,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 8.100000023841858
+        },
+        {
+          "kind": "render",
+          "commonName": "Menu",
+          "operationRelativeEndTime": 1441.4000000953674,
+          "operationStartOffset": 1438.9000000953674,
+          "occurrence": 7,
+          "metadata": {
+            "metricId": "ticket/assignee_field_open"
+          },
+          "detail": {},
+          "duration": 2.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/groups/$ID",
+          "operationRelativeEndTime": 1442.2000000476837,
+          "operationStartOffset": 1281.7000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 169,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "852c9aa5-e739-480a-a713-79047d1e16ce",
+              "type": "xhr",
+              "duration": 160500000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/groups/114095618674",
+              "render_blocking_status": "non-blocking",
+              "size": 262,
+              "encoded_body_size": 169,
+              "decoded_body_size": 262,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1000000,
+                "start": 159500000
+              },
+              "first_byte": {
+                "duration": 157100000,
+                "start": 2400000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 160.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/user",
+          "operationRelativeEndTime": 1446.6000000238419,
+          "operationStartOffset": 583.1000000238419,
+          "occurrence": 3,
+          "metadata": {},
+          "detail": {
+            "operationName": "user",
+            "operationType": "query",
+            "feature": "Ticket/Footer",
+            "status": "ok"
+          },
+          "duration": 863.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/AgentGraphChatComposerShortcuts",
+          "operationRelativeEndTime": 1446.7999511957169,
+          "operationStartOffset": 810.7999511957169,
+          "occurrence": 1,
+          "metadata": {
+            "query": {},
+            "commonName": "graphql/support_remote/query/AgentGraphChatComposerShortcuts",
+            "graphql": {
+              "apolloClientName": "support_remote",
+              "operations": ["query/AgentGraphChatComposerShortcuts"]
+            },
+            "feature": "Chat/OmniConversationPane",
+            "occurrenceMultiplier": 1,
+            "resource": {
+              "id": "f14bfa47-a09f-47ef-936e-d290b072a5d0",
+              "type": "fetch",
+              "duration": 636000000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/lotus/graphql#gql=support_remote/query:AgentGraphChatComposerShortcuts&feature=Chat:OmniConversationPane"
+            }
+          },
+          "detail": {},
+          "duration": 636
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/platform-data-graph-gateway/query/Lotus__IntelligenceSettings",
+          "operationRelativeEndTime": 1474.9000000953674,
+          "operationStartOffset": 809.2000000476837,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "Lotus__IntelligenceSettings",
+            "operationType": "query",
+            "feature": "Omnipanel/SmartAssist/Request/IntelligenceSettings",
+            "status": "ok"
+          },
+          "duration": 665.7000000476837
+        },
+        {
+          "kind": "render",
+          "commonName": "OmniHeader",
+          "operationRelativeEndTime": 1476.1000000238419,
+          "operationStartOffset": 1457.1000000238419,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "ticket/omniheader"
+          },
+          "detail": {},
+          "duration": 19
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/omniheader/ttr",
+          "operationRelativeEndTime": 1479,
+          "operationStartOffset": 609.4000000953674,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "focused": true,
+              "feature": "ConversationPaneHeader",
+              "fetch": true,
+              "mount": "initial",
+              "lastStage": "ready",
+              "conversationState": "ENDED",
+              "visibleEvents": "1-15",
+              "ticketId": "12986",
+              "isChatting": false,
+              "isTicketBeingViewed": true,
+              "canLoadMore": false,
+              "hasReactLayoutTicketPanesGridV2": false,
+              "hasSuggestedReplies": false,
+              "hasTicketLayoutBuilder": false,
+              "hasTicketLayoutBuilderArturo": true,
+              "hasTicketLayoutBuilderAgentGraph": true,
+              "omniLogOrder": "asc",
+              "composerPlacement": "BOTTOM",
+              "composerCollapseDefault": false,
+              "shouldExcludeFromSlo": false,
+              "ticketType": "chat",
+              "hasUseOmniLogCleanup": false
+            },
+            "timingId": "ticket/omniheader/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 2,
+            "minimumExpectedSimultaneousBeacons": 2,
+            "flushReason": "debounce"
+          },
+          "duration": 869.5999999046326
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/omniheader/tti",
+          "operationRelativeEndTime": 1479,
+          "operationStartOffset": 609.4000000953674,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "focused": true,
+              "feature": "ConversationPaneHeader",
+              "fetch": true,
+              "mount": "initial",
+              "lastStage": "ready",
+              "conversationState": "ENDED",
+              "visibleEvents": "1-15",
+              "ticketId": "12986",
+              "isChatting": false,
+              "isTicketBeingViewed": true,
+              "canLoadMore": false,
+              "hasReactLayoutTicketPanesGridV2": false,
+              "hasSuggestedReplies": false,
+              "hasTicketLayoutBuilder": false,
+              "hasTicketLayoutBuilderArturo": true,
+              "hasTicketLayoutBuilderAgentGraph": true,
+              "omniLogOrder": "asc",
+              "composerPlacement": "BOTTOM",
+              "composerCollapseDefault": false,
+              "shouldExcludeFromSlo": false,
+              "ticketType": "chat",
+              "hasUseOmniLogCleanup": false
+            },
+            "timingId": "ticket/omniheader/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 2,
+            "minimumExpectedSimultaneousBeacons": 2,
+            "flushReason": "debounce"
+          },
+          "duration": 869.5999999046326
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/omnilog/conversation_log/ttr",
+          "operationRelativeEndTime": 1479,
+          "operationStartOffset": 609.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "metadata": {
+                "conversationLogPrivacyFilter": "ALL",
+                "omnilogOrder": "asc",
+                "composerPlacement": "BOTTOM",
+                "composerCollapseDefault": false,
+                "hasTicketLayoutBuilder": false
+              },
+              "metadataToIncludeAsTags": [
+                "conversationLogPrivacyFilter",
+                "omnilogOrder",
+                "composerPlacement",
+                "composerCollapseDefault",
+                "hasTicketLayoutBuilder"
+              ],
+              "focused": true,
+              "feature": "Chat/OmniConversationPane",
+              "fetch": true,
+              "mount": "initial",
+              "lastStage": "ready",
+              "conversationState": "ENDED",
+              "visibleEvents": "1-15",
+              "ticketId": "12986",
+              "isChatting": false,
+              "isTicketBeingViewed": true,
+              "canLoadMore": false,
+              "hasReactLayoutTicketPanesGridV2": false,
+              "hasSuggestedReplies": false,
+              "hasTicketLayoutBuilder": false,
+              "hasTicketLayoutBuilderArturo": true,
+              "hasTicketLayoutBuilderAgentGraph": true,
+              "omniLogOrder": "asc",
+              "composerPlacement": "BOTTOM",
+              "composerCollapseDefault": false,
+              "shouldExcludeFromSlo": false,
+              "ticketType": "chat",
+              "hasUseOmniLogCleanup": false,
+              "conversationLogPrivacyFilter": "ALL",
+              "omnilogOrder": "asc"
+            },
+            "timingId": "ticket/omnilog/conversation_log/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 2,
+            "minimumExpectedSimultaneousBeacons": 2,
+            "flushReason": "debounce"
+          },
+          "duration": 869.5
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/omnilog/conversation_log/tti",
+          "operationRelativeEndTime": 1479,
+          "operationStartOffset": 609.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "metadata": {
+                "conversationLogPrivacyFilter": "ALL",
+                "omnilogOrder": "asc",
+                "composerPlacement": "BOTTOM",
+                "composerCollapseDefault": false,
+                "hasTicketLayoutBuilder": false
+              },
+              "metadataToIncludeAsTags": [
+                "conversationLogPrivacyFilter",
+                "omnilogOrder",
+                "composerPlacement",
+                "composerCollapseDefault",
+                "hasTicketLayoutBuilder"
+              ],
+              "focused": true,
+              "feature": "Chat/OmniConversationPane",
+              "fetch": true,
+              "mount": "initial",
+              "lastStage": "ready",
+              "conversationState": "ENDED",
+              "visibleEvents": "1-15",
+              "ticketId": "12986",
+              "isChatting": false,
+              "isTicketBeingViewed": true,
+              "canLoadMore": false,
+              "hasReactLayoutTicketPanesGridV2": false,
+              "hasSuggestedReplies": false,
+              "hasTicketLayoutBuilder": false,
+              "hasTicketLayoutBuilderArturo": true,
+              "hasTicketLayoutBuilderAgentGraph": true,
+              "omniLogOrder": "asc",
+              "composerPlacement": "BOTTOM",
+              "composerCollapseDefault": false,
+              "shouldExcludeFromSlo": false,
+              "ticketType": "chat",
+              "hasUseOmniLogCleanup": false,
+              "conversationLogPrivacyFilter": "ALL",
+              "omnilogOrder": "asc"
+            },
+            "timingId": "ticket/omnilog/conversation_log/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 2,
+            "minimumExpectedSimultaneousBeacons": 2,
+            "flushReason": "debounce"
+          },
+          "duration": 869.5
+        },
+        {
+          "kind": "measure",
+          "commonName": "performance/ticket/activation/ttr",
+          "operationRelativeEndTime": 1479.1000000238419,
+          "operationStartOffset": 0.8000000715255737,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "focused": true,
+              "feature": "Chat/OmniConversationPane",
+              "fetch": true,
+              "mount": "initial",
+              "lastStage": "ready",
+              "render": "initial",
+              "origin": "select-ticket",
+              "conversationState": "ENDED",
+              "visibleEvents": "1-15",
+              "ticketId": "12986",
+              "isChatting": false,
+              "isTicketBeingViewed": true,
+              "canLoadMore": false,
+              "hasReactLayoutTicketPanesGridV2": false,
+              "hasSuggestedReplies": false,
+              "hasTicketLayoutBuilder": false,
+              "hasTicketLayoutBuilderArturo": true,
+              "hasTicketLayoutBuilderAgentGraph": true,
+              "omniLogOrder": "asc",
+              "composerPlacement": "BOTTOM",
+              "composerCollapseDefault": false,
+              "shouldExcludeFromSlo": false,
+              "ticketType": "chat",
+              "hasUseOmniLogCleanup": false
+            },
+            "timingId": "performance/ticket/activation/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 3,
+            "minimumExpectedSimultaneousBeacons": 3,
+            "flushReason": "debounce"
+          },
+          "duration": 1478.2999999523163
+        },
+        {
+          "kind": "measure",
+          "commonName": "performance/ticket/activation/tti",
+          "operationRelativeEndTime": 1479.1000000238419,
+          "operationStartOffset": 0.8000000715255737,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "focused": true,
+              "feature": "Chat/OmniConversationPane",
+              "fetch": true,
+              "mount": "initial",
+              "lastStage": "ready",
+              "render": "initial",
+              "origin": "select-ticket",
+              "conversationState": "ENDED",
+              "visibleEvents": "1-15",
+              "ticketId": "12986",
+              "isChatting": false,
+              "isTicketBeingViewed": true,
+              "canLoadMore": false,
+              "hasReactLayoutTicketPanesGridV2": false,
+              "hasSuggestedReplies": false,
+              "hasTicketLayoutBuilder": false,
+              "hasTicketLayoutBuilderArturo": true,
+              "hasTicketLayoutBuilderAgentGraph": true,
+              "omniLogOrder": "asc",
+              "composerPlacement": "BOTTOM",
+              "composerCollapseDefault": false,
+              "shouldExcludeFromSlo": false,
+              "ticketType": "chat",
+              "hasUseOmniLogCleanup": false
+            },
+            "timingId": "performance/ticket/activation/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 3,
+            "minimumExpectedSimultaneousBeacons": 3,
+            "flushReason": "debounce"
+          },
+          "duration": 1478.2999999523163
+        },
+        {
+          "kind": "measure",
+          "commonName": "performance/serve/conversation/conversation_log/ttr",
+          "operationRelativeEndTime": 1479.1000000238419,
+          "operationStartOffset": 609.7000000476837,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "metadata": {
+                "conversationState": "ENDED",
+                "visibleEvents": "1-15",
+                "ticketId": "12986",
+                "isChatting": false,
+                "isTicketBeingViewed": true,
+                "canLoadMore": false,
+                "hasReactLayoutTicketPanesGridV2": false,
+                "hasSuggestedReplies": false,
+                "hasTicketLayoutBuilder": false,
+                "hasTicketLayoutBuilderArturo": true,
+                "hasTicketLayoutBuilderAgentGraph": true,
+                "omniLogOrder": "asc",
+                "composerPlacement": "BOTTOM",
+                "composerCollapseDefault": false,
+                "shouldExcludeFromSlo": false,
+                "ticketType": "chat",
+                "hasUseOmniLogCleanup": false
+              },
+              "metadataToIncludeAsTags": [
+                "conversationState",
+                "visibleEvents",
+                "isTicketBeingViewed",
+                "canLoadMore",
+                "hasReactLayoutTicketPanesGridV2",
+                "hasSuggestedReplies",
+                "hasTicketLayoutBuilder",
+                "hasTicketLayoutBuilderArturo",
+                "hasTicketLayoutBuilderAgentGraph",
+                "omniLogErrorType",
+                "shouldExcludeFromSlo",
+                "hasUseOmniLogCleanup"
+              ]
+            },
+            "timingId": "performance/serve/conversation/conversation_log/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 1,
+            "minimumExpectedSimultaneousBeacons": 2,
+            "flushReason": "debounce"
+          },
+          "duration": 869.3999999761581
+        },
+        {
+          "kind": "measure",
+          "commonName": "performance/serve/conversation/conversation_log/tti",
+          "operationRelativeEndTime": 1479.1000000238419,
+          "operationStartOffset": 609.7000000476837,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "metadata": {
+                "conversationState": "ENDED",
+                "visibleEvents": "1-15",
+                "ticketId": "12986",
+                "isChatting": false,
+                "isTicketBeingViewed": true,
+                "canLoadMore": false,
+                "hasReactLayoutTicketPanesGridV2": false,
+                "hasSuggestedReplies": false,
+                "hasTicketLayoutBuilder": false,
+                "hasTicketLayoutBuilderArturo": true,
+                "hasTicketLayoutBuilderAgentGraph": true,
+                "omniLogOrder": "asc",
+                "composerPlacement": "BOTTOM",
+                "composerCollapseDefault": false,
+                "shouldExcludeFromSlo": false,
+                "ticketType": "chat",
+                "hasUseOmniLogCleanup": false
+              },
+              "metadataToIncludeAsTags": [
+                "conversationState",
+                "visibleEvents",
+                "isTicketBeingViewed",
+                "canLoadMore",
+                "hasReactLayoutTicketPanesGridV2",
+                "hasSuggestedReplies",
+                "hasTicketLayoutBuilder",
+                "hasTicketLayoutBuilderArturo",
+                "hasTicketLayoutBuilderAgentGraph",
+                "omniLogErrorType",
+                "shouldExcludeFromSlo",
+                "hasUseOmniLogCleanup"
+              ]
+            },
+            "timingId": "performance/serve/conversation/conversation_log/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 1,
+            "minimumExpectedSimultaneousBeacons": 2,
+            "flushReason": "debounce"
+          },
+          "duration": 869.3999999761581
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-30afb2b5e1de13857229d0bdc1866be1/icon_ticket_editor.svg",
+          "operationRelativeEndTime": 1484.7999511957169,
+          "operationStartOffset": 1271.7999511957169,
+          "occurrence": 1,
+          "metadata": {
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "resource": {
+              "id": "ea6cbdca-b23b-4b1c-be1e-3b1f8deee4dd",
+              "type": "xhr",
+              "duration": 213000000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://111872.apps.zdusercontent.com/111872/assets/1681292807-30afb2b5e1de13857229d0bdc1866be1/icon_ticket_editor.svg"
+            }
+          },
+          "detail": {},
+          "duration": 213
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/ticketPolicyMetrics",
+          "operationRelativeEndTime": 1487.9000000953674,
+          "operationStartOffset": 808.8000000715256,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "ticketPolicyMetrics",
+            "operationType": "query",
+            "feature": "ConversationPaneHeader",
+            "status": "ok"
+          },
+          "duration": 679.1000000238419
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-c9b3463afc1a9fd65811acb0c1cc169b/iframe.html",
+          "operationRelativeEndTime": 1490.2000000476837,
+          "operationStartOffset": 1278.6000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "iframe",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {
+              "origin": "https://z3n-iris-dev.zendesk.com",
+              "app_guid": "a2d589e2-7083-4a3f-a081-c74d80a16369"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "de5310d4-f059-4396-8038-f1adc09d9acf",
+              "type": "other",
+              "url": "https://101101.apps.zdusercontent.com/101101/assets/1675213920-c9b3463afc1a9fd65811acb0c1cc169b/iframe.html?origin=https%3A%2F%2Fz3n-iris-dev.zendesk.com&app_guid=a2d589e2-7083-4a3f-a081-c74d80a16369",
+              "duration": 211600000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 211.60000002384186
+        },
+        {
+          "kind": "measure",
+          "commonName": "create_omnicomposer_first_load",
+          "operationRelativeEndTime": 1490.6000000238419,
+          "operationStartOffset": 653.9000000953674,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "composer_type": "rte_ckeditor",
+            "composer_placement": "BOTTOM",
+            "composer_collapse_default": "false",
+            "omnilog_order": "asc",
+            "has_ticket_layout_builder": "false",
+            "has_suggeted_replies": "false",
+            "metric": {
+              "id": "create_omnicomposer_first_load",
+              "fullId": "create_omnicomposer_first_load",
+              "duration": 836.6999999284744
+            },
+            "feature": "create_omnicomposer_first_load"
+          },
+          "duration": 836.6999999284744
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/support_remote/query/AgentGraphChatComposerShortcuts",
+          "operationRelativeEndTime": 1506.1000000238419,
+          "operationStartOffset": 809.1000000238419,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "AgentGraphChatComposerShortcuts",
+            "operationType": "query",
+            "feature": "Chat/OmniConversationPane",
+            "status": "ok"
+          },
+          "duration": 697
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/chat/query/conversationServiceQuery",
+          "operationRelativeEndTime": 1507.8000000715256,
+          "operationStartOffset": 1107.3000000715256,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "conversationServiceQuery",
+            "operationType": "query",
+            "feature": "Chat/MessagingConversationService/Refetch/QueryConversation",
+            "status": "partial-error"
+          },
+          "duration": 400.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID",
+          "operationRelativeEndTime": 1537.2000000476837,
+          "operationStartOffset": 1282.7000000476837,
+          "occurrence": 2,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 1436,
+            "query": {
+              "include": "abilities,roles,lookup_relationship_fields"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "5de23ad4-899d-423c-8756-d8c2802c705b",
+              "type": "xhr",
+              "duration": 254500000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/902894269106?include=abilities%2Croles%2Clookup_relationship_fields",
+              "render_blocking_status": "non-blocking",
+              "size": 4871,
+              "encoded_body_size": 1436,
+              "decoded_body_size": 4871,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1200000,
+                "start": 253300000
+              },
+              "first_byte": {
+                "duration": 252200000,
+                "start": 1100000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 254.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID",
+          "operationRelativeEndTime": 1547.4000000953674,
+          "operationStartOffset": 1285.1000000238419,
+          "occurrence": 3,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 1752,
+            "encodedBodySize": 1452,
+            "query": {
+              "include": "abilities,roles,lookup_relationship_fields"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "1b446bf0-f279-4164-9ca4-37be754050ae",
+              "type": "xhr",
+              "duration": 262300000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/900139146403?include=abilities%2Croles%2Clookup_relationship_fields",
+              "render_blocking_status": "non-blocking",
+              "size": 4782,
+              "encoded_body_size": 1452,
+              "decoded_body_size": 4782,
+              "transfer_size": 1752,
+              "download": {
+                "duration": 1600000,
+                "start": 260700000
+              },
+              "first_byte": {
+                "duration": 259000000,
+                "start": 1700000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 262.3000000715256
+        },
+        {
+          "kind": "render",
+          "commonName": "Footer",
+          "operationRelativeEndTime": 1551.2000000476837,
+          "operationStartOffset": 1540.8000000715256,
+          "occurrence": 11,
+          "metadata": {
+            "metricId": "ticket/footer"
+          },
+          "detail": {},
+          "duration": 10.399999976158142
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/footer/ttr",
+          "operationRelativeEndTime": 1551.2000000476837,
+          "operationStartOffset": 288.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "metadata": {
+                "ticketStatus": "open"
+              },
+              "focused": true,
+              "feature": "Ticket/Footer",
+              "fetch": false,
+              "mount": "initial",
+              "lastStage": "initial",
+              "ticketStatus": "open"
+            },
+            "timingId": "ticket/footer/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 1,
+            "minimumExpectedSimultaneousBeacons": 1,
+            "flushReason": "debounce"
+          },
+          "duration": 1262.7000000476837
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/footer/tti",
+          "operationRelativeEndTime": 1551.2000000476837,
+          "operationStartOffset": 288.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "metadata": {
+                "ticketStatus": "open"
+              },
+              "focused": true,
+              "feature": "Ticket/Footer",
+              "fetch": false,
+              "mount": "initial",
+              "lastStage": "initial",
+              "ticketStatus": "open"
+            },
+            "timingId": "ticket/footer/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 1,
+            "minimumExpectedSimultaneousBeacons": 1,
+            "flushReason": "debounce"
+          },
+          "duration": 1262.7000000476837
+        },
+        {
+          "kind": "render",
+          "commonName": "TicketSidebar",
+          "operationRelativeEndTime": 1551.3000000715256,
+          "operationStartOffset": 1546.5,
+          "occurrence": 5,
+          "metadata": {
+            "metricId": "ticket/agent_collision"
+          },
+          "detail": {},
+          "duration": 4.800000071525574
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/agent_collision/ttr",
+          "operationRelativeEndTime": 1551.3000000715256,
+          "operationStartOffset": 405.90000009536743,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "focused": true,
+              "feature": "Ticket/AgentCollision",
+              "fetch": false,
+              "mount": "initial",
+              "lastStage": "initial"
+            },
+            "timingId": "ticket/agent_collision/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 1,
+            "minimumExpectedSimultaneousBeacons": 1,
+            "flushReason": "debounce"
+          },
+          "duration": 1145.3999999761581
+        },
+        {
+          "kind": "measure",
+          "commonName": "ticket/agent_collision/tti",
+          "operationRelativeEndTime": 1551.3000000715256,
+          "operationStartOffset": 405.90000009536743,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "metadata": {
+              "focused": true,
+              "feature": "Ticket/AgentCollision",
+              "fetch": false,
+              "mount": "initial",
+              "lastStage": "initial"
+            },
+            "timingId": "ticket/agent_collision/12986",
+            "isFirstLoad": true,
+            "maximumActiveBeaconsCount": 1,
+            "minimumExpectedSimultaneousBeacons": 1,
+            "flushReason": "debounce"
+          },
+          "duration": 1145.3999999761581
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/user",
+          "operationRelativeEndTime": 1554.7000000476837,
+          "operationStartOffset": 1402.6000000238419,
+          "occurrence": 4,
+          "metadata": {},
+          "detail": {
+            "operationName": "user",
+            "operationType": "query",
+            "feature": "Omnipanel",
+            "status": "ok"
+          },
+          "duration": 152.10000002384186
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-30afb2b5e1de13857229d0bdc1866be1/app.html",
+          "operationRelativeEndTime": 1559.1000000238419,
+          "operationStartOffset": 1277,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "iframe",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {
+              "origin": "https://z3n-iris-dev.zendesk.com",
+              "app_guid": "2b6291dd-74f4-4b8e-8ad8-9e563509ec42"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "9c7afb3c-dfb2-4fb9-b610-060a36846bc4",
+              "type": "other",
+              "url": "https://111872.apps.zdusercontent.com/111872/assets/1681292807-30afb2b5e1de13857229d0bdc1866be1/app.html?origin=https%3A%2F%2Fz3n-iris-dev.zendesk.com&app_guid=2b6291dd-74f4-4b8e-8ad8-9e563509ec42",
+              "duration": 282100000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 282.10000002384186
+        },
+        {
+          "kind": "render",
+          "commonName": "AppSidebar",
+          "operationRelativeEndTime": 1569.2000000476837,
+          "operationStartOffset": 1563.2000000476837,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "ticket/appSidebar"
+          },
+          "detail": {},
+          "duration": 6
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1577,
+          "operationStartOffset": 1570.3000000715256,
+          "occurrence": 2,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 6.699999928474426
+        },
+        {
+          "kind": "render",
+          "commonName": "AppSidebar",
+          "operationRelativeEndTime": 1577,
+          "operationStartOffset": 1572.6000000238419,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "ticket/appSidebar"
+          },
+          "detail": {},
+          "duration": 4.399999976158142
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-30afb2b5e1de13857229d0bdc1866be1/logo-small.png",
+          "operationRelativeEndTime": 1579.1000000238419,
+          "operationStartOffset": 1577.2000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "img",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "95f2f27d-8a17-4a58-aefe-ebb7e54a8c51",
+              "type": "image",
+              "url": "https://111872.apps.zdusercontent.com/111872/assets/1681292807-30afb2b5e1de13857229d0bdc1866be1/logo-small.png",
+              "duration": 1900000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 1.899999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1592.1000000238419,
+          "operationStartOffset": 1587.5,
+          "occurrence": 3,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 4.600000023841858
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/platform-data-graph-gateway/query/Lotus__Brands",
+          "operationRelativeEndTime": 1659.9000000953674,
+          "operationStartOffset": 1402.1000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 491,
+            "encodedBodySize": 191,
+            "query": {},
+            "commonName": "graphql/platform-data-graph-gateway/query/Lotus__Brands",
+            "graphql": {
+              "apolloClientName": "platform-data-graph-gateway",
+              "operations": ["query/Lotus__Brands"]
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "7cb63c63-4eda-48d6-9b9e-400b3b2454b7",
+              "type": "fetch",
+              "duration": 257800000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/graphql#gql=platform-data-graph-gateway/query:Lotus__Brands",
+              "render_blocking_status": "non-blocking",
+              "size": 420,
+              "encoded_body_size": 191,
+              "decoded_body_size": 420,
+              "transfer_size": 491,
+              "download": {
+                "duration": 1200000,
+                "start": 256600000
+              },
+              "first_byte": {
+                "duration": 251300000,
+                "start": 5300000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 257.8000000715256
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/locales/en-US",
+          "operationRelativeEndTime": 1666.1000000238419,
+          "operationStartOffset": 1557.5,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 300,
+            "encodedBodySize": 160,
+            "query": {},
+            "feature": "Omnipanel",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "d9776a3d-8f73-4a80-a935-c32bdc904466",
+              "type": "fetch",
+              "duration": 108600000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/locales/en-US#feature=Omnipanel",
+              "render_blocking_status": "non-blocking",
+              "size": 272,
+              "encoded_body_size": 160,
+              "decoded_body_size": 272,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1200000,
+                "start": 107400000
+              },
+              "first_byte": {
+                "duration": 104500000,
+                "start": 2900000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 108.60000002384186
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/platform-data-graph-gateway/query/Lotus__Brands",
+          "operationRelativeEndTime": 1682,
+          "operationStartOffset": 1398.2000000476837,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "Lotus__Brands",
+            "operationType": "query",
+            "feature": "Omnipanel",
+            "status": "ok"
+          },
+          "duration": 283.7999999523163
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/locale",
+          "operationRelativeEndTime": 1689,
+          "operationStartOffset": 1556.4000000953674,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "locale",
+            "operationType": "query",
+            "feature": "Omnipanel",
+            "status": "ok"
+          },
+          "duration": 132.59999990463257
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-30afb2b5e1de13857229d0bdc1866be1/app.html",
+          "operationRelativeEndTime": 1692.1000000238419,
+          "operationStartOffset": 1579.6000000238419,
+          "occurrence": 2,
+          "metadata": {
+            "initiatorType": "iframe",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {
+              "origin": "https://z3n-iris-dev.zendesk.com",
+              "app_guid": "66d7a06e-ce1f-4984-91ef-a32270e2cd9e"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "c1c30e0a-f929-4e86-a7d9-431ef87adb34",
+              "type": "other",
+              "url": "https://111872.apps.zdusercontent.com/111872/assets/1681292807-30afb2b5e1de13857229d0bdc1866be1/app.html?origin=https%3A%2F%2Fz3n-iris-dev.zendesk.com&app_guid=66d7a06e-ce1f-4984-91ef-a32270e2cd9e",
+              "duration": 112500000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 112.5
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1709,
+          "operationStartOffset": 1702.9000000953674,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 6.099999904632568
+        },
+        {
+          "kind": "render",
+          "commonName": "AppSidebar",
+          "operationRelativeEndTime": 1709,
+          "operationStartOffset": 1705.2000000476837,
+          "occurrence": 4,
+          "metadata": {
+            "metricId": "ticket/appSidebar"
+          },
+          "detail": {},
+          "duration": 3.799999952316284
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-c9b3463afc1a9fd65811acb0c1cc169b/support/logo-small.png",
+          "operationRelativeEndTime": 1711.4000000953674,
+          "operationStartOffset": 1709.3000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "img",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "b4730faf-400d-4383-b603-70f4a9a484b5",
+              "type": "image",
+              "url": "https://101101.apps.zdusercontent.com/101101/assets/1675213920-c9b3463afc1a9fd65811acb0c1cc169b/support/logo-small.png",
+              "duration": 2100000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 2.100000023841858
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1719.7000000476837,
+          "operationStartOffset": 1715.3000000715256,
+          "occurrence": 5,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 4.399999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1738.9000000953674,
+          "operationStartOffset": 1732.7000000476837,
+          "occurrence": 6,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 6.200000047683716
+        },
+        {
+          "kind": "render",
+          "commonName": "AppSidebar",
+          "operationRelativeEndTime": 1738.9000000953674,
+          "operationStartOffset": 1734.7000000476837,
+          "occurrence": 5,
+          "metadata": {
+            "metricId": "ticket/appSidebar"
+          },
+          "detail": {},
+          "duration": 4.200000047683716
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-574d3f58849095f0b724f1b148b231c1/logo-small.png",
+          "operationRelativeEndTime": 1741.8000000715256,
+          "operationStartOffset": 1739.2000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "img",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "621aa32a-ce35-4309-bdc5-cbbca03b1ea1",
+              "type": "image",
+              "url": "https://5796.apps.zdusercontent.com/5796/assets/1690476489-574d3f58849095f0b724f1b148b231c1/logo-small.png",
+              "duration": 2600000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 2.600000023841858
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1748.8000000715256,
+          "operationStartOffset": 1742.4000000953674,
+          "occurrence": 7,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 6.399999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "AppSidebar",
+          "operationRelativeEndTime": 1748.8000000715256,
+          "operationStartOffset": 1745.8000000715256,
+          "occurrence": 6,
+          "metadata": {
+            "metricId": "ticket/appSidebar"
+          },
+          "detail": {},
+          "duration": 3
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1761.7000000476837,
+          "operationStartOffset": 1757.5,
+          "occurrence": 8,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 4.200000047683716
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID/tickets/requested.json",
+          "operationRelativeEndTime": 1764.5,
+          "operationStartOffset": 1401.2000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 300,
+            "encodedBodySize": 2545,
+            "query": {
+              "include": "comment_count,first_comment,last_comment,users,custom_statuses",
+              "per_page": "10",
+              "sort_order": "desc",
+              "sort_by": "id",
+              "exclude_count": "true",
+              "exclude_archived": "true"
+            },
+            "feature": "Omnipanel",
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "7dfd7405-49c4-4bb8-82dc-7d4db9b13fd0",
+              "type": "fetch",
+              "duration": 363300000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/users/7015998225690/tickets/requested.json?include=comment_count,first_comment,last_comment,users,custom_statuses&per_page=10&sort_order=desc&sort_by=id&exclude_count=true&exclude_archived=true#feature=Omnipanel",
+              "render_blocking_status": "non-blocking",
+              "size": 49525,
+              "encoded_body_size": 2545,
+              "decoded_body_size": 49525,
+              "transfer_size": 300,
+              "download": {
+                "duration": 2200000,
+                "start": 361100000
+              },
+              "first_byte": {
+                "duration": 356200000,
+                "start": 4900000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 363.2999999523163
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1786.8000000715256,
+          "operationStartOffset": 1782,
+          "occurrence": 9,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 4.800000071525574
+        },
+        {
+          "kind": "render",
+          "commonName": "AppSidebar",
+          "operationRelativeEndTime": 1786.8000000715256,
+          "operationStartOffset": 1783.9000000953674,
+          "occurrence": 7,
+          "metadata": {
+            "metricId": "ticket/appSidebar"
+          },
+          "detail": {},
+          "duration": 2.899999976158142
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/side_conversations/query/ThreadListQuery",
+          "operationRelativeEndTime": 1788,
+          "operationStartOffset": 1402.4000000953674,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "fetch",
+            "transferSize": 477,
+            "encodedBodySize": 177,
+            "query": {},
+            "commonName": "graphql/side_conversations/query/ThreadListQuery",
+            "graphql": {
+              "apolloClientName": "side_conversations",
+              "operations": ["query/ThreadListQuery"]
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "654571a9-fe75-4a2f-9a18-82cd4987b4bc",
+              "type": "fetch",
+              "duration": 385600000,
+              "method": "POST",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/collaboration/graphql#gql=side_conversations/query:ThreadListQuery",
+              "render_blocking_status": "non-blocking",
+              "size": 324,
+              "encoded_body_size": 177,
+              "decoded_body_size": 324,
+              "transfer_size": 477,
+              "download": {
+                "duration": 1100000,
+                "start": 384500000
+              },
+              "first_byte": {
+                "duration": 379200000,
+                "start": 5300000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 385.59999990463257
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-a6f7ee53de06c506385a477e095dac65/logo-small.png",
+          "operationRelativeEndTime": 1790.5,
+          "operationStartOffset": 1787.1000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "img",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "9f13f422-a893-4182-a7b0-1e192f2aee2a",
+              "type": "image",
+              "url": "https://35111.apps.zdusercontent.com/35111/assets/1690909118-a6f7ee53de06c506385a477e095dac65/logo-small.png",
+              "duration": 3400000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 3.399999976158142
+        },
+        {
+          "kind": "render",
+          "commonName": "NavBarApps",
+          "operationRelativeEndTime": 1795.2000000476837,
+          "operationStartOffset": 1791.1000000238419,
+          "occurrence": 10,
+          "metadata": {
+            "metricId": "navBar/apps"
+          },
+          "detail": {},
+          "duration": 4.100000023841858
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/side_conversations/query/ThreadListQuery",
+          "operationRelativeEndTime": 1802.9000000953674,
+          "operationStartOffset": 1398.4000000953674,
+          "occurrence": 2,
+          "metadata": {},
+          "detail": {
+            "operationName": "ThreadListQuery",
+            "operationType": "query",
+            "feature": "Omnipanel",
+            "status": "ok"
+          },
+          "duration": 404.5
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-c9b3463afc1a9fd65811acb0c1cc169b/iframe.html",
+          "operationRelativeEndTime": 1808.5,
+          "operationStartOffset": 1711.9000000953674,
+          "occurrence": 2,
+          "metadata": {
+            "initiatorType": "iframe",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {
+              "origin": "https://z3n-iris-dev.zendesk.com",
+              "app_guid": "8f0049f4-5fc2-4c5a-9aa8-b383caf85ebc"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "8c6e95d3-74fa-422a-9287-2d00f780f5b8",
+              "type": "other",
+              "url": "https://101101.apps.zdusercontent.com/101101/assets/1675213920-c9b3463afc1a9fd65811acb0c1cc169b/iframe.html?origin=https%3A%2F%2Fz3n-iris-dev.zendesk.com&app_guid=8f0049f4-5fc2-4c5a-9aa8-b383caf85ebc",
+              "duration": 96600000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 96.59999990463257
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/hc/api/internal/knowledge_capture_features.json",
+          "operationRelativeEndTime": 1812,
+          "operationStartOffset": 1646.5,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 396,
+            "encodedBodySize": 96,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "fb6f822d-278f-4d26-8d51-5fa4f72135a2",
+              "type": "xhr",
+              "duration": 165500000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/hc/api/internal/knowledge_capture_features.json",
+              "render_blocking_status": "non-blocking",
+              "size": 171,
+              "encoded_body_size": 96,
+              "decoded_body_size": 171,
+              "transfer_size": 396,
+              "download": {
+                "duration": 1600000,
+                "start": 163900000
+              },
+              "first_byte": {
+                "duration": 158100000,
+                "start": 5800000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 165.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/ipm/alerts.json",
+          "operationRelativeEndTime": 1857.3000000715256,
+          "operationStartOffset": 1423.1000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 57,
+            "query": {
+              "interface": "lotus"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "8657f96e-44b4-4448-a1bf-043e85630ec1",
+              "type": "xhr",
+              "duration": 434200000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/ipm/alerts.json?interface=lotus",
+              "render_blocking_status": "non-blocking",
+              "size": 61,
+              "encoded_body_size": 57,
+              "decoded_body_size": 61,
+              "transfer_size": 300,
+              "download": {
+                "duration": 2900000,
+                "start": 431300000
+              },
+              "first_byte": {
+                "duration": 429500000,
+                "start": 1800000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 434.2000000476837
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/help_center/users/$ID/user_segments.json",
+          "operationRelativeEndTime": 1886.7000000476837,
+          "operationStartOffset": 1662.9000000953674,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 480,
+            "encodedBodySize": 180,
+            "query": {
+              "multibrand": "true"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "09c80ada-eaef-4555-abb6-3845781b5187",
+              "type": "xhr",
+              "duration": 223800000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/help_center/users/7015998225690/user_segments.json?multibrand=true",
+              "render_blocking_status": "non-blocking",
+              "size": 343,
+              "encoded_body_size": 180,
+              "decoded_body_size": 343,
+              "transfer_size": 480,
+              "download": {
+                "duration": 1000000,
+                "start": 222800000
+              },
+              "first_byte": {
+                "duration": 221200000,
+                "start": 1600000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 223.79999995231628
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/account/settings.json",
+          "operationRelativeEndTime": 1904.4000000953674,
+          "operationStartOffset": 1765.3000000715256,
+          "occurrence": 2,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 0,
+            "encodedBodySize": 2399,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "14339fb2-4db9-4ce9-83a3-d64542cba85e",
+              "type": "xhr",
+              "duration": 139100000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/account/settings.json",
+              "render_blocking_status": "non-blocking",
+              "size": 7059,
+              "encoded_body_size": 2399,
+              "decoded_body_size": 7059,
+              "transfer_size": 0,
+              "download": {
+                "duration": 700000,
+                "start": 138400000
+              },
+              "first_byte": {
+                "duration": 134300000,
+                "start": 4100000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 139.10000002384186
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/api/v2/account/settings.json",
+          "operationRelativeEndTime": 1904.7000000476837,
+          "operationStartOffset": 1646.3000000715256,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 300,
+            "encodedBodySize": 2399,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "deeb7f83-3cff-480a-bd16-059571d4e1e0",
+              "type": "xhr",
+              "duration": 258400000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/api/v2/account/settings.json",
+              "render_blocking_status": "non-blocking",
+              "size": 7059,
+              "encoded_body_size": 2399,
+              "decoded_body_size": 7059,
+              "transfer_size": 300,
+              "download": {
+                "duration": 1300000,
+                "start": 257100000
+              },
+              "first_byte": {
+                "duration": 251800000,
+                "start": 5300000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 258.39999997615814
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-574d3f58849095f0b724f1b148b231c1/iframe.html",
+          "operationRelativeEndTime": 1925.4000000953674,
+          "operationStartOffset": 1754.6000000238419,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "iframe",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {
+              "origin": "https://z3n-iris-dev.zendesk.com",
+              "app_guid": "a581a8ec-aa7a-4305-912b-b521f2ebafdd"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "12ba9a97-a2f1-479e-a4af-963715f8407b",
+              "type": "other",
+              "url": "https://5796.apps.zdusercontent.com/5796/assets/1690476489-574d3f58849095f0b724f1b148b231c1/iframe.html?origin=https%3A%2F%2Fz3n-iris-dev.zendesk.com&app_guid=a581a8ec-aa7a-4305-912b-b521f2ebafdd",
+              "duration": 170800000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 170.80000007152557
+        },
+        {
+          "kind": "asset",
+          "commonName": "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-a6f7ee53de06c506385a477e095dac65/ticket_sidebar.html",
+          "operationRelativeEndTime": 1932.2000000476837,
+          "operationStartOffset": 1788.2000000476837,
+          "occurrence": 1,
+          "metadata": {
+            "initiatorType": "iframe",
+            "transferSize": 0,
+            "encodedBodySize": 0,
+            "query": {
+              "origin": "https://z3n-iris-dev.zendesk.com",
+              "app_guid": "fa990401-2917-4d49-8443-31cab769845f"
+            },
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "",
+            "resource": {
+              "id": "503a914a-a467-4cb9-85b2-37e22a8c2670",
+              "type": "other",
+              "url": "https://35111.apps.zdusercontent.com/35111/assets/1690909118-a6f7ee53de06c506385a477e095dac65/ticket_sidebar.html?origin=https%3A%2F%2Fz3n-iris-dev.zendesk.com&app_guid=fa990401-2917-4d49-8443-31cab769845f",
+              "duration": 144000000,
+              "render_blocking_status": "non-blocking"
+            }
+          },
+          "detail": {},
+          "duration": 144
+        },
+        {
+          "kind": "resource",
+          "commonName": "https://z3n-iris-dev.zendesk.com/hc/api/internal/knowledge_capture_features.json",
+          "operationRelativeEndTime": 1974.3000000715256,
+          "operationStartOffset": 1765.8000000715256,
+          "occurrence": 2,
+          "metadata": {
+            "initiatorType": "xmlhttprequest",
+            "transferSize": 396,
+            "encodedBodySize": 96,
+            "query": {},
+            "occurrenceMultiplier": 1,
+            "httpProtocol": "h2",
+            "resource": {
+              "id": "a00440b5-adcd-4445-ad22-ccccb82a1b92",
+              "type": "xhr",
+              "duration": 208500000,
+              "method": "GET",
+              "status_code": 200,
+              "url": "https://z3n-iris-dev.zendesk.com/hc/api/internal/knowledge_capture_features.json",
+              "render_blocking_status": "non-blocking",
+              "size": 171,
+              "encoded_body_size": 96,
+              "decoded_body_size": 171,
+              "transfer_size": 396,
+              "download": {
+                "duration": 1000000,
+                "start": 207500000
+              },
+              "first_byte": {
+                "duration": 162200000,
+                "start": 45300000
+              }
+            }
+          },
+          "detail": {},
+          "duration": 208.5
+        },
+        {
+          "kind": "resource",
+          "commonName": "graphql/local/query/customerDefaultOmni",
+          "operationRelativeEndTime": 2334.600000023842,
+          "operationStartOffset": 1398.5,
+          "occurrence": 1,
+          "metadata": {},
+          "detail": {
+            "operationName": "customerDefaultOmni",
+            "operationType": "query",
+            "feature": "Omnipanel",
+            "status": "ok"
+          },
+          "duration": 936.1000000238419
+        }
+      ],
+      "includedCommonTaskNames": [
+        "NavBarApps",
+        "ProfileMenu",
+        "TicketActivation",
+        "ticket/load_omnilog_from_new_workspace",
+        "Tabs",
+        "longtask/self",
+        "https://assets.zendesk.com/images/$ID/default-avatar-80.png",
+        "element/text-paint",
+        "Footer",
+        "Assignee",
+        "Menu",
+        "TicketSidebar",
+        "https://z3n-iris-dev.zendesk.com/api/v2beta/tickets/$ID/related",
+        "https://z3n-iris-dev.zendesk.com/api/v2/sharing_agreements",
+        "https://z3n-iris-dev.zendesk.com/api/lotus/tickets/$ID/conversations.json",
+        "https://z3n-iris-dev.zendesk.com/api/v2/locales/agent",
+        "https://z3n-iris-dev.zendesk.com/api/v2/locales",
+        "https://z3n-iris-dev.zendesk.com/api/v2/workspaces",
+        "https://z3n-iris-dev.zendesk.com/api/v2/tickets/$ID",
+        "open_ticket/paint/ticket_workspace",
+        "models.conversations.fetch",
+        "models.ticket.fetch",
+        "open_ticket.paint.ticket_workspace",
+        "https://dev.zd-dev.com/agent/assets/icons/brand_fallback.png",
+        "https://z3n-iris-dev.zendesk.com/api/services/read-receipts/read",
+        "https://dev.zd-dev.com/agent/assets/react/js/default-src_Omnipanel_components_Sidebar_index_tsx.chunk.js",
+        "performance/ticket/activation/ConversationPane/initial-till-loading",
+        "graphql/local/query/entityReadReceipt",
+        "workspace.contextual_workspace.resolution",
+        "ticket/omniheader/OmniHeader/loading-till-ready",
+        "ConversationPane",
+        "OmniHeader",
+        "OmniLog",
+        "macro_shortcuts.load_time",
+        "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID/organization_memberships",
+        "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID",
+        "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID/identities",
+        "https://dev.zd-dev.com/agent/assets/react/js/src_Omnipanel_index_tsx.chunk.js",
+        "https://dev.zd-dev.com/agent/assets/react/js/src_Omnipanel_components_OmnipanelPrechatFormDiscrepancySwitcher_index_tsx.chunk.js",
+        "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_SupportGraphEvaluation_index_tsx.chunk.js",
+        "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_NextTicketButton_index_tsx.chunk.js",
+        "graphql/support_remote/query/ticket",
+        "https://z3n-iris-dev.zendesk.com/api/lotus/assignables/groups.json",
+        "graphql/support_remote/query/BFFConvoLogQuery",
+        "https://z3n-iris-dev.zendesk.com/api/v2/macros/definitions",
+        "https://z3n-iris-dev.zendesk.com/api/v2/groups/$ID.json",
+        "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID.json",
+        "https://z3n-iris-dev.zendesk.com/api/lotus/assignables/groups/$ID/agents.json",
+        "graphql/support_remote/query/SkillTypes",
+        "graphql/chat/query/conversationServiceQuery",
+        "https://dev.zd-dev.com/agent/assets/react/js/src_Ticket_TicketPropertiesSidebar_Assignee_PolarisAssignee_Trigger_ChatTrigger_js.chunk.js",
+        "https://dev.zd-dev.com/agent/assets/react/js/src_Editor_Shell_components_EditorMonitor_InstrumentForDebugging_js.chunk.js",
+        "https://dev.zd-dev.com/agent/assets/react/js/vendors-node_modules_zendesk_unicode-emoji-translations_data_translations_en_US_index_js.chunk.js",
+        "graphql/support_remote/query/user",
+        "graphql/support_remote/query/ticketForm",
+        "ticket.load_omnilog_from_new_workspace",
+        "graphql/local/query/macroDefinitionsQuery",
+        "graphql/local/query/user",
+        "graphql/local/query/Groups",
+        "graphql/local/query/Group",
+        "graphql/local/query/groupAgents",
+        "ticket/omnilog/conversation_log/ConversationPane/loading-till-ready",
+        "performance/serve/conversation/conversation_log/ConversationPane/loading-till-ready",
+        "performance/ticket/activation/ConversationPane/loading-till-ready",
+        "ticket/load_omnilog_from_new_workspace/end",
+        "ServeButton",
+        "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID/related.json",
+        "ticket.open",
+        "ticket.fetch",
+        "graphql/chat/query/agentChatProfilesQuery",
+        "AppSidebar",
+        "https://z3n-iris-dev.zendesk.com/system/photos/$ID/profile_image_902894269106_2149413.png",
+        "https://z3n-iris-dev.zendesk.com/system/photos/$ID/profile-new-small.jpg",
+        "graphql/platform-data-graph-gateway/query/Lotus__IntelligenceSettings",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-c9b3463afc1a9fd65811acb0c1cc169b/support/icon_ticket_editor.svg",
+        "graphql/support_remote/query/ticketPolicyMetrics",
+        "graphql/support_remote/query/AgentGraphChatComposerShortcuts",
+        "open_ticket/paint/omnilog",
+        "open_ticket.paint.omnilog",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-30afb2b5e1de13857229d0bdc1866be1/icon_ticket_editor.svg",
+        "https://z3n-iris-dev.zendesk.com/api/v2/groups/$ID",
+        "create_omnicomposer_first_load",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-c9b3463afc1a9fd65811acb0c1cc169b/iframe.html",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-30afb2b5e1de13857229d0bdc1866be1/app.html",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-30afb2b5e1de13857229d0bdc1866be1/logo-small.png",
+        "graphql/platform-data-graph-gateway/query/Lotus__Brands",
+        "https://z3n-iris-dev.zendesk.com/api/v2/locales/en-US",
+        "graphql/local/query/locale",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-c9b3463afc1a9fd65811acb0c1cc169b/support/logo-small.png",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-574d3f58849095f0b724f1b148b231c1/logo-small.png",
+        "https://z3n-iris-dev.zendesk.com/api/v2/users/$ID/tickets/requested.json",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-a6f7ee53de06c506385a477e095dac65/logo-small.png",
+        "graphql/side_conversations/query/ThreadListQuery",
+        "https://z3n-iris-dev.zendesk.com/hc/api/internal/knowledge_capture_features.json",
+        "https://z3n-iris-dev.zendesk.com/api/v2/ipm/alerts.json",
+        "https://z3n-iris-dev.zendesk.com/api/v2/help_center/users/$ID/user_segments.json",
+        "https://z3n-iris-dev.zendesk.com/api/v2/account/settings.json",
+        "toolbar/tabs/ttr",
+        "toolbar/tabs/tti",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-574d3f58849095f0b724f1b148b231c1/iframe.html",
+        "https://$ID.apps.zdusercontent.com/$ID/assets/$ID-a6f7ee53de06c506385a477e095dac65/ticket_sidebar.html",
+        "performance/ticket/activation/ttr",
+        "performance/ticket/activation/tti",
+        "ticket/omniheader/ttr",
+        "ticket/omniheader/tti",
+        "ticket/omnilog/conversation_log/ttr",
+        "ticket/omnilog/conversation_log/tti",
+        "performance/serve/conversation/conversation_log/ttr",
+        "performance/serve/conversation/conversation_log/tti",
+        "ticket/footer/ttr",
+        "ticket/footer/tti",
+        "ticket/agent_collision/ttr",
+        "ticket/agent_collision/tti",
+        "graphql/local/query/customerDefaultOmni"
+      ]
+    }
+  }
+}

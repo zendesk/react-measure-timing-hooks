@@ -37,7 +37,7 @@ export {
 } from './lazyVisualizer'
 
 // operation tracking
-export { startOperation } from './2024/operationTracking'
+export { processCustomEntry, startOperation } from './2024/operationTracking'
 export type {
   Operation,
   OperationSpanMetadata,

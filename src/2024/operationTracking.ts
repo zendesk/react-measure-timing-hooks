@@ -7,24 +7,28 @@ import type {
   Operation,
   OperationSpanMetadata,
   PerformanceEntryLike,
-  SpanKind,
   Task,
   TaskDataEmbeddedInOperation,
+  TaskSpanKind,
+  TaskSpanMetadata,
 } from './types'
 
 interface ProcessedEntry {
   commonName: string
-  kind: SpanKind
+  kind: TaskSpanKind
   extraMetadata: Record<string, unknown>
+  occurrenceCountPrefix: string
 }
 
 function extractEntryMetadata(
   entry: AnyPerformanceEntry | PerformanceEntryLike,
+  metadata?: Record<string, unknown>,
 ): ProcessedEntry {
   let commonName: string
   let query: Record<string, string | string[]> | undefined
-  let kind: SpanKind = entry.entryType as SpanKind
+  let kind: TaskSpanKind = entry.entryType as TaskSpanKind
   const extraMetadata: Record<string, unknown> = {}
+  let occurrenceCountPrefix = ''
 
   switch (entry.entryType) {
     case 'resource': {
@@ -34,6 +38,14 @@ function extractEntryMetadata(
       extraMetadata.transferSize = resourceTiming.transferSize
       extraMetadata.encodedBodySize = resourceTiming.encodedBodySize
       extraMetadata.query = query
+      const resourceType =
+        metadata?.resource &&
+        typeof metadata?.resource === 'object' &&
+        'type' in metadata.resource &&
+        metadata.resource?.type
+      if (resourceType !== 'xhr' && resourceType !== 'fetch') {
+        kind = 'asset'
+      }
       break
     }
     case 'mark':
@@ -43,6 +55,11 @@ function extractEntryMetadata(
         .replace('useTiming: ', '')
       if (entry.name.endsWith('/render')) {
         kind = 'render'
+        const parts = commonName.split('/')
+        commonName = parts.slice(-2)[0]!
+        const metricId = parts.slice(0, -2).join('/')
+        extraMetadata.metricId = metricId
+        occurrenceCountPrefix = `${metricId}/`
       }
       if (entry.name.includes('graphql/')) {
         kind = 'resource'
@@ -58,10 +75,16 @@ function extractEntryMetadata(
           ? `/${entry.name}`
           : ''
       }`
-      kind = entry.entryType as SpanKind
+      kind = entry.entryType as TaskSpanKind
     }
   }
-  return { commonName, kind, extraMetadata }
+
+  if (typeof metadata?.commonName === 'string') {
+    // eslint-disable-next-line prefer-destructuring
+    commonName = metadata.commonName
+  }
+
+  return { commonName, kind, extraMetadata, occurrenceCountPrefix }
 }
 
 const getPerformanceEntryObservable = <Type extends PerformanceEntryType>(
@@ -132,6 +155,9 @@ export const processCustomEntry = (
   }
 }
 
+const FINALIZATION_WAIT = 5_000
+const TRAILING_END_TASK_THRESHOLD = 1_000
+
 class ActiveOperation {
   private startTime: number
   private name: string
@@ -144,10 +170,12 @@ class ActiveOperation {
   private tasks: Task[] = []
   private remainingRequiredMeasureNames: Set<string>
   private occurrenceCounts = new Map<string, number>()
+  private globalOccurrenceCounts = new Map<string, number>()
   private includedCommonTaskNames = new Set<string>()
   private lastRequiredTask: Task | undefined
   private lastRequiredTaskEndTime: number | undefined
   private subscription: Subscription
+  private finalizing = false
 
   constructor({
     name,
@@ -175,52 +203,71 @@ class ActiveOperation {
 
   private onProcessed = () => {
     // TODO: add operation timeout: auto-complete after a certain time, or once the another (same-type) user interaction is started
-    if (!(this.lastRequiredTask && this.lastRequiredTaskEndTime)) {
-      // not done yet
+    if (this.finalizing) {
+      // already finalizing
       return
     }
-    activeOperations.delete(this)
-    this.subscription.unsubscribe()
-
-    // sort by end time
-    this.tasks.sort(
-      (a, b) => a.startTime + a.duration - (b.startTime + b.duration),
-    )
-
-    const operationMeasure = performance.measure(this.name, {
-      start: this.startTime,
-      end: this.lastRequiredTask.startTime + this.lastRequiredTask.duration,
-      detail: { operationName: this.name },
-    }) as Operation
-
-    const embeddedTasksDetails = this.tasks.map(
-      (rawTask): TaskDataEmbeddedInOperation => ({
-        ...rawTask.operations[this.name]!,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        detail:
-          typeof rawTask.detail === 'object' && rawTask.detail
-            ? { ...rawTask.detail }
-            : {},
-        duration: rawTask.duration,
-      }),
-    )
-    operationMeasure.operations = {
-      [this.name]: {
-        kind: 'operation',
-        metadata: this.metadata,
-        operationId: this.id,
-        operationName: this.name,
-        tasks: embeddedTasksDetails,
-        includedCommonTaskNames: [...this.includedCommonTaskNames],
-      } satisfies OperationSpanMetadata,
+    if (!this.lastRequiredTask) {
+      // more tasks to come
+      return
     }
 
-    console.log(`finished tracking operation: ${this.name}`, operationMeasure)
+    console.log('finalizing operation:', this.name)
+    this.finalizing = true
 
-    this.onEnd?.({
-      operationMeasure,
-      tasks: this.tasks,
-    })
+    // wait a few more seconds for any entries that might came late, then finalize
+    setTimeout(() => {
+      activeOperations.delete(this)
+      this.subscription.unsubscribe()
+
+      // sort by end time
+      this.tasks.sort(
+        (a, b) => a.startTime + a.duration - (b.startTime + b.duration),
+      )
+
+      const operationMeasure = performance.measure(this.name, {
+        start: this.startTime,
+        end: this.lastRequiredTask!.startTime + this.lastRequiredTask!.duration,
+        detail: { operationName: this.name },
+      }) as Operation
+
+      const embeddedTasksDetails = this.tasks.map(
+        (rawTask): TaskDataEmbeddedInOperation => {
+          const { metadata, operationId, operationName, ...operation } =
+            rawTask.operations[this.name]!
+          const embeddedTask = {
+            ...operation,
+            metadata: { ...metadata },
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            detail:
+              typeof rawTask.detail === 'object' && rawTask.detail
+                ? { ...rawTask.detail }
+                : {},
+            duration: rawTask.duration,
+          }
+          // don't embed operation metadata into the task metadata, as it's already part of the operation
+          delete embeddedTask.metadata?.operation
+          return embeddedTask
+        },
+      )
+      operationMeasure.operations = {
+        [this.name]: {
+          kind: 'operation',
+          metadata: this.metadata,
+          operationId: this.id,
+          operationName: this.name,
+          tasks: embeddedTasksDetails,
+          includedCommonTaskNames: [...this.includedCommonTaskNames],
+        } satisfies OperationSpanMetadata,
+      }
+
+      console.log(`finished tracking operation: ${this.name}`, operationMeasure)
+
+      this.onEnd?.({
+        operationMeasure,
+        tasks: this.tasks,
+      })
+    }, FINALIZATION_WAIT)
   }
 
   /**
@@ -242,56 +289,95 @@ class ActiveOperation {
     entry: PerformanceEntryLike,
     metadata?: Record<string, unknown>,
   ) => {
-    const operationStartOffset = entry.startTime - this.startTime
-    if (operationStartOffset < 0) {
-      // ignore tasks that started before the operation
-      return
-    }
-
-    const { commonName, kind, extraMetadata } = extractEntryMetadata(entry)
-
-    // temporary:
-    // if (kind === 'render') {
-    //   return
-    // }
-
-    const occurrence = (this.occurrenceCounts.get(commonName) ?? 0) + 1
-    this.occurrenceCounts.set(commonName, occurrence)
-
-    const taskSpanMetadata = {
-      kind,
-      commonName,
-      operationRelativeEndTime: operationStartOffset + entry.duration,
-      operationName: this.name,
-      operationStartOffset,
-      occurrence,
-      metadata: { ...extraMetadata, ...metadata, operation: this.metadata },
-      operationId: this.id,
-    }
-
-    // TODO: consolidation of renders?
-    // if (
-    //   !lastRequiredTaskEndTime ||
-    //   entry.startTime + entry.duration < lastRequiredTaskEndTime
-    // ) {
-
-    // assignment on purpose:
-    // eslint-disable-next-line no-param-reassign
-    entry.operations ??= {}
-    // eslint-disable-next-line no-param-reassign
-    entry.operations[this.name] = taskSpanMetadata
-
-    const task = entry as Task
-
-    this.tasks.push(task)
-    this.includedCommonTaskNames.add(commonName)
-
-    if (this.remainingRequiredMeasureNames.has(entry.name)) {
-      this.remainingRequiredMeasureNames.delete(entry.name)
-      if (this.remainingRequiredMeasureNames.size === 0) {
-        this.lastRequiredTask = task
-        this.lastRequiredTaskEndTime = task.startTime + task.duration
+    try {
+      if (
+        entry.entryType === 'mark' &&
+        (entry.name.startsWith('--') || entry.name.startsWith('useTiming: '))
+      ) {
+        // react debugging profiler, ignore:
+        return
       }
+
+      const operationStartOffset = entry.startTime - this.startTime
+      // ignore tasks that started before the operation
+      if (operationStartOffset < 0) {
+        return
+      }
+
+      if (this.lastRequiredTaskEndTime) {
+        // ignore tasks that started after the operation
+        if (entry.startTime > this.lastRequiredTaskEndTime) {
+          return
+        }
+        // ignore tasks that ended long after the operation ended
+        if (
+          entry.startTime + entry.duration >
+          this.lastRequiredTaskEndTime + TRAILING_END_TASK_THRESHOLD
+        ) {
+          return
+        }
+      }
+
+      const { commonName, kind, extraMetadata, occurrenceCountPrefix } =
+        extractEntryMetadata(entry, metadata) // maybe: metadata ?? entry.detail
+
+      // temporary:
+      // if (kind === 'render') {
+      //   return
+      // }
+
+      const commonNameWithOccurrence = `${occurrenceCountPrefix}${commonName}`
+      const occurrence =
+        (this.occurrenceCounts.get(commonNameWithOccurrence) ?? 0) + 1
+      this.occurrenceCounts.set(commonNameWithOccurrence, occurrence)
+
+      const globalOccurrence =
+        (this.globalOccurrenceCounts.get(commonName) ?? 0) + 1
+      this.globalOccurrenceCounts.set(commonName, globalOccurrence)
+      if (globalOccurrence !== occurrence) {
+        // deal with duplicates from multiple useTiming hooks placed in the same component
+        // skip since we already have a task with the same name and occurrence
+        return
+      }
+
+      const taskSpanMetadata: TaskSpanMetadata = {
+        kind,
+        commonName,
+        operationRelativeEndTime: operationStartOffset + entry.duration,
+        operationName: this.name,
+        operationStartOffset,
+        occurrence,
+        metadata: { ...extraMetadata, ...metadata, operation: this.metadata },
+        operationId: this.id,
+      }
+
+      // TODO: consolidation of renders?
+
+      // assignment on purpose:
+      // eslint-disable-next-line no-param-reassign
+      entry.operations ??= {}
+      // eslint-disable-next-line no-param-reassign
+      entry.operations[this.name] = taskSpanMetadata
+
+      const task = entry as Task
+
+      this.tasks.push(task)
+      this.includedCommonTaskNames.add(commonName)
+
+      if (this.remainingRequiredMeasureNames.has(entry.name)) {
+        this.remainingRequiredMeasureNames.delete(entry.name)
+        if (this.remainingRequiredMeasureNames.size === 0) {
+          this.lastRequiredTask = task
+          this.lastRequiredTaskEndTime = task.startTime + task.duration
+        }
+      }
+    } catch (error) {
+      console.error(
+        `error while processing operation ${this.name} entry:`,
+        error,
+        entry,
+        metadata,
+      )
     }
   }
 
