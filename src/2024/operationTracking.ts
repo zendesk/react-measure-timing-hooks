@@ -15,6 +15,7 @@ import type {
 
 interface ProcessedEntry {
   commonName: string
+  fullName: string
   kind: TaskSpanKind
   extraMetadata: Record<string, unknown>
   occurrenceCountPrefix: string
@@ -24,7 +25,10 @@ function extractEntryMetadata(
   entry: AnyPerformanceEntry | PerformanceEntryLike,
   metadata?: Record<string, unknown>,
 ): ProcessedEntry {
+  /** a short name used for grouping entries into a single lane */
   let commonName: string
+  /** a fuller descriptive name */
+  let fullName = entry.name
   let query: Record<string, string | string[]> | undefined
   let kind: TaskSpanKind = entry.entryType as TaskSpanKind
   const extraMetadata: Record<string, unknown> = {}
@@ -46,13 +50,15 @@ function extractEntryMetadata(
       if (resourceType !== 'xhr' && resourceType !== 'fetch') {
         kind = 'asset'
       }
+      if (resourceTiming.initiatorType === 'iframe') {
+        kind = 'iframe'
+      }
       break
     }
     case 'mark':
     case 'measure': {
-      commonName = entry.name
-        .replaceAll(/\b\/?\d+\b/g, '')
-        .replace('useTiming: ', '')
+      fullName = entry.name.replace('useTiming: ', '')
+      commonName = fullName.replaceAll(/\b\/?\d+\b/g, '')
       if (entry.name.endsWith('/render')) {
         kind = 'render'
         const parts = commonName.split('/')
@@ -61,7 +67,26 @@ function extractEntryMetadata(
         extraMetadata.metricId = metricId
         occurrenceCountPrefix = `${metricId}/`
       }
-      if (entry.name.includes('graphql/')) {
+      if (entry.name.endsWith('/tti') || entry.name.endsWith('/ttr')) {
+        const parts = commonName.split('/')
+        const metricId = parts.slice(0, -1).join('/')
+        commonName = metricId
+        extraMetadata.metricId = metricId
+      }
+      if (entry.entryType === 'measure' && entry.name.includes('-till-')) {
+        const parts = commonName.split('/')
+        const stageChange = parts.at(-1)!
+        const componentName = parts.at(-2)!
+        const metricId = parts.slice(0, -2).join('/')
+        extraMetadata.metricId = metricId
+        extraMetadata.stageChange = stageChange
+        extraMetadata.componentName = componentName
+        // merge all stage changes under the same commonName as tti and ttr
+        commonName = metricId
+        fullName = `${metricId}/${stageChange}`
+        occurrenceCountPrefix = `${stageChange}/`
+      }
+      if (entry.name.startsWith('graphql/')) {
         kind = 'resource'
       }
       break
@@ -75,7 +100,11 @@ function extractEntryMetadata(
           ? `/${entry.name}`
           : ''
       }`
+      fullName = commonName
       kind = entry.entryType as TaskSpanKind
+      if ('toJSON' in entry) {
+        Object.assign(extraMetadata, entry.toJSON())
+      }
     }
   }
 
@@ -84,7 +113,7 @@ function extractEntryMetadata(
     commonName = metadata.commonName
   }
 
-  return { commonName, kind, extraMetadata, occurrenceCountPrefix }
+  return { commonName, fullName, kind, extraMetadata, occurrenceCountPrefix }
 }
 
 const getPerformanceEntryObservable = <Type extends PerformanceEntryType>(
@@ -220,9 +249,11 @@ class ActiveOperation {
       activeOperations.delete(this)
       this.subscription.unsubscribe()
 
-      // sort by end time
       this.tasks.sort(
-        (a, b) => a.startTime + a.duration - (b.startTime + b.duration),
+        // sort by start time
+        (a, b) => a.startTime - b.startTime,
+        // sort by end time
+        // (a, b) => a.startTime + a.duration - (b.startTime + b.duration),
       )
 
       const operationMeasure = performance.measure(this.name, {
@@ -318,13 +349,13 @@ class ActiveOperation {
         }
       }
 
-      const { commonName, kind, extraMetadata, occurrenceCountPrefix } =
-        extractEntryMetadata(entry, metadata) // maybe: metadata ?? entry.detail
-
-      // temporary:
-      // if (kind === 'render') {
-      //   return
-      // }
+      const {
+        commonName,
+        fullName,
+        kind,
+        extraMetadata,
+        occurrenceCountPrefix,
+      } = extractEntryMetadata(entry, metadata) // maybe: metadata ?? entry.detail
 
       const commonNameWithOccurrence = `${occurrenceCountPrefix}${commonName}`
       const occurrence =
@@ -334,7 +365,7 @@ class ActiveOperation {
       const globalOccurrence =
         (this.globalOccurrenceCounts.get(commonName) ?? 0) + 1
       this.globalOccurrenceCounts.set(commonName, globalOccurrence)
-      if (globalOccurrence !== occurrence) {
+      if (globalOccurrence !== occurrence && kind === 'render') {
         // deal with duplicates from multiple useTiming hooks placed in the same component
         // skip since we already have a task with the same name and occurrence
         return
@@ -342,6 +373,7 @@ class ActiveOperation {
 
       const taskSpanMetadata: TaskSpanMetadata = {
         kind,
+        name: fullName,
         commonName,
         operationRelativeEndTime: operationStartOffset + entry.duration,
         operationName: this.name,
@@ -349,6 +381,7 @@ class ActiveOperation {
         occurrence,
         metadata: { ...extraMetadata, ...metadata, operation: this.metadata },
         operationId: this.id,
+        internalOrder: this.tasks.length,
       }
 
       // TODO: consolidation of renders?

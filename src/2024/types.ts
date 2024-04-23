@@ -3,7 +3,12 @@ import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
 // excludes long_task, since it exists as longtask in the global types
 export type RumKinds = 'action' | 'error' | 'view' | 'resource' | 'vital' // | "long_task"
 export type SpanKind = TaskSpanKind | 'operation'
-export type TaskSpanKind = PerformanceEntryType | RumKinds | 'render' | 'asset'
+export type TaskSpanKind =
+  | PerformanceEntryType
+  | RumKinds
+  | 'render'
+  | 'asset'
+  | 'iframe'
 export type PerformanceEntryLike = Omit<PerformanceEntry, 'toJSON'>
 
 export interface SpanMetadata<Kind extends SpanKind> {
@@ -17,7 +22,12 @@ export interface SpanMetadata<Kind extends SpanKind> {
 }
 
 export interface TaskSpanMetadata extends SpanMetadata<TaskSpanKind> {
-  /* string used to aggregate data */
+  internalOrder: number
+
+  /** complete name that should be displayed when previewing the details of the span */
+  name: string
+
+  /** string used to aggregate data */
   commonName: string
 
   /** how many milliseconds after the operation started did this task start */
