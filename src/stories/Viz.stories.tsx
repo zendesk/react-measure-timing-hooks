@@ -2,7 +2,7 @@
 /* eslint-disable */
 import React, { useCallback, useMemo, useState, useEffect } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
-import { Label } from '@visx/annotation'
+import { Label, Annotation } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
 import { localPoint } from '@visx/event'
 import { Grid } from '@visx/grid'
@@ -83,7 +83,7 @@ const filterOutTTR_TTI = () => {
 
 const {ticketActivationOperation, ttrData, ttiData, ttrDuration, ttiDuration} = filterOutTTR_TTI();
 
-const DEFAULT_MARGIN = { top: 30, left: 200, right: 120, bottom: 30 }
+const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
 
 const BAR_FILL_COLOR = {
   compute: '#2ca02c',
@@ -132,37 +132,54 @@ export interface TTLineProps {
   yMax: number
   showTooltip: (data: Partial<WithTooltipProvidedProps<TaskDataEmbeddedInOperation>>) => void
   hideTooltip: () => void
+  title: string
 }
-const TTLine: React.FC<TTLineProps> = ({hoverData, xCoordinate, yMax, showTooltip, hideTooltip}) => {
+const TTLine: React.FC<TTLineProps> = ({hoverData, xCoordinate, yMax, showTooltip, hideTooltip, title}) => {
   let tooltipTimeout: number
 
   return (
-    <Line
-      from={{ x: xCoordinate, y: 0 }}
-      to={{ x: xCoordinate, y: yMax }}
-      stroke={'red'}
-      strokeWidth={2}
-      opacity={0.8}
-      onMouseLeave={() => {
-        // Prevent tooltip from flickering.
-        tooltipTimeout = window.setTimeout(() => {
-          hideTooltip()
-        }, 300)
-      }}
-      onMouseMove={(event) => {
-        if (tooltipTimeout) clearTimeout(tooltipTimeout)
-        // Update tooltip position and data
-        // const eventSvg = event.target;
-        const coords = localPoint(event.target.ownerSVGElement, event)
-        if (coords) {
-          showTooltip({
-            tooltipLeft: coords.x + 10,
-            tooltipTop: coords.y + 10,
-            tooltipData: hoverData,
-          })
-        }
-      }}
-  />
+    <>
+      <Line
+        from={{ x: xCoordinate, y: 0 }}
+        to={{ x: xCoordinate, y: yMax }}
+        stroke={'red'}
+        strokeOpacity={0.3}
+        strokeWidth={1.5}
+        strokeDasharray={4,4}
+        opacity={0.8}
+        onMouseLeave={() => {
+          // Prevent tooltip from flickering.
+          tooltipTimeout = window.setTimeout(() => {
+            hideTooltip()
+          }, 300)
+        }}
+        onMouseMove={(event) => {
+          if (tooltipTimeout) clearTimeout(tooltipTimeout)
+          // Update tooltip position and data
+          // const eventSvg = event.target;
+          const coords = localPoint(event.target.ownerSVGElement, event)
+          if (coords) {
+            showTooltip({
+              tooltipLeft: coords.x + 10,
+              tooltipTop: coords.y + 10,
+              tooltipData: hoverData,
+            })
+          }
+        }}
+      />
+      <Annotation
+        x={xCoordinate+15}
+        y={-2}
+        dx={0} // x offset of label from subject
+        dy={0} // y offset of label from subject
+
+        // onDragEnd={({ x, y, dx, dy }) => ...}
+      >
+        <Label fontColor={'red'} title={title} subtitle={`${hoverData?.duration.toFixed(2)} ms` ?? ''} showAnchorLine={false} backgroundFill='gray' backgroundProps={{
+          opacity: 0.1,
+        }}/>
+      </Annotation>
+    </>
   )
   
 }
@@ -185,22 +202,19 @@ const MultiSelect: React.FC<MultiSelectProps> = ({setCollapseRenders, setDisplay
   const handleChange = useCallback<NonNullable<IComboboxProps['onChange']>>(({ selectionValue, inputValue, type }) => {
     if (selectionValue?.includes('Collapse Render Spans')) {
       setCollapseRenders(true);
-    } 
-    else if (!selectionValue?.includes('Collapse Render Spans') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
+    } else if (!selectionValue?.includes('Collapse Render Spans') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
       setCollapseRenders(false);
     }
 
     if (selectionValue?.includes('Fetch')) {
       setDisplayFetches(true);
-    } 
-    else if (!selectionValue?.includes('Fetch') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
+    } else if (!selectionValue?.includes('Fetch') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
       setDisplayFetches(false);
     }
 
     if (selectionValue?.includes('Compute')) {
       setDisplayComputes(true);
-    } 
-    else if (!selectionValue?.includes('Compute') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
+    } else if (!selectionValue?.includes('Compute') && (type === 'input:keyDown:Enter' || type === 'option:click' || type === 'fn:setSelectionValue')){
       setDisplayComputes(false);
     }
     
@@ -222,28 +236,58 @@ const MultiSelect: React.FC<MultiSelectProps> = ({setCollapseRenders, setDisplay
   }, [debounceHandleChange]);
 
   return (
-    <Row justifyContent="center">
-      <Col sm={7}>
-        <Field>
-          <GardenLabel>Filter</GardenLabel>
-          <Combobox
-            isAutocomplete
-            isMultiselectable
-            maxHeight="auto"
-            listboxMaxHeight='200px'
-            onChange={debounceHandleChange}
-          >
-            {options.length === 0 ? (
-              <Option isDisabled label="" value="No matches found" />
-            ) : (
-              options.map(value => <Option key={value} value={value} isSelected={true}/>)
-            )}
-          </Combobox>
-        </Field>
-      </Col>
-    </Row>
+    <LegendDemo title="">
+      <Row justifyContent="center">
+        <Col sm={7}>
+          <Field>
+            <GardenLabel>Filter</GardenLabel>
+            <Combobox
+              isAutocomplete
+              isMultiselectable
+              maxHeight="auto"
+              listboxMaxHeight='100px'
+              listboxMinHeight='10px'
+              onChange={debounceHandleChange}
+            >
+              {options.length === 0 ? (
+                <Option isDisabled label="" value="No matches found" />
+              ) : (
+                options.map(value => <Option key={value} value={value} isSelected={true}/>)
+              )}
+            </Combobox>
+          </Field>
+        </Col>
+      </Row>
+    </LegendDemo>
   );
 };
+
+function LegendDemo({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="legend">
+      <div className="title">{title}</div>
+      {children}
+      <style>{`
+        .legend {
+          line-height: 0.9em;
+          color: gray;
+          font-size: 10px;
+          font-family: arial;
+          padding: 10px 10px;
+          float: left;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          margin: 5px 5px;
+        }
+        .title {
+          font-size: 12px;
+          margin-bottom: 10px;
+          font-weight: 100;
+        }
+      `}</style>
+    </div>
+  );
+}
 
 export interface OperationVisualizerProps {
   width: number
@@ -347,6 +391,22 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
             height={yMax}
             numTicksRows={filteredTaskNames.length}
           />
+          <TTLine
+            title={"TTR"}
+            xCoordinate={ttrXCoor}
+            hoverData={ttrData}
+            showTooltip={showTooltip}
+            hideTooltip={hideTooltip}
+            yMax={yMax}
+          />
+          <TTLine
+            title={"TTI"}
+            xCoordinate={ttiXCoor}
+            hoverData={ttiData}
+            showTooltip={showTooltip}
+            hideTooltip={hideTooltip}
+            yMax={yMax}
+          />
           {filteredTasks.map((task, i) => (
             <Bar
               opacity={0.4}
@@ -378,20 +438,6 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
               }}
             />
           ))}
-          <TTLine
-            yMax={yMax}
-            xCoordinate={ttrXCoor}
-            hoverData={ttrData}
-            showTooltip={showTooltip}
-            hideTooltip={hideTooltip}
-          />
-          <TTLine
-            yMax={yMax}
-            xCoordinate={ttiXCoor}
-            hoverData={ttiData}
-            showTooltip={showTooltip}
-            hideTooltip={hideTooltip}
-          />
           <AxisLeft
             scale={labelScale}
             numTicks={filteredTaskNames.length}
@@ -444,29 +490,31 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
           justifyContent: 'space-evenly',
           alignItems: 'center', // Center children vertically
           padding: '10px',
-          gap: '20px' // Optional: set gap between children
+          gap: '20px', // Optional: set gap between children
+          height: '100px'
         }}>
           <MultiSelect setCollapseRenders={setCollapseRenders} setDisplayFetches={setDisplayFetches} setDisplayComputes={setDisplayComputes}/>
-
-          <LegendOrdinal
-            scale={colorScale}
-            labelFormat={(label) => `${label.toUpperCase()}`}
-          >
-            {(labels) => (
-              <div style={{ display: 'flex', flexDirection: 'row' }}>
-                {labels.map((label, i) => (
-                  <LegendItem key={`legend-${i}`} margin="0 5px">
-                    <svg width={15} height={15}>
-                      <rect fill={label.value} width={15} height={15} />
-                    </svg>
-                    <LegendLabel align="left" margin="0 0 0 4px">
-                      {label.text}
-                    </LegendLabel>
-                  </LegendItem>
-                ))}
-              </div>
-            )}
-          </LegendOrdinal>
+          <LegendDemo title="Legend">
+            <LegendOrdinal
+              scale={colorScale}
+              labelFormat={(label) => `${label.toUpperCase()}`}
+            >
+              {(labels) => (
+                <div style={{ display: 'flex', flexDirection: 'row' }}>
+                  {labels.map((label, i) => (
+                    <LegendItem key={`legend-${i}`} margin="0 5px">
+                      <svg width={15} height={15}>
+                        <rect fill={label.value} width={15} height={15} />
+                      </svg>
+                      <LegendLabel align="left" margin="0 0 0 4px">
+                        {label.text}
+                      </LegendLabel>
+                    </LegendItem>
+                  ))}
+                </div>
+              )}
+            </LegendOrdinal>
+          </LegendDemo>
         </div>
       </footer>
       {tooltipOpen && tooltipData && (
