@@ -37,14 +37,16 @@ export {
 } from './lazyVisualizer'
 
 // operation tracking
+export { startOperation } from './2024/operationTracking'
 export type {
   Operation,
   OperationSpanMetadata,
+  PerformanceEntryLike,
+  RumKinds,
   Span,
   SpanKind,
   SpanMetadata,
   Task,
   TaskDataEmbeddedInOperation,
   TaskSpanMetadata,
-} from './2024/operationTracking'
-export { startOperation } from './2024/operationTracking'
+} from './2024/types'

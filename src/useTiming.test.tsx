@@ -117,7 +117,7 @@ describe('useTiming', () => {
         name,
         duration: currentTime - startMark.startTime,
         startTime: startMark.startTime,
-        entryType: 'mark',
+        entryType: 'measure',
         toJSON: () => `(toJSON:${name})`,
         detail: null,
       }
