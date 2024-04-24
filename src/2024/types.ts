@@ -1,7 +1,7 @@
 import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
 
 // excludes long_task, since it exists as longtask in the global types
-export type RumKinds = 'action' | 'error' | 'view' | 'resource' | 'vital' // | "long_task"
+export type RumKinds = 'action' | 'error' | 'resource' | 'vital' // | 'view' | "long_task"
 export type SpanKind = TaskSpanKind | 'operation'
 export type TaskSpanKind =
   | PerformanceEntryType

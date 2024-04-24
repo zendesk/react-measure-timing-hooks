@@ -301,20 +301,6 @@
         },
         {
           "kind": "measure",
-          "name": "ticket/load_omnilog_from_new_workspace/12988",
-          "commonName": "ticket/load_omnilog_from_new_workspace",
-          "operationRelativeEndTime": 3424.399999976158,
-          "operationStartOffset": 204.89999997615814,
-          "occurrence": 2,
-          "internalOrder": 78,
-          "metadata": {},
-          "detail": {
-            "ticketId": "12988"
-          },
-          "duration": 3219.5
-        },
-        {
-          "kind": "measure",
           "name": "ticket.load_omnilog_from_new_workspace",
           "commonName": "ticket.load_omnilog_from_new_workspace",
           "operationRelativeEndTime": 3425.2000000476837,
