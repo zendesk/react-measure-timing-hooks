@@ -1,4 +1,7 @@
-// TODO: maybe even a HOC/wrapper instead?
+// TODO: maybe even a HOC/wrapper instead? this way I could ensure to add a hook at beginning and at the end of the component
+
+// TODO: no need to worry about garbage collection - just delete all entries older than X seconds!!!
+
 export const useCaptureRenderBeaconTask = (opts: {
   componentName: string
   metadata: Record<string, unknown>

@@ -1,0 +1,93 @@
+import React, { useEffect, useState } from 'react'
+import { Skeleton } from '@zendeskgarden/react-loaders'
+import { Well } from '@zendeskgarden/react-notifications'
+import { Paragraph, Span, XXL } from '@zendeskgarden/react-typography'
+import { Timeline } from '@zendeskgarden/react-accordions'
+import styled from 'styled-components'
+import { mockTickets } from './mockTickets'
+import { DEFAULT_THEME, PALETTE } from '@zendeskgarden/react-theming'
+import { Avatar } from '@zendeskgarden/react-avatars'
+import { ReactComponent as UserIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
+
+export const StyledSpan = styled(Span).attrs({ isBold: true, hue: 'blue' })`
+  margin-left: ${DEFAULT_THEME.space.base * 2}px;
+`
+export const MessageSpan = styled(Span).attrs({})`
+  display: block;
+`
+const TimelineContentWide = styled(Timeline.Content)`
+  flex: 5;
+`
+
+interface TicketViewProps {
+  ticketId: number
+  cached?: boolean
+  onLoaded?: () => void
+}
+
+export const TicketView: React.FC<TicketViewProps> = ({
+  ticketId,
+  cached = false,
+  onLoaded,
+}) => {
+  const ticket = mockTickets.find((ticket) => ticket.id === ticketId)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onLoaded?.()
+    }, 1_500)
+    return () => void clearTimeout(timer)
+  }, [ticketId])
+
+  if (!ticket) {
+    return (
+      <Well>
+        <Paragraph>No ticket found</Paragraph>
+      </Well>
+    )
+  }
+
+  return (
+    <Well>
+      <XXL>Ticket: {ticket.subject}</XXL>
+      {!cached ? (
+        <>
+          <Skeleton />
+          <Skeleton />
+          <Skeleton />
+          <Skeleton />
+          <Skeleton />
+        </>
+      ) : (
+        <>
+          <Timeline>
+            {ticket.messages.map((msg, index) => (
+              <Timeline.Item key={index}>
+                <Timeline.OppositeContent>
+                  <Span hue="grey">{msg.humanReadableTimestamp}</Span>
+                </Timeline.OppositeContent>
+                <TimelineContentWide>
+                  <Avatar size="extrasmall" backgroundColor={PALETTE.grey[600]}>
+                    {msg.authorType === 'customer' ? (
+                      <img
+                        alt="image avatar"
+                        src="https://garden.zendesk.com/components/avatar/user.png"
+                      />
+                    ) : (
+                      <UserIcon
+                        role="img"
+                        aria-label="extra small user avatar"
+                      />
+                    )}
+                  </Avatar>
+                  <StyledSpan>{msg.author}</StyledSpan>
+                  <MessageSpan>{msg.message}</MessageSpan>
+                </TimelineContentWide>
+              </Timeline.Item>
+            ))}
+          </Timeline>
+        </>
+      )}
+    </Well>
+  )
+}

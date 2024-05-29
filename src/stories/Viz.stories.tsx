@@ -692,7 +692,6 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
       <main style={{ height: `${height + margin.top + margin.bottom}px` }}>
         <svg width={width - margin.right} height={height}>
           <Group top={margin.top} left={margin.left}>
-            <Axis scale={xScale} top={yMax} />
             <Grid
               xScale={xScale}
               yScale={labelScale}
@@ -776,17 +775,9 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
               }}
               tickFormat={(value) => {
                 return value
-                // if (value.startsWith('http')) return value
-                // const split = value.split(/\/|\./)
-                // if (split.at(-1) === 'render') {
-                //   return split.at(-2)
-                // }
-                // if (split.at(-1)?.includes('-till-')) {
-                //   return split.at(-1)
-                // }
-                // return split.join('.')
               }}
             />
+            <Axis scale={xScale} top={yMax} />
           </Group>
         </svg>
       </main>
