@@ -42,6 +42,21 @@ describe('operation tracking', () => {
       performance: performanceMock,
       // buffer the entire operation
       bufferDuration,
+      supportedEntryTypes: [
+        'element',
+        'event',
+        'first-input',
+        'largest-contentful-paint',
+        'layout-shift',
+        'long-animation-frame',
+        'longtask',
+        'mark',
+        'measure',
+        'navigation',
+        'paint',
+        'resource',
+        'visibility-state',
+      ],
     })
 
     it('tracks operations', () => {
@@ -51,10 +66,12 @@ describe('operation tracking', () => {
           {
             match: { name: 'start-mark', type: 'mark' },
             requiredToStart: true,
+            debounceEndWhenSeen: false,
           },
           {
             match: { name: 'end-mark', type: 'mark' },
             requiredToEnd: true,
+            debounceEndWhenSeen: false,
           },
         ],
         captureDone: true,
@@ -196,6 +213,7 @@ describe('operation tracking', () => {
           {
             match: { name: 'never-to-be-seen-mark', type: 'mark' },
             requiredToEnd: true,
+            debounceEndWhenSeen: false,
           },
         ],
         captureDone: true,
@@ -261,10 +279,12 @@ describe('operation tracking', () => {
             {
               match: { name: 'start', type: 'mark' },
               requiredToStart: true,
+              debounceEndWhenSeen: false,
             },
             {
               match: { name: 'end', type: 'mark' },
               requiredToEnd: true,
+              debounceEndWhenSeen: false,
             },
           ],
           captureDone: true,
@@ -391,10 +411,12 @@ describe('operation tracking', () => {
             {
               match: { name: 'start', type: 'mark' },
               requiredToStart: true,
+              debounceEndWhenSeen: false,
             },
             {
               match: { name: 'end', type: 'mark' },
               requiredToEnd: true,
+              debounceEndWhenSeen: false,
             },
           ],
           captureDone: true,
@@ -497,10 +519,12 @@ describe('operation tracking', () => {
           {
             match: { name: 'start', type: 'mark' },
             requiredToStart: true,
+            debounceEndWhenSeen: false,
           },
           {
             match: { name: 'end', type: 'mark' },
             requiredToEnd: true,
+            debounceEndWhenSeen: false,
           },
         ],
         captureDone: true,
@@ -591,10 +615,12 @@ describe('operation tracking', () => {
           {
             match: { name: 'start-1', type: 'mark' },
             requiredToStart: true,
+            debounceEndWhenSeen: false,
           },
           {
             match: { name: 'end-1', type: 'mark' },
             requiredToEnd: true,
+            debounceEndWhenSeen: false,
           },
         ],
         captureDone: true,
@@ -606,10 +632,12 @@ describe('operation tracking', () => {
           {
             match: { name: 'start-2', type: 'mark' },
             requiredToStart: true,
+            debounceEndWhenSeen: false,
           },
           {
             match: { name: 'end-2', type: 'mark' },
             requiredToEnd: true,
+            debounceEndWhenSeen: false,
           },
         ],
         captureDone: true,

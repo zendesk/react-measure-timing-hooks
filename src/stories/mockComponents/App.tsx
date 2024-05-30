@@ -27,12 +27,34 @@ import { ReactComponent as ZendeskIcon } from '@zendeskgarden/svg-icons/src/26/z
 import { TicketList } from './TicketList'
 import { TicketView } from './TicketView'
 import { mockTickets } from './mockTickets'
+import { operationManager } from './operationManager'
 
 export const App: React.FC = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const [selectedTicketIds, setSelectedTicketIds] = useState<number[]>([])
 
   const handleTicketClick = (id: number) => {
+    operationManager.startOperation({
+      operationName: `ticket-activation/${id}`,
+      track: [
+        {
+          match: { type: 'component-unmount', metadata: { ticketId: id } },
+          // todo: make sure when interrupting the debounce doesn't happen
+          interruptWhenSeen: true,
+        },
+        {
+          match: { metadata: { ticketId: id } },
+          debounceEndWhenSeen: { debounceBy: 1000 },
+        },
+        {
+          match: { metadata: { ticketId: id, state: 'complete' } },
+          requiredToEnd: true,
+        },
+      ],
+      captureDone: true,
+      captureInteractive: true,
+      interruptSelf: true,
+    })
     setSelectedTicketId(id)
   }
 

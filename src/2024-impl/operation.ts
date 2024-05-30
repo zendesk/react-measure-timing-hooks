@@ -14,10 +14,14 @@ import type {
   TaskSpanMetadata,
 } from './types'
 
-const DEFAULT_CAPTURE_INTERACTIVE = { timeout: 5_000, debounceLongTasksBy: 500 }
+const DEFAULT_CAPTURE_INTERACTIVE: Required<CaptureInteractiveConfig> = { timeout: 5_000, debounceLongTasksBy: 500, skipDebounceForLongTasksShorterThan: 0 }
 const DEFAULT_GLOBAL_OPERATION_TIMEOUT = 10_000
 const OPERATION_START_ENTRY_TYPE = 'operation-start'
+const OPERATION_ENTRY_TYPE = 'operation'
 const DEFAULT_DEBOUNCE_TIME = 1_000
+const identity = <T>(value: T): T => value
+
+type TimeoutRef = ReturnType<typeof setTimeout>
 
 type FinalizationReason =
   | 'completed'
@@ -63,13 +67,13 @@ class Operation implements PerformanceEntryLike {
    */
   duration: number
 
-  entryType = 'operation'
+  readonly entryType = 'operation'
 
   /**
    * Metadata for the operation.
    */
   metadata: Record<string, unknown>
-  private tasks: TaskSpanMetadata[] = []
+  readonly tasks: TaskSpanMetadata[] = []
 
   private definition: Omit<OperationDefinition, 'captureInteractive'> & {
     captureInteractive: Required<CaptureInteractiveConfig> | false
@@ -80,7 +84,7 @@ class Operation implements PerformanceEntryLike {
   // this way we could inject entries with past timestamps
   // introduce the function setState() first, then ask gpt to do getStateAt...
   private _state!: OperationState
-  private get state() {
+  get state() {
     return this._state
   }
   private set state(value) {
@@ -121,13 +125,16 @@ class Operation implements PerformanceEntryLike {
       kind: 'operation',
       ...definition.metadata,
     }
-    const captureInteractive = definition.captureInteractive
+    const captureInteractive = definition.captureInteractive && manager.supportedEntryTypes.includes('longtask')
       ? typeof definition.captureInteractive === 'object'
         ? { ...DEFAULT_CAPTURE_INTERACTIVE, ...definition.captureInteractive }
         : DEFAULT_CAPTURE_INTERACTIVE
       : false
 
-    this.definition = { ...definition, captureInteractive }
+    this.definition = { ...definition, captureInteractive, track: definition.track.map((track) => ({
+      ...track,
+      debounceEndWhenSeen: track.debounceEndWhenSeen ?? true,
+    }))}
     this.requiredToStartTrackers = new Set()
     this.requiredToEndTrackers = new Set()
     this.state = 'initial'
@@ -417,9 +424,9 @@ class Operation implements PerformanceEntryLike {
   }
 
   timeoutIds: {
-    global: NodeJS.Timeout | null
-    interactive: NodeJS.Timeout | null
-    debounce: NodeJS.Timeout | null
+    global: TimeoutRef | null
+    interactive: TimeoutRef | null
+    debounce: TimeoutRef | null
   } = {
     global: null,
     interactive: null,
@@ -471,6 +478,9 @@ class Operation implements PerformanceEntryLike {
       clearTimeout(timeoutId)
       this.timeoutIds[type] = null
       this.timeouts[type] = undefined
+    }
+    if (type === 'debounce') {
+      this.lastDebounceDeadline = 0
     }
   }
 
@@ -557,7 +567,8 @@ class Operation implements PerformanceEntryLike {
     if (
       task.entryType !== 'longtask' ||
       this.state !== 'waiting-for-interactive' ||
-      !this.definition.captureInteractive
+      !this.definition.captureInteractive ||
+      task.duration < this.definition.captureInteractive.skipDebounceForLongTasksShorterThan
     ) {
       return
     }
@@ -645,13 +656,14 @@ export class OperationManager {
   defaultDebounceTime: number
   performance: PerformanceApi
   private bufferDuration?: number
-  private bufferTimeoutId?: NodeJS.Timeout
+  private bufferTimeoutId?: TimeoutRef
+  private bufferFlushUntil = 0
   private taskBuffer: PerformanceEntryLike[] = []
+  private preProcessTask: (task: PerformanceEntryLike) => PerformanceEntryLike
+  supportedEntryTypes: readonly string[]
 
   /**
    * Creates an instance of CentralizedPerformanceManager.
-   * @param defaultDebounceTime - The default debounce time for operations.
-   * @param entryTypes - The types of performance entries to observe.
    */
   constructor({
     defaultDebounceTime = DEFAULT_DEBOUNCE_TIME,
@@ -660,18 +672,22 @@ export class OperationManager {
         list.getEntries().forEach(onEntry)
       })
       observer.observe({
-        entryTypes: ['mark', 'measure', 'resource', 'longtask'],
+        entryTypes: ['mark', 'measure', 'resource', 'longtask', 'element', 'long-animation-frame'],
       })
       return () => void observer.disconnect()
     },
-    performance: { measure = performance.measure, now = performance.now } = {},
+    performance: { measure = performance.measure.bind(performance), now = performance.now.bind(performance) } = {},
     bufferDuration,
+    preProcessTask = identity,
+    supportedEntryTypes = PerformanceObserver.supportedEntryTypes,
   }: InstanceOptions = {}) {
     this.operations = new Map()
     this.defaultDebounceTime = defaultDebounceTime
     this.performance = { measure, now }
     this.observe = observe
     this.bufferDuration = bufferDuration
+    this.preProcessTask = preProcessTask
+    this.supportedEntryTypes = supportedEntryTypes
   }
 
   /**
@@ -698,10 +714,11 @@ export class OperationManager {
         duration: operation.duration,
         entryType: 'operation',
         name: operation.name,
-        metadata: operation.metadata,
+        metadata: {...operation.metadata, tasks: operation.tasks, state: operation.state},
       })
       this.operations.delete(operation.id)
       this.ensureObserver()
+      operationDefinition.onDispose?.()
       // TODO: post-process operation data - e.g. send a report or spans
     }
 
@@ -717,21 +734,35 @@ export class OperationManager {
     return operation.id
   }
 
+  scheduleBufferFlushIfNeeded() {
+    if (!this.bufferDuration || this.isFlushingBuffer || this.bufferTimeoutId || this.taskBuffer.length === 0) {
+      return
+    }
+
+    // instead of flushing the whole buffer in one go
+    // every half-buffer, we will only flush tasks that ocurred within the first 1/4 of the buffer's duration
+    // this allows for new items to still be added *between* the items of the remaining 3/4 of the buffer
+    // and guarantees that the entire buffer is processed within the set buffer duration
+    // this is a compromise between processing tasks in order,
+    // and also not waiting too long to process them
+    const now = this.performance.now()
+    this.bufferFlushUntil = now + (this.bufferDuration / 4)
+    this.bufferTimeoutId = setTimeout(
+      () => void this.flushBuffer(),
+      this.bufferDuration / 2,
+    )
+  }
+
   /**
    * Processes a performance entry task.
-   * @param task - The performance entry task to track.
+   * @param entry - The performance entry task to track.
    */
-  scheduleTaskProcessing(task: PerformanceEntryLike): void {
-    // TODO: pre-process the task
+  scheduleTaskProcessing(entry: PerformanceEntryLike): void {
+    const task = this.preProcessTask(entry)
 
     if (this.bufferDuration && !this.isFlushingBuffer) {
       this.taskBuffer.push(task)
-      if (!this.bufferTimeoutId) {
-        this.bufferTimeoutId = setTimeout(
-          () => void this.flushBuffer(),
-          this.bufferDuration,
-        )
-      }
+      this.scheduleBufferFlushIfNeeded()
     } else {
       // process immediately
       this.processTask(task)
@@ -750,29 +781,33 @@ export class OperationManager {
    * Flushes the task buffer, sorts the tasks, and processes them sequentially.
    */
   private flushBuffer(): void {
-    this.bufferTimeoutId = undefined
+    this.isFlushingBuffer = true
 
     // Sort the buffer by end time
     this.taskBuffer.sort(
       (a, b) => a.startTime + a.duration - (b.startTime + b.duration),
     )
 
-    this.isFlushingBuffer = true
+    const remainingBuffer: PerformanceEntryLike[] = []
 
-    // Process each task sequentially
-    this.taskBuffer.forEach((task) => {
-      this.processTask(task)
-    })
+    for (const task of this.taskBuffer) {
+      const taskEndTime = task.startTime + task.duration
+      // Process each task sequentially
+      if (taskEndTime <= this.bufferFlushUntil) {
+        this.processTask(task)
+      } else {
+        remainingBuffer.push(task)
+      }
+    }
 
-    // Clear the buffer
-    this.taskBuffer = []
+    // Update the buffer
+    this.taskBuffer = remainingBuffer
 
+    this.bufferTimeoutId = undefined
+    this.bufferFlushUntil = 0
     this.isFlushingBuffer = false
 
-    // TODO: not necessary in real life except in tests:
-    // this.operations.forEach((operation) => {
-    //   operation.executeBufferedTimeoutsDue(this.performance.now());
-    // });
+    this.scheduleBufferFlushIfNeeded()
   }
 
   /**

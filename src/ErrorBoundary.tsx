@@ -5,14 +5,14 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import { Component, useEffect } from 'react'
+import { Component, useEffect, useRef, type DependencyList } from 'react'
 
 interface ErrorMetadata {
   error: Error
   info: React.ErrorInfo
 }
 
-let errorMetadataCurrentlyBeingThrown: null | ErrorMetadata = null
+let errorMetadataCurrentlyBeingThrown: undefined | ErrorMetadata = undefined
 
 export const useOnErrorBoundaryDidCatch = (
   onCaughtError: (metadata: ErrorMetadata) => void,
@@ -21,7 +21,18 @@ export const useOnErrorBoundaryDidCatch = (
     if (!errorMetadataCurrentlyBeingThrown) return
     // this will only run if React decides to unmount the tree that threw the error
     onCaughtError(errorMetadataCurrentlyBeingThrown)
-  })
+  }, [onCaughtError])
+}
+
+export const useOnComponentUnmount = (
+  onComponentUnmountCallback: (metadata?: ErrorMetadata) => void,
+  dependencies: DependencyList = [],
+): void => {
+  const onComponentUnmountRef = useRef(onComponentUnmountCallback)
+  onComponentUnmountRef.current = onComponentUnmountCallback
+  useEffect(() => () => {
+    onComponentUnmountRef.current(errorMetadataCurrentlyBeingThrown)
+  }, dependencies)
 }
 
 export class ReactMeasureErrorBoundary<
@@ -40,7 +51,7 @@ export class ReactMeasureErrorBoundary<
     setTimeout(() => {
       // we want this data to be available synchronously - only in the same JS frame
       // so we clean-up immediately after:
-      errorMetadataCurrentlyBeingThrown = null
+      errorMetadataCurrentlyBeingThrown = undefined
     })
   }
 }

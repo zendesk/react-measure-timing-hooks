@@ -19,9 +19,12 @@ export interface EntryMatchCriteria {
     | 'measure'
     | 'mark'
     | 'resource'
-    | 'render-start'
-    | 'render-end'
-    | 'render-error'
+    | 'component-render-start'
+    | 'component-render-error'
+    | 'component-render'
+    | 'component-unmount'
+    | 'component-tree-error'
+    | 'component-render-cancel'
     | 'operation-start'
 }
 
@@ -39,6 +42,10 @@ export interface CaptureInteractiveConfig {
    * Duration to debounce long tasks before considering the page interactive.
    */
   debounceLongTasksBy?: number
+  /**
+   * Ignore long tasks that are shorter than this duration.
+   */
+  skipDebounceForLongTasksShorterThan?: number
 }
 
 /**
@@ -73,6 +80,8 @@ export interface OperationDefinition {
 
     /**
      * Configuration for debouncing the end of the operation when this tracker is seen.
+     * When true, debounces by the default amount.
+     * @default true
      */
     debounceEndWhenSeen?:
       | boolean
@@ -80,6 +89,7 @@ export interface OperationDefinition {
 
     /**
      * Indicates if this tracker should interrupt and finalize the operation immediately.
+     * Useful for events like errors.
      */
     interruptWhenSeen?: boolean
   }[]
@@ -112,14 +122,21 @@ export interface OperationDefinition {
   captureInteractive?: boolean | CaptureInteractiveConfig
 
   /**
-   * The start time of the operation.
+   * The start time of the operation in ms elapsed since `Performance.timeOrigin`.
+   * Provide if other than the operation start (by default the first `requiredToStart` event, or the time operation instance was created if none).
    */
   startTime?: number
 
   /**
-   * Indicates if only explicitly tracked tasks should be retained.
+   * Indicates if only explicitly tracked tasks should be retained in the operation.
    */
   keepOnlyExplicitlyTrackedTasks?: boolean
+
+  /**
+   * Callback that runs when the operation is finalized and the object is being disposed of.
+   * Note that when running in buffered mode, this will execute only after the buffer is flushed.
+   */
+  onDispose?: () => void
 }
 
 /**
@@ -198,4 +215,6 @@ export interface InstanceOptions {
   observe?: ObserveFn
   performance?: Partial<PerformanceApi>
   bufferDuration?: number
+  preProcessTask?: (task: PerformanceEntryLike) => PerformanceEntryLike
+  supportedEntryTypes?: readonly string[]
 }
