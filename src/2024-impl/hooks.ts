@@ -3,7 +3,7 @@
 import { useEffect, useRef, type DependencyList } from "react"
 import { OperationManager } from "./operation"
 import { useOnComponentUnmount } from "../ErrorBoundary"
-import type { OperationDefinition, PerformanceEntryLike } from "./types"
+import type { InputTask, Metadata, OperationDefinition, PerformanceEntryLike, Task } from "./types"
 
 const VISIBLE_STATE = {
   /** showing a pending state, like a spinner, a skeleton, or empty */
@@ -21,7 +21,7 @@ export const useCaptureRenderBeaconTask = ({
   componentName,
   metadata: meta,
   error,
-  state = VISIBLE_STATE.COMPLETE,
+  state: visibleState = VISIBLE_STATE.COMPLETE,
   operationManager,
 }: {
   componentName: string
@@ -36,27 +36,29 @@ export const useCaptureRenderBeaconTask = ({
 },
   restartWhenChanged: DependencyList,
 ) => {
-  const metadata = {state: error ? VISIBLE_STATE.ERROR : state, ...meta}
+  const metadata: Metadata = {visibleState: error ? VISIBLE_STATE.ERROR : visibleState, ...meta}
   const renderStartTask = ({
     entryType: error ? 'component-render-error' : 'component-render-start',
-    startTime: operationManager.performance.now(),
     name: componentName,
+    commonName: componentName,
+    startTime: operationManager.performance.now(),
     duration: 0,
     metadata,
-  })
+  } satisfies InputTask)
 
-  const nextStateObj = {state, startTime: renderStartTask.startTime};
+  const nextStateObj = {visibleState, startTime: renderStartTask.startTime};
   const lastStateObjRef = useRef(nextStateObj)
-  if (state !== lastStateObjRef.current.state) {
+  if (visibleState !== lastStateObjRef.current.visibleState) {
     const previousState = lastStateObjRef.current
     lastStateObjRef.current = nextStateObj
     operationManager.scheduleTaskProcessing({
       entryType: 'component-state-change',
-      startTime: previousState.startTime,
       name: componentName,
+      commonName: componentName,
+      startTime: previousState.startTime,
       duration: renderStartTask.startTime - previousState.startTime,
-      metadata: {...metadata, previousState: previousState.state},
-    })
+      metadata: {previousVisibleState: previousState.visibleState, ...metadata},
+    } satisfies InputTask)
   }
 
   // this will fire when external deps have changed:
@@ -84,24 +86,25 @@ export const useCaptureRenderBeaconTask = ({
 
     operationManager.scheduleTaskProcessing({
       entryType: 'component-render',
-      startTime: renderStartTask.startTime,
       name: componentName,
+      commonName: componentName,
+      startTime: renderStartTask.startTime,
       duration: operationManager.performance.now() - renderStartTask.startTime,
       metadata,
-    })
+    } satisfies InputTask)
   })
 
   // capture last component unmount and error boundary errors (if any):
   useOnComponentUnmount((errorBoundaryMetadata) => {
     // an unmount might be used to abort an ongoing operation capture
-    const unmountTask: PerformanceEntryLike = {
+    operationManager.scheduleTaskProcessing({
       entryType: 'component-unmount',
-      startTime: operationManager.performance.now(),
       name: componentName,
+      commonName: componentName,
+      startTime: operationManager.performance.now(),
       duration: 0,
       metadata: errorBoundaryMetadata ? {...metadata, ...errorBoundaryMetadata} : metadata,
-    }
-    operationManager.scheduleTaskProcessing(unmountTask)
+    } satisfies InputTask)
   }, [componentName])
 
 

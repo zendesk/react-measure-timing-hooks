@@ -1,3 +1,32 @@
+import type { ErrorMetadata } from "../ErrorBoundary"
+
+export type NativePerformanceEntryType =
+  | 'element'
+  | 'event'
+  | 'first-input'
+  | 'largest-contentful-paint'
+  | 'layout-shift'
+  | 'long-animation-frame'
+  | 'longtask'
+  | 'mark'
+  | 'measure'
+  | 'navigation'
+  | 'paint'
+  | 'resource'
+  // | 'taskattribution'
+  | 'visibility-state'
+
+export type InternalPerformanceEntryType =
+  | 'component-render-start'
+  | 'component-render-error'
+  | 'component-render'
+  | 'component-unmount'
+  // | 'component-tree-error'
+  | 'component-state-change'
+  | 'operation-start'
+  | 'operation'
+  | 'operation-interactive'
+
 /**
  * Criteria for matching performance entries.
  */
@@ -16,22 +45,14 @@ export interface EntryMatchCriteria {
    * The type of the performance entry to match.
    */
   type?:
-    | 'measure'
-    | 'mark'
-    | 'resource'
-    | 'component-render-start'
-    | 'component-render-error'
-    | 'component-render'
-    | 'component-unmount'
-    | 'component-tree-error'
-    | 'component-render-cancel'
-    | 'operation-start'
+    | NativePerformanceEntryType
+    | InternalPerformanceEntryType
 }
 
 /**
  * Function type for matching performance entries.
  */
-export type EntryMatchFunction = (entry: PerformanceEntryLike) => boolean
+export type EntryMatchFunction = (entry: Task) => boolean
 
 export interface CaptureInteractiveConfig {
   /**
@@ -139,59 +160,84 @@ export interface OperationDefinition {
   onDispose?: () => void
 }
 
+export interface TaskMetadata extends Partial<ErrorMetadata> {
+
+}
+
+export interface Metadata extends Partial<ErrorMetadata> {
+  resource?: {
+    type: 'fetch' | 'xhr' | string // TODO
+  }
+  resourceQuery?: Record<string, string | string[]>
+  [key: string]: unknown
+}
+
+export type TaskEntryType = NativePerformanceEntryType | InternalPerformanceEntryType
+
+/** when present on 'detail' will skip processing */
+export const SKIP_PROCESSING = Symbol.for('SKIP_PROCESSING')
+
+export interface InputTask extends Omit<PerformanceEntryLike, 'entryType'> {
+  readonly entryType: TaskEntryType
+  readonly operations?: Record<string, TaskOperationRelation>
+  metadata?: Metadata
+
+  /**
+   * Common name for the task that could be used for grouping similar tasks.
+   */
+  commonName?: string
+}
+
+export type Task = Required<Omit<InputTask, 'detail' | typeof SKIP_PROCESSING>>
+
 /**
  * Metadata for a task span.
  */
-export interface TaskSpanMetadata extends PerformanceEntryLike {
-  /**
-   * The kind of the task span.
-   */
-  kind: 'task'
-
+export interface TaskOperationRelation {
   /**
    * The ID of the operation the task belongs to.
    */
-  operationId: string
+  id: string
 
   /**
    * The name of the operation the task belongs to.
    */
-  operationName: string
+  name: string
 
   /**
    * Internal order of the task within the operation.
    */
+  // TODO is this necessary?
   internalOrder: number
 
   /**
-   * The name of the task.
-   */
-  name: string
-
-  /**
-   * Common name for the task.
-   */
-  commonName: string
-
-  /**
    * Offset from the start of the operation to the start of the task.
+   * aka operationStartOffset or operationStartToTaskStart
    */
-  operationStartOffset: number
+  operationRelativeStartTime: number
 
   /**
    * Relative end time of the task within the operation.
    */
   operationRelativeEndTime: number
-
-  /**
-   * Occurrence count of the task.
-   */
-  occurrence: number
 }
 
-export type PerformanceEntryLike = Omit<PerformanceEntry, 'toJSON'> & {
-  metadata?: Record<string, unknown>
+export interface PerformanceEntryLike {
+  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/duration) */
+  readonly duration: DOMHighResTimeStamp;
+  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/entryType) */
+  readonly entryType: string;
+  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/name) */
+  readonly name: string;
+  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/startTime) */
+  readonly startTime: DOMHighResTimeStamp;
+
+  readonly detail?: unknown
 }
+
+// export type PerformanceEntryLike = Omit<PerformanceEntry, 'toJSON'> & {
+//   metadata?: Record<string, unknown>
+// }
 
 export type ObserveFn = (
   onEntry: (entry: PerformanceEntryLike) => void,
@@ -210,11 +256,13 @@ export interface PerformanceApi {
   ) => void
 }
 
+export type TaskProcessor = (entry: InputTask | PerformanceEntryLike) => Task
+
 export interface InstanceOptions {
   defaultDebounceTime?: number
   observe?: ObserveFn
   performance?: Partial<PerformanceApi>
   bufferDuration?: number
-  preProcessTask?: (task: PerformanceEntryLike) => PerformanceEntryLike
+  preprocessTask?: TaskProcessor
   supportedEntryTypes?: readonly string[]
 }

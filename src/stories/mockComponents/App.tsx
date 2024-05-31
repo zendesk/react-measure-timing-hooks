@@ -39,7 +39,6 @@ export const App: React.FC = () => {
       track: [
         {
           match: { type: 'component-unmount', metadata: { ticketId: id } },
-          // todo: make sure when interrupting the debounce doesn't happen
           interruptWhenSeen: true,
         },
         {

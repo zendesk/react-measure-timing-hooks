@@ -38,7 +38,12 @@ export function sanitizeUrlForTracing(url: string): {
   // Remove URL scheme
   // const urlWithoutScheme = commonUrl.replace(/(^\w+:|^)\/\//, '');
   // Replace numeric parts of the ID with $ID
-  const sanitizedUrl = commonUrl.replace(/\/\d+/g, '/$ID')
+  let sanitizedUrl = commonUrl.replace(/\/\d+/g, '/$id')
+  // replace UUIDs as well:
+  sanitizedUrl = sanitizedUrl.replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g,
+    '$uuid',
+  )
 
   return {
     commonUrl: sanitizedUrl,

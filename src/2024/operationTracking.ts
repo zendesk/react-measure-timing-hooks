@@ -47,6 +47,7 @@ function extractEntryMetadata(
         typeof metadata?.resource === 'object' &&
         'type' in metadata.resource &&
         metadata.resource?.type
+      // this is better handled in the operation displaying code
       if (resourceType !== 'xhr' && resourceType !== 'fetch') {
         kind = 'asset'
       }
@@ -163,9 +164,9 @@ const getPerformanceEntryObservable = <Type extends PerformanceEntryType>(
 const performanceEntries$ = getPerformanceEntryObservable([
   'element',
   'event',
+  'visibility-state',
   'mark',
   'measure',
-  'visibility-state',
   // get these from RUM and modify them to include the operation metadata:
   // 'longtask',
   // 'resource',

@@ -8,7 +8,7 @@ export const operationManager = new OperationManager({
   //     return performance.measure(name, options)
   //   },
   // },
-  preProcessTask(task) {
+  preprocessTask(task) {
     console.log('task', task);
     return task;
   },

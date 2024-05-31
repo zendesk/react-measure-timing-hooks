@@ -1,6 +1,6 @@
 /* eslint-disable jest/no-conditional-in-test */
 import { OperationManager } from './operation'
-import type { OperationDefinition, PerformanceEntryLike } from './types'
+import type { OperationDefinition, PerformanceEntryLike, Task } from './types'
 
 describe('operation tracking', () => {
   // returns mocked time:
@@ -21,7 +21,7 @@ describe('operation tracking', () => {
     pushEntry = onEntry
     return disconnectMock
   })
-  const pushEntries = (entries: PerformanceEntryLike[]) => {
+  const pushEntries = (entries: (PerformanceEntryLike | Task)[]) => {
     entries.forEach(pushEntry)
   }
   beforeEach(() => {
@@ -380,7 +380,7 @@ describe('operation tracking', () => {
             duration: renderDuration,
             detail: expect.objectContaining({
               state: 'waiting-for-interactive',
-              tasks: expect.objectContaining({ length: 4 }),
+              tasks: expect.objectContaining({ length: 2 }),
             }),
           },
         )
@@ -488,7 +488,7 @@ describe('operation tracking', () => {
             detail: expect.objectContaining({
               state: 'waiting-for-interactive',
               tasks: expect.objectContaining({
-                length: 2 + longTasksCount - 1,
+                length: 2,
               }),
             }),
           },
@@ -726,6 +726,150 @@ describe('operation tracking', () => {
             id: operationId2,
             state: 'completed',
             tasks: expect.objectContaining({ length: 4 }),
+          }),
+        },
+      )
+    })
+
+    it('correctly captures the entire operation when intermediate entries are pushed out-of-order', () => {
+      const id = '12345'
+      const debounceBy = 1000
+      const operationDefinition: OperationDefinition = {
+        operationName: 'ticket-activation',
+        track: [
+          {
+            match: { name: 'ticket-start' },
+            requiredToStart: true,
+          },
+          {
+            match: { metadata: { ticketId: id } },
+            debounceEndWhenSeen: { debounceBy },
+          },
+          {
+            match: { name: 'ticket-complete' },
+            requiredToEnd: true,
+          },
+        ],
+        captureDone: true,
+      }
+
+      const operationId = PerformanceManager.startOperation(operationDefinition)
+
+      const entryTimes = [
+        { time: 1000, state: 'start' },
+        { time: 2000, state: 'processing' },
+        { time: 2500, state: 'middle' },
+        { time: 1500, state: 'out-of-order' },
+        { time: 3000, state: 'complete' },
+      ] as const
+
+      // Simulate entries being pushed in out-of-order
+      for (const { time, state } of entryTimes) {
+        pushEntries([
+          {
+            entryType: 'mark',
+            name: `ticket-${state}`,
+            startTime: time,
+            duration: 0,
+            metadata: { ticketId: id },
+          },
+        ])
+        jest.advanceTimersByTime(Math.max(0, time - getTimeNow()))
+      }
+
+      jest.advanceTimersByTime(debounceBy + 1)
+
+      if (observerType === 'buffered') {
+        // buffered observer will only trigger the end once the *next* task is processed
+        pushEntries([
+          {
+            entryType: 'mark',
+            name: 'dummy',
+            startTime: getTimeNow(),
+            duration: 0,
+          },
+        ])
+        // fast forward to the end of the buffer
+        jest.advanceTimersByTime(bufferDuration + 1 - getTimeNow())
+      }
+
+      expect(performanceMock.measure).toHaveBeenCalledWith(
+        'ticket-activation',
+        {
+          start: entryTimes[0].time,
+          duration: entryTimes[4].time - entryTimes[0].time,
+          detail: expect.objectContaining({
+            state: 'completed',
+            tasks: expect.objectContaining({ length: entryTimes.length }),
+          }),
+        },
+      )
+    })
+
+    if (observerType === 'unbuffered') return
+
+    it('correctly captures the entire operation when start/end entries are pushed out-of-order', () => {
+      const operationDefinition: OperationDefinition = {
+        operationName: 'out-of-order-operation',
+        track: [
+          {
+            match: { name: 'start-mark', type: 'mark' },
+            requiredToStart: true,
+            debounceEndWhenSeen: false,
+          },
+          {
+            match: { name: 'end-mark', type: 'mark' },
+            requiredToEnd: true,
+            debounceEndWhenSeen: false,
+          },
+        ],
+        captureDone: true,
+      }
+
+      const operationId = PerformanceManager.startOperation(operationDefinition)
+
+      const startTime = 1000
+      const endTime = 2000
+
+      // Simulate end mark first
+      pushEntries([
+        {
+          entryType: 'mark',
+          name: 'end-mark',
+          startTime: endTime,
+          duration: 0,
+        },
+      ])
+
+      // Advance time to start mark
+      jest.advanceTimersByTime(startTime)
+
+      // Simulate start mark after end mark
+      pushEntries([
+        {
+          entryType: 'mark',
+          name: 'start-mark',
+          startTime: startTime,
+          duration: 0,
+        },
+      ])
+
+      // Advance time to process the measures
+      jest.advanceTimersByTime(1)
+
+      if (observerType === 'buffered') {
+        // fast forward to the end of the buffer
+        jest.advanceTimersByTime(bufferDuration + 1 - getTimeNow())
+      }
+
+      expect(performanceMock.measure).toHaveBeenCalledWith(
+        'out-of-order-operation',
+        {
+          start: startTime,
+          duration: endTime - startTime,
+          detail: expect.objectContaining({
+            state: 'completed',
+            tasks: expect.objectContaining({ length: 2 }),
           }),
         },
       )

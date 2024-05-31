@@ -2,24 +2,228 @@
 /* eslint-disable no-magic-numbers */
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable max-classes-per-file */
-import type {
-  CaptureInteractiveConfig,
-  EntryMatchCriteria,
-  EntryMatchFunction,
-  InstanceOptions,
-  ObserveFn,
-  OperationDefinition,
-  PerformanceApi,
-  PerformanceEntryLike,
-  TaskSpanMetadata,
+import { sanitizeUrlForTracing } from '../2024/sanitizeUrlForTracing'
+import {
+  SKIP_PROCESSING,
+  type CaptureInteractiveConfig,
+  type EntryMatchCriteria,
+  type EntryMatchFunction,
+  type InputTask,
+  type InstanceOptions,
+  type Metadata,
+  type ObserveFn,
+  type OperationDefinition,
+  type PerformanceApi,
+  type PerformanceEntryLike,
+  type Task,
+  type TaskEntryType,
+  type TaskOperationRelation,
+  type TaskProcessor,
 } from './types'
 
-const DEFAULT_CAPTURE_INTERACTIVE: Required<CaptureInteractiveConfig> = { timeout: 5_000, debounceLongTasksBy: 500, skipDebounceForLongTasksShorterThan: 0 }
-const DEFAULT_GLOBAL_OPERATION_TIMEOUT = 10_000
-const OPERATION_START_ENTRY_TYPE = 'operation-start'
-const OPERATION_ENTRY_TYPE = 'operation'
-const DEFAULT_DEBOUNCE_TIME = 1_000
-const identity = <T>(value: T): T => value
+export const DEFAULT_CAPTURE_INTERACTIVE: Required<CaptureInteractiveConfig> = { timeout: 5_000, debounceLongTasksBy: 500, skipDebounceForLongTasksShorterThan: 0 }
+export const DEFAULT_GLOBAL_OPERATION_TIMEOUT = 10_000
+export const OPERATION_START_ENTRY_TYPE = 'operation-start'
+export const OPERATION_ENTRY_TYPE = 'operation'
+export const OPERATION_INTERACTIVE_ENTRY_TYPE = 'operation-interactive'
+export const DEFAULT_DEBOUNCE_TIME = 1_000
+export const FINAL_STATES: OperationState[] = ['completed', 'interrupted', 'timeout', 'interactive-timeout'];
+
+
+function extractEntryMetadata(
+  entry: AnyPerformanceEntry | PerformanceEntryLike,
+  metadata?: Record<string, unknown>,
+): ProcessedEntry {
+  /** a short name used for grouping entries into a single lane */
+  let commonName: string
+  /** a fuller descriptive name */
+  let fullName = entry.name
+  let query: Record<string, string | string[]> | undefined
+  let kind: TaskSpanKind = entry.entryType as TaskSpanKind
+  const extraMetadata: Record<string, unknown> = {}
+  let occurrenceCountPrefix = ''
+
+  switch (entry.entryType) {
+    case 'resource': {
+      ;({ commonUrl: commonName, query } = sanitizeUrlForTracing(entry.name))
+      const resourceTiming = entry as PerformanceResourceTiming
+      extraMetadata.initiatorType = resourceTiming.initiatorType
+      extraMetadata.transferSize = resourceTiming.transferSize
+      extraMetadata.encodedBodySize = resourceTiming.encodedBodySize
+      extraMetadata.query = query
+      const resourceType =
+        metadata?.resource &&
+        typeof metadata?.resource === 'object' &&
+        'type' in metadata.resource &&
+        metadata.resource?.type
+      if (resourceType !== 'xhr' && resourceType !== 'fetch') {
+        kind = 'asset'
+      }
+      if (resourceTiming.initiatorType === 'iframe') {
+        kind = 'iframe'
+      }
+      break
+    }
+    case 'mark':
+    case 'measure': {
+      fullName = entry.name.replace('useTiming: ', '')
+      commonName = fullName.replaceAll(/\b\/?\d+\b/g, '')
+      if (entry.name.endsWith('/render')) {
+        kind = 'render'
+        const parts = commonName.split('/')
+        commonName = parts.slice(-2)[0]!
+        const metricId = parts.slice(0, -2).join('/')
+        extraMetadata.metricId = metricId
+        occurrenceCountPrefix = `${metricId}/`
+      }
+      if (entry.name.endsWith('/tti') || entry.name.endsWith('/ttr')) {
+        const parts = commonName.split('/')
+        const metricId = parts.slice(0, -1).join('/')
+        commonName = metricId
+        extraMetadata.metricId = metricId
+      }
+      if (entry.entryType === 'measure' && entry.name.includes('-till-')) {
+        const parts = commonName.split('/')
+        const stageChange = parts.at(-1)!
+        const componentName = parts.at(-2)!
+        const metricId = parts.slice(0, -2).join('/')
+        extraMetadata.metricId = metricId
+        extraMetadata.stageChange = stageChange
+        extraMetadata.componentName = componentName
+        // merge all stage changes under the same commonName as tti and ttr
+        commonName = metricId
+        fullName = `${metricId}/${stageChange}`
+        occurrenceCountPrefix = `${stageChange}/`
+      }
+      if (entry.name.startsWith('graphql/')) {
+        kind = 'resource'
+      }
+      break
+    }
+    default: {
+      commonName = `${entry.entryType}${
+        entry.name &&
+        entry.name !== 'unknown' &&
+        entry.name.length > 0 &&
+        entry.entryType !== entry.name
+          ? `/${entry.name}`
+          : ''
+      }`
+      fullName = commonName
+      kind = entry.entryType as TaskSpanKind
+      if ('toJSON' in entry) {
+        Object.assign(extraMetadata, entry.toJSON())
+      }
+    }
+  }
+
+  if (typeof metadata?.commonName === 'string') {
+    // eslint-disable-next-line prefer-destructuring
+    commonName = metadata.commonName
+  }
+
+  return { commonName, fullName, kind, extraMetadata, occurrenceCountPrefix }
+}
+
+
+export const defaultTaskProcessor: TaskProcessor = (entry) => {
+  const detail = (typeof entry.detail === 'object' && entry.detail)
+  const metadata = 'metadata' in entry && typeof entry.metadata === 'object' ? detail ? { ...detail, ...entry.metadata } : entry.metadata : {};
+  const operations = 'operations' in entry && typeof entry.operations === 'object' ? entry.operations : {};
+
+  // TODO: add commonName processing
+
+  let commonName = entry.name
+  if (entry.entryType === 'resource') {
+    const { commonUrl, query } = sanitizeUrlForTracing(entry.name)
+    commonName = commonUrl
+    metadata.resourceQuery = query
+  } else if (entry.entryType !== 'mark' && entry.entryType !== 'measure') {
+    commonName = `${entry.entryType}${
+      entry.name &&
+      entry.name !== 'unknown' &&
+      entry.name.length > 0 &&
+      entry.entryType !== entry.name
+        ? `/${entry.name}`
+        : ''
+    }`
+  }
+
+  return Object.assign(entry, {
+    metadata,
+    operations,
+    commonName: entry.name,
+    entryType: entry.entryType as TaskEntryType,
+  })
+}
+
+export const lotusTaskProcessor: TaskProcessor = (entry) => {
+  const task = defaultTaskProcessor(entry)
+
+  let fullName = task.name
+  let commonName = task.commonName
+  let kind: string = task.entryType
+  let occurrenceCountPrefix = ''
+
+  if (entry.entryType === 'resource') {
+    const metadata = task.metadata
+    const resourceType =
+      metadata?.resource &&
+      typeof metadata?.resource === 'object' &&
+      'type' in metadata.resource &&
+      metadata.resource?.type
+    if (resourceType !== 'xhr' && resourceType !== 'fetch') {
+      kind = 'asset'
+    }
+    const resourceTiming = entry as PerformanceResourceTiming
+    if (resourceTiming.initiatorType === 'iframe') {
+      kind = 'iframe'
+    }
+  }
+  if (task.entryType === 'mark' || task.entryType === 'measure') {
+    // backwards compatibility with useTiming
+    fullName = entry.name.replace('useTiming: ', '')
+    commonName = fullName.replaceAll(/\b\/?\d+\b/g, '')
+    if (entry.name.endsWith('/render')) {
+      kind = 'render'
+      const parts = commonName.split('/')
+      commonName = parts.slice(-2)[0]!
+      const metricId = parts.slice(0, -2).join('/')
+      task.metadata.metricId = metricId
+      occurrenceCountPrefix = `${metricId}/`
+    }
+    if (entry.name.endsWith('/tti') || entry.name.endsWith('/ttr')) {
+      const parts = commonName.split('/')
+      const metricId = parts.slice(0, -1).join('/')
+      commonName = metricId
+      task.metadata.metricId = metricId
+    }
+    if (entry.entryType === 'measure' && entry.name.includes('-till-')) {
+      const parts = commonName.split('/')
+      const stageChange = parts.at(-1)!
+      const componentName = parts.at(-2)!
+      const metricId = parts.slice(0, -2).join('/')
+      task.metadata.metricId = metricId
+      task.metadata.stageChange = stageChange
+      task.metadata.componentName = componentName
+      // merge all stage changes under the same commonName as tti and ttr
+      commonName = metricId
+      fullName = `${metricId}/${stageChange}`
+      occurrenceCountPrefix = `${stageChange}/`
+    }
+    if (entry.name.startsWith('graphql/')) {
+      kind = 'resource'
+    }
+  }
+
+  task.metadata.commonName = commonName
+  task.metadata.kind = kind
+  task.metadata.name = fullName
+  // this should happen in RUM
+  // if ('toJSON' in entry) {
+  //   Object.assign(extraMetadata, entry.toJSON())
+  // }
+}
 
 type TimeoutRef = ReturnType<typeof setTimeout>
 
@@ -73,7 +277,7 @@ class Operation implements PerformanceEntryLike {
    * Metadata for the operation.
    */
   metadata: Record<string, unknown>
-  readonly tasks: TaskSpanMetadata[] = []
+  readonly tasks: Task[] = []
 
   private definition: Omit<OperationDefinition, 'captureInteractive'> & {
     captureInteractive: Required<CaptureInteractiveConfig> | false
@@ -159,34 +363,33 @@ class Operation implements PerformanceEntryLike {
     }
   }
 
+  get isInFinalState() {
+    return FINAL_STATES.includes(this.state)
+  }
+
   /**
    * Processes a Performance Entry task.
    * @param task - The performance entry task.
+   * @returns the task meta if it was processed, false otherwise.
    */
-  processTask(task: PerformanceEntryLike): void {
-    if (this.operationCreationTime > task.startTime) {
-      // ignore tasks that started before the operation was created
-      // this can happen when processing buffered entries
-      // and the operation was created after a new buffer was started
-      return
-    }
-
+  processTask(task: Task): Task | false {
     if (this.buffered) {
       const taskEndTime = task.startTime + task.duration
       this.executeBufferedTimeoutsDue(taskEndTime)
     }
 
-    if (
-      this.state === 'completed' ||
-      this.state === 'interrupted' ||
-      this.state === 'timeout' ||
-      this.state === 'interactive-timeout'
-    ) {
-      // ignore tasks after the operation has completed
-      return
+    if (task.startTime < this.operationCreationTime) {
+      // ignore tasks that started before the operation was created
+      // this can happen when processing buffered entries
+      // and the operation was created after a new buffer was started
+      return false
     }
 
-    // TODO: add buffering in order to support out-of-order entries
+    if (this.isInFinalState) {
+      // ignore tasks after the operation has completed
+      return false
+    }
+
     if (
       this.definition.interruptSelf &&
       (this.state === 'started' || this.state === 'waiting-for-interactive') &&
@@ -194,10 +397,21 @@ class Operation implements PerformanceEntryLike {
       task.name === this.name
     ) {
       this.finalizeOperation('interrupted', task.startTime + task.duration)
-      return
+      return false
     }
 
-    let relevant = false
+
+    if (
+      (this.state === 'started' || this.state === 'waiting-for-interactive') &&
+      task.entryType === OPERATION_ENTRY_TYPE &&
+      task.name === this.name
+    ) {
+      // ignore task of self
+      // TODO: maybe keep this after all?
+      return false
+    }
+
+    let tracked = false
     let interrupted = false
     /**
      * the maximum time any given tracker has allotted to wait
@@ -217,7 +431,7 @@ class Operation implements PerformanceEntryLike {
       )
 
       if (criteriaMatched) {
-        relevant = true
+        tracked = true
         if (trackerDefinition.interruptWhenSeen) {
           interrupted = true
         }
@@ -244,7 +458,7 @@ class Operation implements PerformanceEntryLike {
     if (this.state === 'initial' && this.requiredToStartTrackers.size > 0) {
       // we haven't started yet, and we're still waiting for some required tasks
       // end processing here
-      return
+      return false
     }
 
     const isOperationStartingTask =
@@ -252,38 +466,34 @@ class Operation implements PerformanceEntryLike {
 
     const startTime = isOperationStartingTask ? task.startTime : this.startTime
 
-    const taskMetadata: TaskSpanMetadata = {
-      ...task,
-      duration: task.duration,
-      entryType: task.entryType,
-      startTime: task.startTime,
-      detail: task.detail,
-      // kind: 'task',
-      // TODO: kind
-      kind: 'task',
-      operationId: this.id,
-      operationName: this.name,
-      internalOrder: this.tasks.length + 1,
-      name: task.name,
-      commonName: task.name,
-      operationStartOffset: task.startTime - startTime,
-      operationRelativeEndTime: task.startTime - startTime + task.duration,
-      // TODO: calculate occurrence during report generation, not here:
-      occurrence: 1, // This can be updated as needed
-    }
+    // const taskMetadata: TaskOperationRelation = {
+    //   ...task,
+    //   duration: task.duration,
+    //   entryType: task.entryType,
+    //   startTime: task.startTime,
+    //   detail: task.detail,
+    //   id: this.id,
+    //   name: this.name,
+    //   internalOrder: this.tasks.length,
+    //   name: task.name,
+    //   commonName: task.name,
+    //   operationRelativeStartTime: task.startTime - startTime,
+    //   operationRelativeEndTime: task.startTime - startTime + task.duration,
+    //   // TODO: calculate occurrence count during report generation
+    // }
 
     if (this.definition.keepOnlyExplicitlyTrackedTasks) {
-      if (relevant) {
-        this.tasks.push(taskMetadata)
+      if (tracked) {
+        this.tasks.push(task)
       }
     } else {
-      this.tasks.push(taskMetadata)
+      this.tasks.push(task)
     }
 
     if (isOperationStartingTask) {
       this.markAsStarted(startTime)
       // no more processing
-      return
+      return task
     }
 
     if (
@@ -291,7 +501,7 @@ class Operation implements PerformanceEntryLike {
       (this.state === 'started' || this.state === 'waiting-for-interactive')
     ) {
       this.finalizeOperation('interrupted', task.startTime + task.duration)
-      return
+      return task
     }
 
     if (
@@ -299,17 +509,19 @@ class Operation implements PerformanceEntryLike {
       task.entryType !== 'longtask'
     ) {
       // only long tasks are relevant for interactive state tracking
-      return
+      return task
     }
 
     if (this.state === 'started' && this.requiredToEndTrackers.size === 0) {
       this.maybeFinalizeLater(debounceBy, task.startTime + task.duration)
-      return
+      return task
     }
 
     if (this.state === 'waiting-for-interactive') {
       this.handleInteractiveTracking(task)
     }
+
+    return task
   }
 
   /**
@@ -580,27 +792,41 @@ class Operation implements PerformanceEntryLike {
    * Emits a 'measure' event for the operation.
    */
   private emitMeasureEvent(): void {
+    // TODO: don't call measure, but a custom api function here instead for greater flexibility
+    // also make sure to by default add detail[SKIP_PROCESSING] symbol to prevent double-processing
+    // and emit internally to the manager
     this.manager.performance.measure(this.name, {
       start: this.startTime,
       duration: this.duration,
       detail: {
+        [SKIP_PROCESSING]: true,
         ...this.metadata,
         id: this.id,
         name: this.name,
-        tasks: this.tasks,
+        tasks: this.isInFinalState ? this.tasks : [...this.tasks],
         state: this.state,
       },
+    })
+    // process the operation as a task itself:
+    this.manager.scheduleTaskProcessing({
+      entryType: OPERATION_ENTRY_TYPE,
+      name: this.name,
+      commonName: this.name,
+      startTime: this.startTime,
+      duration: this.duration,
+      metadata: this.metadata,
     })
   }
 
   /**
    * Emits an 'interactive' measure event for the operation.
    */
-  private emitInteractiveMeasureEvent(endTime: number): void {
+  private emitInteractiveMeasureEvent(interactiveTime: number): void {
     this.manager.performance.measure(`${this.name}-interactive`, {
       start: this.startTime,
-      duration: endTime - this.startTime,
+      duration: interactiveTime - this.startTime,
       detail: {
+        [SKIP_PROCESSING]: true,
         ...this.metadata,
         id: this.id,
         name: this.name,
@@ -608,6 +834,15 @@ class Operation implements PerformanceEntryLike {
         state: this.state,
         interactive: true,
       },
+    })
+    // process the operation as a task itself:
+    this.manager.scheduleTaskProcessing({
+      entryType: OPERATION_INTERACTIVE_ENTRY_TYPE,
+      name: this.name,
+      commonName: this.name,
+      startTime: this.startTime,
+      duration: interactiveTime - this.startTime,
+      metadata: this.metadata,
     })
   }
 
@@ -619,7 +854,7 @@ class Operation implements PerformanceEntryLike {
    */
   private matchesCriteria(
     match: EntryMatchCriteria | EntryMatchFunction,
-    task: PerformanceEntryLike,
+    task: Task,
   ): boolean {
     if (typeof match === 'function') {
       return match(task)
@@ -658,8 +893,8 @@ export class OperationManager {
   private bufferDuration?: number
   private bufferTimeoutId?: TimeoutRef
   private bufferFlushUntil = 0
-  private taskBuffer: PerformanceEntryLike[] = []
-  private preProcessTask: (task: PerformanceEntryLike) => PerformanceEntryLike
+  private taskBuffer: Task[] = []
+  private preprocessTask: (task: PerformanceEntryLike | InputTask) => Task
   supportedEntryTypes: readonly string[]
 
   /**
@@ -678,7 +913,7 @@ export class OperationManager {
     },
     performance: { measure = performance.measure.bind(performance), now = performance.now.bind(performance) } = {},
     bufferDuration,
-    preProcessTask = identity,
+    preprocessTask = defaultTaskProcessor,
     supportedEntryTypes = PerformanceObserver.supportedEntryTypes,
   }: InstanceOptions = {}) {
     this.operations = new Map()
@@ -686,7 +921,7 @@ export class OperationManager {
     this.performance = { measure, now }
     this.observe = observe
     this.bufferDuration = bufferDuration
-    this.preProcessTask = preProcessTask
+    this.preprocessTask = preprocessTask
     this.supportedEntryTypes = supportedEntryTypes
   }
 
@@ -708,14 +943,6 @@ export class OperationManager {
     }
 
     const finalizationFn = () => {
-      // process the operation as a task itself
-      this.scheduleTaskProcessing({
-        startTime: operation.startTime,
-        duration: operation.duration,
-        entryType: 'operation',
-        name: operation.name,
-        metadata: {...operation.metadata, tasks: operation.tasks, state: operation.state},
-      })
       this.operations.delete(operation.id)
       this.ensureObserver()
       operationDefinition.onDispose?.()
@@ -757,22 +984,33 @@ export class OperationManager {
    * Processes a performance entry task.
    * @param entry - The performance entry task to track.
    */
-  scheduleTaskProcessing(entry: PerformanceEntryLike): void {
-    const task = this.preProcessTask(entry)
+  scheduleTaskProcessing(entry: PerformanceEntryLike | InputTask): undefined | readonly Task[] {
+    if (typeof entry.detail === 'object' && entry.detail && SKIP_PROCESSING in entry.detail) {
+      return undefined;
+    }
+
+    const task = this.preprocessTask(entry)
 
     if (this.bufferDuration && !this.isFlushingBuffer) {
       this.taskBuffer.push(task)
       this.scheduleBufferFlushIfNeeded()
+      // asynchronous processing
+      return undefined
     } else {
       // process immediately
-      this.processTask(task)
+      return this.processTask(task)
     }
   }
 
-  private processTask(task: PerformanceEntryLike): void {
-    this.operations.forEach((operation) => {
-      operation.processTask(task)
-    })
+  private processTask(task: Task): readonly Task[] {
+    const processedTasks: Task[] = []
+    for (const operation of this.operations.values()) {
+      const operationTask = operation.processTask(task)
+      if (operationTask) {
+        processedTasks.push(operationTask)
+      }
+    }
+    return processedTasks
   }
 
   private isFlushingBuffer = false
@@ -788,7 +1026,7 @@ export class OperationManager {
       (a, b) => a.startTime + a.duration - (b.startTime + b.duration),
     )
 
-    const remainingBuffer: PerformanceEntryLike[] = []
+    const remainingBuffer: Task[] = []
 
     for (const task of this.taskBuffer) {
       const taskEndTime = task.startTime + task.duration

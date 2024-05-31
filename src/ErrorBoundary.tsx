@@ -7,9 +7,9 @@
 
 import { Component, useEffect, useRef, type DependencyList } from 'react'
 
-interface ErrorMetadata {
+export interface ErrorMetadata {
   error: Error
-  info: React.ErrorInfo
+  errorInfo: React.ErrorInfo
 }
 
 let errorMetadataCurrentlyBeingThrown: undefined | ErrorMetadata = undefined
@@ -41,13 +41,13 @@ export class ReactMeasureErrorBoundary<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   SS = any,
 > extends Component<P, S, SS> {
-  override componentDidCatch(error: Error, info: React.ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     // since 'componentDidCatch' runs synchronously right before useEffect clean-up functions
     // belonging to the component that has thrown,
     // that means this metadata is available within that synchronous frame to the component
     // this should work even in concurrent mode;
     // at least for the purpose of reporting metadata, or metrics such as counts, this is good enough
-    errorMetadataCurrentlyBeingThrown = { error, info }
+    errorMetadataCurrentlyBeingThrown = { error, errorInfo }
     setTimeout(() => {
       // we want this data to be available synchronously - only in the same JS frame
       // so we clean-up immediately after:
