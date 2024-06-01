@@ -2,7 +2,17 @@
 /* eslint-disable no-magic-numbers */
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable max-classes-per-file */
-import { BLOCKING_TASK_ENTRY_TYPES, FINAL_STATES, DEFAULT_CAPTURE_INTERACTIVE, OPERATION_START_ENTRY_TYPE, OPERATION_ENTRY_TYPE, DEFAULT_GLOBAL_OPERATION_TIMEOUT, OPERATION_INTERACTIVE_ENTRY_TYPE, DEFAULT_DEBOUNCE_TIME, DEFAULT_OBSERVED_ENTRY_TYPES } from './constants'
+import {
+  BLOCKING_TASK_ENTRY_TYPES,
+  FINAL_STATES,
+  DEFAULT_CAPTURE_INTERACTIVE,
+  OPERATION_START_ENTRY_TYPE,
+  OPERATION_ENTRY_TYPE,
+  DEFAULT_GLOBAL_OPERATION_TIMEOUT,
+  OPERATION_INTERACTIVE_ENTRY_TYPE,
+  DEFAULT_DEBOUNCE_TIME,
+  DEFAULT_OBSERVED_ENTRY_TYPES,
+} from './constants'
 import { OperationState, FinalizationReason } from './types'
 import {
   type CaptureInteractiveConfig,
@@ -17,7 +27,7 @@ import {
   type Event,
   type EventStatus,
 } from './types'
-import { SKIP_PROCESSING } from "./constants"
+import { SKIP_PROCESSING } from './constants'
 import { defaultEventProcessor } from './defaultEventProcessor'
 
 /** returns the best supported blocking task type or undefined if none */
@@ -74,10 +84,7 @@ export class Operation implements PerformanceEntryLike {
 
   private readonly events: Event[] = []
   public getEvents() {
-    return (this.isInFinalState
-      ? this.events
-      : [...this.events]
-    )
+    return this.isInFinalState ? this.events : [...this.events]
   }
   public get eventCount() {
     return this.events.length
@@ -100,7 +107,11 @@ export class Operation implements PerformanceEntryLike {
     return FINAL_STATES.includes(this.state)
   }
   public get status(): EventStatus {
-    return this.state === 'timeout' || this.state === 'interactive-timeout' || this.state === 'interrupted' ? 'aborted' : 'ok'
+    return this.state === 'timeout' ||
+      this.state === 'interactive-timeout' ||
+      this.state === 'interrupted'
+      ? 'aborted'
+      : 'ok'
   }
 
   private lastDebounceDeadline: number
@@ -135,16 +146,26 @@ export class Operation implements PerformanceEntryLike {
     this.duration = 0
     this.durationTillInteractive = 0
     this.metadata = definition.metadata ?? {}
-    const captureInteractive = definition.waitUntilInteractive && bestBlockingTaskType(manager.supportedEntryTypes)
-      ? typeof definition.waitUntilInteractive === 'object'
-        ? { ...DEFAULT_CAPTURE_INTERACTIVE, ...definition.waitUntilInteractive }
-        : DEFAULT_CAPTURE_INTERACTIVE
-      : false
+    const captureInteractive =
+      definition.waitUntilInteractive &&
+      bestBlockingTaskType(manager.supportedEntryTypes)
+        ? typeof definition.waitUntilInteractive === 'object'
+          ? {
+              ...DEFAULT_CAPTURE_INTERACTIVE,
+              ...definition.waitUntilInteractive,
+            }
+          : DEFAULT_CAPTURE_INTERACTIVE
+        : false
 
-    this.definition = { ...definition, captureInteractive, track: definition.track.map((track) => ({
-      ...track,
-      debounceEndWhenSeen: track.debounceEndWhenSeen ?? !track.interruptWhenSeen,
-    }))}
+    this.definition = {
+      ...definition,
+      captureInteractive,
+      track: definition.track.map((track) => ({
+        ...track,
+        debounceEndWhenSeen:
+          track.debounceEndWhenSeen ?? !track.interruptWhenSeen,
+      })),
+    }
     this.requiredToStartTrackers = new Set()
     this.requiredToEndTrackers = new Set()
     this.state = 'initial'
@@ -201,7 +222,6 @@ export class Operation implements PerformanceEntryLike {
       this.finalizeOperation('interrupted', event.startTime + event.duration)
       return false
     }
-
 
     if (
       (this.state === 'started' || this.state === 'waiting-for-interactive') &&
@@ -266,7 +286,9 @@ export class Operation implements PerformanceEntryLike {
     const isOperationStartingEvent =
       this.state === 'initial' && this.requiredToStartTrackers.size === 0
 
-    const startTime = isOperationStartingEvent ? event.startTime : this.startTime
+    const startTime = isOperationStartingEvent
+      ? event.startTime
+      : this.startTime
     // TODO: calculate occurrence count during report generation
 
     if (this.definition.keepOnlyExplicitlyTrackedEvents) {
@@ -569,12 +591,16 @@ export class Operation implements PerformanceEntryLike {
       !BLOCKING_TASK_ENTRY_TYPES.includes(event.entryType) ||
       this.state !== 'waiting-for-interactive' ||
       !this.definition.captureInteractive ||
-      event.duration < this.definition.captureInteractive.skipDebounceForLongEventsShorterThan
+      event.duration <
+        this.definition.captureInteractive.skipDebounceForLongEventsShorterThan
     ) {
       return
     }
     const { debounceLongTasksBy } = this.definition.captureInteractive
-    this.maybeFinalizeLater(debounceLongTasksBy, event.startTime + event.duration)
+    this.maybeFinalizeLater(
+      debounceLongTasksBy,
+      event.startTime + event.duration,
+    )
   }
 
   private onTracked(): void {
@@ -589,7 +615,7 @@ export class Operation implements PerformanceEntryLike {
         commonName: this.name,
         kind: OPERATION_ENTRY_TYPE,
         status: this.status,
-      }
+      },
     })
 
     this.definition.onTracked?.(this)
@@ -608,7 +634,7 @@ export class Operation implements PerformanceEntryLike {
           commonName: this.name,
           kind: OPERATION_INTERACTIVE_ENTRY_TYPE,
           status: this.status,
-        }
+        },
       })
     }
     this.definition.onEnd?.(this)
@@ -633,8 +659,8 @@ export class Operation implements PerformanceEntryLike {
       (typeof name === 'string'
         ? event.name === name
         : typeof name === 'function'
-        ? name(event.name)
-        : name.test(event.name))
+          ? name(event.name)
+          : name.test(event.name))
     const typeMatches = !type || event.entryType === type
     const metadataMatches =
       !metadata ||
@@ -679,7 +705,10 @@ export class OperationManager {
     defaultDebounceTime = DEFAULT_DEBOUNCE_TIME,
     preprocessEvent = defaultEventProcessor,
     observe,
-    performance: { measure = performance.measure.bind(performance), now = performance.now.bind(performance) } = {},
+    performance: {
+      measure = performance.measure.bind(performance),
+      now = performance.now.bind(performance),
+    } = {},
     bufferDuration,
     supportedEntryTypes = PerformanceObserver.supportedEntryTypes,
   }: InstanceOptions = {}) {
@@ -690,15 +719,19 @@ export class OperationManager {
     this.bestBlockingTaskType = bestBlockingTaskType(supportedEntryTypes)
     this.bufferDuration = bufferDuration
     this.preprocessEvent = preprocessEvent
-    const entryTypes = this.bestBlockingTaskType ? [...DEFAULT_OBSERVED_ENTRY_TYPES, this.bestBlockingTaskType] : DEFAULT_OBSERVED_ENTRY_TYPES
+    const entryTypes = this.bestBlockingTaskType
+      ? [...DEFAULT_OBSERVED_ENTRY_TYPES, this.bestBlockingTaskType]
+      : DEFAULT_OBSERVED_ENTRY_TYPES
 
-    this.observe = observe ?? ((onEntry) => {
-      const observer = new PerformanceObserver((list) => {
-        list.getEntries().forEach(onEntry)
+    this.observe =
+      observe ??
+      ((onEntry) => {
+        const observer = new PerformanceObserver((list) => {
+          list.getEntries().forEach(onEntry)
+        })
+        observer.observe({ entryTypes })
+        return () => void observer.disconnect()
       })
-      observer.observe({entryTypes})
-      return () => void observer.disconnect()
-    })
   }
 
   /**
@@ -738,7 +771,12 @@ export class OperationManager {
   }
 
   scheduleBufferFlushIfNeeded() {
-    if (!this.bufferDuration || this.isFlushingBuffer || this.bufferTimeoutId || this.eventBuffer.length === 0) {
+    if (
+      !this.bufferDuration ||
+      this.isFlushingBuffer ||
+      this.bufferTimeoutId ||
+      this.eventBuffer.length === 0
+    ) {
       return
     }
 
@@ -749,7 +787,7 @@ export class OperationManager {
     // this is a compromise between processing events in order,
     // and also not waiting too long to process them
     const now = this.performance.now()
-    this.bufferFlushUntil = now + (this.bufferDuration / 4)
+    this.bufferFlushUntil = now + this.bufferDuration / 4
     this.bufferTimeoutId = setTimeout(
       () => void this.flushBuffer(),
       this.bufferDuration / 2,
@@ -760,9 +798,15 @@ export class OperationManager {
    * Processes a performance entry event.
    * @param entry - The performance entry event to track.
    */
-  scheduleEventProcessing(entry: PerformanceEntryLike | InputEvent): undefined | readonly Event[] {
-    if (typeof entry.detail === 'object' && entry.detail && SKIP_PROCESSING in entry.detail) {
-      return undefined;
+  scheduleEventProcessing(
+    entry: PerformanceEntryLike | InputEvent,
+  ): undefined | readonly Event[] {
+    if (
+      typeof entry.detail === 'object' &&
+      entry.detail &&
+      SKIP_PROCESSING in entry.detail
+    ) {
+      return undefined
     }
 
     const event = this.preprocessEvent(entry)
@@ -786,7 +830,8 @@ export class OperationManager {
         event.operations[operation.name] = {
           id: operation.id,
           operationRelativeStartTime: event.startTime - operation.startTime,
-          operationRelativeEndTime: event.startTime - operation.startTime + event.duration,
+          operationRelativeEndTime:
+            event.startTime - operation.startTime + event.duration,
           internalOrder: operation.eventCount,
         }
         processedEvents.push(processedEvent)

@@ -1,6 +1,7 @@
-import type { ErrorMetadata } from "../ErrorBoundary"
-import type { VISIBLE_STATE } from "./constants"
-import type { Operation } from "./operation"
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+import type { ErrorMetadata } from '../ErrorBoundary'
+import type { VISIBLE_STATE } from './constants'
+import type { Operation } from './operation'
 
 export type EventStatus = 'ok' | 'error' | 'partial-error' | 'aborted'
 
@@ -48,9 +49,7 @@ export interface EventMatchCriteria {
   /**
    * The type of the performance entry to match.
    */
-  type?:
-    | NativePerformanceEntryType
-    | InternalPerformanceEntryType
+  type?: NativePerformanceEntryType | InternalPerformanceEntryType
 }
 
 /**
@@ -188,13 +187,24 @@ export interface EventMetadata extends Partial<ErrorMetadata> {
   status: EventStatus
 }
 
-export type VisibleStates = typeof VISIBLE_STATE[keyof typeof VISIBLE_STATE]
+export type VisibleStates = (typeof VISIBLE_STATE)[keyof typeof VISIBLE_STATE]
 
 export interface Metadata {
   resource?: {
-    type?: "document" | "xhr" | "beacon" | "fetch" | "css" | "js" | "image" | "font" | "media" | "other" | "native";
-    method?: "POST" | "GET" | "HEAD" | "PUT" | "DELETE" | "PATCH" | undefined;
-    status_code?: number | undefined;
+    type?:
+      | 'document'
+      | 'xhr'
+      | 'beacon'
+      | 'fetch'
+      | 'css'
+      | 'js'
+      | 'image'
+      | 'font'
+      | 'media'
+      | 'other'
+      | 'native'
+    method?: 'POST' | 'GET' | 'HEAD' | 'PUT' | 'DELETE' | 'PATCH' | undefined
+    status_code?: number | undefined
   }
   resourceQuery?: Record<string, string | string[]>
 
@@ -205,7 +215,9 @@ export interface Metadata {
   [key: string]: unknown
 }
 
-export type EventEntryType = NativePerformanceEntryType | InternalPerformanceEntryType
+export type EventEntryType =
+  | NativePerformanceEntryType
+  | InternalPerformanceEntryType
 
 export interface InputEvent extends Omit<PerformanceEntryLike, 'entryType'> {
   readonly entryType: EventEntryType
@@ -255,13 +267,13 @@ export interface EventOperationRelation {
 
 export interface PerformanceEntryLike {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/duration) */
-  readonly duration: DOMHighResTimeStamp;
+  readonly duration: DOMHighResTimeStamp
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/entryType) */
-  readonly entryType: string;
+  readonly entryType: string
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/name) */
-  readonly name: string;
+  readonly name: string
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/startTime) */
-  readonly startTime: DOMHighResTimeStamp;
+  readonly startTime: DOMHighResTimeStamp
 
   readonly detail?: unknown
 }
@@ -296,16 +308,16 @@ export interface InstanceOptions {
   bufferDuration?: number
   preprocessEvent?: EventProcessor
   supportedEntryTypes?: readonly string[]
-
 }
 
-export type FinalizationReason = 'completed' |
-  'interrupted' |
-  'timeout' |
-  'interactive-timeout'
+export type FinalizationReason =
+  | 'completed'
+  | 'interrupted'
+  | 'timeout'
+  | 'interactive-timeout'
 
-export type OperationState = 'initial' |
-  'started' |
-  'waiting-for-interactive' |
-  FinalizationReason
-
+export type OperationState =
+  | 'initial'
+  | 'started'
+  | 'waiting-for-interactive'
+  | FinalizationReason

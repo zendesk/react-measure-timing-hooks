@@ -17,11 +17,14 @@ let errorMetadataCurrentlyBeingThrown: undefined | ErrorMetadata = undefined
 export const useOnErrorBoundaryDidCatch = (
   onCaughtError: (metadata: ErrorMetadata) => void,
 ): void => {
-  useEffect(() => () => {
-    if (!errorMetadataCurrentlyBeingThrown) return
-    // this will only run if React decides to unmount the tree that threw the error
-    onCaughtError(errorMetadataCurrentlyBeingThrown)
-  }, [onCaughtError])
+  useEffect(
+    () => () => {
+      if (!errorMetadataCurrentlyBeingThrown) return
+      // this will only run if React decides to unmount the tree that threw the error
+      onCaughtError(errorMetadataCurrentlyBeingThrown)
+    },
+    [onCaughtError],
+  )
 }
 
 export const useOnComponentUnmount = (
@@ -30,9 +33,12 @@ export const useOnComponentUnmount = (
 ): void => {
   const onComponentUnmountRef = useRef(onComponentUnmountCallback)
   onComponentUnmountRef.current = onComponentUnmountCallback
-  useEffect(() => () => {
-    onComponentUnmountRef.current(errorMetadataCurrentlyBeingThrown)
-  }, dependencies)
+  useEffect(
+    () => () => {
+      onComponentUnmountRef.current(errorMetadataCurrentlyBeingThrown)
+    },
+    dependencies,
+  )
 }
 
 export class ReactMeasureErrorBoundary<

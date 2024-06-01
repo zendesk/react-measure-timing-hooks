@@ -1,41 +1,51 @@
 // TODO: maybe even a HOC/wrapper instead? this way I could ensure to add a hook at beginning and at the end of the component
 
-import { useEffect, useRef, type DependencyList } from "react"
-import { OperationManager } from "./operation"
-import { useOnComponentUnmount } from "../ErrorBoundary"
-import type { InputEvent, Metadata, OperationDefinition, PerformanceEntryLike, Event } from "./types"
-import { VISIBLE_STATE } from "./constants"
+import { useEffect, useRef, type DependencyList } from 'react'
+import { OperationManager } from './operation'
+import { useOnComponentUnmount } from '../ErrorBoundary'
+import type {
+  InputEvent,
+  Metadata,
+  OperationDefinition,
+  PerformanceEntryLike,
+  Event,
+} from './types'
+import { VISIBLE_STATE } from './constants'
 
 // TODO: make a getUseCaptureRenderBeaconTask, and provide OperationManager there
-export const useCaptureRenderBeaconTask = ({
-  componentName,
-  metadata: meta,
-  error,
-  state: visibleState = VISIBLE_STATE.COMPLETE,
-  operationManager,
-}: {
-  componentName: string
-  metadata: Record<string, unknown>
-  error?: object
-  /**
-   * what is the state of the UX that the user sees as part of this render?
-   * note that if 'error' is provided, the state will be 'error' regardless of this value
-   **/
-  state?: string
-  operationManager: OperationManager
-},
+export const useCaptureRenderBeaconTask = (
+  {
+    componentName,
+    metadata: meta,
+    error,
+    state: visibleState = VISIBLE_STATE.COMPLETE,
+    operationManager,
+  }: {
+    componentName: string
+    metadata: Record<string, unknown>
+    error?: object
+    /**
+     * what is the state of the UX that the user sees as part of this render?
+     * note that if 'error' is provided, the state will be 'error' regardless of this value
+     **/
+    state?: string
+    operationManager: OperationManager
+  },
   restartWhenChanged: DependencyList,
 ) => {
-  const metadata: Metadata = {visibleState: error ? VISIBLE_STATE.ERROR : visibleState, ...meta}
-  const renderStartTask = ({
+  const metadata: Metadata = {
+    visibleState: error ? VISIBLE_STATE.ERROR : visibleState,
+    ...meta,
+  }
+  const renderStartTask = {
     entryType: error ? 'component-render-error' : 'component-render-start',
     name: componentName,
     startTime: operationManager.performance.now(),
     duration: 0,
     metadata,
-  } satisfies InputEvent)
+  } satisfies InputEvent
 
-  const nextStateObj = {visibleState, startTime: renderStartTask.startTime};
+  const nextStateObj = { visibleState, startTime: renderStartTask.startTime }
   const lastStateObjRef = useRef(nextStateObj)
   if (visibleState !== lastStateObjRef.current.visibleState) {
     const previousState = lastStateObjRef.current
@@ -45,7 +55,10 @@ export const useCaptureRenderBeaconTask = ({
       name: componentName,
       startTime: previousState.startTime,
       duration: renderStartTask.startTime - previousState.startTime,
-      metadata: {previousVisibleState: previousState.visibleState, ...metadata},
+      metadata: {
+        previousVisibleState: previousState.visibleState,
+        ...metadata,
+      },
     } satisfies InputEvent)
   }
 
@@ -82,24 +95,29 @@ export const useCaptureRenderBeaconTask = ({
   })
 
   // capture last component unmount and error boundary errors (if any):
-  useOnComponentUnmount((errorBoundaryMetadata) => {
-    // an unmount might be used to abort an ongoing operation capture
-    operationManager.scheduleEventProcessing({
-      entryType: 'component-unmount',
-      name: componentName,
-      startTime: operationManager.performance.now(),
-      duration: 0,
-      metadata,
-      event: {...errorBoundaryMetadata ? {
-        ...errorBoundaryMetadata,
-      } : {},
-      commonName: componentName,
-      status: errorBoundaryMetadata?.error ? 'error' : 'ok',
-      kind: 'render',
-    }
-    } satisfies InputEvent)
-  }, [componentName])
-
+  useOnComponentUnmount(
+    (errorBoundaryMetadata) => {
+      // an unmount might be used to abort an ongoing operation capture
+      operationManager.scheduleEventProcessing({
+        entryType: 'component-unmount',
+        name: componentName,
+        startTime: operationManager.performance.now(),
+        duration: 0,
+        metadata,
+        event: {
+          ...(errorBoundaryMetadata
+            ? {
+                ...errorBoundaryMetadata,
+              }
+            : {}),
+          commonName: componentName,
+          status: errorBoundaryMetadata?.error ? 'error' : 'ok',
+          kind: 'render',
+        },
+      } satisfies InputEvent)
+    },
+    [componentName],
+  )
 
   // simple: capture renders and emit:
   // render start 'mark'
@@ -109,12 +127,14 @@ export const useCaptureRenderBeaconTask = ({
 
 // records until all required render beacons are settled
 // (and until the page is interactive? or maybe that's the central manager's job)
-export const useCaptureOperationTiming = (operationDefinition: OperationDefinition & {
-  // the operation will start once 'active' is true (or undefined)
-  active?: boolean
-  operationManager: OperationManager
-}) => {
-  const {active = true, operationManager, operationName} = operationDefinition
+export const useCaptureOperationTiming = (
+  operationDefinition: OperationDefinition & {
+    // the operation will start once 'active' is true (or undefined)
+    active?: boolean
+    operationManager: OperationManager
+  },
+) => {
+  const { active = true, operationManager, operationName } = operationDefinition
   // const lastStartedNameRef = useRef<string>(operationDefinition.operationName)
   const startedOperationNameRef = useRef<string>()
   // only start the operation once (but allow another one to be started if the name changes)

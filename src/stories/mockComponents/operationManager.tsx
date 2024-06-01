@@ -1,5 +1,5 @@
-import { OperationManager } from '../../v2/operation';
-import { defaultEventProcessor } from '../../v2/defaultEventProcessor';
+import { OperationManager } from '../../v2/operation'
+import { defaultEventProcessor } from '../../v2/defaultEventProcessor'
 
 export const operationManager = new OperationManager({
   // performance: {
@@ -10,8 +10,8 @@ export const operationManager = new OperationManager({
   //   },
   // },
   preprocessEvent(event) {
-    const processedEvent = defaultEventProcessor(event);
-    console.log('event', processedEvent);
-    return processedEvent;
+    const processedEvent = defaultEventProcessor(event)
+    console.log('event', processedEvent)
+    return processedEvent
   },
-});
+})
