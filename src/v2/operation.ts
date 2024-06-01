@@ -4,31 +4,31 @@
 /* eslint-disable max-classes-per-file */
 import {
   BLOCKING_TASK_ENTRY_TYPES,
-  FINAL_STATES,
   DEFAULT_CAPTURE_INTERACTIVE,
-  OPERATION_START_ENTRY_TYPE,
-  OPERATION_ENTRY_TYPE,
-  DEFAULT_GLOBAL_OPERATION_TIMEOUT,
-  OPERATION_INTERACTIVE_ENTRY_TYPE,
   DEFAULT_DEBOUNCE_TIME,
+  DEFAULT_GLOBAL_OPERATION_TIMEOUT,
   DEFAULT_OBSERVED_ENTRY_TYPES,
+  FINAL_STATES,
+  OPERATION_ENTRY_TYPE,
+  OPERATION_INTERACTIVE_ENTRY_TYPE,
+  OPERATION_START_ENTRY_TYPE,
+  SKIP_PROCESSING,
 } from './constants'
-import { OperationState, FinalizationReason } from './types'
+import { defaultEventProcessor } from './defaultEventProcessor'
+import { FinalizationReason, OperationState } from './types'
 import {
   type CaptureInteractiveConfig,
+  type Event,
   type EventMatchCriteria,
   type EventMatchFunction,
+  type EventStatus,
   type InputEvent,
   type InstanceOptions,
   type ObserveFn,
   type OperationDefinition,
   type PerformanceApi,
   type PerformanceEntryLike,
-  type Event,
-  type EventStatus,
 } from './types'
-import { SKIP_PROCESSING } from './constants'
-import { defaultEventProcessor } from './defaultEventProcessor'
 
 /** returns the best supported blocking task type or undefined if none */
 export const bestBlockingTaskType = (supportedEntryTypes: readonly string[]) =>
@@ -43,18 +43,18 @@ export class Operation implements PerformanceEntryLike {
   /**
    * The ID of the operation.
    */
-  public readonly id: string
+  readonly id: string
 
   /**
    * The name of the operation.
    */
-  public readonly name: string
+  readonly name: string
 
   /**
    * The start time of the operation.
    */
   private _startTime: number | undefined
-  public get startTime() {
+  get startTime() {
     if (typeof this._startTime === 'undefined') {
       throw new TypeError('Operation has not started yet')
     }
@@ -67,26 +67,26 @@ export class Operation implements PerformanceEntryLike {
   /**
    * The duration from the start of the operation until all trackers were satisfied.
    */
-  public duration: number
+  duration: number
 
   /**
    * The duration of the operation + the time it took the page to become interactive or until a timeout was reached.
    * Might be 0 if no interactive tracking was configured.
    */
-  public durationTillInteractive: number
+  durationTillInteractive: number
 
   readonly entryType = 'operation'
 
   /**
    * Metadata for the operation.
    */
-  public metadata: Record<string, unknown>
+  metadata: Record<string, unknown>
 
   private readonly events: Event[] = []
-  public getEvents() {
+  getEvents() {
     return this.isInFinalState ? this.events : [...this.events]
   }
-  public get eventCount() {
+  get eventCount() {
     return this.events.length
   }
 
@@ -97,16 +97,16 @@ export class Operation implements PerformanceEntryLike {
   private requiredToEndTrackers: Set<number>
 
   private _state!: OperationState
-  public get state() {
+  get state() {
     return this._state
   }
   private set state(value) {
     this._state = value
   }
-  public get isInFinalState() {
+  get isInFinalState() {
     return FINAL_STATES.includes(this.state)
   }
-  public get status(): EventStatus {
+  get status(): EventStatus {
     return this.state === 'timeout' ||
       this.state === 'interactive-timeout' ||
       this.state === 'interrupted'
@@ -816,10 +816,9 @@ export class OperationManager {
       this.scheduleBufferFlushIfNeeded()
       // asynchronous processing
       return undefined
-    } else {
-      // process immediately
-      return this.processEvent(event)
     }
+    // process immediately
+    return this.processEvent(event)
   }
 
   private processEvent(event: Event): readonly Event[] {
