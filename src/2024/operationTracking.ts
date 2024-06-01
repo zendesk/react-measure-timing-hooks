@@ -2,7 +2,7 @@
 
 import { type Subscription, Observable, share } from 'rxjs'
 import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
-import { sanitizeUrlForTracing } from './sanitizeUrlForTracing'
+import { sanitizeUrlForTracing } from '../v2/sanitizeUrlForTracing'
 import type {
   Operation,
   OperationSpanMetadata,

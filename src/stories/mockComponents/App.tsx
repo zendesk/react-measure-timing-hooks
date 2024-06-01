@@ -28,14 +28,21 @@ import { TicketList } from './TicketList'
 import { TicketView } from './TicketView'
 import { mockTickets } from './mockTickets'
 import { operationManager } from './operationManager'
+import type { Operation } from '../../v2/operation'
 
 export const App: React.FC = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const [selectedTicketIds, setSelectedTicketIds] = useState<number[]>([])
 
   const handleTicketClick = (id: number) => {
+    const onTracked = (operation: Operation) =>
+      void console.log(
+        `Ticket ${id}: ${operation.state}`,
+        operation,
+        operation.getEvents(),
+      )
     operationManager.startOperation({
-      operationName: `ticket-activation/${id}`,
+      operationName: `ticket-activation`,
       track: [
         {
           match: { type: 'component-unmount', metadata: { ticketId: id } },
@@ -46,12 +53,13 @@ export const App: React.FC = () => {
           debounceEndWhenSeen: { debounceBy: 1000 },
         },
         {
-          match: { metadata: { ticketId: id, state: 'complete' } },
+          match: { metadata: { ticketId: id, visibleState: 'complete' } },
           requiredToEnd: true,
         },
       ],
-      captureDone: true,
-      captureInteractive: true,
+      onTracked,
+      onEnd: onTracked,
+      waitUntilInteractive: true,
       interruptSelf: true,
     })
     setSelectedTicketId(id)

@@ -3,18 +3,8 @@
 import { useEffect, useRef, type DependencyList } from "react"
 import { OperationManager } from "./operation"
 import { useOnComponentUnmount } from "../ErrorBoundary"
-import type { InputTask, Metadata, OperationDefinition, PerformanceEntryLike, Task } from "./types"
-
-const VISIBLE_STATE = {
-  /** showing a pending state, like a spinner, a skeleton, or empty */
-  LOADING: 'loading',
-  /** fully functional component */
-  COMPLETE: 'complete',
-  /** displaying an error state */
-  ERROR: 'error',
-  /** somewhat functional component with a partial error state */
-  COMPLETE_WITH_ERROR: 'complete-with-error',
-}
+import type { InputEvent, Metadata, OperationDefinition, PerformanceEntryLike, Event } from "./types"
+import { VISIBLE_STATE } from "./constants"
 
 // TODO: make a getUseCaptureRenderBeaconTask, and provide OperationManager there
 export const useCaptureRenderBeaconTask = ({
@@ -40,25 +30,23 @@ export const useCaptureRenderBeaconTask = ({
   const renderStartTask = ({
     entryType: error ? 'component-render-error' : 'component-render-start',
     name: componentName,
-    commonName: componentName,
     startTime: operationManager.performance.now(),
     duration: 0,
     metadata,
-  } satisfies InputTask)
+  } satisfies InputEvent)
 
   const nextStateObj = {visibleState, startTime: renderStartTask.startTime};
   const lastStateObjRef = useRef(nextStateObj)
   if (visibleState !== lastStateObjRef.current.visibleState) {
     const previousState = lastStateObjRef.current
     lastStateObjRef.current = nextStateObj
-    operationManager.scheduleTaskProcessing({
+    operationManager.scheduleEventProcessing({
       entryType: 'component-state-change',
       name: componentName,
-      commonName: componentName,
       startTime: previousState.startTime,
       duration: renderStartTask.startTime - previousState.startTime,
       metadata: {previousVisibleState: previousState.visibleState, ...metadata},
-    } satisfies InputTask)
+    } satisfies InputEvent)
   }
 
   // this will fire when external deps have changed:
@@ -71,12 +59,12 @@ export const useCaptureRenderBeaconTask = ({
   //   lastExternalDeps.current = restartWhenChanged
   //   // Q: how do we best cancel stuff? maybe when the component name changes?
   //   // or maybe it's unnecessary do this since we have component-unmount events
-  //   GlobalOperationManager.scheduleTaskProcessing({...task, entryType: 'render-cancel'})
+  //   GlobalOperationManager.scheduleEventProcessing({...task, entryType: 'render-cancel'})
   // }
 
   // not wrapped in useEffect as this is a benchmarking effect
   // and thus must be run during the render phase, every render
-  operationManager.scheduleTaskProcessing(renderStartTask)
+  operationManager.scheduleEventProcessing(renderStartTask)
 
   // this will fire after every render as it does not have any dependencies:
   useEffect(() => {
@@ -84,27 +72,32 @@ export const useCaptureRenderBeaconTask = ({
     // because we want the closure to have the matching values
     // from when the effect was created
 
-    operationManager.scheduleTaskProcessing({
+    operationManager.scheduleEventProcessing({
       entryType: 'component-render',
       name: componentName,
-      commonName: componentName,
       startTime: renderStartTask.startTime,
       duration: operationManager.performance.now() - renderStartTask.startTime,
       metadata,
-    } satisfies InputTask)
+    } satisfies InputEvent)
   })
 
   // capture last component unmount and error boundary errors (if any):
   useOnComponentUnmount((errorBoundaryMetadata) => {
     // an unmount might be used to abort an ongoing operation capture
-    operationManager.scheduleTaskProcessing({
+    operationManager.scheduleEventProcessing({
       entryType: 'component-unmount',
       name: componentName,
-      commonName: componentName,
       startTime: operationManager.performance.now(),
       duration: 0,
-      metadata: errorBoundaryMetadata ? {...metadata, ...errorBoundaryMetadata} : metadata,
-    } satisfies InputTask)
+      metadata,
+      event: {...errorBoundaryMetadata ? {
+        ...errorBoundaryMetadata,
+      } : {},
+      commonName: componentName,
+      status: errorBoundaryMetadata?.error ? 'error' : 'ok',
+      kind: 'render',
+    }
+    } satisfies InputEvent)
   }, [componentName])
 
 
@@ -142,6 +135,3 @@ export const useCaptureOperationTiming = (operationDefinition: OperationDefiniti
   // we need to mark the first operation as 'overwritten' or something like that
   // so then it can be filtered out when displaying an aggregate view
 }
-
-// // a map of object type to their ID, e.g. { 'ticket': '123' }
-// objects: Record<string, string | number | boolean>

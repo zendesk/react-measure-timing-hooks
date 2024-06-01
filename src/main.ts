@@ -36,17 +36,11 @@ export {
   useVisualizer,
 } from './lazyVisualizer'
 
-// operation tracking
-export { processCustomEntry, startOperation } from './2024/operationTracking'
-export type {
-  Operation,
-  OperationSpanMetadata,
-  PerformanceEntryLike,
-  RumKinds,
-  Span,
-  SpanKind,
-  SpanMetadata,
-  Task,
-  TaskDataEmbeddedInOperation,
-  TaskSpanMetadata,
-} from './2024/types'
+// operation tracking (v2)
+export * from './v2/constants'
+export * from './v2/defaultEventProcessor'
+export * from './v2/element'
+export * from './v2/hooks'
+export * from './v2/operation'
+export * from './v2/sanitizeUrlForTracing'
+export type * from './v2/types'

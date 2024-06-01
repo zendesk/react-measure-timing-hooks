@@ -8,9 +8,9 @@ import { mockTickets } from './mockTickets'
 import { DEFAULT_THEME, PALETTE } from '@zendeskgarden/react-theming'
 import { Avatar } from '@zendeskgarden/react-avatars'
 import { ReactComponent as UserIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
-import { useCaptureRenderBeaconTask } from '../../2024-impl/hooks'
+import { useCaptureRenderBeaconTask } from '../../v2/hooks'
 import { operationManager } from './operationManager'
-import { TimingComponent } from '../../2024-impl/element'
+import { TimingComponent } from '../../v2/element'
 
 export const StyledSpan = styled(Span).attrs({ isBold: true, hue: 'blue' })`
   margin-left: ${DEFAULT_THEME.space.base * 2}px;
@@ -78,9 +78,7 @@ export const TicketView: React.FC<TicketViewProps> = ({
             {ticket.messages.map((msg, index) => (
               <Timeline.Item key={index}>
                 <Timeline.OppositeContent>
-                  <Span hue="grey" elementtiming="Hello">
-                    {msg.humanReadableTimestamp}
-                  </Span>
+                  <Span hue="grey">{msg.humanReadableTimestamp}</Span>
                 </Timeline.OppositeContent>
                 <TimelineContentWide>
                   <Avatar size="extrasmall" backgroundColor={PALETTE.grey[600]}>

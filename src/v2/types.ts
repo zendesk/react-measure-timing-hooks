@@ -1,4 +1,8 @@
 import type { ErrorMetadata } from "../ErrorBoundary"
+import type { VISIBLE_STATE } from "./constants"
+import type { Operation } from "./operation"
+
+export type EventStatus = 'ok' | 'error' | 'partial-error' | 'aborted'
 
 export type NativePerformanceEntryType =
   | 'element'
@@ -13,7 +17,7 @@ export type NativePerformanceEntryType =
   | 'navigation'
   | 'paint'
   | 'resource'
-  // | 'taskattribution'
+  // | 'eventattribution'
   | 'visibility-state'
 
 export type InternalPerformanceEntryType =
@@ -30,7 +34,7 @@ export type InternalPerformanceEntryType =
 /**
  * Criteria for matching performance entries.
  */
-export interface EntryMatchCriteria {
+export interface EventMatchCriteria {
   /**
    * The name of the performance entry to match. Can be a string, RegExp, or function.
    */
@@ -39,7 +43,7 @@ export interface EntryMatchCriteria {
   /**
    * Metadata to match against the performance entry.
    */
-  metadata?: Record<string, string | number | boolean>
+  metadata?: Metadata
 
   /**
    * The type of the performance entry to match.
@@ -52,7 +56,7 @@ export interface EntryMatchCriteria {
 /**
  * Function type for matching performance entries.
  */
-export type EntryMatchFunction = (entry: Task) => boolean
+export type EventMatchFunction = (entry: Event) => boolean
 
 export interface CaptureInteractiveConfig {
   /**
@@ -60,13 +64,13 @@ export interface CaptureInteractiveConfig {
    */
   timeout: number
   /**
-   * Duration to debounce long tasks before considering the page interactive.
+   * Duration to debounce long events before considering the page interactive.
    */
   debounceLongTasksBy?: number
   /**
-   * Ignore long tasks that are shorter than this duration.
+   * Ignore long events that are shorter than this duration.
    */
-  skipDebounceForLongTasksShorterThan?: number
+  skipDebounceForLongEventsShorterThan?: number
 }
 
 /**
@@ -85,7 +89,7 @@ export interface OperationDefinition {
     /**
      * Criteria or function for matching performance entries.
      */
-    match: EntryMatchCriteria | EntryMatchFunction
+    match: EventMatchCriteria | EventMatchFunction
 
     /**
      * Indicates if this entry is required to start the operation.
@@ -100,7 +104,7 @@ export interface OperationDefinition {
     requiredToEnd?: boolean
 
     /**
-     * Configuration for debouncing the end of the operation when this tracker is seen.
+     * Configuration for debouncing the end of the operation when a matching event is seen.
      * When true, debounces by the default amount.
      * @default true
      */
@@ -118,7 +122,7 @@ export interface OperationDefinition {
   /**
    * Metadata for the operation.
    */
-  metadata?: Record<string, unknown>
+  metadata?: Metadata
 
   /**
    * Timeout for the operation in ms, after which it should be finalized.
@@ -132,15 +136,24 @@ export interface OperationDefinition {
   interruptSelf?: boolean
 
   /**
-   * Indicates if a 'measure' event should be emitted when the operation ends.
-   */
-  captureDone?: boolean
-
-  /**
-   * Indicates if a 'measure' event should be emitted when interactivity is reached after the operation ends.
+   * Indicates the operation should continue capturing events until interactivity is reached after the operation ends.
    * Provide a boolean or a configuration object.
    */
-  captureInteractive?: boolean | CaptureInteractiveConfig
+  waitUntilInteractive?: boolean | CaptureInteractiveConfig
+
+  /**
+   * Callback that runs when the operation is completed (either interrupted, via a timeout, or any other case).
+   * Note that when running in buffered mode, this will execute only after the buffer is flushed.
+   */
+  onEnd?: (operation: Operation) => void
+
+  /**
+   * A callback that will be called once there are no more required events to end the operation.
+   * Useful if you want to emit a performance.measure as soon as possible.
+   * Prefer `onEnd` for most other cases.
+   * Note that when running in buffered mode, this will execute only after the buffer is flushed.
+   */
+  onTracked?: (operation: Operation) => void
 
   /**
    * The start time of the operation in ms elapsed since `Performance.timeOrigin`.
@@ -149,9 +162,9 @@ export interface OperationDefinition {
   startTime?: number
 
   /**
-   * Indicates if only explicitly tracked tasks should be retained in the operation.
+   * Indicates if only explicitly tracked events should be retained in the operation.
    */
-  keepOnlyExplicitlyTrackedTasks?: boolean
+  keepOnlyExplicitlyTrackedEvents?: boolean
 
   /**
    * Callback that runs when the operation is finalized and the object is being disposed of.
@@ -160,64 +173,82 @@ export interface OperationDefinition {
   onDispose?: () => void
 }
 
-export interface TaskMetadata extends Partial<ErrorMetadata> {
+export interface EventMetadata extends Partial<ErrorMetadata> {
+  /**
+   * Common name for the event that could be used for grouping similar events.
+   */
+  commonName: string
 
+  /** may be present to override the value of the parent entry.name */
+  name?: string
+
+  // TODO could be a specific string union
+  kind: string
+
+  status: EventStatus
 }
 
-export interface Metadata extends Partial<ErrorMetadata> {
+export type VisibleStates = typeof VISIBLE_STATE[keyof typeof VISIBLE_STATE]
+
+export interface Metadata {
   resource?: {
-    type: 'fetch' | 'xhr' | string // TODO
+    type?: "document" | "xhr" | "beacon" | "fetch" | "css" | "js" | "image" | "font" | "media" | "other" | "native";
+    method?: "POST" | "GET" | "HEAD" | "PUT" | "DELETE" | "PATCH" | undefined;
+    status_code?: number | undefined;
   }
   resourceQuery?: Record<string, string | string[]>
+
+  // renders add this metadata:
+  visibleState?: VisibleStates | string
+  previousVisibleState?: VisibleStates | string
+
   [key: string]: unknown
 }
 
-export type TaskEntryType = NativePerformanceEntryType | InternalPerformanceEntryType
+export type EventEntryType = NativePerformanceEntryType | InternalPerformanceEntryType
 
-/** when present on 'detail' will skip processing */
-export const SKIP_PROCESSING = Symbol.for('SKIP_PROCESSING')
-
-export interface InputTask extends Omit<PerformanceEntryLike, 'entryType'> {
-  readonly entryType: TaskEntryType
-  readonly operations?: Record<string, TaskOperationRelation>
+export interface InputEvent extends Omit<PerformanceEntryLike, 'entryType'> {
+  readonly entryType: EventEntryType
+  readonly operations?: Record<string, EventOperationRelation>
   metadata?: Metadata
-
-  /**
-   * Common name for the task that could be used for grouping similar tasks.
-   */
-  commonName?: string
+  event?: EventMetadata
 }
 
-export type Task = Required<Omit<InputTask, 'detail' | typeof SKIP_PROCESSING>>
+export interface Event extends Omit<PerformanceEntryLike, 'entryType'> {
+  readonly entryType: EventEntryType
+  readonly operations: Record<string, EventOperationRelation>
+  metadata: Metadata
+  event: EventMetadata
+}
 
 /**
- * Metadata for a task span.
+ * Metadata for an event.
  */
-export interface TaskOperationRelation {
+export interface EventOperationRelation {
   /**
-   * The ID of the operation the task belongs to.
+   * The ID of the operation the event belongs to.
    */
   id: string
 
   /**
-   * The name of the operation the task belongs to.
+   * The name of the operation the event belongs to.
    */
-  name: string
+  // name: string
 
   /**
-   * Internal order of the task within the operation.
+   * Internal order of the event within the operation.
    */
   // TODO is this necessary?
   internalOrder: number
 
   /**
-   * Offset from the start of the operation to the start of the task.
-   * aka operationStartOffset or operationStartToTaskStart
+   * Offset from the start of the operation to the start of the event.
+   * aka operationStartOffset or operationStartToEventStart
    */
   operationRelativeStartTime: number
 
   /**
-   * Relative end time of the task within the operation.
+   * Relative end time of the event within the operation.
    */
   operationRelativeEndTime: number
 }
@@ -256,13 +287,25 @@ export interface PerformanceApi {
   ) => void
 }
 
-export type TaskProcessor = (entry: InputTask | PerformanceEntryLike) => Task
+export type EventProcessor = (entry: InputEvent | PerformanceEntryLike) => Event
 
 export interface InstanceOptions {
   defaultDebounceTime?: number
   observe?: ObserveFn
   performance?: Partial<PerformanceApi>
   bufferDuration?: number
-  preprocessTask?: TaskProcessor
+  preprocessEvent?: EventProcessor
   supportedEntryTypes?: readonly string[]
+
 }
+
+export type FinalizationReason = 'completed' |
+  'interrupted' |
+  'timeout' |
+  'interactive-timeout'
+
+export type OperationState = 'initial' |
+  'started' |
+  'waiting-for-interactive' |
+  FinalizationReason
+

@@ -1,6 +1,11 @@
 /* eslint-disable jest/no-conditional-in-test */
-import { OperationManager } from './operation'
-import type { OperationDefinition, PerformanceEntryLike, Task } from './types'
+import { OperationManager, type Operation } from './operation'
+import {
+  type OperationDefinition,
+  type PerformanceEntryLike,
+  type Event,
+} from './types'
+import { SKIP_PROCESSING } from './constants'
 
 describe('operation tracking', () => {
   // returns mocked time:
@@ -9,6 +14,32 @@ describe('operation tracking', () => {
     now: jest.fn(getTimeNow),
     measure: jest.fn(),
   }
+  const onTracked = (operation: Operation) => {
+    performanceMock.measure(
+      operation.durationTillInteractive
+        ? `${operation.name}-interactive`
+        : operation.name,
+      {
+        start: operation.startTime,
+        duration: operation.durationTillInteractive || operation.duration,
+        detail: {
+          [SKIP_PROCESSING]: true,
+          metadata: operation.metadata,
+          id: operation.id,
+          name: operation.name,
+          events: operation.getEvents().map((event) => ({
+            name: event.name,
+            entryType: event.entryType,
+            startTime: event.startTime,
+            duration: event.duration,
+          })),
+          state: operation.state,
+          interactive: Boolean(operation.durationTillInteractive),
+        },
+      },
+    )
+  }
+
   let pushEntry: (entry: PerformanceEntryLike) => void = () => {
     //
   }
@@ -21,7 +52,7 @@ describe('operation tracking', () => {
     pushEntry = onEntry
     return disconnectMock
   })
-  const pushEntries = (entries: (PerformanceEntryLike | Task)[]) => {
+  const pushEntries = (entries: (PerformanceEntryLike | Event)[]) => {
     entries.forEach(pushEntry)
   }
   beforeEach(() => {
@@ -48,7 +79,7 @@ describe('operation tracking', () => {
         'first-input',
         'largest-contentful-paint',
         'layout-shift',
-        'long-animation-frame',
+        // 'long-animation-frame',
         'longtask',
         'mark',
         'measure',
@@ -74,7 +105,7 @@ describe('operation tracking', () => {
             debounceEndWhenSeen: false,
           },
         ],
-        captureDone: true,
+        onTracked,
       }
 
       const operationId = PerformanceManager.startOperation(operationDefinition)
@@ -117,7 +148,7 @@ describe('operation tracking', () => {
         duration: 1_000,
         detail: expect.objectContaining({
           state: 'completed',
-          tasks: expect.objectContaining({ length: 2 }),
+          events: expect.objectContaining({ length: 2 }),
         }),
       })
     })
@@ -132,7 +163,7 @@ describe('operation tracking', () => {
             debounceEndWhenSeen: { debounceBy: 500 },
           },
         ],
-        captureDone: true,
+        onTracked,
       }
 
       const operationId = PerformanceManager.startOperation(operationDefinition)
@@ -200,7 +231,7 @@ describe('operation tracking', () => {
           duration: 300 * 2,
           detail: expect.objectContaining({
             state: 'completed',
-            tasks: expect.objectContaining({ length: 3 }),
+            events: expect.objectContaining({ length: 3 }),
           }),
         },
       )
@@ -216,7 +247,7 @@ describe('operation tracking', () => {
             debounceEndWhenSeen: false,
           },
         ],
-        captureDone: true,
+        onTracked,
         timeout: 1_000,
       }
 
@@ -264,7 +295,7 @@ describe('operation tracking', () => {
           duration: 1_000,
           detail: expect.objectContaining({
             state: 'timeout',
-            tasks: expect.objectContaining({ length: 1 }),
+            events: expect.objectContaining({ length: 1 }),
           }),
         },
       )
@@ -287,8 +318,9 @@ describe('operation tracking', () => {
               debounceEndWhenSeen: false,
             },
           ],
-          captureDone: true,
-          captureInteractive: { timeout: 5_000, debounceLongTasksBy },
+          onTracked,
+          onEnd: onTracked,
+          waitUntilInteractive: { timeout: 5_000, debounceLongTasksBy },
         }
 
         const operationId =
@@ -380,7 +412,7 @@ describe('operation tracking', () => {
             duration: renderDuration,
             detail: expect.objectContaining({
               state: 'waiting-for-interactive',
-              tasks: expect.objectContaining({ length: 2 }),
+              events: expect.objectContaining({ length: 2 }),
             }),
           },
         )
@@ -396,7 +428,7 @@ describe('operation tracking', () => {
             detail: expect.objectContaining({
               interactive: true,
               state: 'completed',
-              tasks: expect.objectContaining({ length: 4 }),
+              events: expect.objectContaining({ length: 4 }),
             }),
           },
         )
@@ -419,8 +451,9 @@ describe('operation tracking', () => {
               debounceEndWhenSeen: false,
             },
           ],
-          captureDone: true,
-          captureInteractive: {
+          onTracked,
+          onEnd: onTracked,
+          waitUntilInteractive: {
             timeout: interactiveTimeout,
             debounceLongTasksBy,
           },
@@ -487,7 +520,7 @@ describe('operation tracking', () => {
             duration: renderDuration,
             detail: expect.objectContaining({
               state: 'waiting-for-interactive',
-              tasks: expect.objectContaining({
+              events: expect.objectContaining({
                 length: 2,
               }),
             }),
@@ -503,7 +536,7 @@ describe('operation tracking', () => {
             detail: expect.objectContaining({
               interactive: true,
               state: 'interactive-timeout',
-              tasks: expect.objectContaining({
+              events: expect.objectContaining({
                 length: 2 + longTasksCount - 1,
               }),
             }),
@@ -527,7 +560,7 @@ describe('operation tracking', () => {
             debounceEndWhenSeen: false,
           },
         ],
-        captureDone: true,
+        onTracked,
         interruptSelf: true,
       }
 
@@ -588,7 +621,7 @@ describe('operation tracking', () => {
           detail: expect.objectContaining({
             id: operationId1,
             state: 'interrupted',
-            tasks: expect.objectContaining({ length: 1 }),
+            events: expect.objectContaining({ length: 1 }),
           }),
         },
       )
@@ -602,7 +635,7 @@ describe('operation tracking', () => {
           detail: expect.objectContaining({
             id: operationId2,
             state: 'completed',
-            tasks: expect.objectContaining({ length: 2 }),
+            events: expect.objectContaining({ length: 2 }),
           }),
         },
       )
@@ -623,7 +656,7 @@ describe('operation tracking', () => {
             debounceEndWhenSeen: false,
           },
         ],
-        captureDone: true,
+        onTracked,
       }
 
       const operationDefinition2: OperationDefinition = {
@@ -640,7 +673,7 @@ describe('operation tracking', () => {
             debounceEndWhenSeen: false,
           },
         ],
-        captureDone: true,
+        onTracked,
       }
 
       const operationId1 =
@@ -711,7 +744,7 @@ describe('operation tracking', () => {
           detail: expect.objectContaining({
             id: operationId1,
             state: 'completed',
-            tasks: expect.objectContaining({ length: 3 }),
+            events: expect.objectContaining({ length: 3 }),
           }),
         },
       )
@@ -725,7 +758,7 @@ describe('operation tracking', () => {
           detail: expect.objectContaining({
             id: operationId2,
             state: 'completed',
-            tasks: expect.objectContaining({ length: 4 }),
+            events: expect.objectContaining({ length: 4 }),
           }),
         },
       )
@@ -750,7 +783,7 @@ describe('operation tracking', () => {
             requiredToEnd: true,
           },
         ],
-        captureDone: true,
+        onTracked,
       }
 
       const operationId = PerformanceManager.startOperation(operationDefinition)
@@ -800,7 +833,7 @@ describe('operation tracking', () => {
           duration: entryTimes[4].time - entryTimes[0].time,
           detail: expect.objectContaining({
             state: 'completed',
-            tasks: expect.objectContaining({ length: entryTimes.length }),
+            events: expect.objectContaining({ length: entryTimes.length }),
           }),
         },
       )
@@ -823,7 +856,7 @@ describe('operation tracking', () => {
             debounceEndWhenSeen: false,
           },
         ],
-        captureDone: true,
+        onTracked,
       }
 
       const operationId = PerformanceManager.startOperation(operationDefinition)
@@ -869,7 +902,7 @@ describe('operation tracking', () => {
           duration: endTime - startTime,
           detail: expect.objectContaining({
             state: 'completed',
-            tasks: expect.objectContaining({ length: 2 }),
+            events: expect.objectContaining({ length: 2 }),
           }),
         },
       )

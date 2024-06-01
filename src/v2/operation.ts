@@ -2,297 +2,105 @@
 /* eslint-disable no-magic-numbers */
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable max-classes-per-file */
-import { sanitizeUrlForTracing } from '../2024/sanitizeUrlForTracing'
+import { BLOCKING_TASK_ENTRY_TYPES, FINAL_STATES, DEFAULT_CAPTURE_INTERACTIVE, OPERATION_START_ENTRY_TYPE, OPERATION_ENTRY_TYPE, DEFAULT_GLOBAL_OPERATION_TIMEOUT, OPERATION_INTERACTIVE_ENTRY_TYPE, DEFAULT_DEBOUNCE_TIME, DEFAULT_OBSERVED_ENTRY_TYPES } from './constants'
+import { OperationState, FinalizationReason } from './types'
 import {
-  SKIP_PROCESSING,
   type CaptureInteractiveConfig,
-  type EntryMatchCriteria,
-  type EntryMatchFunction,
-  type InputTask,
+  type EventMatchCriteria,
+  type EventMatchFunction,
+  type InputEvent,
   type InstanceOptions,
-  type Metadata,
   type ObserveFn,
   type OperationDefinition,
   type PerformanceApi,
   type PerformanceEntryLike,
-  type Task,
-  type TaskEntryType,
-  type TaskOperationRelation,
-  type TaskProcessor,
+  type Event,
+  type EventStatus,
 } from './types'
+import { SKIP_PROCESSING } from "./constants"
+import { defaultEventProcessor } from './defaultEventProcessor'
 
-export const DEFAULT_CAPTURE_INTERACTIVE: Required<CaptureInteractiveConfig> = { timeout: 5_000, debounceLongTasksBy: 500, skipDebounceForLongTasksShorterThan: 0 }
-export const DEFAULT_GLOBAL_OPERATION_TIMEOUT = 10_000
-export const OPERATION_START_ENTRY_TYPE = 'operation-start'
-export const OPERATION_ENTRY_TYPE = 'operation'
-export const OPERATION_INTERACTIVE_ENTRY_TYPE = 'operation-interactive'
-export const DEFAULT_DEBOUNCE_TIME = 1_000
-export const FINAL_STATES: OperationState[] = ['completed', 'interrupted', 'timeout', 'interactive-timeout'];
-
-
-function extractEntryMetadata(
-  entry: AnyPerformanceEntry | PerformanceEntryLike,
-  metadata?: Record<string, unknown>,
-): ProcessedEntry {
-  /** a short name used for grouping entries into a single lane */
-  let commonName: string
-  /** a fuller descriptive name */
-  let fullName = entry.name
-  let query: Record<string, string | string[]> | undefined
-  let kind: TaskSpanKind = entry.entryType as TaskSpanKind
-  const extraMetadata: Record<string, unknown> = {}
-  let occurrenceCountPrefix = ''
-
-  switch (entry.entryType) {
-    case 'resource': {
-      ;({ commonUrl: commonName, query } = sanitizeUrlForTracing(entry.name))
-      const resourceTiming = entry as PerformanceResourceTiming
-      extraMetadata.initiatorType = resourceTiming.initiatorType
-      extraMetadata.transferSize = resourceTiming.transferSize
-      extraMetadata.encodedBodySize = resourceTiming.encodedBodySize
-      extraMetadata.query = query
-      const resourceType =
-        metadata?.resource &&
-        typeof metadata?.resource === 'object' &&
-        'type' in metadata.resource &&
-        metadata.resource?.type
-      if (resourceType !== 'xhr' && resourceType !== 'fetch') {
-        kind = 'asset'
-      }
-      if (resourceTiming.initiatorType === 'iframe') {
-        kind = 'iframe'
-      }
-      break
-    }
-    case 'mark':
-    case 'measure': {
-      fullName = entry.name.replace('useTiming: ', '')
-      commonName = fullName.replaceAll(/\b\/?\d+\b/g, '')
-      if (entry.name.endsWith('/render')) {
-        kind = 'render'
-        const parts = commonName.split('/')
-        commonName = parts.slice(-2)[0]!
-        const metricId = parts.slice(0, -2).join('/')
-        extraMetadata.metricId = metricId
-        occurrenceCountPrefix = `${metricId}/`
-      }
-      if (entry.name.endsWith('/tti') || entry.name.endsWith('/ttr')) {
-        const parts = commonName.split('/')
-        const metricId = parts.slice(0, -1).join('/')
-        commonName = metricId
-        extraMetadata.metricId = metricId
-      }
-      if (entry.entryType === 'measure' && entry.name.includes('-till-')) {
-        const parts = commonName.split('/')
-        const stageChange = parts.at(-1)!
-        const componentName = parts.at(-2)!
-        const metricId = parts.slice(0, -2).join('/')
-        extraMetadata.metricId = metricId
-        extraMetadata.stageChange = stageChange
-        extraMetadata.componentName = componentName
-        // merge all stage changes under the same commonName as tti and ttr
-        commonName = metricId
-        fullName = `${metricId}/${stageChange}`
-        occurrenceCountPrefix = `${stageChange}/`
-      }
-      if (entry.name.startsWith('graphql/')) {
-        kind = 'resource'
-      }
-      break
-    }
-    default: {
-      commonName = `${entry.entryType}${
-        entry.name &&
-        entry.name !== 'unknown' &&
-        entry.name.length > 0 &&
-        entry.entryType !== entry.name
-          ? `/${entry.name}`
-          : ''
-      }`
-      fullName = commonName
-      kind = entry.entryType as TaskSpanKind
-      if ('toJSON' in entry) {
-        Object.assign(extraMetadata, entry.toJSON())
-      }
-    }
-  }
-
-  if (typeof metadata?.commonName === 'string') {
-    // eslint-disable-next-line prefer-destructuring
-    commonName = metadata.commonName
-  }
-
-  return { commonName, fullName, kind, extraMetadata, occurrenceCountPrefix }
-}
-
-
-export const defaultTaskProcessor: TaskProcessor = (entry) => {
-  const detail = (typeof entry.detail === 'object' && entry.detail)
-  const metadata = 'metadata' in entry && typeof entry.metadata === 'object' ? detail ? { ...detail, ...entry.metadata } : entry.metadata : {};
-  const operations = 'operations' in entry && typeof entry.operations === 'object' ? entry.operations : {};
-
-  // TODO: add commonName processing
-
-  let commonName = entry.name
-  if (entry.entryType === 'resource') {
-    const { commonUrl, query } = sanitizeUrlForTracing(entry.name)
-    commonName = commonUrl
-    metadata.resourceQuery = query
-  } else if (entry.entryType !== 'mark' && entry.entryType !== 'measure') {
-    commonName = `${entry.entryType}${
-      entry.name &&
-      entry.name !== 'unknown' &&
-      entry.name.length > 0 &&
-      entry.entryType !== entry.name
-        ? `/${entry.name}`
-        : ''
-    }`
-  }
-
-  return Object.assign(entry, {
-    metadata,
-    operations,
-    commonName: entry.name,
-    entryType: entry.entryType as TaskEntryType,
-  })
-}
-
-export const lotusTaskProcessor: TaskProcessor = (entry) => {
-  const task = defaultTaskProcessor(entry)
-
-  let fullName = task.name
-  let commonName = task.commonName
-  let kind: string = task.entryType
-  let occurrenceCountPrefix = ''
-
-  if (entry.entryType === 'resource') {
-    const metadata = task.metadata
-    const resourceType =
-      metadata?.resource &&
-      typeof metadata?.resource === 'object' &&
-      'type' in metadata.resource &&
-      metadata.resource?.type
-    if (resourceType !== 'xhr' && resourceType !== 'fetch') {
-      kind = 'asset'
-    }
-    const resourceTiming = entry as PerformanceResourceTiming
-    if (resourceTiming.initiatorType === 'iframe') {
-      kind = 'iframe'
-    }
-  }
-  if (task.entryType === 'mark' || task.entryType === 'measure') {
-    // backwards compatibility with useTiming
-    fullName = entry.name.replace('useTiming: ', '')
-    commonName = fullName.replaceAll(/\b\/?\d+\b/g, '')
-    if (entry.name.endsWith('/render')) {
-      kind = 'render'
-      const parts = commonName.split('/')
-      commonName = parts.slice(-2)[0]!
-      const metricId = parts.slice(0, -2).join('/')
-      task.metadata.metricId = metricId
-      occurrenceCountPrefix = `${metricId}/`
-    }
-    if (entry.name.endsWith('/tti') || entry.name.endsWith('/ttr')) {
-      const parts = commonName.split('/')
-      const metricId = parts.slice(0, -1).join('/')
-      commonName = metricId
-      task.metadata.metricId = metricId
-    }
-    if (entry.entryType === 'measure' && entry.name.includes('-till-')) {
-      const parts = commonName.split('/')
-      const stageChange = parts.at(-1)!
-      const componentName = parts.at(-2)!
-      const metricId = parts.slice(0, -2).join('/')
-      task.metadata.metricId = metricId
-      task.metadata.stageChange = stageChange
-      task.metadata.componentName = componentName
-      // merge all stage changes under the same commonName as tti and ttr
-      commonName = metricId
-      fullName = `${metricId}/${stageChange}`
-      occurrenceCountPrefix = `${stageChange}/`
-    }
-    if (entry.name.startsWith('graphql/')) {
-      kind = 'resource'
-    }
-  }
-
-  task.metadata.commonName = commonName
-  task.metadata.kind = kind
-  task.metadata.name = fullName
-  // this should happen in RUM
-  // if ('toJSON' in entry) {
-  //   Object.assign(extraMetadata, entry.toJSON())
-  // }
-}
+/** returns the best supported blocking task type or undefined if none */
+export const bestBlockingTaskType = (supportedEntryTypes: readonly string[]) =>
+  BLOCKING_TASK_ENTRY_TYPES.find((type) => supportedEntryTypes.includes(type))
 
 type TimeoutRef = ReturnType<typeof setTimeout>
-
-type FinalizationReason =
-  | 'completed'
-  | 'interrupted'
-  | 'timeout'
-  | 'interactive-timeout'
-type OperationState =
-  | 'initial'
-  | 'started'
-  | 'waiting-for-interactive'
-  | FinalizationReason
 
 /**
  * Class representing an operation.
  */
-class Operation implements PerformanceEntryLike {
+export class Operation implements PerformanceEntryLike {
   /**
    * The ID of the operation.
    */
-  id: string
+  public readonly id: string
 
   /**
    * The name of the operation.
    */
-  name: string
+  public readonly name: string
 
   /**
    * The start time of the operation.
    */
   private _startTime: number | undefined
-  get startTime() {
+  public get startTime() {
     if (typeof this._startTime === 'undefined') {
       throw new TypeError('Operation has not started yet')
     }
     return this._startTime
   }
-  set startTime(value) {
+  private set startTime(value) {
     this._startTime = value
   }
 
   /**
-   * The duration of the operation.
+   * The duration from the start of the operation until all trackers were satisfied.
    */
-  duration: number
+  public duration: number
+
+  /**
+   * The duration of the operation + the time it took the page to become interactive or until a timeout was reached.
+   * Might be 0 if no interactive tracking was configured.
+   */
+  public durationTillInteractive: number
 
   readonly entryType = 'operation'
 
   /**
    * Metadata for the operation.
    */
-  metadata: Record<string, unknown>
-  readonly tasks: Task[] = []
+  public metadata: Record<string, unknown>
+
+  private readonly events: Event[] = []
+  public getEvents() {
+    return (this.isInFinalState
+      ? this.events
+      : [...this.events]
+    )
+  }
+  public get eventCount() {
+    return this.events.length
+  }
 
   private definition: Omit<OperationDefinition, 'captureInteractive'> & {
     captureInteractive: Required<CaptureInteractiveConfig> | false
   }
   private requiredToStartTrackers: Set<number>
   private requiredToEndTrackers: Set<number>
-  // TODO: perhaps state need to be something like getStateAtTime(time: number): State instead?
-  // this way we could inject entries with past timestamps
-  // introduce the function setState() first, then ask gpt to do getStateAt...
+
   private _state!: OperationState
-  get state() {
+  public get state() {
     return this._state
   }
   private set state(value) {
     this._state = value
+  }
+  public get isInFinalState() {
+    return FINAL_STATES.includes(this.state)
+  }
+  public get status(): EventStatus {
+    return this.state === 'timeout' || this.state === 'interactive-timeout' || this.state === 'interrupted' ? 'aborted' : 'ok'
   }
 
   private lastDebounceDeadline: number
@@ -325,19 +133,17 @@ class Operation implements PerformanceEntryLike {
     this.id = Math.random().toString(36).slice(2)
     this.name = definition.operationName
     this.duration = 0
-    this.metadata = {
-      kind: 'operation',
-      ...definition.metadata,
-    }
-    const captureInteractive = definition.captureInteractive && manager.supportedEntryTypes.includes('longtask')
-      ? typeof definition.captureInteractive === 'object'
-        ? { ...DEFAULT_CAPTURE_INTERACTIVE, ...definition.captureInteractive }
+    this.durationTillInteractive = 0
+    this.metadata = definition.metadata ?? {}
+    const captureInteractive = definition.waitUntilInteractive && bestBlockingTaskType(manager.supportedEntryTypes)
+      ? typeof definition.waitUntilInteractive === 'object'
+        ? { ...DEFAULT_CAPTURE_INTERACTIVE, ...definition.waitUntilInteractive }
         : DEFAULT_CAPTURE_INTERACTIVE
       : false
 
     this.definition = { ...definition, captureInteractive, track: definition.track.map((track) => ({
       ...track,
-      debounceEndWhenSeen: track.debounceEndWhenSeen ?? true,
+      debounceEndWhenSeen: track.debounceEndWhenSeen ?? !track.interruptWhenSeen,
     }))}
     this.requiredToStartTrackers = new Set()
     this.requiredToEndTrackers = new Set()
@@ -363,50 +169,46 @@ class Operation implements PerformanceEntryLike {
     }
   }
 
-  get isInFinalState() {
-    return FINAL_STATES.includes(this.state)
-  }
-
   /**
-   * Processes a Performance Entry task.
-   * @param task - The performance entry task.
-   * @returns the task meta if it was processed, false otherwise.
+   * Processes a Performance Entry event.
+   * @param event - The performance entry event.
+   * @returns the event meta if it was processed, false otherwise.
    */
-  processTask(task: Task): Task | false {
+  processEvent(event: Event): Event | false {
     if (this.buffered) {
-      const taskEndTime = task.startTime + task.duration
-      this.executeBufferedTimeoutsDue(taskEndTime)
+      const eventEndTime = event.startTime + event.duration
+      this.executeBufferedTimeoutsDue(eventEndTime)
     }
 
-    if (task.startTime < this.operationCreationTime) {
-      // ignore tasks that started before the operation was created
+    if (event.startTime < this.operationCreationTime) {
+      // ignore events that started before the operation was created
       // this can happen when processing buffered entries
       // and the operation was created after a new buffer was started
       return false
     }
 
     if (this.isInFinalState) {
-      // ignore tasks after the operation has completed
+      // ignore events after the operation has completed
       return false
     }
 
     if (
       this.definition.interruptSelf &&
       (this.state === 'started' || this.state === 'waiting-for-interactive') &&
-      task.entryType === OPERATION_START_ENTRY_TYPE &&
-      task.name === this.name
+      event.entryType === OPERATION_START_ENTRY_TYPE &&
+      event.name === this.name
     ) {
-      this.finalizeOperation('interrupted', task.startTime + task.duration)
+      this.finalizeOperation('interrupted', event.startTime + event.duration)
       return false
     }
 
 
     if (
       (this.state === 'started' || this.state === 'waiting-for-interactive') &&
-      task.entryType === OPERATION_ENTRY_TYPE &&
-      task.name === this.name
+      event.entryType === OPERATION_ENTRY_TYPE &&
+      event.name === this.name
     ) {
-      // ignore task of self
+      // ignore event of self
       // TODO: maybe keep this after all?
       return false
     }
@@ -427,7 +229,7 @@ class Operation implements PerformanceEntryLike {
       const trackerDefinition = this.definition.track[trackerIndex]!
       const criteriaMatched = this.matchesCriteria(
         trackerDefinition.match,
-        task,
+        event,
       )
 
       if (criteriaMatched) {
@@ -456,72 +258,57 @@ class Operation implements PerformanceEntryLike {
     }
 
     if (this.state === 'initial' && this.requiredToStartTrackers.size > 0) {
-      // we haven't started yet, and we're still waiting for some required tasks
+      // we haven't started yet, and we're still waiting for some required events
       // end processing here
       return false
     }
 
-    const isOperationStartingTask =
+    const isOperationStartingEvent =
       this.state === 'initial' && this.requiredToStartTrackers.size === 0
 
-    const startTime = isOperationStartingTask ? task.startTime : this.startTime
+    const startTime = isOperationStartingEvent ? event.startTime : this.startTime
+    // TODO: calculate occurrence count during report generation
 
-    // const taskMetadata: TaskOperationRelation = {
-    //   ...task,
-    //   duration: task.duration,
-    //   entryType: task.entryType,
-    //   startTime: task.startTime,
-    //   detail: task.detail,
-    //   id: this.id,
-    //   name: this.name,
-    //   internalOrder: this.tasks.length,
-    //   name: task.name,
-    //   commonName: task.name,
-    //   operationRelativeStartTime: task.startTime - startTime,
-    //   operationRelativeEndTime: task.startTime - startTime + task.duration,
-    //   // TODO: calculate occurrence count during report generation
-    // }
-
-    if (this.definition.keepOnlyExplicitlyTrackedTasks) {
+    if (this.definition.keepOnlyExplicitlyTrackedEvents) {
       if (tracked) {
-        this.tasks.push(task)
+        this.events.push(event)
       }
     } else {
-      this.tasks.push(task)
+      this.events.push(event)
     }
 
-    if (isOperationStartingTask) {
+    if (isOperationStartingEvent) {
       this.markAsStarted(startTime)
       // no more processing
-      return task
+      return event
     }
 
     if (
       interrupted &&
       (this.state === 'started' || this.state === 'waiting-for-interactive')
     ) {
-      this.finalizeOperation('interrupted', task.startTime + task.duration)
-      return task
+      this.finalizeOperation('interrupted', event.startTime + event.duration)
+      return event
     }
 
     if (
       this.state === 'waiting-for-interactive' &&
-      task.entryType !== 'longtask'
+      !BLOCKING_TASK_ENTRY_TYPES.includes(event.entryType)
     ) {
-      // only long tasks are relevant for interactive state tracking
-      return task
+      // only events demarking blocking should be handled further for interactive state tracking
+      return event
     }
 
     if (this.state === 'started' && this.requiredToEndTrackers.size === 0) {
-      this.maybeFinalizeLater(debounceBy, task.startTime + task.duration)
-      return task
+      this.maybeFinalizeLater(debounceBy, event.startTime + event.duration)
+      return event
     }
 
     if (this.state === 'waiting-for-interactive') {
-      this.handleInteractiveTracking(task)
+      this.handleInteractiveTracking(event)
     }
 
-    return task
+    return event
   }
 
   /**
@@ -561,16 +348,16 @@ class Operation implements PerformanceEntryLike {
     return debounceBy
   }
 
-  private maybeFinalizeLater(debounceBy: number, taskEndTime: number) {
+  private maybeFinalizeLater(debounceBy: number, eventEndTime: number) {
     const newDeadline = Math.max(
-      taskEndTime + debounceBy,
+      eventEndTime + debounceBy,
       this.lastDebounceDeadline,
     )
 
     if (debounceBy === 0) {
       this.lastDebounceDeadline = newDeadline
       this.clearTimeout('debounce')
-      this.finalizeOperation('completed', taskEndTime)
+      this.finalizeOperation('completed', eventEndTime)
       return
     }
 
@@ -579,7 +366,7 @@ class Operation implements PerformanceEntryLike {
 
       const onDebounceDue = () => {
         this.clearTimeout('debounce')
-        this.finalizeOperation('completed', taskEndTime)
+        this.finalizeOperation('completed', eventEndTime)
       }
 
       // we could finalize this synchronously, but we always run this operation async
@@ -591,10 +378,10 @@ class Operation implements PerformanceEntryLike {
   }
 
   /**
-   * In buffered mode, the timeouts are triggered by the next task that is processed.
-   * Tasks are assumed to be processed in order.
+   * In buffered mode, the timeouts are triggered by the next event that is processed.
+   * Events are assumed to be processed in order.
    */
-  enableBufferedMode() {
+  private enableBufferedMode() {
     this.buffered = true
     Object.values(this.timeoutIds).forEach((id) => {
       if (id) {
@@ -606,14 +393,14 @@ class Operation implements PerformanceEntryLike {
   /**
    * Disables buffered mode and triggers any timeouts if they are due.
    */
-  disableBufferedMode() {
+  private disableBufferedMode() {
     this.buffered = false
     Object.keys(this.timeouts).forEach((type) => {
       this.ensureTimeout(type as keyof typeof this.timeouts)
     })
   }
 
-  executeBufferedTimeoutsDue(time: number) {
+  private executeBufferedTimeoutsDue(time: number) {
     Object.values(this.timeouts)
       .sort((a, b) => (a?.[0] ?? 0) - (b?.[0] ?? 0))
       .forEach((timeout) => {
@@ -625,7 +412,7 @@ class Operation implements PerformanceEntryLike {
       })
   }
 
-  timeouts: {
+  private timeouts: {
     global: [number, () => void] | undefined
     interactive: [number, () => void] | undefined
     debounce: [number, () => void] | undefined
@@ -635,7 +422,7 @@ class Operation implements PerformanceEntryLike {
     debounce: undefined,
   }
 
-  timeoutIds: {
+  private timeoutIds: {
     global: TimeoutRef | null
     interactive: TimeoutRef | null
     debounce: TimeoutRef | null
@@ -645,7 +432,7 @@ class Operation implements PerformanceEntryLike {
     debounce: null,
   }
 
-  setTimeout(
+  private setTimeout(
     type: 'global' | 'interactive' | 'debounce',
     callback: () => void,
     endTime: number,
@@ -655,14 +442,14 @@ class Operation implements PerformanceEntryLike {
     this.ensureTimeout(type, alwaysAsync)
   }
 
-  ensureTimeout(
+  private ensureTimeout(
     type: 'global' | 'interactive' | 'debounce',
     alwaysAsync?: boolean,
   ) {
     const timeout = this.timeouts[type]
     if (timeout) {
       if (this.buffered) {
-        // do nothing, the timeout will be triggered by the next task when it is processed
+        // do nothing, the timeout will be triggered by the next event when it is processed
       } else {
         const [dueTime, callback] = timeout
         const timeoutId = this.timeoutIds[type]
@@ -684,7 +471,7 @@ class Operation implements PerformanceEntryLike {
     }
   }
 
-  clearTimeout(type: 'global' | 'interactive' | 'debounce') {
+  private clearTimeout(type: 'global' | 'interactive' | 'debounce') {
     const timeoutId = this.timeoutIds[type]
     if (timeoutId) {
       clearTimeout(timeoutId)
@@ -733,9 +520,7 @@ class Operation implements PerformanceEntryLike {
       this.duration = endTime - this.startTime
       this.clearTimeout('debounce')
 
-      if (this.definition.captureDone) {
-        this.emitMeasureEvent()
-      }
+      this.onTracked()
 
       // only capture interactive state if the operation is completed:
       if (captureInteractive) {
@@ -757,123 +542,106 @@ class Operation implements PerformanceEntryLike {
           endTime + interactiveTimeout,
         )
 
-        // waiting for long tasks for the duration of the interactive debounce:
+        // waiting for long events for the duration of the interactive debounce:
         this.maybeFinalizeLater(captureInteractive.debounceLongTasksBy, endTime)
       } else {
-        this.clearAllTimeouts()
-        this.finalizationFn()
+        this.finalize()
       }
     } else if (this.state === 'waiting-for-interactive') {
       this.state = reason
-      this.clearAllTimeouts()
-      this.emitInteractiveMeasureEvent(endTime)
-      this.finalizationFn()
+      this.durationTillInteractive = endTime - this.startTime
+      this.finalize()
     }
   }
 
+  private finalize() {
+    this.clearAllTimeouts()
+    this.onEnd()
+    this.finalizationFn()
+  }
+
   /**
-   * Handles tracking long tasks while waiting for interactivity.
-   * @param task - The performance entry task to track.
+   * Handles tracking long events while waiting for interactivity.
+   * @param event - The performance entry event to track.
    */
-  private handleInteractiveTracking(task: PerformanceEntryLike): void {
+  private handleInteractiveTracking(event: PerformanceEntryLike): void {
     if (
-      task.entryType !== 'longtask' ||
+      !BLOCKING_TASK_ENTRY_TYPES.includes(event.entryType) ||
       this.state !== 'waiting-for-interactive' ||
       !this.definition.captureInteractive ||
-      task.duration < this.definition.captureInteractive.skipDebounceForLongTasksShorterThan
+      event.duration < this.definition.captureInteractive.skipDebounceForLongEventsShorterThan
     ) {
       return
     }
     const { debounceLongTasksBy } = this.definition.captureInteractive
-    this.maybeFinalizeLater(debounceLongTasksBy, task.startTime + task.duration)
+    this.maybeFinalizeLater(debounceLongTasksBy, event.startTime + event.duration)
   }
 
-  /**
-   * Emits a 'measure' event for the operation.
-   */
-  private emitMeasureEvent(): void {
-    // TODO: don't call measure, but a custom api function here instead for greater flexibility
-    // also make sure to by default add detail[SKIP_PROCESSING] symbol to prevent double-processing
-    // and emit internally to the manager
-    this.manager.performance.measure(this.name, {
-      start: this.startTime,
-      duration: this.duration,
-      detail: {
-        [SKIP_PROCESSING]: true,
-        ...this.metadata,
-        id: this.id,
-        name: this.name,
-        tasks: this.isInFinalState ? this.tasks : [...this.tasks],
-        state: this.state,
-      },
-    })
-    // process the operation as a task itself:
-    this.manager.scheduleTaskProcessing({
+  private onTracked(): void {
+    // process the operation as a event itself:
+    this.manager.scheduleEventProcessing({
       entryType: OPERATION_ENTRY_TYPE,
       name: this.name,
-      commonName: this.name,
       startTime: this.startTime,
       duration: this.duration,
       metadata: this.metadata,
+      event: {
+        commonName: this.name,
+        kind: OPERATION_ENTRY_TYPE,
+        status: this.status,
+      }
     })
+
+    this.definition.onTracked?.(this)
   }
 
-  /**
-   * Emits an 'interactive' measure event for the operation.
-   */
-  private emitInteractiveMeasureEvent(interactiveTime: number): void {
-    this.manager.performance.measure(`${this.name}-interactive`, {
-      start: this.startTime,
-      duration: interactiveTime - this.startTime,
-      detail: {
-        [SKIP_PROCESSING]: true,
-        ...this.metadata,
-        id: this.id,
+  private onEnd(): void {
+    // process the operation as a event itself:
+    if (this.durationTillInteractive) {
+      this.manager.scheduleEventProcessing({
+        entryType: OPERATION_INTERACTIVE_ENTRY_TYPE,
         name: this.name,
-        tasks: this.tasks,
-        state: this.state,
-        interactive: true,
-      },
-    })
-    // process the operation as a task itself:
-    this.manager.scheduleTaskProcessing({
-      entryType: OPERATION_INTERACTIVE_ENTRY_TYPE,
-      name: this.name,
-      commonName: this.name,
-      startTime: this.startTime,
-      duration: interactiveTime - this.startTime,
-      metadata: this.metadata,
-    })
+        startTime: this.startTime,
+        duration: this.durationTillInteractive,
+        metadata: this.metadata,
+        event: {
+          commonName: this.name,
+          kind: OPERATION_INTERACTIVE_ENTRY_TYPE,
+          status: this.status,
+        }
+      })
+    }
+    this.definition.onEnd?.(this)
   }
 
   /**
-   * Matches criteria against a performance entry task.
+   * Matches criteria against a performance entry event.
    * @param match - The match criteria or function.
-   * @param task - The performance entry task.
-   * @returns True if the task matches the criteria, false otherwise.
+   * @param event - The performance entry event.
+   * @returns True if the event matches the criteria, false otherwise.
    */
   private matchesCriteria(
-    match: EntryMatchCriteria | EntryMatchFunction,
-    task: Task,
+    match: EventMatchCriteria | EventMatchFunction,
+    event: Event,
   ): boolean {
     if (typeof match === 'function') {
-      return match(task)
+      return match(event)
     }
     const { name, metadata, type } = match
     const nameMatches =
       !name ||
       (typeof name === 'string'
-        ? task.name === name
+        ? event.name === name
         : typeof name === 'function'
-        ? name(task.name)
-        : name.test(task.name))
-    const typeMatches = !type || task.entryType === type
+        ? name(event.name)
+        : name.test(event.name))
+    const typeMatches = !type || event.entryType === type
     const metadataMatches =
       !metadata ||
       Boolean(
-        task.metadata &&
+        event.metadata &&
           Object.entries(metadata).every(
-            ([key, value]) => task.metadata?.[key] === value,
+            ([key, value]) => event.metadata?.[key] === value,
           ),
       )
     return nameMatches && typeMatches && metadataMatches
@@ -893,36 +661,44 @@ export class OperationManager {
   private bufferDuration?: number
   private bufferTimeoutId?: TimeoutRef
   private bufferFlushUntil = 0
-  private taskBuffer: Task[] = []
-  private preprocessTask: (task: PerformanceEntryLike | InputTask) => Task
+  private eventBuffer: Event[] = []
+  /**
+   * The function to preprocess a PerformanceEntry-like object into an Event object.
+   * The resulting Event should have an 'operations' property record,
+   * which will be updated by the manager with metadata related to the operations that have processed it.
+   * This will happen synchronously when running in unbuffered mode, and asynchronously when running in buffered mode.
+   */
+  private preprocessEvent: (event: PerformanceEntryLike | InputEvent) => Event
   supportedEntryTypes: readonly string[]
+  bestBlockingTaskType: string | undefined
 
   /**
    * Creates an instance of CentralizedPerformanceManager.
    */
   constructor({
     defaultDebounceTime = DEFAULT_DEBOUNCE_TIME,
-    observe = (onEntry) => {
-      const observer = new PerformanceObserver((list) => {
-        list.getEntries().forEach(onEntry)
-      })
-      observer.observe({
-        entryTypes: ['mark', 'measure', 'resource', 'longtask', 'element', 'long-animation-frame'],
-      })
-      return () => void observer.disconnect()
-    },
+    preprocessEvent = defaultEventProcessor,
+    observe,
     performance: { measure = performance.measure.bind(performance), now = performance.now.bind(performance) } = {},
     bufferDuration,
-    preprocessTask = defaultTaskProcessor,
     supportedEntryTypes = PerformanceObserver.supportedEntryTypes,
   }: InstanceOptions = {}) {
     this.operations = new Map()
     this.defaultDebounceTime = defaultDebounceTime
     this.performance = { measure, now }
-    this.observe = observe
-    this.bufferDuration = bufferDuration
-    this.preprocessTask = preprocessTask
     this.supportedEntryTypes = supportedEntryTypes
+    this.bestBlockingTaskType = bestBlockingTaskType(supportedEntryTypes)
+    this.bufferDuration = bufferDuration
+    this.preprocessEvent = preprocessEvent
+    const entryTypes = this.bestBlockingTaskType ? [...DEFAULT_OBSERVED_ENTRY_TYPES, this.bestBlockingTaskType] : DEFAULT_OBSERVED_ENTRY_TYPES
+
+    this.observe = observe ?? ((onEntry) => {
+      const observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach(onEntry)
+      })
+      observer.observe({entryTypes})
+      return () => void observer.disconnect()
+    })
   }
 
   /**
@@ -939,7 +715,7 @@ export class OperationManager {
         startTime: operationDefinition.startTime ?? this.performance.now(),
         duration: 0,
       }
-      this.scheduleTaskProcessing(operationStartEvent)
+      this.scheduleEventProcessing(operationStartEvent)
     }
 
     const finalizationFn = () => {
@@ -962,15 +738,15 @@ export class OperationManager {
   }
 
   scheduleBufferFlushIfNeeded() {
-    if (!this.bufferDuration || this.isFlushingBuffer || this.bufferTimeoutId || this.taskBuffer.length === 0) {
+    if (!this.bufferDuration || this.isFlushingBuffer || this.bufferTimeoutId || this.eventBuffer.length === 0) {
       return
     }
 
     // instead of flushing the whole buffer in one go
-    // every half-buffer, we will only flush tasks that ocurred within the first 1/4 of the buffer's duration
+    // every half-buffer, we will only flush events that ocurred within the first 1/4 of the buffer's duration
     // this allows for new items to still be added *between* the items of the remaining 3/4 of the buffer
     // and guarantees that the entire buffer is processed within the set buffer duration
-    // this is a compromise between processing tasks in order,
+    // this is a compromise between processing events in order,
     // and also not waiting too long to process them
     const now = this.performance.now()
     this.bufferFlushUntil = now + (this.bufferDuration / 4)
@@ -981,65 +757,71 @@ export class OperationManager {
   }
 
   /**
-   * Processes a performance entry task.
-   * @param entry - The performance entry task to track.
+   * Processes a performance entry event.
+   * @param entry - The performance entry event to track.
    */
-  scheduleTaskProcessing(entry: PerformanceEntryLike | InputTask): undefined | readonly Task[] {
+  scheduleEventProcessing(entry: PerformanceEntryLike | InputEvent): undefined | readonly Event[] {
     if (typeof entry.detail === 'object' && entry.detail && SKIP_PROCESSING in entry.detail) {
       return undefined;
     }
 
-    const task = this.preprocessTask(entry)
+    const event = this.preprocessEvent(entry)
 
     if (this.bufferDuration && !this.isFlushingBuffer) {
-      this.taskBuffer.push(task)
+      this.eventBuffer.push(event)
       this.scheduleBufferFlushIfNeeded()
       // asynchronous processing
       return undefined
     } else {
       // process immediately
-      return this.processTask(task)
+      return this.processEvent(event)
     }
   }
 
-  private processTask(task: Task): readonly Task[] {
-    const processedTasks: Task[] = []
+  private processEvent(event: Event): readonly Event[] {
+    const processedEvents: Event[] = []
     for (const operation of this.operations.values()) {
-      const operationTask = operation.processTask(task)
-      if (operationTask) {
-        processedTasks.push(operationTask)
+      const processedEvent = operation.processEvent(event)
+      if (processedEvent) {
+        event.operations[operation.name] = {
+          id: operation.id,
+          operationRelativeStartTime: event.startTime - operation.startTime,
+          operationRelativeEndTime: event.startTime - operation.startTime + event.duration,
+          internalOrder: operation.eventCount,
+        }
+        processedEvents.push(processedEvent)
       }
     }
-    return processedTasks
+    return processedEvents
   }
 
   private isFlushingBuffer = false
 
   /**
-   * Flushes the task buffer, sorts the tasks, and processes them sequentially.
+   * Flushes the event buffer, sorts the events, and processes them sequentially.
    */
   private flushBuffer(): void {
     this.isFlushingBuffer = true
 
     // Sort the buffer by end time
-    this.taskBuffer.sort(
+    this.eventBuffer.sort(
       (a, b) => a.startTime + a.duration - (b.startTime + b.duration),
     )
 
-    const remainingBuffer: Task[] = []
+    const remainingBuffer: Event[] = []
 
-    for (const task of this.taskBuffer) {
-      const taskEndTime = task.startTime + task.duration
-      // Process each task sequentially
-      if (taskEndTime <= this.bufferFlushUntil) {
-        this.processTask(task)
+    for (const event of this.eventBuffer) {
+      const eventEndTime = event.startTime + event.duration
+      // Process each event sequentially
+      if (eventEndTime <= this.bufferFlushUntil) {
+        this.processEvent(event)
       } else {
-        remainingBuffer.push(task)
+        remainingBuffer.push(event)
       }
     }
 
     // Update the buffer
-    this.taskBuffer = remainingBuffer
+    this.eventBuffer = remainingBuffer
 
     this.bufferTimeoutId = undefined
     this.bufferFlushUntil = 0
@@ -1056,7 +838,7 @@ export class OperationManager {
     const isObserving = Boolean(this.observerDisconnect)
     if (shouldBeObserving && !isObserving) {
       this.observerDisconnect = this.observe(
-        (entry) => void this.scheduleTaskProcessing(entry),
+        (entry) => void this.scheduleEventProcessing(entry),
       )
     } else if (!shouldBeObserving && isObserving) {
       this.observerDisconnect!()
