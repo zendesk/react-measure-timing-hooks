@@ -445,13 +445,13 @@ export class Operation implements PerformanceEntryLike {
   }
 
   private timeoutIds: {
-    global: TimeoutRef | null
-    interactive: TimeoutRef | null
-    debounce: TimeoutRef | null
+    global: TimeoutRef | undefined
+    interactive: TimeoutRef | undefined
+    debounce: TimeoutRef | undefined
   } = {
-    global: null,
-    interactive: null,
-    debounce: null,
+    global: undefined,
+    interactive: undefined,
+    debounce: undefined,
   }
 
   private setTimeout(
@@ -477,7 +477,7 @@ export class Operation implements PerformanceEntryLike {
         const timeoutId = this.timeoutIds[type]
         if (timeoutId) {
           clearTimeout(timeoutId)
-          this.timeoutIds[type] = null
+          this.timeoutIds[type] = undefined
         }
         const now = this.manager.performance.now()
         const offsetAdjustedTimeout = Math.max(0, dueTime - now)
@@ -485,7 +485,7 @@ export class Operation implements PerformanceEntryLike {
           callback()
         } else {
           this.timeoutIds[type] = setTimeout(() => {
-            this.timeoutIds[type] = null
+            this.timeoutIds[type] = undefined
             callback()
           }, offsetAdjustedTimeout)
         }
@@ -497,9 +497,9 @@ export class Operation implements PerformanceEntryLike {
     const timeoutId = this.timeoutIds[type]
     if (timeoutId) {
       clearTimeout(timeoutId)
-      this.timeoutIds[type] = null
-      this.timeouts[type] = undefined
     }
+    this.timeoutIds[type] = undefined
+    this.timeouts[type] = undefined
     if (type === 'debounce') {
       this.lastDebounceDeadline = 0
     }
