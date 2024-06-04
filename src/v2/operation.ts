@@ -15,12 +15,12 @@ import {
   SKIP_PROCESSING,
 } from './constants'
 import { defaultEventProcessor } from './defaultEventProcessor'
-import { FinalizationReason, OperationState } from './types'
 import {
   type CaptureInteractiveConfig,
   type Event,
   type EventMatchCriteria,
   type EventMatchFunction,
+  type EventProcessor,
   type EventStatus,
   type InputEvent,
   type InstanceOptions,
@@ -28,6 +28,8 @@ import {
   type OperationDefinition,
   type PerformanceApi,
   type PerformanceEntryLike,
+  FinalizationReason,
+  OperationState,
 } from './types'
 
 /** returns the best supported blocking task type or undefined if none */
@@ -702,7 +704,7 @@ export class OperationManager {
    * which will be updated by the manager with metadata related to the operations that have processed it.
    * This will happen synchronously when running in unbuffered mode, and asynchronously when running in buffered mode.
    */
-  private preprocessEvent: (event: PerformanceEntryLike | InputEvent) => Event
+  private preprocessEvent: EventProcessor
   supportedEntryTypes: readonly string[]
   expectBlockingTasks: boolean
 
@@ -830,6 +832,9 @@ export class OperationManager {
     }
 
     const event = this.preprocessEvent(entry)
+    if (!event) {
+      return undefined
+    }
 
     if (this.bufferDuration && !this.isFlushingBuffer) {
       this.eventBuffer.push(event)

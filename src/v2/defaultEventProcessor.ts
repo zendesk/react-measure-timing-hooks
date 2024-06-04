@@ -6,7 +6,14 @@ import {
   type InputEvent,
 } from './types'
 
-export const defaultEventProcessor: EventProcessor = (entry): Event => {
+export const defaultEventProcessor: EventProcessor = (
+  entry,
+): Event | undefined => {
+  if (entry.entryType === 'mark' && entry.name.startsWith('--')) {
+    // react in dev mode hundreds of these marks, ignore them
+    return undefined
+  }
+
   const detail = typeof entry.detail === 'object' && entry.detail
   const metadata =
     'metadata' in entry && typeof entry.metadata === 'object'

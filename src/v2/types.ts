@@ -299,7 +299,9 @@ export interface PerformanceApi {
   now: () => number
 }
 
-export type EventProcessor = (entry: InputEvent | PerformanceEntryLike) => Event
+export type EventProcessor = (
+  entry: InputEvent | PerformanceEntryLike,
+) => Event | undefined
 
 export interface InstanceOptions {
   defaultDebounceTime?: number
