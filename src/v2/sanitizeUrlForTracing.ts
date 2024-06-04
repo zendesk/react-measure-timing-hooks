@@ -41,6 +41,7 @@ export function sanitizeUrlForTracing(url: string): {
   let sanitizedUrl = commonUrl.replace(/\/\d+/g, '/$id')
   // replace UUIDs as well:
   sanitizedUrl = sanitizedUrl.replace(
+    // eslint-disable-next-line unicorn/better-regex
     /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g,
     '$uuid',
   )
