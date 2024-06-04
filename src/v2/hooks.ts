@@ -1,42 +1,36 @@
 // TODO: maybe even a HOC/wrapper instead? this way I could ensure to add a hook at beginning and at the end of the component
 
-import { useEffect, useRef, type DependencyList } from 'react'
-import { OperationManager } from './operation'
+import { useEffect, useRef } from 'react'
 import { useOnComponentUnmount } from '../ErrorBoundary'
-import type {
-  InputEvent,
-  Metadata,
-  OperationDefinition,
-  PerformanceEntryLike,
-  Event,
-} from './types'
 import { VISIBLE_STATE } from './constants'
+import { OperationManager } from './operation'
+import type { InputEvent, Metadata, OperationDefinition } from './types'
 
 // TODO: make a getUseCaptureRenderBeaconTask, and provide OperationManager there
-export const useCaptureRenderBeaconTask = (
-  {
-    componentName,
-    metadata: meta,
-    error,
-    state: visibleState = VISIBLE_STATE.COMPLETE,
-    operationManager,
-  }: {
-    componentName: string
-    metadata: Record<string, unknown>
-    error?: object
-    /**
-     * what is the state of the UX that the user sees as part of this render?
-     * note that if 'error' is provided, the state will be 'error' regardless of this value
-     **/
-    state?: string
-    operationManager: OperationManager
-  },
-  restartWhenChanged: DependencyList,
-) => {
+export const useCaptureRenderBeaconTask = ({
+  componentName,
+  metadata: meta,
+  error,
+  visibleState = VISIBLE_STATE.COMPLETE,
+  operationManager,
+}: {
+  componentName: string
+  metadata: Record<string, unknown>
+  error?: object
+  /**
+   * what is the state of the UX that the user sees as part of this render?
+   * note that if 'error' is provided, the state will be 'error' regardless of this value
+   * */
+  visibleState?: string
+  operationManager: OperationManager
+}) => {
+  const renderCountRef = useRef(0)
   const metadata: Metadata = {
     visibleState: error ? VISIBLE_STATE.ERROR : visibleState,
+    renderCount: renderCountRef.current,
     ...meta,
   }
+  renderCountRef.current += 1
   const renderStartTask = {
     entryType: error ? 'component-render-error' : 'component-render-start',
     name: componentName,

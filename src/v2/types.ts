@@ -203,14 +203,23 @@ export interface Metadata {
       | 'media'
       | 'other'
       | 'native'
-    method?: 'POST' | 'GET' | 'HEAD' | 'PUT' | 'DELETE' | 'PATCH' | undefined
-    status_code?: number | undefined
+    method?:
+      | 'POST'
+      | 'GET'
+      | 'HEAD'
+      | 'PUT'
+      | 'DELETE'
+      | 'PATCH'
+      | 'TRACE'
+      | undefined
+    status?: number | undefined
   }
   resourceQuery?: Record<string, string | string[]>
 
   // renders add this metadata:
   visibleState?: VisibleStates | string
   previousVisibleState?: VisibleStates | string
+  renderCount?: number
 
   [key: string]: unknown
 }
@@ -288,15 +297,6 @@ export type ObserveFn = (
 
 export interface PerformanceApi {
   now: () => number
-  measure: (
-    name: string,
-    options: {
-      start: number
-      duration: number
-      // TODO: strongly type the detail here
-      detail: Record<string, unknown>
-    },
-  ) => void
 }
 
 export type EventProcessor = (entry: InputEvent | PerformanceEntryLike) => Event
@@ -308,6 +308,8 @@ export interface InstanceOptions {
   bufferDuration?: number
   preprocessEvent?: EventProcessor
   supportedEntryTypes?: readonly string[]
+  requestObserveEntryTypes?: readonly string[]
+  expectBlockingTasks?: boolean
 }
 
 export type FinalizationReason =

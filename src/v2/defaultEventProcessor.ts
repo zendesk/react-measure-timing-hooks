@@ -33,13 +33,12 @@ export const defaultEventProcessor: EventProcessor = (entry) => {
     const resourceType =
       resource && typeof resource.type === 'string' && resource.type
     const statusCode =
-      resource &&
-      typeof resource.status_code === 'number' &&
-      resource.status_code
+      resource && typeof resource.status === 'number' && resource.status
 
     if (resourceType && resourceType !== 'xhr' && resourceType !== 'fetch') {
       kind = 'asset'
     }
+    // eslint-disable-next-line no-magic-numbers
     if (statusCode && statusCode >= 400) {
       status = 'error'
     }
@@ -68,65 +67,4 @@ export const defaultEventProcessor: EventProcessor = (entry) => {
       status,
     },
   })
-}
-
-export const lotusEventProcessor: EventProcessor = (entry) => {
-  const processedEntry = defaultEventProcessor(entry)
-  const { event, metadata } = processedEntry
-
-  let fullName: string | undefined
-  let commonName = event.commonName
-  let kind = event.kind
-  let occurrenceCountPrefix = ''
-
-  if (
-    processedEntry.entryType === 'mark' ||
-    processedEntry.entryType === 'measure'
-  ) {
-    // backwards compatibility with useTiming
-    fullName = processedEntry.name.replace('useTiming: ', '')
-    commonName = fullName.replaceAll(/\b\/?\d+\b/g, '')
-    if (entry.name.endsWith('/render')) {
-      kind = 'render'
-      const parts = commonName.split('/')
-      commonName = parts.slice(-2)[0]!
-      const metricId = parts.slice(0, -2).join('/')
-      metadata.metricId = metricId
-      occurrenceCountPrefix = `${metricId}/`
-    }
-    if (entry.name.endsWith('/tti') || entry.name.endsWith('/ttr')) {
-      const parts = commonName.split('/')
-      const metricId = parts.slice(0, -1).join('/')
-      commonName = metricId
-      metadata.metricId = metricId
-    }
-    if (entry.entryType === 'measure' && entry.name.includes('-till-')) {
-      const parts = commonName.split('/')
-      const stageChange = parts.at(-1)!
-      const componentName = parts.at(-2)!
-      const metricId = parts.slice(0, -2).join('/')
-      metadata.metricId = metricId
-      metadata.stageChange = stageChange
-      metadata.componentName = componentName
-      // merge all stage changes under the same commonName as tti and ttr
-      commonName = metricId
-      fullName = `${metricId}/${stageChange}`
-      occurrenceCountPrefix = `${stageChange}/`
-    }
-    if (entry.name.startsWith('graphql/')) {
-      kind = 'resource'
-    }
-  }
-
-  event.commonName = commonName
-  event.kind = kind
-  if (fullName) {
-    event.name = fullName
-  }
-
-  return processedEntry
-  // this should happen in RUM (or maybe already does happen?)
-  // if ('toJSON' in entry) {
-  //   Object.assign(extraMetadata, entry.toJSON())
-  // }
 }
