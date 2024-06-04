@@ -1,21 +1,18 @@
 import { sanitizeUrlForTracing } from './sanitizeUrlForTracing'
 import {
-  type EventEntryType,
+  type Event,
   type EventProcessor,
   type EventStatus,
+  type InputEvent,
 } from './types'
 
-export const defaultEventProcessor: EventProcessor = (entry) => {
+export const defaultEventProcessor: EventProcessor = (entry): Event => {
   const detail = typeof entry.detail === 'object' && entry.detail
   const metadata =
     'metadata' in entry && typeof entry.metadata === 'object'
       ? detail
         ? { ...detail, ...entry.metadata }
         : entry.metadata
-      : {}
-  const operations =
-    'operations' in entry && typeof entry.operations === 'object'
-      ? entry.operations
       : {}
   let kind = entry.entryType
   let commonName = entry.name
@@ -57,14 +54,12 @@ export const defaultEventProcessor: EventProcessor = (entry) => {
     }`
   }
 
-  return Object.assign(entry, {
-    metadata,
-    operations,
-    entryType: entry.entryType as EventEntryType,
-    event: {
-      commonName,
-      kind,
-      status,
-    },
-  })
+  const inputEvent = entry as InputEvent
+  if (!('operations' in entry) || typeof entry.operations !== 'object') {
+    inputEvent.operations = {}
+  }
+  inputEvent.metadata = metadata
+  inputEvent.event = { commonName, kind, status }
+
+  return inputEvent as Event
 }
