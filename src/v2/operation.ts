@@ -147,8 +147,7 @@ export class Operation implements PerformanceEntryLike {
     this.durationTillInteractive = 0
     this.metadata = definition.metadata ?? {}
     const captureInteractive =
-      definition.waitUntilInteractive &&
-      bestBlockingTaskType(manager.supportedEntryTypes)
+      definition.waitUntilInteractive && manager.expectBlockingTasks
         ? typeof definition.waitUntilInteractive === 'object'
           ? {
               ...DEFAULT_CAPTURE_INTERACTIVE,
@@ -674,6 +673,15 @@ export class Operation implements PerformanceEntryLike {
   }
 }
 
+export const getDefaultObserveFn: (entryTypes: string[]) => ObserveFn =
+  (entryTypes) => (onEntry) => {
+    const observer = new PerformanceObserver((list) => {
+      list.getEntries().forEach(onEntry)
+    })
+    observer.observe({ entryTypes })
+    return () => void observer.disconnect()
+  }
+
 /**
  * Class representing the centralized performance manager.
  */
@@ -696,7 +704,7 @@ export class OperationManager {
    */
   private preprocessEvent: (event: PerformanceEntryLike | InputEvent) => Event
   supportedEntryTypes: readonly string[]
-  bestBlockingTaskType: string | undefined
+  expectBlockingTasks: boolean
 
   /**
    * Creates an instance of CentralizedPerformanceManager.
@@ -705,33 +713,45 @@ export class OperationManager {
     defaultDebounceTime = DEFAULT_DEBOUNCE_TIME,
     preprocessEvent = defaultEventProcessor,
     observe,
-    performance: {
-      measure = performance.measure.bind(performance),
-      now = performance.now.bind(performance),
-    } = {},
+    performance: { now = performance.now.bind(performance) } = {},
     bufferDuration,
     supportedEntryTypes = PerformanceObserver.supportedEntryTypes,
+    requestObserveEntryTypes = DEFAULT_OBSERVED_ENTRY_TYPES,
+    expectBlockingTasks = true,
   }: InstanceOptions = {}) {
     this.operations = new Map()
     this.defaultDebounceTime = defaultDebounceTime
-    this.performance = { measure, now }
-    this.supportedEntryTypes = supportedEntryTypes
-    this.bestBlockingTaskType = bestBlockingTaskType(supportedEntryTypes)
+    this.performance = { now }
     this.bufferDuration = bufferDuration
     this.preprocessEvent = preprocessEvent
-    const entryTypes = this.bestBlockingTaskType
-      ? [...DEFAULT_OBSERVED_ENTRY_TYPES, this.bestBlockingTaskType]
-      : DEFAULT_OBSERVED_ENTRY_TYPES
+    this.supportedEntryTypes = supportedEntryTypes
 
-    this.observe =
-      observe ??
-      ((onEntry) => {
-        const observer = new PerformanceObserver((list) => {
-          list.getEntries().forEach(onEntry)
-        })
-        observer.observe({ entryTypes })
-        return () => void observer.disconnect()
-      })
+    const blockingTaskSupport = BLOCKING_TASK_ENTRY_TYPES.some((type) =>
+      supportedEntryTypes.includes(type),
+    )
+    this.expectBlockingTasks = blockingTaskSupport && expectBlockingTasks
+
+    const blockingTaskObservation = BLOCKING_TASK_ENTRY_TYPES.filter((type) =>
+      requestObserveEntryTypes.includes(type),
+    )
+    const bestSupportedBlockingType =
+      blockingTaskObservation.length > 0 &&
+      bestBlockingTaskType(blockingTaskObservation)
+
+    const allRequestedEntryTypes = bestSupportedBlockingType
+      ? [
+          ...requestObserveEntryTypes.filter(
+            (type) => !BLOCKING_TASK_ENTRY_TYPES.includes(type),
+          ),
+          bestSupportedBlockingType,
+        ]
+      : requestObserveEntryTypes
+
+    const entryTypes = allRequestedEntryTypes.filter((type) =>
+      supportedEntryTypes.includes(type),
+    )
+
+    this.observe = observe ?? getDefaultObserveFn(entryTypes)
   }
 
   /**
@@ -826,6 +846,7 @@ export class OperationManager {
     for (const operation of this.operations.values()) {
       const processedEvent = operation.processEvent(event)
       if (processedEvent) {
+        // eslint-disable-next-line no-param-reassign
         event.operations[operation.name] = {
           id: operation.id,
           operationRelativeStartTime: event.startTime - operation.startTime,
