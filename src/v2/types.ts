@@ -230,7 +230,7 @@ export type EventEntryType =
 
 export interface InputEvent extends Omit<PerformanceEntryLike, 'entryType'> {
   readonly entryType: EventEntryType
-  readonly operations?: Record<string, EventOperationRelation>
+  operations?: Record<string, EventOperationRelation>
   metadata?: Metadata
   event?: EventMetadata
 }
@@ -238,8 +238,8 @@ export interface InputEvent extends Omit<PerformanceEntryLike, 'entryType'> {
 export interface Event extends Omit<PerformanceEntryLike, 'entryType'> {
   readonly entryType: EventEntryType
   readonly operations: Record<string, EventOperationRelation>
-  metadata: Metadata
-  event: EventMetadata
+  readonly metadata: Metadata
+  readonly event: EventMetadata
 }
 
 /**

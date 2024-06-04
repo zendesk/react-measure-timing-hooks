@@ -45,6 +45,7 @@ export const TicketView: React.FC<TicketViewProps> = ({
 
   useEffect(() => {
     const timer = setTimeout(() => {
+      performance.mark('TicketViewLoaded')
       onLoaded?.()
       // eslint-disable-next-line no-magic-numbers
     }, 1_500)
