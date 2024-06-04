@@ -1,4 +1,4 @@
-import type { OperationState, CaptureInteractiveConfig } from './types'
+import type { CaptureInteractiveConfig, OperationState } from './types'
 
 export const VISIBLE_STATE = {
   /** showing a pending state, like a spinner, a skeleton, or empty */
@@ -28,20 +28,21 @@ export const FINAL_STATES: OperationState[] = [
   'interactive-timeout',
 ]
 
-// TODO: polyfill lack of support for visibility-state with https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
+// see https://developer.chrome.com/docs/web-platform/long-animation-frames
+export const BLOCKING_TASK_ENTRY_TYPES: readonly [string, string] = [
+  'long-animation-frame',
+  'longtask',
+]
+
 export const DEFAULT_OBSERVED_ENTRY_TYPES = [
   'mark',
   'measure',
   'resource',
   'element',
+  // TODO: polyfill lack of support for visibility-state with https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
   'visibility-state',
+  ...BLOCKING_TASK_ENTRY_TYPES,
 ]
-
-// see https://developer.chrome.com/docs/web-platform/long-animation-frames
-export const BLOCKING_TASK_ENTRY_TYPES: readonly [string, string] = [
-  'long-animation-frame',
-  'longtask',
-] /** when present on 'detail' of a performance measure/mark, it will ignore that event */
 
 /** when present on 'detail' of a performance measure/mark, it will ignore that event */
 export const SKIP_PROCESSING = Symbol.for('SKIP_PROCESSING')
