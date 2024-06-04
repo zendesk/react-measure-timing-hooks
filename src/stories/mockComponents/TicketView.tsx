@@ -1,16 +1,17 @@
 import React, { useEffect } from 'react'
+import styled from 'styled-components'
+import { Timeline } from '@zendeskgarden/react-accordions'
+import { Avatar } from '@zendeskgarden/react-avatars'
 import { Skeleton } from '@zendeskgarden/react-loaders'
 import { Well } from '@zendeskgarden/react-notifications'
-import { Paragraph, Span, XXL } from '@zendeskgarden/react-typography'
-import { Timeline } from '@zendeskgarden/react-accordions'
-import styled from 'styled-components'
-import { mockTickets } from './mockTickets'
 import { DEFAULT_THEME, PALETTE } from '@zendeskgarden/react-theming'
-import { Avatar } from '@zendeskgarden/react-avatars'
+import { Paragraph, Span, XXL } from '@zendeskgarden/react-typography'
 import { ReactComponent as UserIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
-import { useCaptureRenderBeaconTask } from '../../v2/hooks'
-import { operationManager } from './operationManager'
+import { VISIBLE_STATE } from '../../main'
 import { TimingComponent } from '../../v2/element'
+import { useCaptureRenderBeaconTask } from '../../v2/hooks'
+import { mockTickets } from './mockTickets'
+import { operationManager } from './operationManager'
 
 export const StyledSpan = styled(Span).attrs({ isBold: true, hue: 'blue' })`
   margin-left: ${DEFAULT_THEME.space.base * 2}px;
@@ -33,21 +34,19 @@ export const TicketView: React.FC<TicketViewProps> = ({
   cached = false,
   onLoaded,
 }) => {
-  useCaptureRenderBeaconTask(
-    {
-      componentName: 'TicketView',
-      metadata: { ticketId, loading: !cached },
-      state: cached ? 'complete' : 'loading',
-      operationManager,
-    },
-    [ticketId],
-  )
+  useCaptureRenderBeaconTask({
+    componentName: 'TicketView',
+    metadata: { ticketId, loading: !cached },
+    visibleState: cached ? VISIBLE_STATE.COMPLETE : VISIBLE_STATE.LOADING,
+    operationManager,
+  })
 
   const ticket = mockTickets.find((ticket) => ticket.id === ticketId)
 
   useEffect(() => {
     const timer = setTimeout(() => {
       onLoaded?.()
+      // eslint-disable-next-line no-magic-numbers
     }, 1_500)
     return () => void clearTimeout(timer)
   }, [ticketId])
