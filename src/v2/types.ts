@@ -116,6 +116,13 @@ export interface OperationDefinition {
      * Useful for events like errors.
      */
     interruptWhenSeen?: boolean
+
+    /**
+     * Indicates if events matching this tracker should be kept in the operation.
+     * Maybe used to filter out events that are not relevant to the operation.
+     * @default true
+     */
+    keep?: boolean
   }[]
 
   /**

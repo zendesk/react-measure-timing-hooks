@@ -235,6 +235,7 @@ export class Operation implements PerformanceEntryLike {
     }
 
     let tracked = false
+    let shouldAddEvent = true
     let interrupted = false
     /**
      * the maximum time any given tracker has allotted to wait
@@ -255,6 +256,9 @@ export class Operation implements PerformanceEntryLike {
 
       if (criteriaMatched) {
         tracked = true
+        if (trackerDefinition.keep === false) {
+          shouldAddEvent = false
+        }
         if (trackerDefinition.interruptWhenSeen) {
           interrupted = true
         }
@@ -292,12 +296,14 @@ export class Operation implements PerformanceEntryLike {
       : this.startTime
     // TODO: calculate occurrence count during report generation
 
-    if (this.definition.keepOnlyExplicitlyTrackedEvents) {
-      if (tracked) {
+    if (shouldAddEvent) {
+      if (this.definition.keepOnlyExplicitlyTrackedEvents) {
+        if (tracked) {
+          this.events.push(event)
+        }
+      } else {
         this.events.push(event)
       }
-    } else {
-      this.events.push(event)
     }
 
     if (isOperationStartingEvent) {
