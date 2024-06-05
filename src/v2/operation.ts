@@ -611,7 +611,7 @@ export class Operation implements PerformanceEntryLike {
       name: this.name,
       startTime: this.startTime,
       duration: this.duration,
-      metadata: this.metadata,
+      metadata: { ...this.metadata },
       event: {
         commonName: this.name,
         kind: OPERATION_ENTRY_TYPE,
@@ -630,7 +630,7 @@ export class Operation implements PerformanceEntryLike {
         name: this.name,
         startTime: this.startTime,
         duration: this.durationTillInteractive,
-        metadata: this.metadata,
+        metadata: { ...this.metadata },
         event: {
           commonName: this.name,
           kind: OPERATION_INTERACTIVE_ENTRY_TYPE,

@@ -211,10 +211,12 @@ export interface Metadata {
       | 'DELETE'
       | 'PATCH'
       | 'TRACE'
-      | undefined
+      | 'OPTIONS'
+      | 'CONNECT'
     status?: number | undefined
   }
   resourceQuery?: Record<string, string | string[]>
+  resourceHash?: string
 
   // renders add this metadata:
   visibleState?: VisibleStates | string

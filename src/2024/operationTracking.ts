@@ -2,7 +2,7 @@
 
 import { type Subscription, Observable, share } from 'rxjs'
 import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
-import { sanitizeUrlForTracing } from '../v2/sanitizeUrlForTracing'
+import { getCommonUrlForTracing } from '../v2/getCommonUrlForTracing'
 import type {
   Operation,
   OperationSpanMetadata,
@@ -36,7 +36,7 @@ function extractEntryMetadata(
 
   switch (entry.entryType) {
     case 'resource': {
-      ;({ commonUrl: commonName, query } = sanitizeUrlForTracing(entry.name))
+      ;({ commonUrl: commonName, query } = getCommonUrlForTracing(entry.name))
       const resourceTiming = entry as PerformanceResourceTiming
       extraMetadata.initiatorType = resourceTiming.initiatorType
       extraMetadata.transferSize = resourceTiming.transferSize
