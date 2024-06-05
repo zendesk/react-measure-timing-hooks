@@ -40,7 +40,7 @@ export {
 export * from './v2/constants'
 export * from './v2/defaultEventProcessor'
 export * from './v2/element'
+export * from './v2/getCommonUrlForTracing'
 export * from './v2/hooks'
 export * from './v2/operation'
-export * from './v2/sanitizeUrlForTracing'
 export type * from './v2/types'

@@ -1,11 +1,39 @@
-export function sanitizeUrlForTracing(url: string): {
+const COMMON_EXTENSIONS = [
+  '.html',
+  '.js',
+  '.css',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.svg',
+  '.webp',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.otf',
+  '.ico',
+]
+
+export function getCommonUrlForTracing(
+  url: string,
+  commonExtensions = COMMON_EXTENSIONS,
+): {
   commonUrl: string
   query: Record<string, string | string[]>
+  hash: string
 } {
+  let commonUrl = url
+  let hash = ''
+  const hashIndex = url.indexOf('#')
+  if (hashIndex >= 0) {
+    commonUrl = url.slice(0, hashIndex)
+    hash = url.slice(hashIndex)
+  }
   // Extract query string into a separate variable
   const queryStringIndex = url.indexOf('?')
   const query: Record<string, string | string[]> = {}
-  let commonUrl = url
   if (queryStringIndex >= 0) {
     // Split the URL to get the query string part
     commonUrl = url.slice(0, queryStringIndex)
@@ -35,19 +63,35 @@ export function sanitizeUrlForTracing(url: string): {
       })
   }
 
-  // Remove URL scheme
-  // const urlWithoutScheme = commonUrl.replace(/(^\w+:|^)\/\//, '');
-  // Replace numeric parts of the ID with $ID
-  let sanitizedUrl = commonUrl.replace(/\/\d+/g, '/$id')
-  // replace UUIDs as well:
-  sanitizedUrl = sanitizedUrl.replace(
+  // if the URL ends with a common extension, replace file name with $file:
+  const urlParts = commonUrl.split('/')
+  const lastPart = urlParts.at(-1)!
+  const extensionIndex = lastPart.lastIndexOf('.')
+  const extension =
+    extensionIndex >= 0 ? lastPart.slice(extensionIndex) : undefined
+  if (extension && commonExtensions.includes(extension)) {
+    urlParts[urlParts.length - 1] = '$file'
+    commonUrl = urlParts.join('/')
+  }
+
+  // replace UUIDs:
+  commonUrl = commonUrl.replace(
     // eslint-disable-next-line unicorn/better-regex
     /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g,
     '$uuid',
   )
+  // replace 32-character or longer hex strings:
+  commonUrl = commonUrl.replace(
+    // eslint-disable-next-line unicorn/better-regex
+    /[0-9a-f]{32,}/g,
+    '$hex',
+  )
+  // Replace numeric parts of the ID with $id
+  commonUrl = commonUrl.replace(/\d{2,}/g, '$d')
 
   return {
-    commonUrl: sanitizedUrl,
+    commonUrl,
     query,
+    hash,
   }
 }

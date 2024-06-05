@@ -1,4 +1,4 @@
-import { sanitizeUrlForTracing } from './sanitizeUrlForTracing'
+import { getCommonUrlForTracing } from './getCommonUrlForTracing'
 import {
   type Event,
   type EventProcessor,
@@ -25,30 +25,33 @@ export const defaultEventProcessor: EventProcessor = (
   let commonName = entry.name
   let status: EventStatus = 'ok'
 
-  if (entry.entryType === 'resource') {
-    const { commonUrl, query } = sanitizeUrlForTracing(entry.name)
+  if (entry.entryType === 'resource' || entry.entryType === 'navigation') {
+    const { commonUrl, query, hash } = getCommonUrlForTracing(entry.name)
     commonName = commonUrl
     metadata.resourceQuery = query
+    metadata.resourceHash = hash
 
-    const resource =
-      metadata.resource &&
-      typeof metadata.resource === 'object' &&
-      metadata.resource
-    const resourceType =
-      resource && typeof resource.type === 'string' && resource.type
-    const statusCode =
-      resource && typeof resource.status === 'number' && resource.status
+    if (entry.entryType === 'resource') {
+      const resource =
+        metadata.resource &&
+        typeof metadata.resource === 'object' &&
+        metadata.resource
+      const resourceType =
+        resource && typeof resource.type === 'string' && resource.type
+      const statusCode =
+        resource && typeof resource.status === 'number' && resource.status
 
-    if (resourceType && resourceType !== 'xhr' && resourceType !== 'fetch') {
-      kind = 'asset'
-    }
-    // eslint-disable-next-line no-magic-numbers
-    if (statusCode && statusCode >= 400) {
-      status = 'error'
-    }
-    const resourceTiming = entry as PerformanceResourceTiming
-    if (resourceTiming.initiatorType === 'iframe') {
-      kind = 'iframe'
+      if (resourceType && resourceType !== 'xhr' && resourceType !== 'fetch') {
+        kind = 'asset'
+      }
+      // eslint-disable-next-line no-magic-numbers
+      if (statusCode && statusCode >= 400) {
+        status = 'error'
+      }
+      const resourceTiming = entry as PerformanceResourceTiming
+      if (resourceTiming.initiatorType === 'iframe') {
+        kind = 'iframe'
+      }
     }
   } else if (entry.entryType !== 'mark' && entry.entryType !== 'measure') {
     commonName = `${entry.entryType}${
