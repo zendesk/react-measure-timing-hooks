@@ -11,16 +11,16 @@ export const VISIBLE_STATE = {
   COMPLETE_WITH_ERROR: 'complete-with-error',
 } as const
 
+export const DEFAULT_DEBOUNCE_TIME = 500
 export const DEFAULT_CAPTURE_INTERACTIVE: Required<CaptureInteractiveConfig> = {
   timeout: 5_000,
-  debounceLongTasksBy: 500,
+  debounceLongTasksBy: DEFAULT_DEBOUNCE_TIME,
   skipDebounceForLongEventsShorterThan: 0,
 }
-export const DEFAULT_GLOBAL_OPERATION_TIMEOUT = 10_000
+export const DEFAULT_GLOBAL_OPERATION_TIMEOUT = 45_000
 export const OPERATION_START_ENTRY_TYPE = 'operation-start'
 export const OPERATION_ENTRY_TYPE = 'operation'
 export const OPERATION_INTERACTIVE_ENTRY_TYPE = 'operation-interactive'
-export const DEFAULT_DEBOUNCE_TIME = 1_000
 export const FINAL_STATES: OperationState[] = [
   'completed',
   'interrupted',
