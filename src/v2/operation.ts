@@ -218,7 +218,9 @@ export class Operation implements PerformanceEntryLike {
       this.definition.interruptSelf &&
       (this.state === 'started' || this.state === 'waiting-for-interactive') &&
       event.entryType === OPERATION_START_ENTRY_TYPE &&
-      event.name === this.name
+      event.name === this.name &&
+      (typeof this._startTime === 'undefined' ||
+        event.startTime !== this._startTime)
     ) {
       this.finalizeOperation('interrupted', event.startTime + event.duration)
       return false
@@ -383,7 +385,8 @@ export class Operation implements PerformanceEntryLike {
       this.lastDebounceDeadline,
     )
 
-    if (debounceBy === 0) {
+    if (debounceBy === 0 && this.lastDebounceDeadline <= eventEndTime) {
+      // no pending debouncing, and no new debouncing required, finalize immediately
       this.lastDebounceDeadline = newDeadline
       this.clearTimeout('debounce')
       this.finalizeOperation('completed', eventEndTime)

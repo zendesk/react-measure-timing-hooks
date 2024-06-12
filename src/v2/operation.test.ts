@@ -1,11 +1,13 @@
 /* eslint-disable jest/no-conditional-in-test */
-import { OperationManager, type Operation } from './operation'
+import { DEFAULT_DEBOUNCE_MS } from '../constants'
+import ticketActivationFixtureData from './__fixtures__/ticket-activation-select-tab-1.json'
+import { DEFAULT_DEBOUNCE_TIME, SKIP_PROCESSING } from './constants'
+import { type Operation, OperationManager } from './operation'
 import {
+  type Event,
   type OperationDefinition,
   type PerformanceEntryLike,
-  type Event,
 } from './types'
-import { SKIP_PROCESSING } from './constants'
 
 describe('operation tracking', () => {
   // returns mocked time:
@@ -66,7 +68,9 @@ describe('operation tracking', () => {
 
   describe.each(['unbuffered', 'buffered'] as const)('%s', (observerType) => {
     // describe('with unbuffered observer', () => {
-    //   const observerType = 'unbuffered' as 'unbuffered' | 'buffered';
+    //   const observerType = 'unbuffered' as 'unbuffered' | 'buffered'
+    // describe('with buffered observer', () => {
+    //   const observerType = 'buffered' as 'unbuffered' | 'buffered'
     const bufferDuration = observerType === 'buffered' ? 10_000 : 0
     const PerformanceManager = new OperationManager({
       observe: observeMock,
@@ -766,12 +770,13 @@ describe('operation tracking', () => {
 
     it('correctly captures the entire operation when intermediate entries are pushed out-of-order', () => {
       const id = '12345'
-      const debounceBy = 1000
+      const debounceBy = 1_000
       const operationDefinition: OperationDefinition = {
         operationName: 'ticket-activation',
         track: [
           {
             match: { name: 'ticket-start' },
+            debounceEndWhenSeen: false,
             requiredToStart: true,
           },
           {
@@ -780,6 +785,7 @@ describe('operation tracking', () => {
           },
           {
             match: { name: 'ticket-complete' },
+            debounceEndWhenSeen: false,
             requiredToEnd: true,
           },
         ],
@@ -789,11 +795,11 @@ describe('operation tracking', () => {
       const operationId = PerformanceManager.startOperation(operationDefinition)
 
       const entryTimes = [
-        { time: 1000, state: 'start' },
-        { time: 2000, state: 'processing' },
-        { time: 2500, state: 'middle' },
-        { time: 1500, state: 'out-of-order' },
-        { time: 3000, state: 'complete' },
+        { time: 1_000, state: 'start' },
+        { time: 2_000, state: 'processing' },
+        { time: 2_500, state: 'middle' },
+        { time: 1_500, state: 'out-of-order' },
+        { time: 3_000, state: 'complete' },
       ] as const
 
       // Simulate entries being pushed in out-of-order
@@ -839,6 +845,97 @@ describe('operation tracking', () => {
       )
     })
 
+    it(`correctly captures the operation's duration`, () => {
+      const id = '13024'
+      const operationName = 'ticket.activation'
+      const lastEventRelativeEndTime = 1_706.599_999_999_627_5
+      const operationDefinition: OperationDefinition = {
+        operationName,
+        interruptSelf: true,
+        metadata: { ticketId: id },
+        waitUntilInteractive: true,
+        startTime: ticketActivationFixtureData.startTime,
+        timeout: 60_000,
+        track: [
+          // debounce on anything that has ticketId metadata:
+          { match: { metadata: { ticketId: id } } },
+          // any resource fetch should debounce the end of the operation:
+          { match: { type: 'resource' } },
+          // debounce on element timing sentinels:
+          { match: { type: 'element', name: `ticket_workspace/${id}` } },
+          { match: { type: 'element', name: `omnilog/${id}` } },
+          // OmniLog must be rendered in 'complete' state to end the operation:
+          {
+            match: {
+              name: 'OmniLog',
+              metadata: { ticketId: id, visibleState: 'complete' },
+            },
+            requiredToEnd: true,
+          },
+          { match: { name: 'dummy' }, keep: false, debounceEndWhenSeen: false },
+        ],
+        onEnd: onTracked,
+      }
+
+      // start at startTime:
+      jest.advanceTimersByTime(
+        Math.max(0, ticketActivationFixtureData.startTime - getTimeNow()),
+      )
+
+      const operationId = PerformanceManager.startOperation(operationDefinition)
+
+      // Simulate entries being pushed in out-of-order
+      for (const event of ticketActivationFixtureData.events) {
+        pushEntries([event])
+        jest.advanceTimersByTime(
+          Math.max(0, event.startTime + event.duration - getTimeNow()),
+        )
+      }
+
+      // Advance time to process the measures
+      jest.advanceTimersByTime(DEFAULT_DEBOUNCE_TIME + 1)
+
+      if (observerType === 'buffered') {
+        // fast forward to the end of the buffer
+        jest.advanceTimersByTime(bufferDuration + 1)
+        // buffered observer will only trigger the end once the *next* task is processed
+        pushEntries([
+          {
+            entryType: 'mark',
+            name: 'dummy',
+            startTime: getTimeNow(),
+            duration: 0,
+          },
+        ])
+        jest.advanceTimersByTime(bufferDuration + 1)
+        // one more task to process the interactive debounce:
+        pushEntries([
+          {
+            entryType: 'mark',
+            name: 'dummy',
+            startTime: getTimeNow(),
+            duration: 0,
+          },
+        ])
+        jest.advanceTimersByTime(bufferDuration + 1)
+      }
+
+      expect(performanceMock.measure).toHaveBeenCalledWith(
+        `${operationName}-interactive`,
+        expect.objectContaining({
+          start: ticketActivationFixtureData.startTime,
+          duration: expect.closeTo(lastEventRelativeEndTime),
+          detail: expect.objectContaining({
+            state: 'completed',
+            interactive: true,
+            events: expect.objectContaining({
+              length: observerType === 'buffered' ? 207 : 206,
+            }),
+          }),
+        }),
+      )
+    })
+
     if (observerType === 'unbuffered') return
 
     it('correctly captures the entire operation when start/end entries are pushed out-of-order', () => {
@@ -861,8 +958,8 @@ describe('operation tracking', () => {
 
       const operationId = PerformanceManager.startOperation(operationDefinition)
 
-      const startTime = 1000
-      const endTime = 2000
+      const startTime = 1_000
+      const endTime = 2_000
 
       // Simulate end mark first
       pushEntries([
@@ -882,7 +979,7 @@ describe('operation tracking', () => {
         {
           entryType: 'mark',
           name: 'start-mark',
-          startTime: startTime,
+          startTime,
           duration: 0,
         },
       ])
