@@ -30,8 +30,8 @@ import {
 import { Col, Row } from '@zendeskgarden/react-grid'
 import { ThemeProvider } from '@zendeskgarden/react-theming'
 import debounce from 'lodash.debounce'
-import TicketData from '../2024/ticket-fixtures/ticket-open-new-format-slow.json'
-import type { TaskDataEmbeddedInOperation, TaskSpanKind } from '../2024/types'
+import TicketData from '../../2024/ticket-fixtures/ticket-open-new-format-slow.json'
+import type { TaskDataEmbeddedInOperation, TaskSpanKind } from '../../2024/types'
 
 // Assume TicketData has the right shape to match the Operation type,
 // if not, validate or transform the data to fit the Operation type.
