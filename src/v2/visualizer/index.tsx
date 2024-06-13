@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Operation } from '../../2024/types'
-import FileLoader from './components/FileLoader'
+import { DropTarget } from './components/DropTarget'
+import FileUploadButton from './components/FileUploadButton'
 import OperationVisualization from './components/OperationVisualization'
 import { mapTicketActivationData } from './mapTicketActivationData'
 
@@ -11,8 +12,7 @@ export interface OperationVisualizerProps {
 const OperationVisualizer = ({ width, margin }: OperationVisualizerProps) => {
   const [fileContent, setFileContent] = useState<Operation | null>(null)
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const readFile = (file: File | undefined) => {
     if (file && file.type === 'application/json') {
       const reader = new FileReader()
       reader.addEventListener('load', (e) => {
@@ -26,6 +26,17 @@ const OperationVisualizer = ({ width, margin }: OperationVisualizerProps) => {
     }
   }
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    readFile(file)
+  }
+
+  const handleDrop: React.DragEventHandler = (e) => {
+    if (e.dataTransfer.files.length > 0) {
+      readFile(e.dataTransfer.files[0])
+    }
+  }
+
   const mappedFileContent = useMemo(() => {
     if (!fileContent) return null
 
@@ -35,19 +46,27 @@ const OperationVisualizer = ({ width, margin }: OperationVisualizerProps) => {
 
   if (!fileContent) {
     return (
-      <FileLoader onChange={handleFileChange} name="fileData" id="fileData" />
+      <DropTarget onDrop={handleDrop}>
+        <FileUploadButton
+          onChange={handleFileChange}
+          name="fileData"
+          id="fileData"
+        />
+      </DropTarget>
     )
   }
 
   // If we failed validation or the mapping returned a null for some reason
-  if (!mappedFileContent) return 'Some error state'
+  if (!mappedFileContent) return <div>'Some error state'</div>
 
   return (
-    <OperationVisualization
-      width={width}
-      margin={margin}
-      operation={mappedFileContent}
-    />
+    <DropTarget onDrop={handleDrop}>
+      <OperationVisualization
+        width={width}
+        margin={margin}
+        operation={mappedFileContent}
+      />
+    </DropTarget>
   )
 }
 

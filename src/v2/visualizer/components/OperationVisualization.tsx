@@ -408,8 +408,6 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
         style={{
           display: 'flex',
           flexDirection: 'row',
-          //   justifyContent: 'center',
-          //   alignItems: 'center',
           padding: '5px',
           gap: '10px',
         }}

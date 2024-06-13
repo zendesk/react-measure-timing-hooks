@@ -8,11 +8,7 @@ import OperationVisualizer, {
 export const OperationVisualizerStory: StoryObj<OperationVisualizerProps> = {
   render: () => {
     const { width } = useScreenSize()
-    return (
-      <div style={{ padding: '1em', position: 'relative' }}>
-        <OperationVisualizer width={width} />
-      </div>
-    )
+    return <OperationVisualizer width={width} />
   },
 }
 
