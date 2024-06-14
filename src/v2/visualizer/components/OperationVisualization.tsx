@@ -30,33 +30,20 @@ import type {
   TaskDataEmbeddedInOperation,
   TaskSpanKind,
 } from '../../../2024/types'
+import {
+  type FilterOption,
+  BAR_FILL_COLOR,
+  COLLAPSE_ASSET_SPANS_TEXT,
+  COLLAPSE_EMBER_RESOURCE_SPANS,
+  COLLAPSE_IFRAME_SPANS,
+  COLLAPSE_RENDER_SPANS_TEXT,
+  FILTER_OPTIONS,
+  MEASURES_TEXT,
+  RESOURCES_TEXT,
+} from '../constants'
 import { MappedOperation } from '../mapTicketActivationData'
 
 const rootOperation = TicketData
-
-const BAR_FILL_COLOR: Record<TaskSpanKind | 'resource-ember', string> = {
-  render: '#ff7f0e',
-  measure: '#2ca02c',
-  resource: '#1f77b4',
-  'resource-ember': '#17becf',
-  longtask: '#d62728',
-  mark: '#9467bd',
-  asset: '#8c564b',
-  iframe: '#e377c2',
-  element: '#7f7f7f',
-  action: '#bcbd22',
-
-  error: '#ff9896',
-  vital: '#ffbb78',
-  'first-input': '#aec7e8',
-  'largest-contentful-paint': '#98df8a',
-  'layout-shift': '#ff9896',
-  'visibility-state': '#ff9896',
-  event: '#ff9896',
-  navigation: '#ff9896',
-  paint: '#ff9896',
-  taskattribution: '#ff9896',
-}
 
 const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
 
@@ -146,30 +133,28 @@ const TTLine: React.FC<TTLineProps> = ({
   )
 }
 
-const RESOURCES_TEXT = 'Show Resources'
-const MEASURES_TEXT = 'Show Measures'
-const COLLAPSE_RENDER_SPANS_TEXT = 'Collapse Render Spans'
-const COLLAPSE_ASSET_SPANS_TEXT = 'Collapse Asset Spans'
-const COLLAPSE_EMBER_RESOURCE_SPANS = 'Collapse Ember Resource Spans'
-const COLLAPSE_IFRAME_SPANS = 'Collapse iframe Spans'
-
-type FilterOption =
-  | typeof RESOURCES_TEXT
-  | typeof MEASURES_TEXT
-  | typeof COLLAPSE_RENDER_SPANS_TEXT
-  | typeof COLLAPSE_ASSET_SPANS_TEXT
-  | typeof COLLAPSE_EMBER_RESOURCE_SPANS
-  | typeof COLLAPSE_IFRAME_SPANS
-
-const FILTER_OPTIONS: FilterOption[] = [
-  RESOURCES_TEXT,
-  MEASURES_TEXT,
-  COLLAPSE_RENDER_SPANS_TEXT,
-  COLLAPSE_ASSET_SPANS_TEXT,
-  COLLAPSE_EMBER_RESOURCE_SPANS,
-  COLLAPSE_IFRAME_SPANS,
-]
-
+function handleOption({
+  selectionValue,
+  setter,
+  type,
+  text,
+}: {
+  selectionValue: OptionValue[]
+  setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  type: string
+  text: string
+}) {
+  if (selectionValue?.includes(text)) {
+    setter((prev) => ({ ...prev, [text]: true }))
+  } else if (
+    !selectionValue?.includes(text) &&
+    (type === 'input:keyDown:Enter' ||
+      type === 'option:click' ||
+      type === 'fn:setSelectionValue')
+  ) {
+    setter((prev) => ({ ...prev, [text]: false }))
+  }
+}
 export interface MultiSelectProps {
   setState: React.Dispatch<React.SetStateAction<Record<FilterOption, boolean>>>
   state: Record<string, boolean>
@@ -273,29 +258,6 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ state, setState }) => {
   )
 }
 
-function handleOption({
-  selectionValue,
-  setter,
-  type,
-  text,
-}: {
-  selectionValue: OptionValue[]
-  setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
-  type: string
-  text: string
-}) {
-  if (selectionValue?.includes(text)) {
-    setter((prev) => ({ ...prev, [text]: true }))
-  } else if (
-    !selectionValue?.includes(text) &&
-    (type === 'input:keyDown:Enter' ||
-      type === 'option:click' ||
-      type === 'fn:setSelectionValue')
-  ) {
-    setter((prev) => ({ ...prev, [text]: false }))
-  }
-}
-
 function LegendDemo({
   title,
   children,
@@ -332,21 +294,19 @@ function LegendDemo({
 export interface OperationVisualizationProps {
   width: number
   operation: MappedOperation
+  setDisplayOptions: React.Dispatch<
+    React.SetStateAction<Record<FilterOption, boolean>>
+  >
+  displayOptions: Record<FilterOption, boolean>
   margin?: { top: number; right: number; bottom: number; left: number }
 }
 const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   width,
   operation,
+  displayOptions,
+  setDisplayOptions,
   margin = DEFAULT_MARGIN,
 }) => {
-  const [state, setState] = useState({
-    [RESOURCES_TEXT]: true,
-    [MEASURES_TEXT]: true,
-    [COLLAPSE_RENDER_SPANS_TEXT]: true,
-    [COLLAPSE_ASSET_SPANS_TEXT]: true,
-    [COLLAPSE_EMBER_RESOURCE_SPANS]: false,
-    [COLLAPSE_IFRAME_SPANS]: false,
-  })
   const {
     ttrData,
     ttiData,
@@ -533,7 +493,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
             height: `${footerHeight}px`,
           }}
         >
-          <MultiSelect setState={setState} state={state} />
+          <MultiSelect setState={setDisplayOptions} state={displayOptions} />
           <LegendDemo title="Legend">
             <LegendOrdinal
               scale={colorScale}

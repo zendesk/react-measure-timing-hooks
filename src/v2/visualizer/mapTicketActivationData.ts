@@ -45,7 +45,6 @@ export const mapTicketActivationData = (
     includedCommonTaskNames: _,
     // this function depends on the tasks being sorted by startTime
     tasks: allTasks,
-    ...operation
   } = operationData
 
   const OPERATION_SPAN_NAME = 'performance/ticket/activation'
@@ -170,7 +169,6 @@ export const mapTicketActivationData = (
   // Create a new operation object without the TTR and TTI tasks;
   // this avoids any side effects from modifying tempOperation directly.
   return {
-    operation,
     tasks,
     includedCommonTaskNames,
     ttrData,
