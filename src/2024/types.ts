@@ -9,6 +9,7 @@ export type TaskSpanKind =
   | 'render'
   | 'asset'
   | 'iframe'
+  | 'resource-ember'
 export type PerformanceEntryLike = Omit<PerformanceEntry, 'toJSON'>
 
 export interface SpanMetadata<Kind extends SpanKind> {
