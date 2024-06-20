@@ -1,0 +1,57 @@
+name: Publish Storybook
+
+on:
+  push:
+    branches:
+      - main
+      - next
+  
+  workflow_dispatch:
+
+  # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+# Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+permissions:
+  contents: read
+  pages: write 
+  id-token: write   
+
+jobs:
+  build-storybook:
+    name: Build Storybook and Upload Artifact
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: zendesk/checkout@v4
+      - uses: zendesk/setup-node@v4
+        with:
+          node-version: 20
+          scope: zendesk
+          always-auth: 'true'
+          cache: 'yarn'
+      - name: Build Storybook files
+        run: |
+          yarn install --immutable
+          yarn build-storybook
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./storybook-static
+    
+  deploy:
+    needs: build-storybook
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Deploy to Github Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      
