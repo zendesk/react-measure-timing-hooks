@@ -1,163 +1,51 @@
-/* eslint-disable eslint-comments/no-unlimited-disable,unicorn/no-abusive-eslint-disable */
-/* eslint-disable */
-import type { Meta, StoryObj } from '@storybook/react'
+/* eslint-disable import/no-extraneous-dependencies */
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import debounce from 'lodash.debounce'
 import { Annotation, Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
 import { localPoint } from '@visx/event'
 import { Grid } from '@visx/grid'
 import { Group } from '@visx/group'
-import { useScreenSize } from '@visx/responsive'
+import { LegendItem, LegendLabel, LegendOrdinal } from '@visx/legend'
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale'
-import { Bar } from '@visx/shape'
+import { Bar, Line } from '@visx/shape'
 import {
-  TooltipWithBounds,
   defaultStyles as defaultTooltipStyles,
+  TooltipWithBounds,
   useTooltip,
 } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-// import TicketData from '../2024/ticket-fixtures/ticket-accept-chat.json'
-import { LegendItem, LegendLabel, LegendOrdinal } from '@visx/legend'
-import { Line } from '@visx/shape'
 import {
+  type OptionValue,
   Combobox,
   Field,
-  Label as GardenLabel,
   IComboboxProps,
+  Label as GardenLabel,
   Option,
-  type OptionValue,
 } from '@zendeskgarden/react-dropdowns.next'
 import { Col, Row } from '@zendeskgarden/react-grid'
 import { ThemeProvider } from '@zendeskgarden/react-theming'
-import debounce from 'lodash.debounce'
-import TicketData from '../2024/ticket-fixtures/ticket-open-new-format-slow.json'
-import type { TaskDataEmbeddedInOperation, TaskSpanKind } from '../2024/types'
-
-// Assume TicketData has the right shape to match the Operation type,
-// if not, validate or transform the data to fit the Operation type.
+import TicketData from '../../../2024/ticket-fixtures/ticket-open-new-format-slow.json'
+import type {
+  TaskDataEmbeddedInOperation,
+  TaskSpanKind,
+} from '../../../2024/types'
+import {
+  type FilterOption,
+  BAR_FILL_COLOR,
+  COLLAPSE_ASSET_SPANS_TEXT,
+  COLLAPSE_EMBER_RESOURCE_SPANS,
+  COLLAPSE_IFRAME_SPANS,
+  COLLAPSE_RENDER_SPANS_TEXT,
+  FILTER_OPTIONS,
+  MEASURES_TEXT,
+  RESOURCES_TEXT,
+} from '../constants'
+import { MappedOperation } from '../mapTicketActivationData'
 
 const rootOperation = TicketData
 
-const BAR_FILL_COLOR: Record<TaskSpanKind | 'resource-ember', string> = {
-  render: '#ff7f0e',
-  measure: '#2ca02c',
-  resource: '#1f77b4',
-  'resource-ember': '#17becf',
-  longtask: '#d62728',
-  mark: '#9467bd',
-  asset: '#8c564b',
-  iframe: '#e377c2',
-  element: '#7f7f7f',
-  action: '#bcbd22',
-
-  error: '#ff9896',
-  vital: '#ffbb78',
-  'first-input': '#aec7e8',
-  'largest-contentful-paint': '#98df8a',
-  'layout-shift': '#ff9896',
-  'visibility-state': '#ff9896',
-  event: '#ff9896',
-  navigation: '#ff9896',
-  paint: '#ff9896',
-  taskattribution: '#ff9896',
-}
-
-const order: Record<string, number> = {
-  longtask: 0,
-  render: 1,
-  measure: 2,
-  resource: 3,
-  'resource-ember': 3,
-  asset: 4,
-  iframe: 5,
-}
-
 const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
-
-export interface StyledTableProps {
-  filteredTaskNames: string[]
-  ttiDuration: number
-  ttrDuration: number
-}
-const StyledTable: React.FC<StyledTableProps> = ({
-  filteredTaskNames,
-  ttiDuration,
-  ttrDuration,
-}) => {
-  return (
-    <table
-      style={{
-        width: '40%',
-        borderCollapse: 'collapse',
-        marginTop: '1px',
-        fontFamily: 'sans-serif',
-      }}
-    >
-      <tbody>
-        <tr>
-          <td
-            style={{
-              textAlign: 'center',
-              padding: '1px',
-              borderBottom: '1px solid #eee',
-            }}
-          >
-            TTR
-          </td>
-          <td
-            style={{
-              textAlign: 'center',
-              padding: '1px',
-              borderBottom: '1px solid #eee',
-            }}
-          >
-            {ttrDuration.toFixed(1)} ms
-          </td>
-        </tr>
-        <tr>
-          <td
-            style={{
-              textAlign: 'center',
-              padding: '1px',
-              borderBottom: '1px solid #eee',
-            }}
-          >
-            TTI
-          </td>
-          <td
-            style={{
-              textAlign: 'center',
-              padding: '1px',
-              borderBottom: '1px solid #eee',
-            }}
-          >
-            {ttiDuration.toFixed(1)} ms
-          </td>
-        </tr>
-        <tr>
-          <td
-            style={{
-              textAlign: 'center',
-              padding: '1px',
-              borderBottom: 'none',
-            }}
-          >
-            unique task count
-          </td>
-          <td
-            style={{
-              textAlign: 'center',
-              padding: '1px',
-              borderBottom: 'none',
-            }}
-          >
-            {filteredTaskNames.length}
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  )
-}
 
 export interface TTLineProps {
   hoverData: TaskDataEmbeddedInOperation
@@ -245,30 +133,28 @@ const TTLine: React.FC<TTLineProps> = ({
   )
 }
 
-const RESOURCES_TEXT = 'Show Resources'
-const MEASURES_TEXT = 'Show Measures'
-const COLLAPSE_RENDER_SPANS_TEXT = 'Collapse Render Spans'
-const COLLAPSE_ASSET_SPANS_TEXT = 'Collapse Asset Spans'
-const COLLAPSE_EMBER_RESOURCE_SPANS = 'Collapse Ember Resource Spans'
-const COLLAPSE_IFRAME_SPANS = 'Collapse iframe Spans'
-
-type FilterOption =
-  | typeof RESOURCES_TEXT
-  | typeof MEASURES_TEXT
-  | typeof COLLAPSE_RENDER_SPANS_TEXT
-  | typeof COLLAPSE_ASSET_SPANS_TEXT
-  | typeof COLLAPSE_EMBER_RESOURCE_SPANS
-  | typeof COLLAPSE_IFRAME_SPANS
-
-const FILTER_OPTIONS: FilterOption[] = [
-  RESOURCES_TEXT,
-  MEASURES_TEXT,
-  COLLAPSE_RENDER_SPANS_TEXT,
-  COLLAPSE_ASSET_SPANS_TEXT,
-  COLLAPSE_EMBER_RESOURCE_SPANS,
-  COLLAPSE_IFRAME_SPANS,
-]
-
+function handleOption({
+  selectionValue,
+  setter,
+  type,
+  text,
+}: {
+  selectionValue: OptionValue[]
+  setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  type: string
+  text: string
+}) {
+  if (selectionValue?.includes(text)) {
+    setter((prev) => ({ ...prev, [text]: true }))
+  } else if (
+    !selectionValue?.includes(text) &&
+    (type === 'input:keyDown:Enter' ||
+      type === 'option:click' ||
+      type === 'fn:setSelectionValue')
+  ) {
+    setter((prev) => ({ ...prev, [text]: false }))
+  }
+}
 export interface MultiSelectProps {
   setState: React.Dispatch<React.SetStateAction<Record<FilterOption, boolean>>>
   state: Record<string, boolean>
@@ -338,9 +224,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ state, setState }) => {
     [handleChange],
   )
 
-  useEffect(() => {
-    return () => debounceHandleChange.cancel()
-  }, [debounceHandleChange])
+  useEffect(
+    () => () => void debounceHandleChange.cancel(),
+    [debounceHandleChange],
+  )
 
   return (
     <LegendDemo title="">
@@ -369,29 +256,6 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ state, setState }) => {
       </Row>
     </LegendDemo>
   )
-}
-
-function handleOption({
-  selectionValue,
-  setter,
-  type,
-  text,
-}: {
-  selectionValue: OptionValue[]
-  setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
-  type: string
-  text: string
-}) {
-  if (selectionValue?.includes(text)) {
-    setter((prev) => ({ ...prev, [text]: true }))
-  } else if (
-    !selectionValue?.includes(text) &&
-    (type === 'input:keyDown:Enter' ||
-      type === 'option:click' ||
-      type === 'fn:setSelectionValue')
-  ) {
-    setter((prev) => ({ ...prev, [text]: false }))
-  }
 }
 
 function LegendDemo({
@@ -427,177 +291,22 @@ function LegendDemo({
   )
 }
 
-const mapData = ({
-  collapseRenders = true,
-  collapseAssets = true,
-  collapseEmberResources = false,
-  collapseIframes = false,
-  displayResources = true,
-  displayMeasures = true,
-}: {
-  collapseRenders?: boolean
-  collapseAssets?: boolean
-  collapseEmberResources?: boolean
-  collapseIframes?: boolean
-  displayResources?: boolean
-  displayMeasures?: boolean
-} = {}) => {
-  const {
-    includedCommonTaskNames: _,
-    // this function depends on the tasks being sorted by startTime
-    tasks: allTasks,
-    ...operation
-  } = TicketData.operations['ticket/activation']
-
-  const OPERATION_SPAN_NAME = 'performance/ticket/activation'
-
-  // Use helper functions to find the TTR and TTI data.
-  const isTTITask = (task: (typeof allTasks)[number]) =>
-    task.name.startsWith(OPERATION_SPAN_NAME) && task.name.endsWith('/tti')
-  const ttiData = allTasks.find(isTTITask) as TaskDataEmbeddedInOperation
-
-  const isTTRTask = (task: (typeof allTasks)[number]) =>
-    task.name.startsWith(OPERATION_SPAN_NAME) && task.name.endsWith('/ttr')
-  const ttrData = allTasks.find(isTTRTask) as TaskDataEmbeddedInOperation
-
-  // Extract durations if the tasks were found.
-  const ttrDuration = ttrData?.duration
-  const ttiDuration = ttiData?.duration
-
-  const tasks = allTasks
-    .filter((task) => !isTTITask(task) && !isTTRTask(task) && task.duration > 0)
-    .map((task, idx) => {
-      let overrideCommonName: string | undefined
-      let kind = task.kind
-
-      if (task.name.endsWith('.svg')) {
-        overrideCommonName =
-          overrideCommonName ??
-          task.commonName.split('/').at(-1) ??
-          task.commonName
-        kind = 'asset'
-      }
-      if (collapseRenders && kind === 'render') {
-        overrideCommonName = 'renders'
-      }
-      if (collapseAssets && kind === 'asset') {
-        overrideCommonName = 'assets'
-      }
-      if (collapseIframes && kind === 'iframe') {
-        overrideCommonName = 'iframes'
-      }
-      if (kind === 'asset' || kind === 'iframe') {
-        overrideCommonName =
-          overrideCommonName ??
-          task.commonName.split('/').at(-1) ??
-          task.commonName
-      }
-      if (task.commonName.startsWith('https://')) {
-        const shortenedName = task.commonName.split('zendesk.com').at(-1)
-        if (task.metadata.initiatorType === 'xmlhttprequest') {
-          overrideCommonName = collapseEmberResources
-            ? 'ember-resource'
-            : overrideCommonName ?? shortenedName ?? task.commonName
-          kind = 'resource-ember'
-        }
-        if (kind === 'resource') {
-          overrideCommonName =
-            overrideCommonName ?? shortenedName ?? task.commonName
-        }
-      }
-      if (task.commonName.startsWith('graphql/')) {
-        const operationName = task.commonName.split('/').at(-1)
-        const commonName =
-          overrideCommonName ||
-          (operationName && `graphql:${operationName}`) ||
-          task.commonName
-        if (
-          task.commonName.startsWith('graphql/local/') &&
-          task.detail.feature
-        ) {
-          const feature = task.detail.feature
-          // match "graphql/local" "resource" with `detail.feature` with next "resource" of the same `metadata.feature`.
-          // use commonName of the former.
-          const matchingResourceTask = allTasks.slice(idx + 1).find((t) => {
-            return t.metadata.feature === feature && t.kind === 'resource'
-          })
-          const resourceUrl = matchingResourceTask?.name
-          if (matchingResourceTask) {
-            matchingResourceTask.commonName = commonName
-          }
-          return {
-            ...task,
-            commonName,
-            kind: 'resource',
-            metadata: {
-              ...task.metadata,
-              resourceUrl,
-            },
-          }
-        }
-        return {
-          ...task,
-          commonName,
-          kind: 'resource',
-        }
-      }
-      return {
-        ...task,
-        commonName: overrideCommonName ?? task.commonName,
-        kind,
-      }
-    })
-    .filter(
-      (task) =>
-        (displayResources || task.kind !== 'resource') &&
-        (displayMeasures || task.kind !== 'measure'),
-    )
-    .sort((a, b) => {
-      const orderA = order[a.kind] ?? 100
-      const orderB = order[b.kind] ?? 100
-      return orderA - orderB
-    })
-
-  const spanEvents = allTasks.filter((task) => task.duration === 0)
-  const kinds = new Set(tasks.map((task) => task.kind))
-
-  // regenerate the includedCommonTaskNames
-  const includedCommonTaskNames = [
-    ...new Set(tasks.map((task) => task.commonName)),
-  ]
-
-  // Create a new operation object without the TTR and TTI tasks;
-  // this avoids any side effects from modifying tempOperation directly.
-  return {
-    operation,
-    tasks,
-    includedCommonTaskNames,
-    ttrData,
-    ttiData,
-    ttrDuration,
-    ttiDuration,
-    spanEvents,
-    kinds,
-  }
-}
-
-export interface OperationVisualizerProps {
+export interface OperationVisualizationProps {
   width: number
+  operation: MappedOperation
+  setDisplayOptions: React.Dispatch<
+    React.SetStateAction<Record<FilterOption, boolean>>
+  >
+  displayOptions: Record<FilterOption, boolean>
   margin?: { top: number; right: number; bottom: number; left: number }
 }
-const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
+const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   width,
+  operation,
+  displayOptions,
+  setDisplayOptions,
   margin = DEFAULT_MARGIN,
 }) => {
-  const [state, setState] = useState({
-    [RESOURCES_TEXT]: true,
-    [MEASURES_TEXT]: true,
-    [COLLAPSE_RENDER_SPANS_TEXT]: true,
-    [COLLAPSE_ASSET_SPANS_TEXT]: true,
-    [COLLAPSE_EMBER_RESOURCE_SPANS]: false,
-    [COLLAPSE_IFRAME_SPANS]: false,
-  })
-
   const {
     ttrData,
     ttiData,
@@ -607,18 +316,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
     kinds,
     includedCommonTaskNames,
     tasks,
-  } = useMemo(
-    () =>
-      mapData({
-        collapseRenders: state[COLLAPSE_RENDER_SPANS_TEXT],
-        collapseAssets: state[COLLAPSE_ASSET_SPANS_TEXT],
-        collapseEmberResources: state[COLLAPSE_EMBER_RESOURCE_SPANS],
-        collapseIframes: state[COLLAPSE_IFRAME_SPANS],
-        displayResources: state[RESOURCES_TEXT],
-        displayMeasures: state[MEASURES_TEXT],
-      }),
-    [state],
-  )
+  } = operation
 
   // Render proportions
   const tickHeight = 20
@@ -629,20 +327,22 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   const footerScaleHeight = 30
 
   const xMax = width - margin.left - margin.right
-  const yMax = height - margin.bottom - margin.top //- 132
+  const yMax = height - margin.bottom - margin.top // - 132
 
   const xScale = scaleLinear({
     domain: [0, rootOperation.duration + 10],
     range: [0, xMax],
   })
 
-  const labelScale = useMemo(() => {
-    return scaleBand({
-      domain: includedCommonTaskNames,
-      range: [0, yMax],
-      padding: 0.2,
-    })
-  }, [includedCommonTaskNames, yMax])
+  const labelScale = useMemo(
+    () =>
+      scaleBand({
+        domain: includedCommonTaskNames,
+        range: [0, yMax],
+        padding: 0.2,
+      }),
+    [includedCommonTaskNames, yMax],
+  )
 
   const colorScale = scaleOrdinal({
     domain: [...kinds],
@@ -668,8 +368,6 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
         style={{
           display: 'flex',
           flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
           padding: '5px',
           gap: '10px',
         }}
@@ -683,11 +381,6 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
         >
           Operation: {rootOperation.name}
         </h1>
-        <StyledTable
-          filteredTaskNames={includedCommonTaskNames}
-          ttiDuration={ttiDuration}
-          ttrDuration={ttrDuration}
-        />
       </header>
       <main style={{ height: `${height + margin.top + margin.bottom}px` }}>
         <svg width={width - margin.right} height={height}>
@@ -719,9 +412,9 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
               <TTLine
                 key={task.name}
                 title={task.commonName}
-                color={BAR_FILL_COLOR[task.kind as TaskSpanKind]}
+                color={BAR_FILL_COLOR[task.kind]}
                 xCoordinate={xScale(task.operationStartOffset)}
-                hoverData={task as TaskDataEmbeddedInOperation}
+                hoverData={task}
                 showTooltip={showTooltip}
                 hideTooltip={hideTooltip}
                 yMax={yMax}
@@ -737,7 +430,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
                 y={labelScale(`${task.commonName}`)}
                 width={xScale(task.duration)}
                 height={labelScale.bandwidth()}
-                fill={BAR_FILL_COLOR[task.kind as TaskSpanKind]}
+                fill={BAR_FILL_COLOR[task.kind]}
                 onMouseLeave={() => {
                   // Prevent tooltip from flickering.
                   tooltipTimeout = window.setTimeout(() => {
@@ -757,7 +450,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
                     showTooltip({
                       tooltipLeft: coords.x + 10,
                       tooltipTop: coords.y + 10,
-                      tooltipData: task as TaskDataEmbeddedInOperation,
+                      tooltipData: task,
                     })
                   }
                 }}
@@ -773,9 +466,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
                 dy: '0.33em',
                 width: 100,
               }}
-              tickFormat={(value) => {
-                return value
-              }}
+              tickFormat={(value) => value}
             />
             <Axis scale={xScale} top={yMax} />
           </Group>
@@ -802,7 +493,7 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
             height: `${footerHeight}px`,
           }}
         >
-          <MultiSelect setState={setState} state={state} />
+          <MultiSelect setState={setDisplayOptions} state={displayOptions} />
           <LegendDemo title="Legend">
             <LegendOrdinal
               scale={colorScale}
@@ -866,21 +557,4 @@ const OperationVisualizer: React.FC<OperationVisualizerProps> = ({
   )
 }
 
-export const OperationVisualizerStory: StoryObj<OperationVisualizerProps> = {
-  render: () => {
-    const { width } = useScreenSize()
-    return (
-      <div style={{ padding: '1em', position: 'relative' }}>
-        <OperationVisualizer width={width} />
-      </div>
-    )
-  },
-}
-
-const Component: React.FunctionComponent<{}> = () => <>Hello world</>
-
-const meta: Meta<{}> = {
-  component: Component,
-}
-
-export default meta
+export default OperationVisualization
