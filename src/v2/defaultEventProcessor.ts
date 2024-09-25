@@ -15,12 +15,14 @@ export const defaultEventProcessor: EventProcessor = (
   }
 
   const detail = typeof entry.detail === 'object' && entry.detail
-  const metadata =
+  const existingMetadata =
     'metadata' in entry && typeof entry.metadata === 'object'
-      ? detail
-        ? { ...detail, ...entry.metadata }
-        : entry.metadata
+      ? entry.metadata
       : {}
+  const metadata = detail
+    ? { ...detail, ...existingMetadata }
+    : existingMetadata
+
   let kind = entry.entryType
   let commonName = entry.name
   let status: EventStatus = 'ok'
