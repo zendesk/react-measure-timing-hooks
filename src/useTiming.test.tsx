@@ -1125,7 +1125,7 @@ describe('useTiming', () => {
       // the hook shouldn't affect the contents being rendered:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1168,7 +1168,7 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1211,7 +1211,7 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1537,7 +1537,7 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1645,11 +1645,11 @@ describe('useTiming', () => {
       const generatedReport = generateReport(reportArgs!)
       expect(generatedReport).toEqual(report)
       expect(generatedReport.spans).toMatchInlineSnapshot(`
-        Array [
-          Object {
-            "data": Object {
-              "metadata": Object {},
-              "mountedPlacements": Array [
+        [
+          {
+            "data": {
+              "metadata": {},
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1658,15 +1658,15 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "<beacon> (1)",
-            "endTime": 200,
+            "endTime": 400,
             "relativeEndTime": 100,
-            "startTime": 100,
+            "startTime": 300,
             "type": "render",
           },
-          Object {
-            "data": Object {
-              "metadata": Object {},
-              "mountedPlacements": Array [
+          {
+            "data": {
+              "metadata": {},
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1675,15 +1675,15 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "<manager> (1)",
-            "endTime": 300,
+            "endTime": 500,
             "relativeEndTime": 200,
-            "startTime": 100,
+            "startTime": 300,
             "type": "render",
           },
-          Object {
-            "data": Object {
-              "metadata": Object {},
-              "mountedPlacements": Array [
+          {
+            "data": {
+              "metadata": {},
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1692,15 +1692,15 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "unresponsive",
-            "endTime": 900,
+            "endTime": 1100,
             "relativeEndTime": 800,
-            "startTime": 400,
+            "startTime": 600,
             "type": "unresponsive",
           },
-          Object {
-            "data": Object {
+          {
+            "data": {
               "dependencyChanges": 0,
-              "mountedPlacements": Array [
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1710,15 +1710,15 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "render",
-            "endTime": 300,
+            "endTime": 500,
             "relativeEndTime": 200,
-            "startTime": 100,
+            "startTime": 300,
             "type": "ttr",
           },
-          Object {
-            "data": Object {
+          {
+            "data": {
               "dependencyChanges": 0,
-              "mountedPlacements": Array [
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1728,9 +1728,9 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "interactive",
-            "endTime": 900,
+            "endTime": 1100,
             "relativeEndTime": 800,
-            "startTime": 100,
+            "startTime": 300,
             "type": "tti",
           },
         ]
@@ -1820,7 +1820,7 @@ describe('useTiming', () => {
       })
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1862,7 +1862,7 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -2137,7 +2137,7 @@ describe('useTiming', () => {
       })
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,

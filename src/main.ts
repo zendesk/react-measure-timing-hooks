@@ -35,3 +35,16 @@ export {
   onActionAddedCallback,
   useVisualizer,
 } from './lazyVisualizer'
+
+// operation tracking
+export type {
+  Operation,
+  OperationSpanMetadata,
+  Span,
+  SpanKind,
+  SpanMetadata,
+  Task,
+  TaskDataEmbeddedInOperation,
+  TaskSpanMetadata,
+} from './2024/operationTracking'
+export { startOperation } from './2024/operationTracking'

@@ -674,17 +674,17 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         this.lastStage,
       )
     } else if (lastRenderAction) {
+      ttr = performanceMeasure(
+        `${this.id}/ttr`,
+        firstAction.entry.startMark ?? firstAction.entry,
+        lastRenderAction.entry.endMark ?? lastRenderAction.entry,
+        detail,
+      )
       // add a measure so we can use it in Lighthouse runs
       tti = performanceMeasure(
         `${this.id}/tti`,
         firstAction.entry.startMark ?? firstAction.entry,
         lastAction.entry.endMark ?? lastAction.entry,
-        detail,
-      )
-      ttr = performanceMeasure(
-        `${this.id}/ttr`,
-        firstAction.entry.startMark ?? firstAction.entry,
-        lastRenderAction.entry.endMark ?? lastRenderAction.entry,
         detail,
       )
     }
