@@ -23,6 +23,19 @@ export const defaultEventProcessor: EventProcessor = (
     ? { ...detail, ...existingMetadata }
     : existingMetadata
 
+  const inputEvent = entry as InputEvent
+
+  inputEvent.metadata = metadata
+
+  if (!('operations' in entry) || typeof entry.operations !== 'object') {
+    inputEvent.operations = {}
+  }
+
+  if (typeof inputEvent.event === 'object') {
+    // the event might have been prepopulated, in which case we don't want to overwrite it
+    return inputEvent as Event
+  }
+
   let kind = entry.entryType
   let commonName = entry.name
   let status: EventStatus = 'ok'
@@ -66,11 +79,6 @@ export const defaultEventProcessor: EventProcessor = (
     }`
   }
 
-  const inputEvent = entry as InputEvent
-  if (!('operations' in entry) || typeof entry.operations !== 'object') {
-    inputEvent.operations = {}
-  }
-  inputEvent.metadata = metadata
   inputEvent.event = { commonName, kind, status }
 
   return inputEvent as Event
