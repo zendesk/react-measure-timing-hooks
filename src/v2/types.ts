@@ -42,9 +42,9 @@ export interface EventMatchCriteria {
   name?: string | RegExp | ((name: string) => boolean)
 
   /**
-   * Metadata to match against the performance entry.
+   * Attributes (metadata) to match against the performance entry.
    */
-  metadata?: Metadata
+  attributes?: Attributes
 
   /**
    * The type of the performance entry to match.
@@ -126,9 +126,9 @@ export interface OperationDefinition {
   }[]
 
   /**
-   * Metadata for the operation.
+   * Attributes (metadata) for the operation.
    */
-  metadata?: Metadata
+  attributes?: Attributes
 
   /**
    * Timeout for the operation in ms, after which it should be finalized.
@@ -177,6 +177,12 @@ export interface OperationDefinition {
    * Note that when running in buffered mode, this will execute only after the buffer is flushed.
    */
   onDispose?: () => void
+
+  /**
+   * Indicates if the operation should be restarted automatically after it ends.
+   * This means that onEnd and onDispose may be called multiple times.
+   */
+  autoRestart?: boolean
 }
 
 export interface EventMetadata extends Partial<ErrorMetadata> {
@@ -196,7 +202,7 @@ export interface EventMetadata extends Partial<ErrorMetadata> {
 
 export type VisibleStates = (typeof VISIBLE_STATE)[keyof typeof VISIBLE_STATE]
 
-export interface Metadata {
+export interface Attributes {
   resource?: {
     type?:
       | 'document'
@@ -240,14 +246,14 @@ export type EventEntryType =
 export interface InputEvent extends Omit<PerformanceEntryLike, 'entryType'> {
   readonly entryType: EventEntryType
   operations?: Record<string, EventOperationRelation>
-  metadata?: Metadata
+  attributes?: Attributes
   event?: EventMetadata
 }
 
 export interface Event extends Omit<PerformanceEntryLike, 'entryType'> {
   readonly entryType: EventEntryType
   readonly operations: Record<string, EventOperationRelation>
-  readonly metadata: Metadata
+  readonly attributes: Attributes
   readonly event: EventMetadata
 }
 
@@ -259,11 +265,6 @@ export interface EventOperationRelation {
    * The ID of the operation the event belongs to.
    */
   id: string
-
-  /**
-   * The name of the operation the event belongs to.
-   */
-  // name: string
 
   /**
    * Internal order of the event within the operation.
