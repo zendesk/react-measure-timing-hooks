@@ -17,18 +17,17 @@ import {
   NavItemText,
 } from '@zendeskgarden/react-chrome'
 import { PALETTE } from '@zendeskgarden/react-theming'
-
 import { ReactComponent as MenuTrayIcon } from '@zendeskgarden/svg-icons/src/16/grid-2x2-stroke.svg'
 import { ReactComponent as PersonIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
+import { ReactComponent as ClearIcon } from '@zendeskgarden/svg-icons/src/26/arrow-right-left.svg'
 import { ReactComponent as ProductIcon } from '@zendeskgarden/svg-icons/src/26/garden.svg'
 import { ReactComponent as HomeIcon } from '@zendeskgarden/svg-icons/src/26/home-fill.svg'
-import { ReactComponent as ClearIcon } from '@zendeskgarden/svg-icons/src/26/arrow-right-left.svg'
 import { ReactComponent as ZendeskIcon } from '@zendeskgarden/svg-icons/src/26/zendesk.svg'
-import { TicketList } from './TicketList'
-import { TicketView } from './TicketView'
+import type { Operation } from '../../v2/operation'
 import { mockTickets } from './mockTickets'
 import { operationManager } from './operationManager'
-import type { Operation } from '../../v2/operation'
+import { TicketList } from './TicketList'
+import { TicketView } from './TicketView'
 
 export const App: React.FC = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
@@ -45,15 +44,15 @@ export const App: React.FC = () => {
       operationName: `ticket-activation`,
       track: [
         {
-          match: { type: 'component-unmount', metadata: { ticketId: id } },
+          match: { type: 'component-unmount', attributes: { ticketId: id } },
           interruptWhenSeen: true,
         },
         {
-          match: { metadata: { ticketId: id } },
-          debounceEndWhenSeen: { debounceBy: 1000 },
+          match: { attributes: { ticketId: id } },
+          debounceEndWhenSeen: { debounceBy: 1_000 },
         },
         {
-          match: { metadata: { ticketId: id, visibleState: 'complete' } },
+          match: { attributes: { ticketId: id, visibleState: 'complete' } },
           requiredToEnd: true,
         },
       ],

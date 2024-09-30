@@ -9,14 +9,12 @@ const visuallyHiddenButRenderable: React.CSSProperties = {
   pointerEvents: 'none',
 } as const
 
-export const TimingComponent = React.memo(({ name }: { name: string }) => {
-  return (
-    <p
-      // @ts-ignore
-      elementtiming={name}
-      style={visuallyHiddenButRenderable}
-    >
-      &nbsp;
-    </p>
-  )
-})
+export const TimingComponent = React.memo(({ name }: { name: string }) => (
+  <p
+    // @ts-expect-error missing elementtiming from React types
+    elementtiming={name}
+    style={visuallyHiddenButRenderable}
+  >
+    &nbsp;
+  </p>
+))

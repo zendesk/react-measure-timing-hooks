@@ -36,7 +36,7 @@ export const TicketView: React.FC<TicketViewProps> = ({
 }) => {
   useCaptureRenderBeaconTask({
     componentName: 'TicketView',
-    metadata: { ticketId, loading: !cached },
+    attributes: { ticketId, loading: !cached },
     visibleState: cached ? VISIBLE_STATE.COMPLETE : VISIBLE_STATE.LOADING,
     operationManager,
   })

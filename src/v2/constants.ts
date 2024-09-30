@@ -45,4 +45,4 @@ export const DEFAULT_OBSERVED_ENTRY_TYPES = [
 ]
 
 /** when present on 'detail' of a performance measure/mark, it will ignore that event */
-export const SKIP_PROCESSING = Symbol.for('SKIP_PROCESSING')
+export const SKIP_PROCESSING = '__SKIP_PROCESSING__'

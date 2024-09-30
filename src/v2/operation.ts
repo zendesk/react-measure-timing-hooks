@@ -40,6 +40,9 @@ type TimeoutRef = ReturnType<typeof setTimeout>
 
 /**
  * Class representing an operation.
+ * An operation always always starts when the user interacts with the page (e.g. onClick of a button).
+ * TODO: Maybe it's named UserOperation to make it clear that it's user-initiated?
+ * TODO: maybe have a Task/Process class with 'entryType' = 'task'
  */
 export class Operation implements PerformanceEntryLike {
   /**
@@ -80,9 +83,9 @@ export class Operation implements PerformanceEntryLike {
   readonly entryType = 'operation'
 
   /**
-   * Metadata for the operation.
+   * Attributes (metadata) of the operation.
    */
-  metadata: Record<string, unknown>
+  attributes: Record<string, unknown>
 
   private readonly events: Event[] = []
   getEvents() {
@@ -147,7 +150,7 @@ export class Operation implements PerformanceEntryLike {
     this.name = definition.operationName
     this.duration = 0
     this.durationTillInteractive = 0
-    this.metadata = definition.metadata ?? {}
+    this.attributes = definition.attributes ?? {}
     const captureInteractive =
       definition.waitUntilInteractive && manager.expectBlockingTasks
         ? typeof definition.waitUntilInteractive === 'object'
@@ -543,7 +546,7 @@ export class Operation implements PerformanceEntryLike {
    * Finalizes the operation.
    * @param reason - The reason for finalizing the operation.
    */
-  private finalizeOperation(reason: FinalizationReason, endTime: number): void {
+  finalizeOperation(reason: FinalizationReason, endTime: number): void {
     if (this.state === 'started') {
       const captureInteractive =
         reason === 'completed' && this.definition.captureInteractive
@@ -620,7 +623,7 @@ export class Operation implements PerformanceEntryLike {
       name: this.name,
       startTime: this.startTime,
       duration: this.duration,
-      metadata: { ...this.metadata },
+      attributes: { ...this.attributes },
       event: {
         commonName: this.name,
         kind: OPERATION_ENTRY_TYPE,
@@ -639,7 +642,7 @@ export class Operation implements PerformanceEntryLike {
         name: this.name,
         startTime: this.startTime,
         duration: this.durationTillInteractive,
-        metadata: { ...this.metadata },
+        attributes: { ...this.attributes },
         event: {
           commonName: this.name,
           kind: OPERATION_INTERACTIVE_ENTRY_TYPE,
@@ -663,7 +666,7 @@ export class Operation implements PerformanceEntryLike {
     if (typeof match === 'function') {
       return match(event)
     }
-    const { name, metadata, type } = match
+    const { name, attributes, type } = match
     const nameMatches =
       !name ||
       (typeof name === 'string'
@@ -672,15 +675,15 @@ export class Operation implements PerformanceEntryLike {
           ? name(event.name)
           : name.test(event.name))
     const typeMatches = !type || event.entryType === type
-    const metadataMatches =
-      !metadata ||
+    const attributeMatches =
+      !attributes ||
       Boolean(
-        event.metadata &&
-          Object.entries(metadata).every(
-            ([key, value]) => event.metadata?.[key] === value,
+        event.attributes &&
+          Object.entries(attributes).every(
+            ([key, value]) => event.attributes?.[key] === value,
           ),
       )
-    return nameMatches && typeMatches && metadataMatches
+    return nameMatches && typeMatches && attributeMatches
   }
 }
 
@@ -710,7 +713,7 @@ export class OperationManager {
   /**
    * The function to preprocess a PerformanceEntry-like object into an Event object.
    * The resulting Event should have an 'operations' property record,
-   * which will be updated by the manager with metadata related to the operations that have processed it.
+   * which will be updated by the manager with attributes related to the operations that have processed it.
    * This will happen synchronously when running in unbuffered mode, and asynchronously when running in buffered mode.
    */
   private preprocessEvent: EventProcessor
@@ -826,7 +829,7 @@ export class OperationManager {
   }
 
   /**
-   * Processes a performance entry event.
+   * Ingests a performance entry event by either processing it immediately (sync) or later (async).
    * @param entry - The performance entry event to track.
    */
   scheduleEventProcessing(
@@ -855,11 +858,13 @@ export class OperationManager {
     return this.processEvent(event)
   }
 
+  // TODO: should this return a list of Events? or a list of operations that processed the event?
   private processEvent(event: Event): readonly Event[] {
     const processedEvents: Event[] = []
     for (const operation of this.operations.values()) {
       const processedEvent = operation.processEvent(event)
       if (processedEvent) {
+        // TODO: add configurable setOperation(event, operation)
         // eslint-disable-next-line no-param-reassign
         event.operations[operation.name] = {
           id: operation.id,
