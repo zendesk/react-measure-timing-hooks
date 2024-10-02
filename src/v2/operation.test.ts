@@ -1,5 +1,4 @@
 /* eslint-disable jest/no-conditional-in-test */
-import { DEFAULT_DEBOUNCE_MS } from '../constants'
 import ticketActivationFixtureData from './__fixtures__/ticket-activation-select-tab-1.json'
 import { DEFAULT_DEBOUNCE_TIME, SKIP_PROCESSING } from './constants'
 import { type Operation, OperationManager } from './operation'
@@ -26,7 +25,7 @@ describe('operation tracking', () => {
         duration: operation.durationTillInteractive || operation.duration,
         detail: {
           [SKIP_PROCESSING]: true,
-          metadata: operation.metadata,
+          attributes: operation.attributes,
           id: operation.id,
           name: operation.name,
           events: operation.getEvents().map((event) => ({
@@ -780,7 +779,7 @@ describe('operation tracking', () => {
             requiredToStart: true,
           },
           {
-            match: { metadata: { ticketId: id } },
+            match: { attributes: { ticketId: id } },
             debounceEndWhenSeen: { debounceBy },
           },
           {
@@ -810,7 +809,7 @@ describe('operation tracking', () => {
             name: `ticket-${state}`,
             startTime: time,
             duration: 0,
-            metadata: { ticketId: id },
+            attributes: { ticketId: id },
           },
         ])
         jest.advanceTimersByTime(Math.max(0, time - getTimeNow()))
@@ -846,29 +845,29 @@ describe('operation tracking', () => {
     })
 
     it(`correctly captures the operation's duration`, () => {
-      const id = '13024'
+      const ticketId = '13024'
       const operationName = 'ticket.activation'
       const lastEventRelativeEndTime = 1_706.599_999_999_627_5
       const operationDefinition: OperationDefinition = {
         operationName,
         interruptSelf: true,
-        metadata: { ticketId: id },
+        attributes: { ticketId },
         waitUntilInteractive: true,
         startTime: ticketActivationFixtureData.startTime,
         timeout: 60_000,
         track: [
-          // debounce on anything that has ticketId metadata:
-          { match: { metadata: { ticketId: id } } },
+          // debounce on anything that has ticketId attributes:
+          { match: { attributes: { ticketId } } },
           // any resource fetch should debounce the end of the operation:
           { match: { type: 'resource' } },
           // debounce on element timing sentinels:
-          { match: { type: 'element', name: `ticket_workspace/${id}` } },
-          { match: { type: 'element', name: `omnilog/${id}` } },
+          { match: { type: 'element', name: `ticket_workspace/${ticketId}` } },
+          { match: { type: 'element', name: `omnilog/${ticketId}` } },
           // OmniLog must be rendered in 'complete' state to end the operation:
           {
             match: {
               name: 'OmniLog',
-              metadata: { ticketId: id, visibleState: 'complete' },
+              attributes: { ticketId, visibleState: 'complete' },
             },
             requiredToEnd: true,
           },

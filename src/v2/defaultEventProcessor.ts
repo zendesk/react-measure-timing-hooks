@@ -15,17 +15,17 @@ export const defaultEventProcessor: EventProcessor = (
   }
 
   const detail = typeof entry.detail === 'object' && entry.detail
-  const existingMetadata =
-    'metadata' in entry && typeof entry.metadata === 'object'
-      ? entry.metadata
+  const existingAttributes =
+    'attributes' in entry && typeof entry.attributes === 'object'
+      ? entry.attributes
       : {}
-  const metadata = detail
-    ? { ...detail, ...existingMetadata }
-    : existingMetadata
+  const attributes = detail
+    ? { ...detail, ...existingAttributes }
+    : existingAttributes
 
   const inputEvent = entry as InputEvent
 
-  inputEvent.metadata = metadata
+  inputEvent.attributes = attributes
 
   if (!('operations' in entry) || typeof entry.operations !== 'object') {
     inputEvent.operations = {}
@@ -43,14 +43,14 @@ export const defaultEventProcessor: EventProcessor = (
   if (entry.entryType === 'resource' || entry.entryType === 'navigation') {
     const { commonUrl, query, hash } = getCommonUrlForTracing(entry.name)
     commonName = commonUrl
-    metadata.resourceQuery = query
-    metadata.resourceHash = hash
+    attributes.resourceQuery = query
+    attributes.resourceHash = hash
 
     if (entry.entryType === 'resource') {
       const resource =
-        metadata.resource &&
-        typeof metadata.resource === 'object' &&
-        metadata.resource
+        attributes.resource &&
+        typeof attributes.resource === 'object' &&
+        attributes.resource
       const resourceType =
         resource && typeof resource.type === 'string' && resource.type
       const statusCode =

@@ -1,21 +1,21 @@
 // TODO: maybe even a HOC/wrapper instead? this way I could ensure to add a hook at beginning and at the end of the component
 
-import { useEffect, useRef } from 'react'
+import { type DependencyList, useEffect, useRef } from 'react'
 import { useOnComponentUnmount } from '../ErrorBoundary'
 import { VISIBLE_STATE } from './constants'
 import { OperationManager } from './operation'
-import type { InputEvent, Metadata, OperationDefinition } from './types'
+import type { Attributes, InputEvent, OperationDefinition } from './types'
 
 // TODO: make a getUseCaptureRenderBeaconTask, and provide OperationManager there
 export const useCaptureRenderBeaconTask = ({
   componentName,
-  metadata: meta,
+  attributes: attr,
   error,
   visibleState = VISIBLE_STATE.COMPLETE,
   operationManager,
 }: {
   componentName: string
-  metadata: Record<string, unknown>
+  attributes: Record<string, unknown>
   error?: object
   /**
    * what is the state of the UX that the user sees as part of this render?
@@ -25,10 +25,10 @@ export const useCaptureRenderBeaconTask = ({
   operationManager: OperationManager
 }) => {
   const renderCountRef = useRef(0)
-  const metadata: Metadata = {
+  const attributes: Attributes = {
     visibleState: error ? VISIBLE_STATE.ERROR : visibleState,
     renderCount: renderCountRef.current,
-    ...meta,
+    ...attr,
   }
   renderCountRef.current += 1
   const renderStartTask = {
@@ -36,7 +36,7 @@ export const useCaptureRenderBeaconTask = ({
     name: componentName,
     startTime: operationManager.performance.now(),
     duration: 0,
-    metadata,
+    attributes,
   } satisfies InputEvent
 
   const nextStateObj = { visibleState, startTime: renderStartTask.startTime }
@@ -49,9 +49,9 @@ export const useCaptureRenderBeaconTask = ({
       name: componentName,
       startTime: previousState.startTime,
       duration: renderStartTask.startTime - previousState.startTime,
-      metadata: {
+      attributes: {
         previousVisibleState: previousState.visibleState,
-        ...metadata,
+        ...attributes,
       },
     } satisfies InputEvent)
   }
@@ -84,7 +84,7 @@ export const useCaptureRenderBeaconTask = ({
       name: componentName,
       startTime: renderStartTask.startTime,
       duration: operationManager.performance.now() - renderStartTask.startTime,
-      metadata,
+      attributes,
     } satisfies InputEvent)
   })
 
@@ -97,7 +97,7 @@ export const useCaptureRenderBeaconTask = ({
         name: componentName,
         startTime: operationManager.performance.now(),
         duration: 0,
-        metadata,
+        attributes,
         event: {
           ...(errorBoundaryMetadata
             ? {
@@ -121,26 +121,51 @@ export const useCaptureRenderBeaconTask = ({
 
 // records until all required render beacons are settled
 // (and until the page is interactive? or maybe that's the central manager's job)
-export const useCaptureOperationTiming = (
-  operationDefinition: OperationDefinition & {
+export const useRenderProcessTrace = (
+  traceDefinition: OperationDefinition & {
     // the operation will start once 'active' is true (or undefined)
     active?: boolean
     operationManager: OperationManager
   },
+  restartWhenChanged: DependencyList,
 ) => {
-  const { active = true, operationManager, operationName } = operationDefinition
-  // const lastStartedNameRef = useRef<string>(operationDefinition.operationName)
-  const startedOperationNameRef = useRef<string>()
-  // only start the operation once (but allow another one to be started if the name changes)
-  if (!active || startedOperationNameRef.current === operationName) return
-  operationManager.startOperation(operationDefinition)
-  startedOperationNameRef.current = operationName
+  const { active = true, operationManager } = traceDefinition
+  const activeTraceId = useRef<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (!active) {
+      return undefined
+    }
+
+    return () => {
+      if (activeTraceId.current) {
+        // TODO: we dont want to throw away the operation if the operation is debouncing!
+        operationManager.cancelOperation(activeTraceId.current)
+        activeTraceId.current = undefined
+      }
+    }
+  }, [active])
+
+  // this will fire when external deps have changed:
+  // Note: we cannot use useEffect has we need this code to run during the render
+  // and especially before we call actionLogRef.current.setActive.
+  const isFirstTrace = useRef(true)
+  const lastExternalDeps = useRef(restartWhenChanged)
+  const externalDepsHaveChanged = restartWhenChanged.some(
+    (value, i) => value !== lastExternalDeps.current[i],
+  )
+
+  if (externalDepsHaveChanged || isFirstTrace.current) {
+    isFirstTrace.current = false
+    lastExternalDeps.current = restartWhenChanged
+    activeTraceId.current = operationManager.startOperation(traceDefinition)
+  }
 
   // starts an operation when:
   // - 'active' is true,
   // - all requiredToStart timings have been seen
-  // all metadata from required tasks is merged into the operation metadata
-  // the resulting task will have metadata that explains why it ended:
+  // all attributes from required tasks is merged into the operation attributes
+  // the resulting task will have attributes that explains why it ended:
   // - 'interrupted' if an interruptWhenSeen task was seen
   // - 'timeout' if the timeout was reached
   // - 'error'

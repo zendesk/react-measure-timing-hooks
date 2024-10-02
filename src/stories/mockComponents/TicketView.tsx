@@ -9,7 +9,7 @@ import { Paragraph, Span, XXL } from '@zendeskgarden/react-typography'
 import { ReactComponent as UserIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
 import { VISIBLE_STATE } from '../../main'
 import { TimingComponent } from '../../v2/element'
-import { useCaptureRenderBeaconTask } from '../../v2/hooks'
+import { useCaptureRenderBeaconTask, useRenderProcessTrace } from '../../v2/hooks'
 import { mockTickets } from './mockTickets'
 import { operationManager } from './operationManager'
 
@@ -34,9 +34,19 @@ export const TicketView: React.FC<TicketViewProps> = ({
   cached = false,
   onLoaded,
 }) => {
+
+  useRenderProcessTrace({
+    operationManager, operationName: 'TicketView', onEnd: (trace) => {
+      console.log('TicketView trace', trace, "ticketId", ticketId)
+    }, track: [{ match: { attributes: { ticketId } } }, { //debounce on any event that has the same ticket id 
+      match: { attributes: { ticketId, visibleState: 'complete' } }, //required to end the operation, ticket fully loaded!
+      requiredToEnd: true,
+    }]
+  }, [ticketId])
+
   useCaptureRenderBeaconTask({
     componentName: 'TicketView',
-    metadata: { ticketId, loading: !cached },
+    attributes: { ticketId, loading: !cached },
     visibleState: cached ? VISIBLE_STATE.COMPLETE : VISIBLE_STATE.LOADING,
     operationManager,
   })
