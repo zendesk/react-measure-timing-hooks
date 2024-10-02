@@ -1,6 +1,6 @@
 // TODO: maybe even a HOC/wrapper instead? this way I could ensure to add a hook at beginning and at the end of the component
 
-import { useEffect, useRef } from 'react'
+import { type DependencyList, useEffect, useRef } from 'react'
 import { useOnComponentUnmount } from '../ErrorBoundary'
 import { VISIBLE_STATE } from './constants'
 import { OperationManager } from './operation'
@@ -121,27 +121,41 @@ export const useCaptureRenderBeaconTask = ({
 
 // records until all required render beacons are settled
 // (and until the page is interactive? or maybe that's the central manager's job)
-export const useCaptureRenderTask = (
-  operationDefinition: OperationDefinition & {
+export const useRenderProcessTrace = (
+  traceDefinition: OperationDefinition & {
     // the operation will start once 'active' is true (or undefined)
     active?: boolean
     operationManager: OperationManager
   },
+  restartWhenChanged: DependencyList,
 ) => {
-  const { active = true, operationManager, operationName } = operationDefinition
+  const { active = true, operationManager, operationName } = traceDefinition
 
   useEffect(() => {
     if (!active) {
       return undefined
     }
-    operationManager.startOperation({
-      ...operationDefinition,
-      autoRestart: true,
-    })
+
     return () => {
+      // TODO: we dont want to throw away the operation if the operation is debouncing!
       operationManager.cancelOperation(operationName)
     }
   }, [active])
+
+  // this will fire when external deps have changed:
+  // Note: we cannot use useEffect has we need this code to run during the render
+  // and especially before we call actionLogRef.current.setActive.
+  const isFirstTrace = useRef(true)
+  const lastExternalDeps = useRef(restartWhenChanged)
+  const externalDepsHaveChanged = restartWhenChanged.some(
+    (value, i) => value !== lastExternalDeps.current[i],
+  )
+
+  if (externalDepsHaveChanged || isFirstTrace.current) {
+    isFirstTrace.current = false;
+    lastExternalDeps.current = restartWhenChanged;
+    operationManager.startOperation(traceDefinition)
+  }
 
   // starts an operation when:
   // - 'active' is true,
