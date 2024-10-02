@@ -129,7 +129,8 @@ export const useRenderProcessTrace = (
   },
   restartWhenChanged: DependencyList,
 ) => {
-  const { active = true, operationManager, operationName } = traceDefinition
+  const { active = true, operationManager } = traceDefinition
+  const activeTraceId = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (!active) {
@@ -137,8 +138,11 @@ export const useRenderProcessTrace = (
     }
 
     return () => {
-      // TODO: we dont want to throw away the operation if the operation is debouncing!
-      operationManager.cancelOperation(operationName)
+      if (activeTraceId.current) {
+        // TODO: we dont want to throw away the operation if the operation is debouncing!
+        operationManager.cancelOperation(activeTraceId.current)
+        activeTraceId.current = undefined
+      }
     }
   }, [active])
 
@@ -152,9 +156,9 @@ export const useRenderProcessTrace = (
   )
 
   if (externalDepsHaveChanged || isFirstTrace.current) {
-    isFirstTrace.current = false;
-    lastExternalDeps.current = restartWhenChanged;
-    operationManager.startOperation(traceDefinition)
+    isFirstTrace.current = false
+    lastExternalDeps.current = restartWhenChanged
+    activeTraceId.current = operationManager.startOperation(traceDefinition)
   }
 
   // starts an operation when:
