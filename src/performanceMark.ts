@@ -62,7 +62,7 @@ export const performanceMeasure = (
     const measure = performance.measure(measureName, {
       start: startMark.startTime + startMark.duration,
       end,
-      detail,
+      detail: detail ?? {},
     })
 
     if (measure) return measure

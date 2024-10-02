@@ -27,7 +27,7 @@ import {
   ChartBulletPrimarySegmentedMeasure,
   ChartBulletQualitativeRange,
   ChartThemeColor,
-  getBulletTheme,
+  getTheme,
 } from '@patternfly/react-charts'
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { Button, SearchInput, Stack, StackItem } from '@patternfly/react-core'
@@ -74,7 +74,7 @@ interface PersistedActionLog {
 }
 
 const MINIMAL_BLOCK_SIZE_PERCENTAGE = 0.01
-const THEME = getBulletTheme(ChartThemeColor.multiOrdered)
+const THEME = getTheme(ChartThemeColor.multiOrdered)
 
 const PADDING = {
   bottom: 0,
