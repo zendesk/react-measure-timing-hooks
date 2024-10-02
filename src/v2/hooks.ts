@@ -129,12 +129,19 @@ export const useCaptureRenderTask = (
   },
 ) => {
   const { active = true, operationManager, operationName } = operationDefinition
-  // const lastStartedNameRef = useRef<string>(operationDefinition.operationName)
-  const startedOperationNameRef = useRef<string>()
-  // only start the operation once (but allow another one to be started if the name changes)
-  if (!active || startedOperationNameRef.current === operationName) return
-  operationManager.startOperation(operationDefinition)
-  startedOperationNameRef.current = operationName
+
+  useEffect(() => {
+    if (!active) {
+      return undefined
+    }
+    operationManager.startOperation({
+      ...operationDefinition,
+      autoRestart: true,
+    })
+    return () => {
+      operationManager.cancelOperation(operationName)
+    }
+  }, [active])
 
   // starts an operation when:
   // - 'active' is true,
