@@ -270,6 +270,7 @@ export class Operation implements PerformanceEntryLike {
         if (this.state === 'initial' && trackerDefinition.requiredToStart) {
           this.requiredToStartTrackers.delete(trackerIndex)
         }
+        // TODO: should be be removing from 'requiredToEnd' list even when operation is not started yet? i.e. when this.state === 'initial' ?
         if (this.state === 'started') {
           if (trackerDefinition.requiredToEnd) {
             this.requiredToEndTrackers.delete(trackerIndex)
@@ -579,14 +580,14 @@ export class Operation implements PerformanceEntryLike {
 
         // waiting for long events for the duration of the interactive debounce:
         this.maybeFinalizeLater(captureInteractive.debounceLongTasksBy, endTime)
-      } else {
-        this.finalize()
+        return
       }
     } else if (this.state === 'waiting-for-interactive') {
       this.state = reason
       this.durationTillInteractive = endTime - this.startTime
-      this.finalize()
     }
+
+    this.finalize()
   }
 
   private finalize() {
@@ -786,10 +787,12 @@ export class OperationManager {
     }
 
     const finalizationFn = () => {
-      this.operations.delete(operation.id)
+      this.operations.delete(operation.name)
       this.ensureObserver()
       operationDefinition.onDispose?.()
-      // TODO: post-process operation data - e.g. send a report or spans
+      if (operationDefinition.autoRestart) {
+        this.startOperation(operationDefinition)
+      }
     }
 
     const operation = new Operation({
@@ -798,10 +801,17 @@ export class OperationManager {
       finalizationFn,
       buffered: Boolean(this.bufferDuration),
     })
-    this.operations.set(operation.id, operation)
+    this.operations.set(operation.name, operation)
     this.ensureObserver()
 
     return operation.id
+  }
+
+  cancelOperation(operationName: string): void {
+    const operation = this.operations.get(operationName)
+    if (operation) {
+      operation.finalizeOperation('interrupted', this.performance.now())
+    }
   }
 
   scheduleBufferFlushIfNeeded() {
