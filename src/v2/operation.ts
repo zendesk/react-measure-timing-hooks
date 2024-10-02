@@ -270,7 +270,6 @@ export class Operation implements PerformanceEntryLike {
         if (this.state === 'initial' && trackerDefinition.requiredToStart) {
           this.requiredToStartTrackers.delete(trackerIndex)
         }
-        // TODO: should be be removing from 'requiredToEnd' list even when operation is not started yet? i.e. when this.state === 'initial' ?
         if (this.state === 'started') {
           if (trackerDefinition.requiredToEnd) {
             this.requiredToEndTrackers.delete(trackerIndex)
@@ -787,12 +786,10 @@ export class OperationManager {
     }
 
     const finalizationFn = () => {
-      this.operations.delete(operation.name)
+      this.operations.delete(operation.id)
       this.ensureObserver()
       operationDefinition.onDispose?.()
-      if (operationDefinition.autoRestart) {
-        this.startOperation(operationDefinition)
-      }
+      // TODO: post-process operation data - e.g. send a report or spans
     }
 
     const operation = new Operation({
@@ -801,17 +798,10 @@ export class OperationManager {
       finalizationFn,
       buffered: Boolean(this.bufferDuration),
     })
-    this.operations.set(operation.name, operation)
+    this.operations.set(operation.id, operation)
     this.ensureObserver()
 
     return operation.id
-  }
-
-  cancelOperation(operationName: string): void {
-    const operation = this.operations.get(operationName)
-    if (operation) {
-      operation.finalizeOperation('interrupted', this.performance.now())
-    }
   }
 
   scheduleBufferFlushIfNeeded() {
