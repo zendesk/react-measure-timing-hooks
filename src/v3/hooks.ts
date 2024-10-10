@@ -1,36 +1,37 @@
 import { useEffect, useRef } from 'react'
 import { useOnComponentUnmount } from '../ErrorBoundary'
+import { ensureTimestamp } from './ensureTimestamp'
 import type {
   BeaconConfig,
   ComponentRenderEntryInput,
   GetScopeTFromTraceManager,
   ITraceManager,
   ScopeBase,
+  Timestamp,
   UseBeacon,
 } from './types'
 
 type MakeEntryInput<ScopeT extends ScopeBase> = Omit<
   ComponentRenderEntryInput<ScopeT>,
   'startTime'
->
+> & { startTime?: Timestamp }
+
 const makeEntry = <ScopeT extends ScopeBase>(
   inp: MakeEntryInput<ScopeT>,
 ): ComponentRenderEntryInput<ScopeT> => ({
   ...inp,
-  startTime: {
-    epoch: Date.now(),
-    now: performance.now(),
-  },
+  startTime: ensureTimestamp(inp.startTime),
 })
-/*
-  The job of the beacon:
-  * emit component-render-start, component-render, component-unmount entries
-  *
-*/
 
+/**
+ * The job of the beacon:
+ * emit component-render-start, component-render, component-unmount entries
+ */
 export const generateUseBeacon =
-  <T extends ScopeBase>(traceManager: ITraceManager<T>): UseBeacon<T> =>
-  (config: BeaconConfig<GetScopeTFromTraceManager<ITraceManager<T>>>) => {
+  <ScopeT extends ScopeBase>(
+    traceManager: ITraceManager<ScopeT>,
+  ): UseBeacon<ScopeT> =>
+  (config: BeaconConfig<GetScopeTFromTraceManager<ITraceManager<ScopeT>>>) => {
     const renderCountRef = useRef(0)
     renderCountRef.current += 1
 
@@ -40,12 +41,14 @@ export const generateUseBeacon =
       renderCount: renderCountRef.current,
     }
 
-    const renderStartTask: ComponentRenderEntryInput<T> = makeEntry({
+    const status = config.error ? 'error' : 'ok'
+
+    const renderStartTask: ComponentRenderEntryInput<ScopeT> = makeEntry({
       ...config,
       type: 'component-render-start',
       duration: 0,
       attributes,
-      status: 'ok', // TODO: how are we determining error here? We probably need to have an error prop
+      status,
     })
 
     traceManager.processEntry(renderStartTask)
@@ -56,9 +59,9 @@ export const generateUseBeacon =
         makeEntry({
           ...config,
           type: 'component-render',
-          // TODO: the previous implemntation had `operationManager.performance.now()`. Was this different?
+          // TODO: the previous implementation had `operationManager.performance.now()`. Was this different?
           duration: performance.now() - renderStartTask.startTime.now,
-          status: 'ok',
+          status,
           attributes,
         }),
       )

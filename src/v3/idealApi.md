@@ -177,7 +177,7 @@ const traceId = ticketActivationTracer.start()
 ```
 
 ```ts
-const internalTracerStates = {
+const internalActiveTraceStates = {
   // 'pending': {
   //   // for now we don't need to worry about it - we'll not implement
   // },

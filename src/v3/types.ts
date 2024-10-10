@@ -42,9 +42,16 @@ export interface StartTraceInput<ScopeT extends ScopeBase> {
   }
 }
 
+export interface ActiveTraceInput<ScopeT extends ScopeBase>
+  extends StartTraceInput<ScopeT> {
+  id: string
+  startTime: Timestamp
+  onEnd: (trace: TraceRecording<ScopeT>) => void
+}
+
 export type EntryStatus = 'ok' | 'error'
 
-export interface TraceEntryInputBase<ScopeT extends ScopeBase> {
+export interface TraceEntryBase<ScopeT extends ScopeBase> {
   type: EntryType
   /**
    * The common name of the entry.
@@ -75,14 +82,13 @@ export interface TraceEntryInputBase<ScopeT extends ScopeBase> {
 }
 
 export interface ComponentRenderEntryInput<ScopeT extends ScopeBase>
-  extends TraceEntryInputBase<ScopeT>,
+  extends TraceEntryBase<ScopeT>,
     BeaconConfig<ScopeT> {
   type: ComponentLifecycleEntryType
   errorInfo?: ErrorInfo
 }
 
-export type TraceEntryInput<ScopeT extends ScopeBase> =
-  TraceEntryInputBase<ScopeT>
+export type TraceEntry<ScopeT extends ScopeBase> = TraceEntryBase<ScopeT>
 
 export type Attributes = Record<string, unknown>
 
@@ -244,7 +250,7 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
 
 export interface TraceRecording<ScopeT extends ScopeBase>
   extends TraceRecordingBase<ScopeT> {
-  entries: TraceEntryInput<ScopeT>[]
+  entries: TraceEntry<ScopeT>[]
 }
 
 export type RenderedOutput = 'null' | 'loading' | 'content' | 'error'
@@ -264,12 +270,14 @@ export type UseBeacon<ScopeT extends ScopeBase> = (
   beaconConfig: BeaconConfig<ScopeT>,
 ) => void
 
+export type ReportFn<ScopeT extends ScopeBase> = (
+  trace: TraceRecording<ScopeT>,
+) => void
+
 export interface TraceManagerConfig<ScopeT extends ScopeBase> {
-  reportFn: (
-    trace: TraceRecording<ScopeT>,
-    entries: TraceEntryInput<ScopeT>,
-  ) => void
-  embeddedEntryTypes: EntryType[]
+  reportFn: ReportFn<ScopeT>
+  // TODO: embeddedEntryTypes: EntryType[] would actually goes to configuration of the "convertRecordingToRum" function
+  // which would be called inside of reportFn
   generateId: () => string
 }
 
@@ -303,7 +311,9 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
 
   type: TraceType
 
-  attributes: Attributes
+  // TODO: implement this with typechecking
+  // to ensure we cannot start a trace without the required scope keys
+  requiredScopeKeys: keyof ScopeT[]
 
   requiredToEnd: EntryMatchCriteria<ScopeT>[]
   debounceOn?: EntryMatchCriteria<ScopeT>[]
@@ -324,7 +334,7 @@ export interface ComputedValueDefinition<
   matches: [...MatchersT]
   computeValueFromMatches: (
     // as many matches as match of type TraceEntryInput<ScopeT>
-    matches: MapTuple<MatchersT, TraceEntryInput<ScopeT>>,
+    matches: MapTuple<MatchersT, TraceEntry<ScopeT>>,
   ) => number | string | boolean
 }
 
@@ -339,7 +349,7 @@ export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
 
 export interface ITraceManager<ScopeT extends ScopeBase> {
   createTracer: (traceDefinition: TraceDefinition<ScopeT>) => Tracer<ScopeT>
-  processEntry: (entry: TraceEntryInput<ScopeT>) => EntryAnnotation
+  processEntry: (entry: TraceEntry<ScopeT>) => EntryAnnotation
 }
 
 export type GetScopeTFromTraceManager<

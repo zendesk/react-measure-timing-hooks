@@ -1,4 +1,6 @@
 // import { Trace } from './Trace'
+import { ActiveTrace } from './ActiveTrace'
+import { ensureTimestamp } from './ensureTimestamp'
 import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
@@ -7,10 +9,11 @@ import type {
   EntryMatchCriteria,
   EntryType,
   ITraceManager,
+  ReportFn,
   ScopeBase,
   StartTraceInput,
   TraceDefinition,
-  TraceEntryInput,
+  TraceEntry,
   TraceManagerConfig,
   Tracer,
   TraceRecording,
@@ -22,19 +25,11 @@ import type {
 export class TraceManager<ScopeT extends ScopeBase>
   implements ITraceManager<ScopeT>
 {
-  private readonly reportFn: (
-    trace: TraceRecording<ScopeT>,
-    entries: TraceEntryInput<ScopeT>,
-  ) => void
-  private readonly embeddedEntryTypes: EntryType[]
+  private readonly reportFn: ReportFn<ScopeT>
   private readonly generateId: () => string
+  private activeTrace: ActiveTrace<ScopeT> | undefined = undefined
 
-  constructor({
-    reportFn,
-    embeddedEntryTypes,
-    generateId,
-  }: TraceManagerConfig<ScopeT>) {
-    this.embeddedEntryTypes = embeddedEntryTypes
+  constructor({ reportFn, generateId }: TraceManagerConfig<ScopeT>) {
     this.reportFn = reportFn
     this.generateId = generateId
   }
@@ -67,7 +62,8 @@ export class TraceManager<ScopeT extends ScopeBase>
     }
   }
 
-  processEntry(entry: TraceEntryInput<ScopeT>): EntryAnnotation {
+  // if no active trace, return or maybe buffer?
+  processEntry(entry: TraceEntry<ScopeT>): EntryAnnotation {
     return {}
   }
 
@@ -75,9 +71,21 @@ export class TraceManager<ScopeT extends ScopeBase>
     definition: CompleteTraceDefinition<ScopeT>,
     input: StartTraceInput<ScopeT>,
   ): string {
+    const onEnd = (traceRecording: TraceRecording<ScopeT>) => {
+      this.activeTrace = undefined
+      this.reportFn(traceRecording)
+    }
+
     const id = input.id ?? this.generateId()
 
-    // TODO: implement
+    const activeTrace = new ActiveTrace(definition, {
+      ...input,
+      startTime: ensureTimestamp(input.startTime),
+      id,
+      onEnd,
+    })
+
+    this.activeTrace = activeTrace
 
     return id
   }
