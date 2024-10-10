@@ -71,12 +71,19 @@ export class TraceManager<ScopeT extends ScopeBase>
     definition: CompleteTraceDefinition<ScopeT>,
     input: StartTraceInput<ScopeT>,
   ): string {
-    const onEnd = (traceRecording: TraceRecording<ScopeT>) => {
+    if (this.activeTrace) {
+      this.activeTrace.interrupt('another-trace-started')
       this.activeTrace = undefined
-      this.reportFn(traceRecording)
     }
 
     const id = input.id ?? this.generateId()
+
+    const onEnd = (traceRecording: TraceRecording<ScopeT>) => {
+      if (this.activeTrace && id === this.activeTrace?.input.id) {
+        this.activeTrace = undefined
+      }
+      this.reportFn(traceRecording)
+    }
 
     const activeTrace = new ActiveTrace(definition, {
       ...input,
