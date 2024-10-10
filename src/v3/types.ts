@@ -88,7 +88,9 @@ export interface ComponentRenderEntryInput<ScopeT extends ScopeBase>
   errorInfo?: ErrorInfo
 }
 
-export type TraceEntry<ScopeT extends ScopeBase> = TraceEntryBase<ScopeT>
+export type TraceEntry<ScopeT extends ScopeBase> =
+  | TraceEntryBase<ScopeT>
+  | ComponentRenderEntryInput<ScopeT>
 
 export type Attributes = Record<string, unknown>
 
@@ -126,6 +128,17 @@ export interface EntryMatchCriteria<ScopeT extends ScopeBase> {
    */
   isIdle?: boolean
 }
+
+/**
+ * Function type for matching performance entries.
+ */
+export type EntryMatchFunction<ScopeT extends ScopeBase> = (
+  entry: TraceEntry<ScopeT>,
+) => boolean
+
+export type EntryMatcher<ScopeT extends ScopeBase> =
+  | EntryMatchCriteria<ScopeT>
+  | EntryMatchFunction<ScopeT>
 
 export interface EntryAnnotation {
   [operationName: string]: {
