@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 
+import { ErrorInfo } from 'react'
+
 export type ScopeBase = Record<string, string | number | boolean>
 
 export type NativePerformanceEntryType =
@@ -17,28 +19,40 @@ export type NativePerformanceEntryType =
   | 'resource'
   | 'visibility-state'
 
-export type InternalPerformanceEntryType =
+export type ComponentLifecycleEntryType =
   | 'component-render-start'
   | 'component-render'
   | 'component-unmount'
 
-export type EntryType =
-  | NativePerformanceEntryType
-  | InternalPerformanceEntryType
+export type EntryType = NativePerformanceEntryType | ComponentLifecycleEntryType
 
-export interface TraceEntryInput<ScopeT extends ScopeBase> {
-  type: EntryType
-  commonName: string
-
-  // performance.now() time
-  startTime: number
+export interface Timestamp {
   // absolute count of ms from epoch
-  startTimeEpoch: number
+  epoch: number
+  // performance.now() time
+  now: number
+}
 
-  // if this is just an event, this 0, span will have > 0
-  duration: number
+export interface StartTraceInput<ScopeT extends ScopeBase> {
+  id?: string
+  scope: ScopeT
+  startTime?: Partial<Timestamp>
+  attributes?: {
+    [name: string]: unknown
+  }
+}
 
-  status: 'ok' | 'error'
+export type EntryStatus = 'ok' | 'error'
+
+export interface TraceEntryInputBase<ScopeT extends ScopeBase> {
+  type: EntryType
+  /**
+   * The common name of the entry.
+   * If converted from a PerformanceEntry, this is a sanitized version of the name.
+   */
+  name: string
+
+  startTime: Timestamp
 
   scope: ScopeT
 
@@ -46,11 +60,65 @@ export interface TraceEntryInput<ScopeT extends ScopeBase> {
     [name: string]: unknown
   }
 
-  // the complete name of the related event, that's specific to this event
-  // e.g. https://domain.zendesk.com/apis/ticket/123.json
-  originalName: string
+  // if this is just an event, this 0, span will have > 0
+  duration: number
+
+  status: EntryStatus
+
+  // // the complete name of the related event, that's specific to this event
+  // // e.g. https://domain.zendesk.com/apis/ticket/123.json
+  // originalName: string
 
   performanceEntry?: PerformanceEntry
+
+  error?: Error
+}
+
+export interface ComponentRenderEntryInput<ScopeT extends ScopeBase>
+  extends TraceEntryInputBase<ScopeT>,
+    BeaconConfig<ScopeT> {
+  type: ComponentLifecycleEntryType
+  errorInfo?: ErrorInfo
+}
+
+export type TraceEntryInput<ScopeT extends ScopeBase> =
+  TraceEntryInputBase<ScopeT>
+
+export type Attributes = Record<string, unknown>
+
+/**
+ * Criteria for matching performance entries.
+ */
+export interface EntryMatchCriteria<ScopeT extends ScopeBase> {
+  /**
+   * The common name of the entry to match. Can be a string, RegExp, or function.
+   */
+  name?: string | RegExp | ((name: string) => boolean)
+
+  /**
+   * The PerformanceEntry.name of the entry to match. Can be a string, RegExp, or function.
+   */
+  performanceEntryName?: string | RegExp | ((name: string) => boolean)
+
+  /**
+   * The subset of attributes (metadata) to match against the entry.
+   */
+  attributes?: Attributes
+
+  status?: EntryStatus
+  type?: EntryType
+
+  scope?: ScopeT
+
+  /**
+   * The occurrence of the entry with the same name within the operation.
+   */
+  occurrence?: number
+
+  /**
+   * only applicable for component-lifecycle entries
+   */
+  isIdle?: boolean
 }
 
 export interface EntryAnnotation {
@@ -79,7 +147,46 @@ export interface EntryAnnotation {
   }
 }
 
-export interface Trace {
+export type TraceType = 'operation' | 'process'
+
+export type TraceStatus = EntryStatus | 'interrupted'
+
+export type TraceInterruptionReason =
+  | 'timeout'
+  | 'another-trace-started'
+  | 'manually-aborted'
+  | 'idle-component-no-longer-idle'
+
+export interface RumTraceRecording<ScopeT extends ScopeBase>
+  extends TraceRecordingBase<ScopeT> {
+  scope: ScopeT
+
+  // spans that don't exist as separate spans in the DB
+  // useful for things like renders, which can repeat tens of times
+  // during the same operation
+  embeddedEntries: {
+    [typeAndName: string]: {
+      count: number
+      totalDuration: number
+      spans: {
+        startOffset: number
+        duration: number
+        error?: true | undefined
+      }[]
+    }
+  }
+
+  // `typeAndName`s of entires that can be used to query
+  // & aggregate average start offset and duration
+  // 'resource|/apis/tickets/123.json'
+  // 'resource|graphql/query/GetTickets'
+  // 'component-render|OmniLog'
+  // 'error|Something went wrong'
+  // 'measure|ticket.fetch'
+  nonEmbeddedEntries: string[]
+}
+
+export interface TraceRecordingBase<ScopeT extends ScopeBase> {
   // random generated unique value
   id: string
 
@@ -87,24 +194,19 @@ export interface Trace {
   // TODO: define naming convention
   name: string
 
-  type: 'user-operation' | 'process'
+  scope: ScopeT
+
+  type: TraceType
 
   // set to 'error' if any entry with status: 'error' was part of the actual trace
   // (except if it happened while in the waiting-for-interactive state)
-  status: 'ok' | 'error' | 'interrupted'
+  status: TraceStatus
 
-  interruptionReason?:
-    | 'timeout'
-    | 'another-trace-started'
-    | 'manually-aborted'
-    | 'idle-component-no-longer-idle'
-
-  // duration from start to satisfied all requiredToEnd + any debounced events
-  // start till complete
+  interruptionReason?: TraceInterruptionReason
   duration: number
 
-  startTillInteractive: number
-  completeTillInteractive: number
+  startTillInteractive: number | null
+  completeTillInteractive: number | null
 
   attributes: {
     // feature flags, etc.
@@ -124,26 +226,11 @@ export interface Trace {
     [valueName: string]: number | string | boolean
   }
 
-  // spans that don't exist as separate spans in the DB
-  // useful for things like renders, which can repeat tens of times
-  // during the same operation
-  embeddedEntries: {
-    [commonName: string]: {
-      count: number
-      totalDuration: number
-      spans: { startOffset: number; duration: number }[]
-    }
-  }
-
   entryAttributes: {
-    [commonName: string]: {
+    [typeAndName: string]: {
       [attributeName: string]: unknown
     }
   }
-
-  // all common names of entires that can be used to query
-  // & aggregate average start offset and duration
-  includedEntryNames: string[]
 
   // all the other spans that did get recorded
   // spans: {
@@ -155,58 +242,107 @@ export interface Trace {
   // }
 }
 
+export interface TraceRecording<ScopeT extends ScopeBase>
+  extends TraceRecordingBase<ScopeT> {
+  entries: TraceEntryInput<ScopeT>[]
+}
+
+export type RenderedOutput = 'null' | 'loading' | 'content' | 'error'
+
 export interface BeaconConfig<ScopeT extends ScopeBase> {
-  componentName: string
+  name: string
   scope: ScopeT
+  renderedOutput: RenderedOutput
+  isIdle: boolean
   attributes: {
     [name: string]: unknown
   }
-  renderedOutput: 'null' | 'loading' | 'content' | 'error'
-  isIdle: boolean
+  error?: Error
 }
 
 export type UseBeacon<ScopeT extends ScopeBase> = (
   beaconConfig: BeaconConfig<ScopeT>,
 ) => void
 
-export interface TraceManagerConfig {
-  reportFn: (trace: Trace) => void
+export interface TraceManagerConfig<ScopeT extends ScopeBase> {
+  reportFn: (
+    trace: TraceRecording<ScopeT>,
+    entries: TraceEntryInput<ScopeT>,
+  ) => void
   embeddedEntryTypes: EntryType[]
+  generateId: () => string
 }
 
+type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
+  [Index in keyof KeysTuple]: MapToValue // T[KeysTuple[Index]]
+}
+
+/**
+ *
+ */
 export interface Tracer<ScopeT extends ScopeBase> {
-  defineComputedEntry: (
-    computedEntryDefinition: ComputedEntryDefinition<ScopeT>,
+  /**
+   * @returns The ID of the trace.
+   */
+  start: (input: StartTraceInput<ScopeT>) => string
+
+  defineComputedSpan: (
+    computedSpanDefinition: ComputedSpanDefinition<ScopeT>,
   ) => void
 
-  defineComputedValue: (
-    name: string,
-    computedValueDefinition: ComputedValueDefinition<ScopeT>,
+  defineComputedValue: <MatchersT extends EntryMatchCriteria<ScopeT>[]>(
+    computedValueDefinition: ComputedValueDefinition<ScopeT, MatchersT>,
   ) => void
 }
 
 export interface TraceDefinition<ScopeT extends ScopeBase> {
-  //
-}
-
-export interface MatchFunction<ScopeT extends ScopeBase> {
-  scope: ScopeT
-  index?: number
-}
-
-export interface ComputedEntryDefinition<ScopeT extends ScopeBase> {
+  /**
+   * The name of the trace.
+   */
   name: string
-  startEntry: MatchFunction<ScopeT>
-  endEntry: MatchFunction<ScopeT>
+
+  type: TraceType
+
+  attributes: Attributes
+
+  requiredToEnd: EntryMatchCriteria<ScopeT>[]
+  debounceOn?: EntryMatchCriteria<ScopeT>[]
+  interruptOn?: EntryMatchCriteria<ScopeT>[]
 }
 
-// export interface ComputedValueDefinition<ScopeT extends ScopeBase> {
-//   name: string
-//   match:
-// }
+export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
+  name: string
+  startEntry: EntryMatchCriteria<ScopeT>
+  endEntry: EntryMatchCriteria<ScopeT>
+}
 
-export interface TraceManager<ScopeT extends ScopeBase> {
-  constructor: (config: TraceManagerConfig) => void
+export interface ComputedValueDefinition<
+  ScopeT extends ScopeBase,
+  MatchersT extends EntryMatchCriteria<ScopeT>[],
+> {
+  name: string
+  matches: [...MatchersT]
+  computeValueFromMatches: (
+    // as many matches as match of type TraceEntryInput<ScopeT>
+    matches: MapTuple<MatchersT, TraceEntryInput<ScopeT>>,
+  ) => number | string | boolean
+}
 
+export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
+  extends TraceDefinition<ScopeT> {
+  computedSpanDefinitions: readonly ComputedSpanDefinition<ScopeT>[]
+  computedValueDefinitions: readonly ComputedValueDefinition<
+    ScopeT,
+    EntryMatchCriteria<ScopeT>[]
+  >[]
+}
+
+export interface ITraceManager<ScopeT extends ScopeBase> {
   createTracer: (traceDefinition: TraceDefinition<ScopeT>) => Tracer<ScopeT>
+  processEntry: (entry: TraceEntryInput<ScopeT>) => EntryAnnotation
 }
+
+export type GetScopeTFromTraceManager<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  TraceManagerT extends ITraceManager<any>,
+> = TraceManagerT extends ITraceManager<infer ScopeT> ? ScopeT : never
