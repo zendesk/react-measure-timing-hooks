@@ -5,15 +5,15 @@ import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
   ComputedValueDefinition,
-  EntryAnnotation,
-  EntryMatchCriteria,
   EntryType,
   ITraceManager,
   ReportFn,
   ScopeBase,
-  StartTraceInput,
+  StartTraceConfig,
   TraceDefinition,
   TraceEntry,
+  TraceEntryAnnotation,
+  TraceEntryMatchCriteria,
   TraceManagerConfig,
   Tracer,
   TraceRecording,
@@ -38,7 +38,7 @@ export class TraceManager<ScopeT extends ScopeBase>
     const computedSpanDefinitions: ComputedSpanDefinition<ScopeT>[] = []
     const computedValueDefinitions: ComputedValueDefinition<
       ScopeT,
-      EntryMatchCriteria<ScopeT>[]
+      TraceEntryMatchCriteria<ScopeT>[]
     >[] = []
     const completeTraceDefiniton: CompleteTraceDefinition<ScopeT> = {
       ...traceDefinition,
@@ -54,7 +54,7 @@ export class TraceManager<ScopeT extends ScopeBase>
         computedValueDefinitions.push(
           definition as ComputedValueDefinition<
             ScopeT,
-            EntryMatchCriteria<ScopeT>[]
+            TraceEntryMatchCriteria<ScopeT>[]
           >,
         )
       },
@@ -63,13 +63,13 @@ export class TraceManager<ScopeT extends ScopeBase>
   }
 
   // if no active trace, return or maybe buffer?
-  processEntry(entry: TraceEntry<ScopeT>): EntryAnnotation {
+  processEntry(entry: TraceEntry<ScopeT>): TraceEntryAnnotation {
     return {}
   }
 
   private startTrace(
     definition: CompleteTraceDefinition<ScopeT>,
-    input: StartTraceInput<ScopeT>,
+    input: StartTraceConfig<ScopeT>,
   ): string {
     if (this.activeTrace) {
       this.activeTrace.interrupt('another-trace-started')

@@ -266,7 +266,7 @@ const annotation = traceManager.processEntry(traceEntryInput)
 // this output annotation should be stored as metadata of the trace entry
 // in the tracing system (e.g. Datadog RUM)
 
-interface EntryAnnotation {
+interface TraceEntryAnnotation {
   [operationName: string]: {
     /**
      * The ID of the operation the event belongs to.

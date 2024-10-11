@@ -3,7 +3,7 @@ import { useOnComponentUnmount } from '../ErrorBoundary'
 import { ensureTimestamp } from './ensureTimestamp'
 import type {
   BeaconConfig,
-  ComponentRenderEntryInput,
+  ComponentRenderTraceEntry,
   GetScopeTFromTraceManager,
   ITraceManager,
   ScopeBase,
@@ -12,13 +12,13 @@ import type {
 } from './types'
 
 type MakeEntryInput<ScopeT extends ScopeBase> = Omit<
-  ComponentRenderEntryInput<ScopeT>,
+  ComponentRenderTraceEntry<ScopeT>,
   'startTime'
 > & { startTime?: Timestamp }
 
 const makeEntry = <ScopeT extends ScopeBase>(
   inp: MakeEntryInput<ScopeT>,
-): ComponentRenderEntryInput<ScopeT> => ({
+): ComponentRenderTraceEntry<ScopeT> => ({
   ...inp,
   startTime: ensureTimestamp(inp.startTime),
 })
@@ -43,7 +43,7 @@ export const generateUseBeacon =
 
     const status = config.error ? 'error' : 'ok'
 
-    const renderStartTask: ComponentRenderEntryInput<ScopeT> = makeEntry({
+    const renderStartTask: ComponentRenderTraceEntry<ScopeT> = makeEntry({
       ...config,
       type: 'component-render-start',
       duration: 0,
