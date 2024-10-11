@@ -10,6 +10,48 @@ import type {
   TraceRecording,
 } from './types'
 
+/**
+ * Matches criteria against a performance entry event.
+ * @param match - The match criteria or function.
+ * @param event - The performance entry event.
+ * @returns {boolean} `true` if the event matches the criteria, `false` otherwise.
+ */
+function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
+  entry: TraceEntry<ScopeT>,
+  match: TraceEntryMatcher<ScopeT>,
+): boolean {
+  if (typeof match === 'function') {
+    return match(entry)
+  }
+  const { name, attributes, type } = match
+  const nameMatches =
+    !name ||
+    (typeof name === 'string'
+      ? entry.name === name
+      : typeof name === 'function'
+        ? name(entry.name)
+        : name.test(entry.name))
+  const typeMatches = !type || entry.type === type
+  const attributeMatches =
+    !attributes ||
+    Boolean(
+      entry.attributes &&
+        Object.entries(attributes).every(
+          ([key, value]) => entry.attributes?.[key] === value,
+        ),
+    )
+
+  if (match.scope) {
+    // TODO
+  }
+
+  if (match.isIdle) {
+    // TODO (only valid for ComponentRenderTraceEntry)
+  }
+
+  return nameMatches && typeMatches && attributeMatches
+}
+
 // type OnEntryHandler<ScopeT extends ScopeBase> = (
 //   entry: TraceEntry<ScopeT>,
 // ) => void
@@ -43,13 +85,13 @@ type TraceStates = NonTerminalTraceStates | TerminalTraceStates
 interface OnEnterInterrupted {
   nextState: 'interrupted'
   previousState: NonTerminalTraceStates
-  interruptReason: TraceInterruptionReason
+  interruptionReason: TraceInterruptionReason
 }
 
 interface OnEnterComplete {
   nextState: 'complete'
   previousState: NonTerminalTraceStates
-  interruptReason?: TraceInterruptionReason
+  interruptionReason?: TraceInterruptionReason
 }
 
 interface OnEnterWaitingForInteractive {
@@ -83,12 +125,7 @@ type MergedHandlers = UnionToIntersection<StateMachine[TraceStates]>
 type AcceptedEvents = Omit<MergedHandlers, never>
 
 type GetFunctionForEvent<EventName extends keyof AcceptedEvents> =
-  StateMachine[keyof StateMachine] extends Record<
-    EventName,
-    (payload: infer Payload) => any
-  >
-    ? Payload
-    : never
+  MergedHandlers extends Record<EventName, infer Function> ? Function : never
 
 type PayloadForOnEnterState = GetFunctionForEvent<'onEnterState'>
 
@@ -110,8 +147,8 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   readonly input: ActiveTraceConfig<ScopeT>
 
   currentState: TraceStates = 'recording'
-  entries: TraceEntry<ScopeT>[]
-  private requiredToEndChecklist: Set<number>
+  entries: TraceEntry<ScopeT>[] = []
+  private requiredToEndIndexChecklist: Set<number>
 
   stateMachine = {
     recording: {
@@ -119,34 +156,38 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
         // does trace entry satisfy any of the "interruptOn" definitions
         if (this.definition.interruptOn) {
           for (const definition of this.definition.interruptOn) {
-            if (this.doesEntryMatchDefinition(entry, definition)) {
-              this.interrupt('matched-on-interrupt')
-              // this.transition({
-              //   nextState: 'interrupted',
-              //   interruptReason: 'matched-on-interrupt',
-              // })
+            if (doesEntryMatchDefinition(entry, definition)) {
+              this.transition({
+                nextState: 'interrupted',
+                interruptionReason: 'matched-on-interrupt',
+              })
               return
             }
           }
         }
 
-        // should this be satifies ALL (rather than any) of the required to end definitions?
-        // does trace entry satisfy any of the "requiredToEnd" definitions
-        if (this.definition.requiredToEnd) {
-          for (const definition of this.definition.requiredToEnd) {
-            if (this.doesEntryMatchDefinition(entry, definition)) {
-              //
-            }
+        for (let i = 0; i < this.definition.requiredToEnd.length; i++) {
+          const definition = this.definition.requiredToEnd[i]!
+          if (doesEntryMatchDefinition(entry, definition)) {
+            // remove the index of this definition from the list of requiredToEnd
+            this.requiredToEndIndexChecklist.delete(i)
           }
+        }
+
+        if (this.requiredToEndIndexChecklist.size === 0) {
+          this.transition({ nextState: 'debouncing' })
         }
       },
       onInterrupt: (reason: TraceInterruptionReason) => {
-        this.transition({ nextState: 'interrupted', interruptReason: reason })
+        this.transition({
+          nextState: 'interrupted',
+          interruptionReason: reason,
+        })
       },
       onTimeout: () => {
         this.transition({
           nextState: 'interrupted',
-          interruptReason: 'timeout',
+          interruptionReason: 'timeout',
         })
       },
     },
@@ -154,30 +195,46 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       onEnterState: (payload: OnEnterDebouncing) => {
         // TODO: start debouncing timeout
         //
-        this.startDebounceTimer()
       },
       onProcessEntry: (entry: TraceEntry<ScopeT>) => {
+        for (const definition of this.definition.requiredToEnd) {
+          if (
+            doesEntryMatchDefinition(entry, definition) &&
+            definition.isIdle &&
+            'isIdle' in entry &&
+            entry.isIdle
+          ) {
+            // check if we regressed on "isIdle", and if so, transition to interrupted with reason
+            this.transition({
+              nextState: 'interrupted',
+              interruptionReason: 'idle-component-no-longer-idle',
+            })
+            return
+          }
+        }
+
         // does trace entry satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.definition.debounceOn) {
           for (const definition of this.definition.debounceOn) {
-            if (this.doesEntryMatchDefinition(entry, definition)) {
-              this.resetDebounceTimer()
+            if (doesEntryMatchDefinition(entry, definition)) {
+              // TODO: restart debounce timer
+
               return
             }
           }
         }
-
-        // checked if we regressed on of the "requiredToEnd", and if so, ______? (are we restarting the debouce timer?)
       },
       onInterrupt: (reason: TraceInterruptionReason) => {
-        this.transition({ nextState: 'interrupted', interruptReason: reason })
+        this.transition({
+          nextState: 'interrupted',
+          interruptionReason: reason,
+        })
       },
       onTimeout: () => {
-        this.interrupt('timeout')
-        // this.transition({
-        //   nextState: 'interrupted',
-        //   interruptReason: 'timeout',
-        // })
+        this.transition({
+          nextState: 'interrupted',
+          interruptionReason: 'timeout',
+        })
       },
     },
     'waiting-for-interactive': {
@@ -188,10 +245,13 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       },
       onInterrupt: (reason: TraceInterruptionReason) => {
         // there is a still a complete trace, however the interactive data is missing
-        this.transition({ nextState: 'complete', interruptReason: reason })
+        this.transition({ nextState: 'complete', interruptionReason: reason })
       },
       onTimeout: () => {
-        this.transition({ nextState: 'complete', interruptReason: 'timeout' })
+        this.transition({
+          nextState: 'complete',
+          interruptionReason: 'timeout',
+        })
       },
     },
 
@@ -199,13 +259,13 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     interrupted: {
       onEnterState: ({
         previousState,
-        interruptReason,
+        interruptionReason,
       }: OnEnterInterrupted) => {
-        // TODO: tiny naming discrepancy here with interruptReason
+        // TODO: tiny naming discrepancy here with interruptionReason
         this.input.onEnd(
           this.createTraceRecording({
             previousState,
-            interruptionReason: interruptReason,
+            interruptionReason,
           }),
         )
       },
@@ -223,8 +283,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   ) {
     this.definition = definition
     this.input = input
-    this.entries = []
-    this.requiredToEndChecklist = new Set(
+    this.requiredToEndIndexChecklist = new Set(
       definition.requiredToEnd.map((_, i) => i),
     )
   }
@@ -233,7 +292,8 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     return this.stateMachine[this.currentState]
   }
 
-  private interrupt(reason: TraceInterruptionReason) {
+  // this is public API only and should not be called internally
+  interrupt(reason: TraceInterruptionReason) {
     const state = this.getCurrentState()
     if ('onInterrupt' in state) {
       state.onInterrupt?.(reason)
@@ -247,34 +307,17 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     }
   }
 
-  // private transition<NextStateT extends NonInitialStates>(
-  //   nextState: NextStateT,
-  //   payload: Omit<
-  //     Extract<
-  //       OnEnterStatePayload,
-  //       {
-  //         nextState: NextStateT
-  //       }
-  //     >,
-  //     'nextState' | 'previousState'
-  //   >,
-  // ) {
-
   private transition(
     payload: DistributiveOmit<OnEnterStatePayload, 'previousState'>,
   ) {
     const { nextState } = payload
     if (nextState === this.currentState) return
-    const nextStateObj = this.stateMachine[nextState] as AcceptedEvents
+    const nextStateObj = this.stateMachine[nextState] // as AcceptedEvents
     const previousState = this.currentState as NonTerminalTraceStates
     this.currentState = nextState
 
-    const x: FunctionForEvent<'onEnterState'> = (a) => {
-      a.interruptReason
-    }
-
     if ('onEnterState' in nextStateObj) {
-      ;(nextStateObj.onEnterState as FunctionForEvent<'onEnterState'>)({
+      nextStateObj.onEnterState({
         ...payload,
         previousState,
       })
@@ -289,53 +332,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     interruptionReason?: TraceInterruptionReason
   }): TraceRecording<ScopeT> {
     const traceRecording: TraceRecording<ScopeT> = {
-      // TODO
+      // TODO: use this.input, this.definition and this.entries to create the full trace recording
       interruptionReason,
       entries: this.entries,
     }
 
     return traceRecording
-  }
-
-  /**
-   * Matches criteria against a performance entry event.
-   * @param match - The match criteria or function.
-   * @param event - The performance entry event.
-   * @returns True if the event matches the criteria, false otherwise.
-   */
-  private doesEntryMatchDefinition(
-    entry: TraceEntry<ScopeT>,
-    match: TraceEntryMatcher<ScopeT>,
-  ): boolean {
-    if (typeof match === 'function') {
-      return match(entry)
-    }
-    const { name, attributes, type } = match
-    const nameMatches =
-      !name ||
-      (typeof name === 'string'
-        ? entry.name === name
-        : typeof name === 'function'
-          ? name(entry.name)
-          : name.test(entry.name))
-    const typeMatches = !type || entry.type === type
-    const attributeMatches =
-      !attributes ||
-      Boolean(
-        entry.attributes &&
-          Object.entries(attributes).every(
-            ([key, value]) => entry.attributes?.[key] === value,
-          ),
-      )
-
-    if (match.scope) {
-      // TODO
-    }
-
-    if (match.isIdle) {
-      // TODO (only valid for ComponentRenderTraceEntry)
-    }
-
-    return nameMatches && typeMatches && attributeMatches
   }
 }
