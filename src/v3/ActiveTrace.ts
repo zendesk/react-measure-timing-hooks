@@ -1,18 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/consistent-indexed-object-style */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable max-classes-per-file */
 import type {
   ActiveTraceConfig,
   CompleteTraceDefinition,
-  ComponentRenderTraceEntry,
-  OnEndFn,
   ScopeBase,
   TraceEntry,
-  TraceEntryMatchCriteria,
   TraceEntryMatcher,
   TraceInterruptionReason,
   TraceRecording,
 } from './types'
+import type { DistributiveOmit, Prettify } from './typeUtils'
 
 /**
  * Matches criteria against a performance entry event.
@@ -56,38 +55,6 @@ function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
   return nameMatches && typeMatches && attributeMatches
 }
 
-// type OnEntryHandler<ScopeT extends ScopeBase> = (
-//   entry: TraceEntry<ScopeT>,
-// ) => void
-// type OnInterruptHandler = (reason: TraceInterruptionReason) => void
-// interface StateWithEventHandlers<ScopeT extends ScopeBase> {
-//   onProcessEntry: OnEntryHandler<ScopeT>
-//   onInterrupt: OnInterruptHandler
-//   onTimeout: () => void
-// }
-
-// interface TraceStateMachine<ScopeT extends ScopeBase> {
-//   recording: StateWithEventHandlers<ScopeT>
-//   debouncing: StateWithEventHandlers<ScopeT>
-//   'waiting-for-interactive': StateWithEventHandlers<ScopeT>
-//   interrupted: object
-//   complete: object
-// }
-
-type DistributiveOmit<T, K extends keyof any> = T extends any
-  ? Omit<T, K>
-  : never
-
-type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
-  x: infer I,
-) => void
-  ? I
-  : never
-
-type Prettify<T> = {
-  [K in keyof T]: T[K]
-} & {}
-
 interface CreateTraceRecordingConfig {
   previousState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
@@ -129,21 +96,12 @@ type OnEnterStatePayload =
   | OnEnterDebouncing
   | OnEnterWaitingForInteractive
 
-type FinalizeFn = (config: CreateTraceRecordingConfig) => void
-
-interface TraceStateMachineSideEffectHandlers {
-  readonly finalize: FinalizeFn
-}
-
 type Transition = DistributiveOmit<OnEnterStatePayload, 'previousState'>
 
-// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
+type FinalizeFn = (config: CreateTraceRecordingConfig) => void
+
 interface StateHandlersBase {
-  // onEnterState?: (payload: OnEnterStatePayload) => void | Transition
-  // onProcessEntry?: (entry: TraceEntry<ScopeT>) => void | Transition
-  // onInterrupt?: (reason: TraceInterruptionReason) => void | Transition
-  // onTimeout?: () => void | Transition
-  [handler: string]: (payload: any) => void | Transition
+  [handler: string]: (payload: any) => void | undefined | Transition
 }
 
 type StatesBase = Record<TraceStates, StateHandlersBase>
@@ -170,6 +128,16 @@ type TupleToObject<T extends [PropertyKey, any]> = Prettify<{
 type StateHandlerPayloads<ScopeT extends ScopeBase> = TupleToObject<
   HandlerToPayloadTuples<ScopeT>
 >
+
+type MergedStateHandlerMethods<ScopeT extends ScopeBase> = {
+  [K in keyof StateHandlerPayloads<ScopeT>]: (
+    payload: StateHandlerPayloads<ScopeT>[K],
+  ) => undefined | Transition
+}
+
+interface TraceStateMachineSideEffectHandlers {
+  readonly finalize: FinalizeFn
+}
 
 export class TraceStateMachine<ScopeT extends ScopeBase> {
   context: {
@@ -205,6 +173,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         if (this.context.requiredToEndIndexChecklist.size === 0) {
           return { nextState: 'debouncing' }
         }
+        return undefined
       },
       onInterrupt: (reason: TraceInterruptionReason) => ({
         nextState: 'interrupted',
@@ -246,6 +215,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             }
           }
         }
+        return undefined
       },
       onInterrupt: (reason: TraceInterruptionReason) => ({
         nextState: 'interrupted',
@@ -288,11 +258,18 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     event: EventName,
     payload: StateHandlerPayloads<ScopeT>[EventName],
   ) {
-    const currentStateHandlers: Partial<StateHandlerPayloads<ScopeT>> =
-      this.states[this.currentState]
-    if (event in currentStateHandlers) {
-      currentStateHandlers[event](payload)
+    const currentStateHandlers = this.states[this.currentState] as Partial<
+      MergedStateHandlerMethods<ScopeT>
+    >
+    const transition = currentStateHandlers[event]?.(payload)
+    if (!transition) return
+
+    const onEnterStateEvent = {
+      previousState: this.currentState as NonTerminalTraceStates,
+      ...transition,
     }
+    this.currentState = transition.nextState
+    this.emit('onEnterState', onEnterStateEvent)
   }
 
   constructor({
@@ -343,40 +320,14 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     this.input.onEnd(traceRecording)
   }
 
-  getCurrentState() {
-    return this.stateMachine[this.currentState]
-  }
-
   // this is public API only and should not be called internally
   interrupt(reason: TraceInterruptionReason) {
-    const state = this.getCurrentState()
-    if ('onInterrupt' in state) {
-      state.onInterrupt?.(reason)
-    }
+    this.stateMachine.emit('onInterrupt', reason)
   }
 
-  private processEntry(entry: TraceEntry<ScopeT>) {
-    const state = this.getCurrentState()
-    if ('onProcessEntry' in state) {
-      state.onProcessEntry?.(entry)
-    }
-  }
-
-  private transition(
-    payload: DistributiveOmit<OnEnterStatePayload, 'previousState'>,
-  ) {
-    const { nextState } = payload
-    if (nextState === this.currentState) return
-    const nextStateObj = this.stateMachine[nextState] // as AcceptedEvents
-    const previousState = this.currentState as NonTerminalTraceStates
-    this.currentState = nextState
-
-    if ('onEnterState' in nextStateObj) {
-      nextStateObj.onEnterState({
-        ...payload,
-        previousState,
-      })
-    }
+  processEntry(entry: TraceEntry<ScopeT>) {
+    this.entries.push(entry)
+    this.stateMachine.emit('onProcessEntry', entry)
   }
 
   private createTraceRecording = ({
