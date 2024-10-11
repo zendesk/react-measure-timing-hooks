@@ -45,11 +45,15 @@ export interface StartTraceConfig<ScopeT extends ScopeBase> {
   }
 }
 
+export type OnEndFn<ScopeT extends ScopeBase> = (
+  trace: TraceRecording<ScopeT>,
+) => void
+
 export interface ActiveTraceConfig<ScopeT extends ScopeBase>
   extends StartTraceConfig<ScopeT> {
   id: string
   startTime: Timestamp
-  onEnd: (trace: TraceRecording<ScopeT>) => void
+  onEnd: OnEndFn<ScopeT>
 }
 
 export type TraceEntryStatus = 'ok' | 'error'
