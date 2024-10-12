@@ -5,14 +5,12 @@ import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
   ComputedValueDefinition,
-  EntryType,
-  ITraceManager,
   ReportFn,
   ScopeBase,
   StartTraceConfig,
   TraceDefinition,
   TraceEntry,
-  TraceEntryAnnotation,
+  TraceEntryAnnotationRecord,
   TraceEntryMatchCriteria,
   TraceManagerConfig,
   Tracer,
@@ -22,9 +20,7 @@ import type {
 /**
  * Class representing the centralized trace performance manager.
  */
-export class TraceManager<ScopeT extends ScopeBase>
-  implements ITraceManager<ScopeT>
-{
+export class TraceManager<ScopeT extends ScopeBase> {
   private readonly reportFn: ReportFn<ScopeT>
   private readonly generateId: () => string
   private activeTrace: ActiveTrace<ScopeT> | undefined = undefined
@@ -40,7 +36,7 @@ export class TraceManager<ScopeT extends ScopeBase>
       ScopeT,
       TraceEntryMatchCriteria<ScopeT>[]
     >[] = []
-    const completeTraceDefiniton: CompleteTraceDefinition<ScopeT> = {
+    const completeTraceDefinition: CompleteTraceDefinition<ScopeT> = {
       ...traceDefinition,
       computedSpanDefinitions,
       computedValueDefinitions,
@@ -58,13 +54,15 @@ export class TraceManager<ScopeT extends ScopeBase>
           >,
         )
       },
-      start: (input) => this.startTrace(completeTraceDefiniton, input),
+      start: (input) => this.startTrace(completeTraceDefinition, input),
     }
   }
 
   // if no active trace, return or maybe buffer?
-  processEntry(entry: TraceEntry<ScopeT>): TraceEntryAnnotation {
-    return {}
+  processEntry(
+    entry: TraceEntry<ScopeT>,
+  ): TraceEntryAnnotationRecord | undefined {
+    return this.activeTrace?.processEntry(entry)
   }
 
   private startTrace(
@@ -79,7 +77,7 @@ export class TraceManager<ScopeT extends ScopeBase>
     const id = input.id ?? this.generateId()
 
     const onEnd = (traceRecording: TraceRecording<ScopeT>) => {
-      if (this.activeTrace && id === this.activeTrace?.input.id) {
+      if (id === this.activeTrace?.input.id) {
         this.activeTrace = undefined
       }
       this.reportFn(traceRecording)
