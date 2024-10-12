@@ -1,17 +1,24 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable max-classes-per-file */
+import { ensureTimestamp } from './ensureTimestamp'
 import type {
   ActiveTraceConfig,
   CompleteTraceDefinition,
   ScopeBase,
+  Timestamp,
   TraceEntry,
+  TraceEntryAndAnnotation,
+  TraceEntryAnnotation,
+  TraceEntryAnnotationRecord,
   TraceEntryMatcher,
   TraceInterruptionReason,
   TraceRecording,
 } from './types'
-import type { DistributiveOmit, Prettify } from './typeUtils'
+import type {
+  DistributiveOmit,
+  MergedStateHandlerMethods,
+  StateHandlerPayloads,
+} from './typeUtils'
 
 /**
  * Matches criteria against a performance entry event.
@@ -56,7 +63,7 @@ function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
 }
 
 interface CreateTraceRecordingConfig {
-  previousState: NonTerminalTraceStates
+  transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
 }
 
@@ -66,28 +73,28 @@ type NonTerminalTraceStates =
   | 'debouncing'
   | 'waiting-for-interactive'
 type TerminalTraceStates = 'interrupted' | 'complete'
-type TraceStates = NonTerminalTraceStates | TerminalTraceStates
+export type TraceStates = NonTerminalTraceStates | TerminalTraceStates
 
 interface OnEnterInterrupted {
-  nextState: 'interrupted'
-  previousState: NonTerminalTraceStates
+  transitionToState: 'interrupted'
+  transitionFromState: NonTerminalTraceStates
   interruptionReason: TraceInterruptionReason
 }
 
 interface OnEnterComplete {
-  nextState: 'complete'
-  previousState: NonTerminalTraceStates
+  transitionToState: 'complete'
+  transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
 }
 
 interface OnEnterWaitingForInteractive {
-  nextState: 'waiting-for-interactive'
-  previousState: NonTerminalTraceStates
+  transitionToState: 'waiting-for-interactive'
+  transitionFromState: NonTerminalTraceStates
 }
 
 interface OnEnterDebouncing {
-  nextState: 'debouncing'
-  previousState: NonTerminalTraceStates
+  transitionToState: 'debouncing'
+  transitionFromState: NonTerminalTraceStates
 }
 
 type OnEnterStatePayload =
@@ -96,66 +103,47 @@ type OnEnterStatePayload =
   | OnEnterDebouncing
   | OnEnterWaitingForInteractive
 
-type Transition = DistributiveOmit<OnEnterStatePayload, 'previousState'>
+export type Transition = DistributiveOmit<
+  OnEnterStatePayload,
+  'transitionFromState'
+>
 
 type FinalizeFn = (config: CreateTraceRecordingConfig) => void
 
+export type States<ScopeT extends ScopeBase> =
+  TraceStateMachine<ScopeT>['states']
+
 interface StateHandlersBase {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [handler: string]: (payload: any) => void | undefined | Transition
 }
 
 type StatesBase = Record<TraceStates, StateHandlersBase>
 
-type States<ScopeT extends ScopeBase> = TraceStateMachine<ScopeT>['states']
-
-type HandlerToPayloadTuples<
-  ScopeT extends ScopeBase,
-  State extends TraceStates = TraceStates,
-> = State extends State
-  ? {
-      [K in keyof States<ScopeT>[State]]: States<ScopeT>[State][K] extends (
-        ...args: infer ArgsT
-      ) => unknown
-        ? [K, ArgsT[0]]
-        : never
-    }[keyof States<ScopeT>[State]]
-  : never
-
-type TupleToObject<T extends [PropertyKey, any]> = Prettify<{
-  [K in T[0]]: T extends [K, infer V] ? V : never
-}>
-
-type StateHandlerPayloads<ScopeT extends ScopeBase> = TupleToObject<
-  HandlerToPayloadTuples<ScopeT>
->
-
-type MergedStateHandlerMethods<ScopeT extends ScopeBase> = {
-  [K in keyof StateHandlerPayloads<ScopeT>]: (
-    payload: StateHandlerPayloads<ScopeT>[K],
-  ) => undefined | Transition
-}
-
-interface TraceStateMachineSideEffectHandlers {
-  readonly finalize: FinalizeFn
-}
+type TraceStateMachineSideEffectHandlers =
+  TraceStateMachine<ScopeBase>['sideEffectFns']
 
 export class TraceStateMachine<ScopeT extends ScopeBase> {
-  context: {
+  readonly context: {
     readonly definition: CompleteTraceDefinition<ScopeT>
     readonly input: Omit<ActiveTraceConfig<ScopeT>, 'onEnd'>
     readonly requiredToEndIndexChecklist: Set<number>
   }
-  sideEffects: TraceStateMachineSideEffectHandlers
+  readonly sideEffectFns: {
+    readonly finalize: FinalizeFn
+  }
   currentState: TraceStates = 'recording'
-  states = {
+  readonly states = {
     recording: {
-      onProcessEntry: (entry: TraceEntry<ScopeT>) => {
+      onProcessEntry: ({ entry }: TraceEntryAndAnnotation<ScopeT>) => {
         // does trace entry satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
             if (doesEntryMatchDefinition(entry, definition)) {
+              // TODO: should we somehow nullify the annotation?
+              // I'm thinking the interrupted-on events should not be annotated
               return {
-                nextState: 'interrupted',
+                transitionToState: 'interrupted',
                 interruptionReason: 'matched-on-interrupt',
               }
             }
@@ -171,25 +159,29 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         }
 
         if (this.context.requiredToEndIndexChecklist.size === 0) {
-          return { nextState: 'debouncing' }
+          return { transitionToState: 'debouncing' }
         }
         return undefined
       },
+
       onInterrupt: (reason: TraceInterruptionReason) => ({
-        nextState: 'interrupted',
+        transitionToState: 'interrupted',
         interruptionReason: reason,
       }),
+
       onTimeout: () => ({
-        nextState: 'interrupted',
+        transitionToState: 'interrupted',
         interruptionReason: 'timeout',
       }),
     },
+
     debouncing: {
       onEnterState: (payload: OnEnterDebouncing) => {
         // TODO: start debouncing timeout
         //
       },
-      onProcessEntry: (entry: TraceEntry<ScopeT>) => {
+
+      onProcessEntry: ({ entry }: TraceEntryAndAnnotation<ScopeT>) => {
         for (const definition of this.context.definition.requiredToEnd) {
           if (
             doesEntryMatchDefinition(entry, definition) &&
@@ -199,7 +191,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           ) {
             // check if we regressed on "isIdle", and if so, transition to interrupted with reason
             return {
-              nextState: 'interrupted',
+              transitionToState: 'interrupted',
               interruptionReason: 'idle-component-no-longer-idle',
             }
           }
@@ -209,7 +201,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         if (this.context.definition.debounceOn) {
           for (const definition of this.context.definition.debounceOn) {
             if (doesEntryMatchDefinition(entry, definition)) {
-              // TODO: restart debounce timer
+              // TODO: (re)start debounce timer
 
               return undefined
             }
@@ -217,26 +209,43 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         }
         return undefined
       },
+
+      onTimerExpired: () => {
+        if (this.context.definition.captureInteractive) {
+          return { transitionToState: 'waiting-for-interactive' }
+        }
+        return { transitionToState: 'complete' }
+      },
+
       onInterrupt: (reason: TraceInterruptionReason) => ({
-        nextState: 'interrupted',
+        transitionToState: 'interrupted',
         interruptionReason: reason,
       }),
+
       onTimeout: () => ({
-        nextState: 'interrupted',
+        transitionToState: 'interrupted',
         interruptionReason: 'timeout',
       }),
     },
+
     'waiting-for-interactive': {
       onEnterState: (payload: OnEnterWaitingForInteractive) => {},
-      onProcessEntry: (entry: TraceEntry<ScopeT>) => {
+
+      onProcessEntry: ({ entry }: TraceEntryAndAnnotation<ScopeT>) => {
         // here we only debounce on longtasks and long-animation-frame
         // if the entry matches any of the interruptOn criteria, transition to interrupted state with the 'matched-on-interrupt'
       },
+
+      onTimerExpired: () =>
+        // no more long tasks or long animation frames, transition to complete
+        ({ transitionToState: 'complete' }),
+
       onInterrupt: (reason: TraceInterruptionReason) =>
-        // there is a still a complete trace, however the interactive data is missing
-        ({ nextState: 'complete', interruptionReason: reason }),
+        // we captured a complete trace, however the interactive data is missing
+        ({ transitionToState: 'complete', interruptionReason: reason }),
+
       onTimeout: () => ({
-        nextState: 'complete',
+        transitionToState: 'complete',
         interruptionReason: 'timeout',
       }),
     },
@@ -244,42 +253,48 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     // terminal states:
     interrupted: {
       onEnterState: (payload: OnEnterInterrupted) => {
-        this.sideEffects.finalize(payload)
+        this.sideEffectFns.finalize(payload)
       },
     },
+
     complete: {
       onEnterState: (payload: OnEnterComplete) => {
-        this.sideEffects.finalize(payload)
+        this.sideEffectFns.finalize(payload)
       },
     },
   } satisfies StatesBase
 
+  /**
+   * @returns the last OnEnterState event if a transition was made
+   */
   emit<EventName extends keyof StateHandlerPayloads<ScopeT>>(
     event: EventName,
     payload: StateHandlerPayloads<ScopeT>[EventName],
-  ) {
+  ): OnEnterStatePayload | undefined {
     const currentStateHandlers = this.states[this.currentState] as Partial<
       MergedStateHandlerMethods<ScopeT>
     >
-    const transition = currentStateHandlers[event]?.(payload)
-    if (!transition) return
-
-    const onEnterStateEvent = {
-      previousState: this.currentState as NonTerminalTraceStates,
-      ...transition,
+    const transitionPayload = currentStateHandlers[event]?.(payload)
+    if (transitionPayload) {
+      const transitionFromState = this.currentState as NonTerminalTraceStates
+      this.currentState = transitionPayload.transitionToState
+      const onEnterStateEvent: OnEnterStatePayload = {
+        transitionFromState,
+        ...transitionPayload,
+      }
+      return this.emit('onEnterState', onEnterStateEvent) ?? onEnterStateEvent
     }
-    this.currentState = transition.nextState
-    this.emit('onEnterState', onEnterStateEvent)
+    return undefined
   }
 
   constructor({
     definition,
     input,
-    sideEffects,
+    sideEffectFns,
   }: {
     definition: CompleteTraceDefinition<ScopeT>
     input: ActiveTraceConfig<ScopeT>
-    sideEffects: TraceStateMachineSideEffectHandlers
+    sideEffectFns: TraceStateMachineSideEffectHandlers
   }) {
     this.context = {
       definition,
@@ -288,7 +303,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         definition.requiredToEnd.map((_, i) => i),
       ),
     }
-    this.sideEffects = sideEffects
+    this.sideEffectFns = sideEffectFns
   }
 }
 
@@ -296,9 +311,10 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   readonly definition: CompleteTraceDefinition<ScopeT>
   readonly input: ActiveTraceConfig<ScopeT>
 
-  entries: TraceEntry<ScopeT>[] = []
-
+  recordedItems: TraceEntryAndAnnotation<ScopeT>[] = []
   stateMachine: TraceStateMachine<ScopeT>
+  startTime: Timestamp
+  occurrenceCounters = new Map<string, number>()
 
   constructor(
     definition: CompleteTraceDefinition<ScopeT>,
@@ -306,10 +322,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   ) {
     this.definition = definition
     this.input = input
+    this.startTime = ensureTimestamp(input.startTime)
     this.stateMachine = new TraceStateMachine({
       definition,
       input,
-      sideEffects: {
+      sideEffectFns: {
         finalize: this.finalize,
       },
     })
@@ -325,19 +342,56 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     this.stateMachine.emit('onInterrupt', reason)
   }
 
-  processEntry(entry: TraceEntry<ScopeT>) {
-    this.entries.push(entry)
-    this.stateMachine.emit('onProcessEntry', entry)
+  processEntry(
+    entry: TraceEntry<ScopeT>,
+  ): TraceEntryAnnotationRecord | undefined {
+    // check if valid for this trace:
+    if (entry.startTime.now < this.startTime.now) {
+      return undefined
+    }
+    const occurrence = this.occurrenceCounters.get(entry.name) ?? 1
+    this.occurrenceCounters.set(entry.name, occurrence + 1)
+
+    const annotation: TraceEntryAnnotation = {
+      id: this.input.id,
+      operationRelativeStartTime: entry.startTime.now - this.startTime.now,
+      operationRelativeEndTime:
+        entry.startTime.now - this.startTime.now + entry.duration,
+      occurrence,
+    }
+
+    const entryAndAnnotation: TraceEntryAndAnnotation<ScopeT> = {
+      entry,
+      annotation,
+    }
+
+    const lastState = this.stateMachine.emit(
+      'onProcessEntry',
+      entryAndAnnotation,
+    )
+
+    if (lastState?.transitionToState !== 'interrupted') {
+      // only record the entry if it was not an interrupting event
+      // TODO: think if this is the right place for this logic
+      this.recordedItems.push(entryAndAnnotation)
+
+      return {
+        [this.definition.name]: annotation,
+      }
+    }
+
+    return undefined
   }
 
   private createTraceRecording = ({
-    previousState,
+    transitionFromState,
     interruptionReason,
   }: CreateTraceRecordingConfig): TraceRecording<ScopeT> => {
     const traceRecording: TraceRecording<ScopeT> = {
       // TODO: use this.input, this.definition and this.entries to create the full trace recording
       interruptionReason,
-      entries: this.entries,
+      // TODO: remove render entries
+      entries: this.recordedItems.map(({ entry }) => entry),
     }
 
     return traceRecording

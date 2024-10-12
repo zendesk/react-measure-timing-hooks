@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 
 import { ErrorInfo } from 'react'
+import type { TraceManager } from './traceManager'
 
 export type ScopeBase = Record<string, string | number | boolean>
 
@@ -164,29 +165,33 @@ export type TraceEntryMatcher<ScopeT extends ScopeBase> =
   | TraceEntryMatchFunction<ScopeT>
 
 export interface TraceEntryAnnotation {
-  [operationName: string]: {
-    /**
-     * The ID of the operation the event belongs to.
-     */
-    id: string
+  /**
+   * The ID of the operation the event belongs to.
+   */
+  id: string
+  /**
+   * The occurrence of the entry with the same name within the operation.
+   * Usually 1 (first entry)
+   */
+  occurrence: number
+  /**
+   * Offset from the start of the operation to the start of the event.
+   * aka operationStartOffset or operationStartToEventStart
+   */
+  operationRelativeStartTime: number
+  /**
+   * Relative end time of the event within the operation.
+   */
+  operationRelativeEndTime: number
+}
 
-    /**
-     * The occurrence of the entry with the same name within the operation.
-     * Usually 1 (first entry)
-     */
-    occurrence: number
+export interface TraceEntryAnnotationRecord {
+  [operationName: string]: TraceEntryAnnotation
+}
 
-    /**
-     * Offset from the start of the operation to the start of the event.
-     * aka operationStartOffset or operationStartToEventStart
-     */
-    operationRelativeStartTime: number
-
-    /**
-     * Relative end time of the event within the operation.
-     */
-    operationRelativeEndTime: number
-  }
+export interface TraceEntryAndAnnotation<ScopeT extends ScopeBase> {
+  entry: TraceEntry<ScopeT>
+  annotation: TraceEntryAnnotation
 }
 
 /**
@@ -294,6 +299,11 @@ export interface TraceManagerConfig<ScopeT extends ScopeBase> {
   // TODO: embeddedEntryTypes: EntryType[] would actually goes to configuration of the "convertRecordingToRum" function
   // which would be called inside of reportFn
   generateId: () => string
+
+  /**
+   * The entry types that should be omitted from the trace report.
+   */
+  entryTypesOmittedFromReport?: EntryType[]
 }
 
 type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
@@ -356,7 +366,7 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
    * Indicates the operation should continue capturing events until interactivity is reached after the operation ends.
    * Provide a boolean or a configuration object.
    */
-  waitUntilInteractive?: boolean | CaptureInteractiveConfig
+  captureInteractive?: boolean | CaptureInteractiveConfig
 }
 
 /**
@@ -395,15 +405,7 @@ export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
   >[]
 }
 
-/**
- * Internal Trace Manager Type
- */
-export interface ITraceManager<ScopeT extends ScopeBase> {
-  createTracer: (traceDefinition: TraceDefinition<ScopeT>) => Tracer<ScopeT>
-  processEntry: (entry: TraceEntry<ScopeT>) => TraceEntryAnnotation
-}
-
 export type GetScopeTFromTraceManager<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TraceManagerT extends ITraceManager<any>,
-> = TraceManagerT extends ITraceManager<infer ScopeT> ? ScopeT : never
+  TraceManagerT extends TraceManager<any>,
+> = TraceManagerT extends TraceManager<infer ScopeT> ? ScopeT : never
