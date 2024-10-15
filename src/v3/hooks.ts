@@ -43,7 +43,7 @@ export const generateUseBeacon =
 
       const status = config.error ? 'error' : 'ok'
 
-      const renderStartTask: ComponentRenderTraceEntry<ScopeT> = makeEntry({
+      const renderStartTaskEntry: ComponentRenderTraceEntry<ScopeT> = makeEntry({
         ...config,
         type: 'component-render-start',
         duration: 0,
@@ -51,7 +51,7 @@ export const generateUseBeacon =
         status,
       })
 
-      traceManager.processEntry(renderStartTask)
+      traceManager.processEntry(renderStartTaskEntry)
 
       // Beacon effect for tracking 'component-render'. This will fire after every render as it does not have any dependencies:
       useEffect(() => {
@@ -60,7 +60,7 @@ export const generateUseBeacon =
             ...config,
             type: 'component-render',
             // TODO: the previous implementation had `operationManager.performance.now()`. Was this different?
-            duration: performance.now() - renderStartTask.startTime.now,
+            duration: performance.now() - renderStartTaskEntry.startTime.now,
             status,
             attributes,
           }),

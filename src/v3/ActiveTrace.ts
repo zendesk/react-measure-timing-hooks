@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 /* eslint-disable max-classes-per-file */
+import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
 import { ensureTimestamp } from './ensureTimestamp'
 import type {
   ActiveTraceConfig,
@@ -10,7 +11,6 @@ import type {
   TraceEntryAndAnnotation,
   TraceEntryAnnotation,
   TraceEntryAnnotationRecord,
-  TraceEntryMatcher,
   TraceInterruptionReason,
   TraceRecording,
 } from './types'
@@ -19,48 +19,6 @@ import type {
   MergedStateHandlerMethods,
   StateHandlerPayloads,
 } from './typeUtils'
-
-/**
- * Matches criteria against a performance entry event.
- * @param match - The match criteria or function.
- * @param event - The performance entry event.
- * @returns {boolean} `true` if the event matches the criteria, `false` otherwise.
- */
-function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
-  entry: TraceEntry<ScopeT>,
-  match: TraceEntryMatcher<ScopeT>,
-): boolean {
-  if (typeof match === 'function') {
-    return match(entry)
-  }
-  const { name, attributes, type } = match
-  const nameMatches =
-    !name ||
-    (typeof name === 'string'
-      ? entry.name === name
-      : typeof name === 'function'
-        ? name(entry.name)
-        : name.test(entry.name))
-  const typeMatches = !type || entry.type === type
-  const attributeMatches =
-    !attributes ||
-    Boolean(
-      entry.attributes &&
-        Object.entries(attributes).every(
-          ([key, value]) => entry.attributes?.[key] === value,
-        ),
-    )
-
-  if (match.scope) {
-    // TODO
-  }
-
-  if (match.isIdle) {
-    // TODO (only valid for ComponentRenderTraceEntry)
-  }
-
-  return nameMatches && typeMatches && attributeMatches
-}
 
 interface CreateTraceRecordingConfig {
   transitionFromState: NonTerminalTraceStates
@@ -135,7 +93,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   currentState: TraceStates = 'recording'
   readonly states = {
     recording: {
-      onProcessEntry: ({ entry }: TraceEntryAndAnnotation<ScopeT>) => {
+      onProcessEntry: ({ entry, annotation }: TraceEntryAndAnnotation<ScopeT>) => {
         // does trace entry satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
@@ -181,7 +139,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         //
       },
 
-      onProcessEntry: ({ entry }: TraceEntryAndAnnotation<ScopeT>) => {
+      onProcessEntry: ({ entry, annotation }: TraceEntryAndAnnotation<ScopeT>) => {
         for (const definition of this.context.definition.requiredToEnd) {
           if (
             doesEntryMatchDefinition(entry, definition) &&
@@ -229,7 +187,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     },
 
     'waiting-for-interactive': {
-      onEnterState: (payload: OnEnterWaitingForInteractive) => {},
+      onEnterState: (payload: OnEnterWaitingForInteractive) => { },
 
       onProcessEntry: ({ entry }: TraceEntryAndAnnotation<ScopeT>) => {
         // here we only debounce on longtasks and long-animation-frame
@@ -397,3 +355,13 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     return traceRecording
   }
 }
+
+/**
+ * Remainder:
+ * - finish create trace recording
+ * - finish doesEntryMatchDefinition 
+ * - fill in rest of state machine
+ *    - debouncing
+ *    - 
+ * - add testing (we can take a look at v2 tests)
+ */
