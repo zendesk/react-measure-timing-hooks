@@ -222,6 +222,25 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     },
   } satisfies StatesBase
 
+  constructor({
+    definition,
+    input,
+    sideEffectFns,
+  }: {
+    definition: CompleteTraceDefinition<ScopeT>
+    input: ActiveTraceConfig<ScopeT>
+    sideEffectFns: TraceStateMachineSideEffectHandlers
+  }) {
+    this.context = {
+      definition,
+      input,
+      requiredToEndIndexChecklist: new Set(
+        definition.requiredToEnd.map((_, i) => i),
+      ),
+    }
+    this.sideEffectFns = sideEffectFns
+  }
+
   /**
    * @returns the last OnEnterState event if a transition was made
    */
@@ -243,25 +262,6 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       return this.emit('onEnterState', onEnterStateEvent) ?? onEnterStateEvent
     }
     return undefined
-  }
-
-  constructor({
-    definition,
-    input,
-    sideEffectFns,
-  }: {
-    definition: CompleteTraceDefinition<ScopeT>
-    input: ActiveTraceConfig<ScopeT>
-    sideEffectFns: TraceStateMachineSideEffectHandlers
-  }) {
-    this.context = {
-      definition,
-      input,
-      requiredToEndIndexChecklist: new Set(
-        definition.requiredToEnd.map((_, i) => i),
-      ),
-    }
-    this.sideEffectFns = sideEffectFns
   }
 }
 
