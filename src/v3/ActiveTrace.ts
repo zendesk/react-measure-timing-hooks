@@ -93,7 +93,10 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   currentState: TraceStates = 'recording'
   readonly states = {
     recording: {
-      onProcessEntry: ({ entry, annotation }: TraceEntryAndAnnotation<ScopeT>) => {
+      onProcessEntry: ({
+        entry,
+        annotation,
+      }: TraceEntryAndAnnotation<ScopeT>) => {
         // does trace entry satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
@@ -139,10 +142,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         //
       },
 
-      onProcessEntry: ({ entry, annotation }: TraceEntryAndAnnotation<ScopeT>) => {
+      onProcessEntry: (entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>) => {
         for (const definition of this.context.definition.requiredToEnd) {
+          const { entry } = entryAndAnnotation
           if (
-            doesEntryMatchDefinition(entry, definition) &&
+            doesEntryMatchDefinition(entryAndAnnotation, definition) &&
             definition.isIdle &&
             'isIdle' in entry &&
             entry.isIdle
@@ -158,7 +162,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // does trace entry satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
           for (const definition of this.context.definition.debounceOn) {
-            if (doesEntryMatchDefinition(entry, definition)) {
+            if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
               // TODO: (re)start debounce timer
 
               return undefined
@@ -187,9 +191,9 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     },
 
     'waiting-for-interactive': {
-      onEnterState: (payload: OnEnterWaitingForInteractive) => { },
+      onEnterState: (payload: OnEnterWaitingForInteractive) => {},
 
-      onProcessEntry: ({ entry }: TraceEntryAndAnnotation<ScopeT>) => {
+      onProcessEntry: (entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>) => {
         // here we only debounce on longtasks and long-animation-frame
         // if the entry matches any of the interruptOn criteria, transition to interrupted state with the 'matched-on-interrupt'
       },
@@ -359,9 +363,9 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
 /**
  * Remainder:
  * - finish create trace recording
- * - finish doesEntryMatchDefinition 
+ * - finish doesEntryMatchDefinition
  * - fill in rest of state machine
  *    - debouncing
- *    - 
+ *    -
  * - add testing (we can take a look at v2 tests)
  */

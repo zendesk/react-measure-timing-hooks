@@ -1,4 +1,4 @@
-import { ScopeBase, TraceEntry, TraceEntryMatcher } from "./types"
+import { ScopeBase, TraceEntryAndAnnotation, TraceEntryMatcher } from './types'
 
 /**
  * Matches criteria against a performance entry event.
@@ -7,49 +7,68 @@ import { ScopeBase, TraceEntry, TraceEntryMatcher } from "./types"
  * @returns {boolean} `true` if the event matches the criteria, `false` otherwise.
  */
 export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
-    entry: TraceEntry<ScopeT>,
-    match: TraceEntryMatcher<ScopeT>,
+  { entry, annotation }: TraceEntryAndAnnotation<ScopeT>,
+  match: TraceEntryMatcher<ScopeT>,
 ): boolean {
-    if (typeof match === 'function') {
-        return match(entry)
-    }
-    const { name, performanceEntryName, type, status, attributes, scope } = match
-    const nameMatches =
-        !name ||
-        (typeof name === 'string'
-            ? entry.name === name
-            : typeof name === 'function'
-                ? name(entry.name)
-                : name.test(entry.name))
+  if (typeof match === 'function') {
+    return match(entry)
+  }
+  const {
+    name,
+    performanceEntryName,
+    type,
+    status,
+    attributes,
+    scope,
+    occurrence,
+  } = match
+  const nameMatches =
+    !name ||
+    (typeof name === 'string'
+      ? entry.name === name
+      : typeof name === 'function'
+        ? name(entry.name)
+        : name.test(entry.name))
 
-    const performanceEntryNameMatches =
-        !performanceEntryName || entry.performanceEntry?.name === performanceEntryName
+  const performanceEntryNameMatches =
+    !performanceEntryName ||
+    entry.performanceEntry?.name === performanceEntryName
 
-    const typeMatches = !type || entry.type === type
+  const typeMatches = !type || entry.type === type
 
-    const statusMatches = !status || entry.status === status
+  const statusMatches = !status || entry.status === status
 
-    // const occurrenceMatches = !occurrence || entry. === occurrence;
+  const occurrenceMatches = !occurrence || annotation.occurrence === occurrence
 
-    const attributeMatches =
-        !attributes ||
-        Boolean(
-            entry.attributes &&
-            Object.entries(attributes).every(
-                ([key, value]) => entry.attributes?.[key] === value,
-            ),
-        )
-
-    const matchesScope = !scope || Boolean(
-        entry.scope &&
-        Object.entries(scope).every(
-            ([key, value]) => entry.scope?.[key] === value,
+  const attributeMatches =
+    !attributes ||
+    Boolean(
+      entry.attributes &&
+        Object.entries(attributes).every(
+          ([key, value]) => entry.attributes?.[key] === value,
         ),
-    );
+    )
 
-    const entryIsIdle = 'isIdle' in entry ? entry.isIdle : false
-    const isIdleMatches = !match.isIdle || (match.isIdle === entryIsIdle);
+  const matchesScope =
+    !scope ||
+    Boolean(
+      entry.scope &&
+        Object.entries(scope).every(
+          ([key, value]) => entry.scope?.[key] === value,
+        ),
+    )
 
-    return nameMatches && performanceEntryNameMatches && typeMatches && statusMatches
-        && attributeMatches && matchesScope && isIdleMatches
+  const entryIsIdle = 'isIdle' in entry ? entry.isIdle : false
+  const isIdleMatches = !match.isIdle || match.isIdle === entryIsIdle
+
+  return (
+    nameMatches &&
+    performanceEntryNameMatches &&
+    typeMatches &&
+    statusMatches &&
+    attributeMatches &&
+    matchesScope &&
+    isIdleMatches &&
+    occurrenceMatches
+  )
 }
