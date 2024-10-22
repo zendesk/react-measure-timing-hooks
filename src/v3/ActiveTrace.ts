@@ -93,16 +93,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   currentState: TraceStates = 'recording'
   readonly states = {
     recording: {
-      onProcessEntry: ({
-        entry,
-        annotation,
-      }: TraceEntryAndAnnotation<ScopeT>) => {
+      onProcessEntry: (entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>) => {
         // does trace entry satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
-            if (doesEntryMatchDefinition(entry, definition)) {
-              // TODO: should we somehow nullify the annotation?
-              // I'm thinking the interrupted-on events should not be annotated
+            if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'matched-on-interrupt',
@@ -113,7 +108,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
         for (let i = 0; i < this.context.definition.requiredToEnd.length; i++) {
           const definition = this.context.definition.requiredToEnd[i]!
-          if (doesEntryMatchDefinition(entry, definition)) {
+          if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
           }
@@ -139,7 +134,6 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     debouncing: {
       onEnterState: (payload: OnEnterDebouncing) => {
         // TODO: start debouncing timeout
-        //
       },
 
       onProcessEntry: (entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>) => {
@@ -163,7 +157,9 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         if (this.context.definition.debounceOn) {
           for (const definition of this.context.definition.debounceOn) {
             if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
-              // TODO: (re)start debounce timer
+              // TODO: (re)start debounce timer relative from the time of the event
+              // (not from the time of processing of the event, because it may be asynchronous)
+              // i.e. deadline is entryAndAnnotation.entry.startTime.now + entryAndAnnotation.entry.duration + 500
 
               return undefined
             }
@@ -191,11 +187,27 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     },
 
     'waiting-for-interactive': {
-      onEnterState: (payload: OnEnterWaitingForInteractive) => {},
+      onEnterState: (payload: OnEnterWaitingForInteractive) => {
+        // TODO: start the timer for tti debouncing
+      },
 
       onProcessEntry: (entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>) => {
+        // TODO
         // here we only debounce on longtasks and long-animation-frame
-        // if the entry matches any of the interruptOn criteria, transition to interrupted state with the 'matched-on-interrupt'
+        // (hardcoded match criteria)
+
+        // if the entry matches any of the interruptOn criteria,
+        // transition to complete state with the 'matched-on-interrupt' interruptionReason
+        if (this.context.definition.interruptOn) {
+          for (const definition of this.context.definition.interruptOn) {
+            if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
+              return {
+                transitionToState: 'complete',
+                interruptionReason: 'matched-on-interrupt',
+              }
+            }
+          }
+        }
       },
 
       onTimerExpired: () =>
@@ -327,14 +339,17 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       annotation,
     }
 
-    const lastState = this.stateMachine.emit(
+    const transitionPayload = this.stateMachine.emit(
       'onProcessEntry',
       entryAndAnnotation,
     )
 
-    if (lastState?.transitionToState !== 'interrupted') {
-      // only record the entry if it was not an interrupting event
-      // TODO: think if this is the right place for this logic
+    // if the final state is interrupted,
+    // we decided that we should not record the entry nor annotate it externally
+    if (
+      !transitionPayload ||
+      transitionPayload.transitionToState !== 'interrupted'
+    ) {
       this.recordedItems.push(entryAndAnnotation)
 
       return {
@@ -359,13 +374,3 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     return traceRecording
   }
 }
-
-/**
- * Remainder:
- * - finish create trace recording
- * - finish doesEntryMatchDefinition
- * - fill in rest of state machine
- *    - debouncing
- *    -
- * - add testing (we can take a look at v2 tests)
- */
