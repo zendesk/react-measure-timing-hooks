@@ -60,7 +60,8 @@ export class TraceManager<ScopeT extends ScopeBase> {
 
   // if no active trace, return or maybe buffer?
   processEntry(
-    entry: TraceEntry<ScopeT>,
+    // TODO: figure out where to call mapPerformanceEntryToTraceEntry
+    entry: TraceEntry<ScopeT>
   ): TraceEntryAnnotationRecord | undefined {
     return this.activeTrace?.processEntry(entry)
   }
