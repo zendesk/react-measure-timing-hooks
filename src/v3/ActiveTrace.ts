@@ -360,17 +360,119 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     return undefined
   }
 
+  private get computedValues(): TraceRecording<ScopeT>['computedValues'] {
+    const computedValues: TraceRecording<ScopeT>['computedValues'] = {}
+
+    this.definition.computedValueDefinitions.forEach((definition) => {
+      const { name, matches, computeValueFromMatches } = definition
+
+      const matchingRecordedEntries = this.recordedItems.filter(
+        (entryAndAnnotation) =>
+          matches.some((matchCriteria) =>
+            doesEntryMatchDefinition(entryAndAnnotation, matchCriteria),
+          ),
+      )
+
+      computedValues[name] = computeValueFromMatches(matchingRecordedEntries)
+    })
+
+    return computedValues
+  }
+
+  // TODO: What if want to have a computed span that is just the offset duration from the start to one event?
+  private get computedSpans(): TraceRecording<ScopeT>['computedSpans'] {
+    // loop through the computed span definitions, check for entries that match in recorded items. calculate the startoffset and duration
+    const computedSpans: TraceRecording<ScopeT>['computedSpans'] = {}
+
+    this.definition.computedSpanDefinitions.forEach((definition) => {
+      const { startEntry, endEntry, name } = definition
+      const matchingStartEntry = this.recordedItems.find((entryAndAnnotation) =>
+        doesEntryMatchDefinition(entryAndAnnotation, startEntry),
+      )
+      const matchingEndEntry = this.recordedItems.find((entryAndAnnotation) =>
+        doesEntryMatchDefinition(entryAndAnnotation, endEntry),
+      )
+
+      if (matchingStartEntry && matchingEndEntry) {
+        // TODO: is starttime.now correct or should it use epoch? when is each case useful?
+        const duration =
+          matchingEndEntry.entry.startTime.now -
+          matchingStartEntry.entry.startTime.now
+
+        computedSpans[name] = {
+          duration,
+          // TODO: might need to consider this as which event happened first and not which one was assumed to be the "start"
+          startOffset:
+            matchingStartEntry.entry.startTime.now - this.startTime.now,
+        }
+      }
+    })
+
+    return computedSpans
+  }
+
+  // TODO: Not that useful in its current form
+  private get entryAttributes(): TraceRecording<ScopeT>['entryAttributes'] {
+    // loop through recorded items, create a entry based on the name
+    const entryAttributes: TraceRecording<ScopeT>['entryAttributes'] = {}
+
+    this.recordedItems.forEach(({ entry }) => {
+      const { attributes, name } = entry
+      const existingAttributes = entryAttributes[name] ?? {}
+      entryAttributes[name] = {
+        ...existingAttributes,
+        ...attributes,
+      }
+    })
+
+    return entryAttributes
+  }
+
+  // TODO: implementation of gathering Trace level attributes
+  private get attributes(): TraceRecording<ScopeT>['attributes'] {
+    return {}
+  }
+
   private createTraceRecording = ({
     transitionFromState,
     interruptionReason,
   }: CreateTraceRecordingConfig): TraceRecording<ScopeT> => {
-    const traceRecording: TraceRecording<ScopeT> = {
-      // TODO: use this.input, this.definition and this.entries to create the full trace recording
+    const { id, scope } = this.input
+    const { name } = this.definition
+    const { computedSpans, computedValues, entryAttributes, attributes } = this
+
+    const lastEntry = this.recordedItems.at(-1)
+    const anyErrors = this.recordedItems.some(
+      ({ entry }) => entry.status === 'error',
+    )
+    // TODO: this wont work. we need to keep an end time that is set during the debounce state. Then calc the duration from the diff of that and the start time
+    const duration = lastEntry
+      ? lastEntry.entry.startTime.now - this.startTime.now
+      : 0
+    return {
+      id,
+      name,
+      scope,
+      type: 'operation',
+      duration,
+      // TODO: TTI times are figured out by logic in state machine and then stored on the class somewhere?
+      startTillInteractive: 0, // duration + tti time
+      // last entry until the tti?
+      completeTillInteractive: 0,
+      // ?: If we have any error entries then should we mark the status as 'error'
+      status:
+        interruptionReason && transitionFromState !== 'waiting-for-interactive'
+          ? 'interrupted'
+          : anyErrors
+            ? 'error'
+            : 'ok',
+      computedSpans,
+      computedValues,
+      attributes,
+      entryAttributes,
       interruptionReason,
-      // TODO: remove render entries
+      // TODO: remove render entries (I forgot why this TODO was here... why do we remove the render entries at this point?)
       entries: this.recordedItems.map(({ entry }) => entry),
     }
-
-    return traceRecording
   }
 }
