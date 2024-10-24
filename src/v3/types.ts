@@ -336,7 +336,6 @@ export interface TraceManagerConfig<ScopeT extends ScopeBase> {
 type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
   [Index in keyof KeysTuple]: MapToValue // T[KeysTuple[Index]]
 }
-
 /**
  *
  */
@@ -416,7 +415,7 @@ export interface ComputedValueDefinition<
   matches: [...MatchersT]
   computeValueFromMatches: (
     // as many matches as match of type TraceEntry<ScopeT>
-    matches: MapTuple<MatchersT, TraceEntry<ScopeT>>,
+    matches: MapTuple<MatchersT, TraceEntryAndAnnotation<ScopeT>>,
   ) => number | string | boolean
 }
 
