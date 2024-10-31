@@ -1,6 +1,6 @@
 import { getCommonUrlForTracing } from "../main";
 import { ensureTimestamp } from "./ensureTimestamp";
-import { Attributes, NativePerformanceEntryType, ScopeBase, Timestamp, TraceEntry, TraceEntryStatus } from "./types"
+import { Attributes, EntryType, ScopeBase, Timestamp, TraceEntry, TraceEntryStatus } from "./types"
 
 /**
  * Maps Performance Entry to Trace Entry
@@ -9,18 +9,18 @@ import { Attributes, NativePerformanceEntryType, ScopeBase, Timestamp, TraceEntr
  */
 export function processPerformanceEntry<ScopeT extends ScopeBase>(
   inputEntry: PerformanceEntry,
-): TraceEntry<ScopeT> {
+): TraceEntry<ScopeT> | undefined {
 
-  // if (entry.entryType === 'mark') {
-  //   // react in dev mode hundreds of these marks, ignore them
-  //   return undefined
-  // }
+  // react in dev mode generates hundreds of these marks, ignore them
+  if (inputEntry.entryType === 'mark') {
+    return undefined
+  }
 
   const detail =
     'details' in inputEntry && typeof inputEntry.detail === 'object' && inputEntry.details !== null
       ? inputEntry.details
       : {}
-  // TODO: confirm if we still have attributes
+
   const existingAttributes =
     'attributes' in inputEntry && typeof inputEntry.attributes === 'object' && inputEntry.attributes !== null
       ? inputEntry.attributes
@@ -31,13 +31,13 @@ export function processPerformanceEntry<ScopeT extends ScopeBase>(
     ...existingAttributes,
   };
 
-  let kind = inputEntry.entryType
-  let commonName = inputEntry.name
+  let type = inputEntry.entryType as EntryType;
+  let { name } = inputEntry;
   let status: TraceEntryStatus = 'ok';
 
   if (inputEntry.entryType === 'resource' || inputEntry.entryType === 'navigation') {
     const { commonUrl, query, hash } = getCommonUrlForTracing(inputEntry.name)
-    commonName = commonUrl
+    name = commonUrl
     attributes.resourceQuery = query
     attributes.resourceHash = hash
 
@@ -51,20 +51,22 @@ export function processPerformanceEntry<ScopeT extends ScopeBase>(
       const statusCode =
         resource && typeof resource.status === 'number' && resource.status
 
-      if (resourceType && resourceType !== 'xhr' && resourceType !== 'fetch') {
-        kind = 'asset'
-      }
       // eslint-disable-next-line no-magic-numbers
       if (statusCode && statusCode >= 400) {
         status = 'error'
       }
+
+      if (resourceType && resourceType !== 'xhr' && resourceType !== 'fetch') {
+        type = 'asset'
+      }
+
       const resourceTiming = inputEntry as PerformanceResourceTiming
       if (resourceTiming.initiatorType === 'iframe') {
-        kind = 'iframe'
+        type = 'iframe'
       }
     }
   } else if (inputEntry.entryType !== 'mark' && inputEntry.entryType !== 'measure') {
-    commonName = `${inputEntry.entryType}${inputEntry.name &&
+    name = `${inputEntry.entryType}${inputEntry.name &&
       inputEntry.name !== 'unknown' &&
       inputEntry.name.length > 0 &&
       inputEntry.entryType !== inputEntry.name
@@ -81,8 +83,8 @@ export function processPerformanceEntry<ScopeT extends ScopeBase>(
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   const scope: ScopeT = {} as ScopeT
   const traceEntry: TraceEntry<ScopeT> = {
-    type: kind as NativePerformanceEntryType,
-    name: commonName,
+    type,
+    name,
     startTime: ensureTimestamp(timestamp),
     attributes,
     scope,
