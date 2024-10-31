@@ -26,7 +26,7 @@ export type ComponentLifecycleEntryType =
   | 'component-render'
   | 'component-unmount'
 
-export type EntryType = NativePerformanceEntryType | ComponentLifecycleEntryType
+export type EntryType = NativePerformanceEntryType | ComponentLifecycleEntryType | 'asset' | 'iframe'
 
 export interface Timestamp {
   // absolute count of ms from epoch
