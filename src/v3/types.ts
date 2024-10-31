@@ -299,7 +299,7 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
 
 export interface TraceRecording<ScopeT extends ScopeBase>
   extends TraceRecordingBase<ScopeT> {
-  entries: TraceEntry<ScopeT>[]
+  entries: TraceEntryAndAnnotation<ScopeT>[]
 }
 
 export type RenderedOutput = 'null' | 'loading' | 'content' | 'error'
