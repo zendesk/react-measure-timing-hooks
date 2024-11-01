@@ -21,12 +21,12 @@ export type NativePerformanceEntryType =
   | 'taskattribution'
   | 'visibility-state'
 
-export type ComponentLifecycleEntryType =
+export type ComponentLifecycleSpanType =
   | 'component-render-start'
   | 'component-render'
   | 'component-unmount'
 
-export type EntryType = NativePerformanceEntryType | ComponentLifecycleEntryType
+export type SpanType = NativePerformanceEntryType | ComponentLifecycleSpanType
 
 export interface Timestamp {
   // absolute count of ms from epoch
@@ -58,17 +58,17 @@ export interface ActiveTraceConfig<ScopeT extends ScopeBase>
   onEnd: OnEndFn<ScopeT>
 }
 
-export type TraceEntryStatus = 'ok' | 'error'
+export type SpanStatus = 'ok' | 'error'
 
 export interface Attributes {
   [key: string]: unknown
 }
 
-export interface TraceEntryBase<ScopeT extends ScopeBase> {
-  type: EntryType
+export interface SpanBase<ScopeT extends ScopeBase> {
+  type: SpanType
 
   /**
-   * The common name of the trace entry.
+   * The common name of the span.
    * If converted from a PerformanceEntry, this is a sanitized version of the name.
    */
   name: string
@@ -82,20 +82,20 @@ export interface TraceEntryBase<ScopeT extends ScopeBase> {
   attributes: Attributes
 
   /**
-   * The duration of this trace entry.
-   * If this trace entry is just an event (a point in time), this will be 0.
+   * The duration of this span.
+   * If this span is just an event (a point in time), this will be 0.
    * On the other hand, spans will have duration > 0.
    */
   duration: number
 
   /**
-   * Status of the trace entry ('error' or 'ok').
+   * Status of the span ('error' or 'ok').
    */
   // TODO: come back to this decision
-  status?: TraceEntryStatus
+  status?: SpanStatus
 
   /**
-   * The original PerformanceEntry from which the TraceEntry
+   * The original PerformanceEntry from which the Span was created
    */
   performanceEntry?: PerformanceEntry
 
@@ -105,10 +105,10 @@ export interface TraceEntryBase<ScopeT extends ScopeBase> {
   error?: Error
 }
 
-export interface ComponentRenderTraceEntry<ScopeT extends ScopeBase>
-  extends TraceEntryBase<ScopeT>,
+export interface ComponentRenderSpan<ScopeT extends ScopeBase>
+  extends SpanBase<ScopeT>,
   BeaconConfig<ScopeT> {
-  type: ComponentLifecycleEntryType
+  type: ComponentLifecycleSpanType
   errorInfo?: ErrorInfo
 }
 
@@ -136,7 +136,7 @@ export type InitiatorType =
   | 'xmlhttprequest'
   | 'other';
 
-export interface ResourceSpan<ScopeT extends ScopeBase> extends TraceEntryBase<ScopeT> {
+export interface ResourceSpan<ScopeT extends ScopeBase> extends SpanBase<ScopeT> {
   resourceDetails: {
     initiatorType: InitiatorType
     query: Record<string, string | string[]>
@@ -147,17 +147,17 @@ export interface ResourceSpan<ScopeT extends ScopeBase> extends TraceEntryBase<S
 /**
  * All possible trace entries
  */
-export type TraceEntry<ScopeT extends ScopeBase> =
-  | TraceEntryBase<ScopeT>
-  | ComponentRenderTraceEntry<ScopeT>
+export type Span<ScopeT extends ScopeBase> =
+  | SpanBase<ScopeT>
+  | ComponentRenderSpan<ScopeT>
   | ResourceSpan<ScopeT>
 
 /**
  * Criteria for matching performance entries.
  */
-export interface TraceEntryMatchCriteria<ScopeT extends ScopeBase> {
+export interface SpanMatchCriteria<ScopeT extends ScopeBase> {
   /**
-   * The common name of the trace entry to match. Can be a string, RegExp, or function.
+   * The common name of the span to match. Can be a string, RegExp, or function.
    */
   name?: string | RegExp | ((name: string) => boolean)
 
@@ -167,17 +167,17 @@ export interface TraceEntryMatchCriteria<ScopeT extends ScopeBase> {
   performanceEntryName?: string | RegExp | ((name: string) => boolean)
 
   /**
-   * The subset of attributes (metadata) to match against the trace entry.
+   * The subset of attributes (metadata) to match against the span.
    */
   attributes?: Attributes
 
-  status?: TraceEntryStatus
-  type?: EntryType
+  status?: SpanStatus
+  type?: SpanType
 
   scope?: ScopeT
 
   /**
-   * The occurrence of the trace entry with the same name within the operation.
+   * The occurrence of the span with the same name within the operation.
    */
   occurrence?: number
 
@@ -190,25 +190,25 @@ export interface TraceEntryMatchCriteria<ScopeT extends ScopeBase> {
 /**
  * Function type for matching performance entries.
  */
-export type TraceEntryMatchFunction<ScopeT extends ScopeBase> = (
-  entry: TraceEntry<ScopeT>,
+export type SpanMatchFunction<ScopeT extends ScopeBase> = (
+  span: Span<ScopeT>,
 ) => boolean
 
 /**
  * Entries can either by matched by a criteria or function
  */
-export type TraceEntryMatcher<ScopeT extends ScopeBase> =
-  | TraceEntryMatchCriteria<ScopeT>
-  | TraceEntryMatchFunction<ScopeT>
+export type SpanMatcher<ScopeT extends ScopeBase> =
+  | SpanMatchCriteria<ScopeT>
+  | SpanMatchFunction<ScopeT>
 
-export interface TraceEntryAnnotation {
+export interface SpanAnnotation {
   /**
    * The ID of the operation the event belongs to.
    */
   id: string
   /**
-   * The occurrence of the entry with the same name within the operation.
-   * Usually 1 (first entry)
+   * The occurrence of the span with the same name within the operation.
+   * Usually 1 (first span)
    */
   occurrence: number
   /**
@@ -222,13 +222,13 @@ export interface TraceEntryAnnotation {
   operationRelativeEndTime: number
 }
 
-export interface TraceEntryAnnotationRecord {
-  [operationName: string]: TraceEntryAnnotation
+export interface SpanAnnotationRecord {
+  [operationName: string]: SpanAnnotation
 }
 
-export interface TraceEntryAndAnnotation<ScopeT extends ScopeBase> {
-  entry: TraceEntry<ScopeT>
-  annotation: TraceEntryAnnotation
+export interface SpanAndAnnotationEntry<ScopeT extends ScopeBase> {
+  span: Span<ScopeT>
+  annotation: SpanAnnotation
 }
 
 /**
@@ -236,7 +236,7 @@ export interface TraceEntryAndAnnotation<ScopeT extends ScopeBase> {
  */
 export type TraceType = 'operation'
 
-export type TraceStatus = TraceEntryStatus | 'interrupted'
+export type TraceStatus = SpanStatus | 'interrupted'
 
 export type TraceInterruptionReason =
   | 'timeout'
@@ -261,7 +261,7 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
 
   type: TraceType
 
-  // set to 'error' if any entry with status: 'error' was part of the actual trace
+  // set to 'error' if any span with status: 'error' was part of the actual trace
   // (except if it happened while in the waiting-for-interactive state)
   status: TraceStatus
 
@@ -289,7 +289,7 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
     [valueName: string]: number | string | boolean
   }
 
-  entryAttributes: {
+  spanAttributes: {
     [typeAndName: string]: {
       [attributeName: string]: unknown
     }
@@ -307,7 +307,7 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
 
 export interface TraceRecording<ScopeT extends ScopeBase>
   extends TraceRecordingBase<ScopeT> {
-  entries: TraceEntryAndAnnotation<ScopeT>[]
+  entries: SpanAndAnnotationEntry<ScopeT>[]
 }
 
 export type RenderedOutput = 'null' | 'loading' | 'content' | 'error'
@@ -331,14 +331,14 @@ export type ReportFn<ScopeT extends ScopeBase> = (
 
 export interface TraceManagerConfig<ScopeT extends ScopeBase> {
   reportFn: ReportFn<ScopeT>
-  // TODO: embeddedEntryTypes: EntryType[] would actually goes to configuration of the "convertRecordingToRum" function
+  // TODO: embeddedSpanTypes: SpanType[] would actually goes to configuration of the "convertRecordingToRum" function
   // which would be called inside of reportFn
   generateId: () => string
 
   /**
-   * The entry types that should be omitted from the trace report.
+   * The span types that should be omitted from the trace report.
    */
-  entryTypesOmittedFromReport?: EntryType[]
+  spanTypesOmittedFromReport?: SpanType[]
 }
 
 type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
@@ -357,7 +357,7 @@ export interface Tracer<ScopeT extends ScopeBase> {
     computedSpanDefinition: ComputedSpanDefinition<ScopeT>,
   ) => void
 
-  defineComputedValue: <MatchersT extends TraceEntryMatchCriteria<ScopeT>[]>(
+  defineComputedValue: <MatchersT extends SpanMatchCriteria<ScopeT>[]>(
     computedValueDefinition: ComputedValueDefinition<ScopeT, MatchersT>,
   ) => void
 }
@@ -392,9 +392,9 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
   // to ensure we cannot start a trace without the required scope keys
   requiredScopeKeys: keyof ScopeT[]
 
-  requiredToEnd: TraceEntryMatchCriteria<ScopeT>[]
-  debounceOn?: TraceEntryMatchCriteria<ScopeT>[]
-  interruptOn?: TraceEntryMatchCriteria<ScopeT>[]
+  requiredToEnd: SpanMatchCriteria<ScopeT>[]
+  debounceOn?: SpanMatchCriteria<ScopeT>[]
+  interruptOn?: SpanMatchCriteria<ScopeT>[]
 
   /**
    * Indicates the operation should continue capturing events until interactivity is reached after the operation ends.
@@ -408,8 +408,8 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
  */
 export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
   name: string
-  startEntry: TraceEntryMatchCriteria<ScopeT>
-  endEntry: TraceEntryMatchCriteria<ScopeT>
+  startSpan: SpanMatchCriteria<ScopeT>
+  endSpan: SpanMatchCriteria<ScopeT>
 }
 
 /**
@@ -417,13 +417,13 @@ export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
  */
 export interface ComputedValueDefinition<
   ScopeT extends ScopeBase,
-  MatchersT extends TraceEntryMatchCriteria<ScopeT>[],
+  MatchersT extends SpanMatchCriteria<ScopeT>[],
 > {
   name: string
   matches: [...MatchersT]
   computeValueFromMatches: (
-    // as many matches as match of type TraceEntry<ScopeT>
-    matches: MapTuple<MatchersT, TraceEntryAndAnnotation<ScopeT>>,
+    // as many matches as match of type Span<ScopeT>
+    matches: MapTuple<MatchersT, SpanAndAnnotationEntry<ScopeT>>,
   ) => number | string | boolean
 }
 
@@ -435,7 +435,7 @@ export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
   computedSpanDefinitions: readonly ComputedSpanDefinition<ScopeT>[]
   computedValueDefinitions: readonly ComputedValueDefinition<
     ScopeT,
-    TraceEntryMatchCriteria<ScopeT>[]
+    SpanMatchCriteria<ScopeT>[]
   >[]
 }
 

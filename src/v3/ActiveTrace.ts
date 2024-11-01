@@ -6,11 +6,11 @@ import type {
   ActiveTraceConfig,
   CompleteTraceDefinition,
   ScopeBase,
+  Span,
+  SpanAndAnnotationEntry,
+  SpanAnnotation,
+  SpanAnnotationRecord,
   Timestamp,
-  TraceEntry,
-  TraceEntryAndAnnotation,
-  TraceEntryAnnotation,
-  TraceEntryAnnotationRecord,
   TraceInterruptionReason,
   TraceRecording,
 } from './types'
@@ -93,11 +93,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   currentState: TraceStates = 'recording'
   readonly states = {
     recording: {
-      onProcessEntry: (entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>) => {
-        // does trace entry satisfy any of the "interruptOn" definitions
+      onProcessSpan: (spanAndAnnotation: SpanAndAnnotationEntry<ScopeT>) => {
+        // does span satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
-            if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
+            if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'matched-on-interrupt',
@@ -108,7 +108,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
         for (let i = 0; i < this.context.definition.requiredToEnd.length; i++) {
           const definition = this.context.definition.requiredToEnd[i]!
-          if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
+          if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
           }
@@ -136,14 +136,14 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // TODO: start debouncing timeout
       },
 
-      onProcessEntry: (entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>) => {
+      onProcessSpan: (spanAndAnnotation: SpanAndAnnotationEntry<ScopeT>) => {
         for (const definition of this.context.definition.requiredToEnd) {
-          const { entry } = entryAndAnnotation
+          const { span } = spanAndAnnotation
           if (
-            doesEntryMatchDefinition(entryAndAnnotation, definition) &&
+            doesEntryMatchDefinition(spanAndAnnotation, definition) &&
             definition.isIdle &&
-            'isIdle' in entry &&
-            entry.isIdle
+            'isIdle' in span &&
+            span.isIdle
           ) {
             // check if we regressed on "isIdle", and if so, transition to interrupted with reason
             return {
@@ -153,13 +153,13 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           }
         }
 
-        // does trace entry satisfy any of the "debouncedOn" and if so, restart our debounce timer
+        // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
           for (const definition of this.context.definition.debounceOn) {
-            if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
+            if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
               // TODO: (re)start debounce timer relative from the time of the event
               // (not from the time of processing of the event, because it may be asynchronous)
-              // i.e. deadline is entryAndAnnotation.entry.startTime.now + entryAndAnnotation.entry.duration + 500
+              // i.e. deadline is spanAndAnnotation.entry.startTime.now + spanAndAnnotation.entry.duration + 500
 
               return undefined
             }
@@ -191,7 +191,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // TODO: start the timer for tti debouncing
       },
 
-      onProcessEntry: (entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>) => {
+      onProcessSpan: (spanAndAnnotation: SpanAndAnnotationEntry<ScopeT>) => {
         // TODO
         // here we only debounce on longtasks and long-animation-frame
         // (hardcoded match criteria)
@@ -200,7 +200,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
-            if (doesEntryMatchDefinition(entryAndAnnotation, definition)) {
+            if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
               return {
                 transitionToState: 'complete',
                 interruptionReason: 'matched-on-interrupt',
@@ -285,7 +285,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   readonly definition: CompleteTraceDefinition<ScopeT>
   readonly input: ActiveTraceConfig<ScopeT>
 
-  recordedItems: TraceEntryAndAnnotation<ScopeT>[] = []
+  recordedItems: SpanAndAnnotationEntry<ScopeT>[] = []
   stateMachine: TraceStateMachine<ScopeT>
   startTime: Timestamp
   occurrenceCounters = new Map<string, number>()
@@ -316,32 +316,32 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     this.stateMachine.emit('onInterrupt', reason)
   }
 
-  processEntry(
-    entry: TraceEntry<ScopeT>,
-  ): TraceEntryAnnotationRecord | undefined {
+  processSpan(
+    span: Span<ScopeT>,
+  ): SpanAnnotationRecord | undefined {
     // check if valid for this trace:
-    if (entry.startTime.now < this.startTime.now) {
+    if (span.startTime.now < this.startTime.now) {
       return undefined
     }
-    const occurrence = this.occurrenceCounters.get(entry.name) ?? 1
-    this.occurrenceCounters.set(entry.name, occurrence + 1)
+    const occurrence = this.occurrenceCounters.get(span.name) ?? 1
+    this.occurrenceCounters.set(span.name, occurrence + 1)
 
-    const annotation: TraceEntryAnnotation = {
+    const annotation: SpanAnnotation = {
       id: this.input.id,
-      operationRelativeStartTime: entry.startTime.now - this.startTime.now,
+      operationRelativeStartTime: span.startTime.now - this.startTime.now,
       operationRelativeEndTime:
-        entry.startTime.now - this.startTime.now + entry.duration,
+        span.startTime.now - this.startTime.now + span.duration,
       occurrence,
     }
 
-    const entryAndAnnotation: TraceEntryAndAnnotation<ScopeT> = {
-      entry,
+    const spanAndAnnotation: SpanAndAnnotationEntry<ScopeT> = {
+      span,
       annotation,
     }
 
     const transitionPayload = this.stateMachine.emit(
-      'onProcessEntry',
-      entryAndAnnotation,
+      'onProcessSpan',
+      spanAndAnnotation,
     )
 
     // if the final state is interrupted,
@@ -350,7 +350,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       !transitionPayload ||
       transitionPayload.transitionToState !== 'interrupted'
     ) {
-      this.recordedItems.push(entryAndAnnotation)
+      this.recordedItems.push(spanAndAnnotation)
 
       return {
         [this.definition.name]: annotation,
@@ -367,9 +367,9 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       const { name, matches, computeValueFromMatches } = definition
 
       const matchingRecordedEntries = this.recordedItems.filter(
-        (entryAndAnnotation) =>
+        (spanAndAnnotation) =>
           matches.some((matchCriteria) =>
-            doesEntryMatchDefinition(entryAndAnnotation, matchCriteria),
+            doesEntryMatchDefinition(spanAndAnnotation, matchCriteria),
           ),
       )
 
@@ -385,25 +385,25 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     const computedSpans: TraceRecording<ScopeT>['computedSpans'] = {}
 
     this.definition.computedSpanDefinitions.forEach((definition) => {
-      const { startEntry, endEntry, name } = definition
-      const matchingStartEntry = this.recordedItems.find((entryAndAnnotation) =>
-        doesEntryMatchDefinition(entryAndAnnotation, startEntry),
+      const { startSpan, endSpan, name } = definition
+      const matchingStartEntry = this.recordedItems.find((spanAndAnnotation) =>
+        doesEntryMatchDefinition(spanAndAnnotation, startSpan),
       )
-      const matchingEndEntry = this.recordedItems.find((entryAndAnnotation) =>
-        doesEntryMatchDefinition(entryAndAnnotation, endEntry),
+      const matchingEndEntry = this.recordedItems.find((spanAndAnnotation) =>
+        doesEntryMatchDefinition(spanAndAnnotation, endSpan),
       )
 
       if (matchingStartEntry && matchingEndEntry) {
         // TODO: is starttime.now correct or should it use epoch? when is each case useful?
         const duration =
-          matchingEndEntry.entry.startTime.now -
-          matchingStartEntry.entry.startTime.now
+          matchingEndEntry.span.startTime.now -
+          matchingStartEntry.span.startTime.now
 
         computedSpans[name] = {
           duration,
           // TODO: might need to consider this as which event happened first and not which one was assumed to be the "start"
           startOffset:
-            matchingStartEntry.entry.startTime.now - this.startTime.now,
+            matchingStartEntry.span.startTime.now - this.startTime.now,
         }
       }
     })
@@ -412,20 +412,20 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   }
 
   // TODO: Not that useful in its current form
-  private get entryAttributes(): TraceRecording<ScopeT>['entryAttributes'] {
+  private get spanAttributes(): TraceRecording<ScopeT>['spanAttributes'] {
     // loop through recorded items, create a entry based on the name
-    const entryAttributes: TraceRecording<ScopeT>['entryAttributes'] = {}
+    const spanAttributes: TraceRecording<ScopeT>['spanAttributes'] = {}
 
-    this.recordedItems.forEach(({ entry }) => {
-      const { attributes, name } = entry
-      const existingAttributes = entryAttributes[name] ?? {}
-      entryAttributes[name] = {
+    this.recordedItems.forEach(({ span }) => {
+      const { attributes, name } = span
+      const existingAttributes = spanAttributes[name] ?? {}
+      spanAttributes[name] = {
         ...existingAttributes,
         ...attributes,
       }
     })
 
-    return entryAttributes
+    return spanAttributes
   }
 
   // TODO: implementation of gathering Trace level attributes
@@ -439,15 +439,15 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   }: CreateTraceRecordingConfig): TraceRecording<ScopeT> => {
     const { id, scope } = this.input
     const { name } = this.definition
-    const { computedSpans, computedValues, entryAttributes, attributes } = this
+    const { computedSpans, computedValues, spanAttributes, attributes } = this
 
     const lastEntry = this.recordedItems.at(-1)
     const anyErrors = this.recordedItems.some(
-      ({ entry }) => entry.status === 'error',
+      ({ span }) => span.status === 'error',
     )
     // TODO: this wont work. we need to keep an end time that is set during the debounce state. Then calc the duration from the diff of that and the start time
     const duration = lastEntry
-      ? lastEntry.entry.startTime.now - this.startTime.now
+      ? lastEntry.span.startTime.now - this.startTime.now
       : 0
     return {
       id,
@@ -469,10 +469,10 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       computedSpans,
       computedValues,
       attributes,
-      entryAttributes,
+      spanAttributes,
       interruptionReason,
       // TODO: remove render entries (I forgot why this TODO was here... why do we remove the render entries at this point?)
-      entries: this.recordedItems.map(({ entry }) => entry),
+      entries: this.recordedItems.map(({ span }) => span),
     }
   }
 }

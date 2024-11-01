@@ -1,15 +1,15 @@
 import { getCommonUrlForTracing } from "../main";
 import { ensureTimestamp } from "./ensureTimestamp";
-import { Attributes, EntryType, InitiatorType, ScopeBase, Timestamp, TraceEntry } from "./types"
+import { Attributes, SpanType, InitiatorType, ScopeBase, Timestamp, Span } from "./types"
 
 /**
  * Maps Performance Entry to Trace Entry
  * @param inputEntry - The performance entry event.
- * @returns {TraceEntry} The trace entry.
+ * @returns {Span} The span.
  */
 export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
   inputEntry: PerformanceEntry,
-): TraceEntry<ScopeT> | undefined {
+): Span<ScopeT> | undefined {
 
   // react in dev mode generates hundreds of these marks, ignore them
   if (inputEntry.entryType === 'mark' && inputEntry.name.startsWith('--')) {
@@ -21,7 +21,7 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
       ? inputEntry.details as Attributes
       : {}
 
-  const type = inputEntry.entryType as EntryType;
+  const type = inputEntry.entryType as SpanType;
   let { name } = inputEntry;
 
   if (inputEntry.entryType === 'resource' || inputEntry.entryType === 'navigation') {
@@ -61,7 +61,7 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
     now: inputEntry.startTime
   }
 
-  const traceEntry: TraceEntry<ScopeT> = {
+  const traceEntry: Span<ScopeT> = {
     type,
     name,
     startTime: ensureTimestamp(timestamp),

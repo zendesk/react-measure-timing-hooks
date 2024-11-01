@@ -8,11 +8,11 @@ import type {
   ComputedValueDefinition,
   ReportFn,
   ScopeBase,
+  Span,
+  SpanAnnotationRecord,
+  SpanMatchCriteria,
   StartTraceConfig,
   TraceDefinition,
-  TraceEntry,
-  TraceEntryAnnotationRecord,
-  TraceEntryMatchCriteria,
   TraceManagerConfig,
   Tracer,
   TraceRecording,
@@ -35,7 +35,7 @@ export class TraceManager<ScopeT extends ScopeBase> {
     const computedSpanDefinitions: ComputedSpanDefinition<ScopeT>[] = []
     const computedValueDefinitions: ComputedValueDefinition<
       ScopeT,
-      TraceEntryMatchCriteria<ScopeT>[]
+      SpanMatchCriteria<ScopeT>[]
     >[] = []
     const completeTraceDefinition: CompleteTraceDefinition<ScopeT> = {
       ...traceDefinition,
@@ -51,7 +51,7 @@ export class TraceManager<ScopeT extends ScopeBase> {
         computedValueDefinitions.push(
           definition as ComputedValueDefinition<
             ScopeT,
-            TraceEntryMatchCriteria<ScopeT>[]
+            SpanMatchCriteria<ScopeT>[]
           >,
         )
       },
@@ -60,10 +60,10 @@ export class TraceManager<ScopeT extends ScopeBase> {
   }
 
   // if no active trace, return or maybe buffer?
-  processEntry(
-    entry: TraceEntry<ScopeT>
-  ): TraceEntryAnnotationRecord | undefined {
-    return this.activeTrace?.processEntry(entry)
+  processSpan(
+    span: Span<ScopeT>
+  ): SpanAnnotationRecord | undefined {
+    return this.activeTrace?.processSpan(span)
   }
 
   private startTrace(
@@ -121,7 +121,7 @@ const observePerformanceWithTraceManager = <ScopeT extends ScopeBase>(traceManag
     entryList.getEntries().forEach((entry) => {
       const traceEntry = getSpanFromPerformanceEntry<ScopeT>(entry)
       if (traceEntry !== undefined) {
-        traceManager.processEntry(traceEntry)
+        traceManager.processSpan(traceEntry)
       }
     })
   })

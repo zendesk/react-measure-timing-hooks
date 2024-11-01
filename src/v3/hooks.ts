@@ -4,7 +4,7 @@ import { ensureTimestamp } from './ensureTimestamp'
 import type { TraceManager } from './traceManager'
 import type {
   BeaconConfig,
-  ComponentRenderTraceEntry,
+  ComponentRenderSpan,
   GetScopeTFromTraceManager,
   ScopeBase,
   Timestamp,
@@ -12,13 +12,13 @@ import type {
 } from './types'
 
 type MakeEntryInput<ScopeT extends ScopeBase> = Omit<
-  ComponentRenderTraceEntry<ScopeT>,
+  ComponentRenderSpan<ScopeT>,
   'startTime'
 > & { startTime?: Timestamp }
 
 const makeEntry = <ScopeT extends ScopeBase>(
   inp: MakeEntryInput<ScopeT>,
-): ComponentRenderTraceEntry<ScopeT> => ({
+): ComponentRenderSpan<ScopeT> => ({
   ...inp,
   startTime: ensureTimestamp(inp.startTime),
 })
@@ -43,7 +43,7 @@ export const generateUseBeacon =
 
       const status = config.error ? 'error' : 'ok'
 
-      const renderStartTaskEntry: ComponentRenderTraceEntry<ScopeT> = makeEntry({
+      const renderStartTaskEntry: ComponentRenderSpan<ScopeT> = makeEntry({
         ...config,
         type: 'component-render-start',
         duration: 0,
@@ -51,11 +51,11 @@ export const generateUseBeacon =
         status,
       })
 
-      traceManager.processEntry(renderStartTaskEntry)
+      traceManager.processSpan(renderStartTaskEntry)
 
       // Beacon effect for tracking 'component-render'. This will fire after every render as it does not have any dependencies:
       useEffect(() => {
-        traceManager.processEntry(
+        traceManager.processSpan(
           makeEntry({
             ...config,
             type: 'component-render',
@@ -79,7 +79,7 @@ export const generateUseBeacon =
             duration: 0, // TODO: is 0 duration correct?
             status: errorBoundaryMetadata?.error ? 'error' : 'ok',
           })
-          traceManager.processEntry(unmountEntry)
+          traceManager.processSpan(unmountEntry)
         },
         [config.name],
       )

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 import {
-  ComponentRenderTraceEntry,
+  ComponentRenderSpan,
   ScopeBase,
-  TraceEntry,
-  TraceEntryAndAnnotation,
+  Span,
+  SpanAndAnnotationEntry,
   TraceRecording,
   TraceRecordingBase,
 } from './types'
@@ -40,8 +40,8 @@ export interface RumTraceRecording<ScopeT extends ScopeBase>
 }
 
 function isRenderEntry<ScopeT extends ScopeBase>(
-  entry: TraceEntry<ScopeT>,
-): entry is ComponentRenderTraceEntry<ScopeT> {
+  entry: Span<ScopeT>,
+): entry is ComponentRenderSpan<ScopeT> {
   return (
     entry.type === 'component-render' ||
     entry.type === 'component-render-start' ||
@@ -51,33 +51,33 @@ function isRenderEntry<ScopeT extends ScopeBase>(
 
 function updateEmbeddedEntry<ScopeT extends ScopeBase>(
   embeddedEntry: EmbeddedEntry,
-  entryAndAnnotation: TraceEntryAndAnnotation<ScopeT>,
+  spanAndAnnotation: SpanAndAnnotationEntry<ScopeT>,
 ): EmbeddedEntry {
-  const { annotation, entry } = entryAndAnnotation
+  const { annotation, span } = spanAndAnnotation
   return {
     count: embeddedEntry.count + 1,
-    totalDuration: embeddedEntry.totalDuration + entry.duration,
+    totalDuration: embeddedEntry.totalDuration + span.duration,
     spans: [
       ...embeddedEntry.spans,
       {
         startOffset: annotation.operationRelativeStartTime,
-        duration: entry.duration,
+        duration: span.duration,
       },
     ],
   }
 }
 
 function createEmbeddedEntry<ScopeT extends ScopeBase>({
-  entry,
+  span,
   annotation,
-}: TraceEntryAndAnnotation<ScopeT>): EmbeddedEntry {
+}: SpanAndAnnotationEntry<ScopeT>): EmbeddedEntry {
   return {
     count: 1,
-    totalDuration: entry.duration,
+    totalDuration: span.duration,
     spans: [
       {
         startOffset: annotation.operationRelativeStartTime,
-        duration: entry.duration,
+        duration: span.duration,
       },
     ],
   }
@@ -87,24 +87,24 @@ export function convertTraceToRUM<ScopeT extends ScopeBase>(
   traceRecording: TraceRecording<ScopeT>,
 ): RumTraceRecording<ScopeT> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording
-  const renderEntries = entries.filter(({ entry }) => isRenderEntry(entry))
+  const renderEntries = entries.filter(({ span }) => isRenderEntry(span))
   const renderEntriesByName: {
     [typeAndName: string]: EmbeddedEntry
   } = {}
 
-  renderEntries.forEach((entryAndAnnotation) => {
-    const { entry } = entryAndAnnotation
-    const { name, type } = entry
+  renderEntries.forEach((spanAndAnnotation) => {
+    const { span } = spanAndAnnotation
+    const { name, type } = span
     const typeAndName = `${type}|${name}`
     const existingEmbeddedEntry = renderEntriesByName[typeAndName]
 
     if (existingEmbeddedEntry) {
       renderEntriesByName[typeAndName] = updateEmbeddedEntry(
         existingEmbeddedEntry,
-        entryAndAnnotation,
+        spanAndAnnotation,
       )
     } else {
-      renderEntriesByName[typeAndName] = createEmbeddedEntry(entryAndAnnotation)
+      renderEntriesByName[typeAndName] = createEmbeddedEntry(spanAndAnnotation)
     }
   })
 
