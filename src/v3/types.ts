@@ -18,6 +18,7 @@ export type NativePerformanceEntryType =
   | 'navigation'
   | 'paint'
   | 'resource'
+  | 'taskattribution'
   | 'visibility-state'
 
 export type ComponentLifecycleEntryType =
@@ -25,7 +26,7 @@ export type ComponentLifecycleEntryType =
   | 'component-render'
   | 'component-unmount'
 
-export type EntryType = NativePerformanceEntryType | ComponentLifecycleEntryType
+export type EntryType = NativePerformanceEntryType | ComponentLifecycleEntryType | 'asset' | 'iframe'
 
 export interface Timestamp {
   // absolute count of ms from epoch
@@ -59,6 +60,38 @@ export interface ActiveTraceConfig<ScopeT extends ScopeBase>
 
 export type TraceEntryStatus = 'ok' | 'error'
 
+export interface Attributes {
+  resource?: {
+    type?:
+    | 'document'
+    | 'xhr'
+    | 'beacon'
+    | 'fetch'
+    | 'css'
+    | 'js'
+    | 'image'
+    | 'font'
+    | 'media'
+    | 'other'
+    | 'native'
+    method?:
+    | 'POST'
+    | 'GET'
+    | 'HEAD'
+    | 'PUT'
+    | 'DELETE'
+    | 'PATCH'
+    | 'TRACE'
+    | 'OPTIONS'
+    | 'CONNECT'
+    status?: number | undefined
+  }
+  resourceQuery?: Record<string, string | string[]>
+  resourceHash?: string
+
+  [key: string]: unknown
+}
+
 export interface TraceEntryBase<ScopeT extends ScopeBase> {
   type: EntryType
 
@@ -72,9 +105,7 @@ export interface TraceEntryBase<ScopeT extends ScopeBase> {
 
   scope: ScopeT
 
-  attributes: {
-    [name: string]: unknown
-  }
+  attributes: Attributes
 
   /**
    * The duration of this trace entry.
@@ -101,7 +132,7 @@ export interface TraceEntryBase<ScopeT extends ScopeBase> {
 
 export interface ComponentRenderTraceEntry<ScopeT extends ScopeBase>
   extends TraceEntryBase<ScopeT>,
-    BeaconConfig<ScopeT> {
+  BeaconConfig<ScopeT> {
   type: ComponentLifecycleEntryType
   errorInfo?: ErrorInfo
 }
@@ -112,8 +143,6 @@ export interface ComponentRenderTraceEntry<ScopeT extends ScopeBase>
 export type TraceEntry<ScopeT extends ScopeBase> =
   | TraceEntryBase<ScopeT>
   | ComponentRenderTraceEntry<ScopeT>
-
-export type Attributes = Record<string, unknown>
 
 /**
  * Criteria for matching performance entries.
@@ -280,9 +309,7 @@ export interface BeaconConfig<ScopeT extends ScopeBase> {
   scope: ScopeT
   renderedOutput: RenderedOutput
   isIdle: boolean
-  attributes: {
-    [name: string]: unknown
-  }
+  attributes: Attributes
   error?: Error
 }
 

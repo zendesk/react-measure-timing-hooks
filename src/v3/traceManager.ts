@@ -1,6 +1,7 @@
 // import { Trace } from './Trace'
 import { ActiveTrace } from './ActiveTrace'
 import { ensureTimestamp } from './ensureTimestamp'
+import { processPerformanceEntry } from './processPerformanceEntry'
 import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
@@ -60,7 +61,7 @@ export class TraceManager<ScopeT extends ScopeBase> {
 
   // if no active trace, return or maybe buffer?
   processEntry(
-    entry: TraceEntry<ScopeT>,
+    entry: TraceEntry<ScopeT>
   ): TraceEntryAnnotationRecord | undefined {
     return this.activeTrace?.processEntry(entry)
   }
@@ -95,3 +96,39 @@ export class TraceManager<ScopeT extends ScopeBase> {
     return id
   }
 }
+
+/**
+ * The function creates an instance of PerformanceObserver that integrates with a TraceManager to automatically observe 
+ * and map specified types of performance entries from the browser's Performance API to trace entries. 
+ *
+ * @template ScopeT - A generic type that extends ScopeBase, allowing for 
+ *                    flexible scope definitions in the TraceManager.
+ *
+ * @param {TraceManager<ScopeT>} traceManager - An instance of TraceManager 
+ *                                               that will handle the processing 
+ *                                               of mapped performance entries.
+ * @param {string[]} entryTypes - An array of strings specifying the types of 
+ *                                performance entries to observe (e.g., 
+ *                                ["resource", "navigation"]).
+ * 
+ * @returns {() => void} A cleanup function that, when called, disconnects the 
+ *                       PerformanceObserver, stopping the observation of 
+ *                       performance entries.
+ */
+const observePerformanceWithTraceManager = <ScopeT extends ScopeBase>(traceManager: TraceManager<ScopeT>, entryTypes: string[]) => {
+
+  const observer = new PerformanceObserver((entryList) => {
+    entryList.getEntries().forEach((entry) => {
+      const traceEntry = processPerformanceEntry<ScopeT>(entry)
+      if (traceEntry !== undefined) {
+        traceManager.processEntry(traceEntry)
+      }
+
+    })
+  })
+
+  observer.observe({ entryTypes })
+
+  return () => void observer.disconnect()
+}
+
