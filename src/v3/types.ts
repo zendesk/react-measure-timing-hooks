@@ -26,7 +26,7 @@ export type ComponentLifecycleEntryType =
   | 'component-render'
   | 'component-unmount'
 
-export type EntryType = NativePerformanceEntryType | ComponentLifecycleEntryType | 'asset' | 'iframe'
+export type EntryType = NativePerformanceEntryType | ComponentLifecycleEntryType
 
 export interface Timestamp {
   // absolute count of ms from epoch
@@ -61,34 +61,6 @@ export interface ActiveTraceConfig<ScopeT extends ScopeBase>
 export type TraceEntryStatus = 'ok' | 'error'
 
 export interface Attributes {
-  resource?: {
-    type?:
-    | 'document'
-    | 'xhr'
-    | 'beacon'
-    | 'fetch'
-    | 'css'
-    | 'js'
-    | 'image'
-    | 'font'
-    | 'media'
-    | 'other'
-    | 'native'
-    method?:
-    | 'POST'
-    | 'GET'
-    | 'HEAD'
-    | 'PUT'
-    | 'DELETE'
-    | 'PATCH'
-    | 'TRACE'
-    | 'OPTIONS'
-    | 'CONNECT'
-    status?: number | undefined
-  }
-  resourceQuery?: Record<string, string | string[]>
-  resourceHash?: string
-
   [key: string]: unknown
 }
 
@@ -103,7 +75,9 @@ export interface TraceEntryBase<ScopeT extends ScopeBase> {
 
   startTime: Timestamp
 
-  scope: ScopeT
+  // non performance entries, scope would be coming from outside like ticket id or user id
+  // performance entries, there is no scope OR scope is in performance detail
+  scope?: ScopeT
 
   attributes: Attributes
 
@@ -117,7 +91,8 @@ export interface TraceEntryBase<ScopeT extends ScopeBase> {
   /**
    * Status of the trace entry ('error' or 'ok').
    */
-  status: TraceEntryStatus
+  // TODO: come back to this decision
+  status?: TraceEntryStatus
 
   /**
    * The original PerformanceEntry from which the TraceEntry
@@ -137,12 +112,45 @@ export interface ComponentRenderTraceEntry<ScopeT extends ScopeBase>
   errorInfo?: ErrorInfo
 }
 
+export type InitiatorType =
+  | 'audio'
+  | 'beacon'
+  | 'body'
+  | 'css'
+  | 'early-hint'
+  | 'embed'
+  | 'fetch'
+  | 'frame'
+  | 'iframe'
+  | 'icon'
+  | 'image'
+  | 'img'
+  | 'input'
+  | 'link'
+  | 'navigation'
+  | 'object'
+  | 'ping'
+  | 'script'
+  | 'track'
+  | 'video'
+  | 'xmlhttprequest'
+  | 'other';
+
+export interface ResourceSpan<ScopeT extends ScopeBase> extends TraceEntryBase<ScopeT> {
+  resourceDetails: {
+    initiatorType: InitiatorType
+    query: Record<string, string | string[]>
+    hash: string
+  }
+}
+
 /**
  * All possible trace entries
  */
 export type TraceEntry<ScopeT extends ScopeBase> =
   | TraceEntryBase<ScopeT>
   | ComponentRenderTraceEntry<ScopeT>
+  | ResourceSpan<ScopeT>
 
 /**
  * Criteria for matching performance entries.

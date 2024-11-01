@@ -1,7 +1,7 @@
 // import { Trace } from './Trace'
 import { ActiveTrace } from './ActiveTrace'
 import { ensureTimestamp } from './ensureTimestamp'
-import { processPerformanceEntry } from './processPerformanceEntry'
+import { getSpanFromPerformanceEntry } from './getSpanFromPerformanceEntry'
 import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
@@ -119,11 +119,10 @@ const observePerformanceWithTraceManager = <ScopeT extends ScopeBase>(traceManag
 
   const observer = new PerformanceObserver((entryList) => {
     entryList.getEntries().forEach((entry) => {
-      const traceEntry = processPerformanceEntry<ScopeT>(entry)
+      const traceEntry = getSpanFromPerformanceEntry<ScopeT>(entry)
       if (traceEntry !== undefined) {
         traceManager.processEntry(traceEntry)
       }
-
     })
   })
 
