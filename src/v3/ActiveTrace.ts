@@ -2,7 +2,6 @@
 /* eslint-disable max-classes-per-file */
 import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
 import { ensureTimestamp } from './ensureTimestamp'
-import { processPerformanceEntry } from './processPerformanceEntry'
 import type {
   ActiveTraceConfig,
   CompleteTraceDefinition,
@@ -317,13 +316,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     this.stateMachine.emit('onInterrupt', reason)
   }
 
-  processEntry(entry: TraceEntry<ScopeT> | PerformanceEntry): TraceEntryAnnotationRecord | undefined {
-    return entry instanceof PerformanceEntry
-      ? this.processTraceEntry(processPerformanceEntry(entry))
-      : this.processTraceEntry(entry)
-  }
-
-  private processTraceEntry(
+  processEntry(
     entry: TraceEntry<ScopeT>,
   ): TraceEntryAnnotationRecord | undefined {
     // check if valid for this trace:
