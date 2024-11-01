@@ -1,4 +1,4 @@
-import { ScopeBase, TraceEntryAndAnnotation, TraceEntryMatcher } from './types'
+import { ScopeBase, SpanAndAnnotationEntry, SpanMatcher } from './types'
 
 /**
  * Matches criteria against a performance entry event.
@@ -7,11 +7,11 @@ import { ScopeBase, TraceEntryAndAnnotation, TraceEntryMatcher } from './types'
  * @returns {boolean} `true` if the event matches the criteria, `false` otherwise.
  */
 export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
-  { entry, annotation }: TraceEntryAndAnnotation<ScopeT>,
-  match: TraceEntryMatcher<ScopeT>,
+  { span, annotation }: SpanAndAnnotationEntry<ScopeT>,
+  match: SpanMatcher<ScopeT>,
 ): boolean {
   if (typeof match === 'function') {
-    return match(entry)
+    return match(span)
   }
   const {
     name,
@@ -25,41 +25,41 @@ export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
   const nameMatches =
     !name ||
     (typeof name === 'string'
-      ? entry.name === name
+      ? span.name === name
       : typeof name === 'function'
-        ? name(entry.name)
-        : name.test(entry.name))
+        ? name(span.name)
+        : name.test(span.name))
 
   const performanceEntryNameMatches =
     !performanceEntryName ||
-    entry.performanceEntry?.name === performanceEntryName
+    span.performanceEntry?.name === performanceEntryName
 
-  const typeMatches = !type || entry.type === type
+  const typeMatches = !type || span.type === type
 
-  const statusMatches = !status || entry.status === status
+  const statusMatches = !status || span.status === status
 
   const occurrenceMatches = !occurrence || annotation.occurrence === occurrence
 
   const attributeMatches =
     !attributes ||
     Boolean(
-      entry.attributes &&
-        Object.entries(attributes).every(
-          ([key, value]) => entry.attributes?.[key] === value,
-        ),
+      span.attributes &&
+      Object.entries(attributes).every(
+        ([key, value]) => span.attributes?.[key] === value,
+      ),
     )
 
   const matchesScope =
     !scope ||
     Boolean(
-      entry.scope &&
-        Object.entries(scope).every(
-          ([key, value]) => entry.scope?.[key] === value,
-        ),
+      span.scope &&
+      Object.entries(scope).every(
+        ([key, value]) => span.scope?.[key] === value,
+      ),
     )
 
-  const entryIsIdle = 'isIdle' in entry ? entry.isIdle : false
-  const isIdleMatches = !match.isIdle || match.isIdle === entryIsIdle
+  const spanIsIdle = 'isIdle' in span ? span.isIdle : false
+  const isIdleMatches = !match.isIdle || match.isIdle === spanIsIdle
 
   return (
     nameMatches &&
