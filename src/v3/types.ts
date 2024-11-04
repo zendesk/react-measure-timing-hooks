@@ -107,7 +107,7 @@ export interface SpanBase<ScopeT extends ScopeBase> {
 
 export interface ComponentRenderSpan<ScopeT extends ScopeBase>
   extends SpanBase<ScopeT>,
-  BeaconConfig<ScopeT> {
+    BeaconConfig<ScopeT> {
   type: ComponentLifecycleSpanType
   errorInfo?: ErrorInfo
 }
@@ -134,9 +134,10 @@ export type InitiatorType =
   | 'track'
   | 'video'
   | 'xmlhttprequest'
-  | 'other';
+  | 'other'
 
-export interface ResourceSpan<ScopeT extends ScopeBase> extends SpanBase<ScopeT> {
+export interface ResourceSpan<ScopeT extends ScopeBase>
+  extends SpanBase<ScopeT> {
   resourceDetails: {
     initiatorType: InitiatorType
     query: Record<string, string | string[]>
@@ -179,7 +180,7 @@ export interface SpanMatchCriteria<ScopeT extends ScopeBase> {
   /**
    * The occurrence of the span with the same name within the operation.
    */
-  occurrence?: number
+  occurrence?: number // TODO add support for fn maching? | ((occurrence: number) => boolean)
 
   /**
    * only applicable for component-lifecycle entries
@@ -368,15 +369,15 @@ export interface CaptureInteractiveConfig {
    */
   timeout: number
   /**
-   * Duration to debounce long events before considering the page interactive.
+   * Duration to debounce long-tasks before considering the page interactive.
    */
-  debounceLongTasksBy?: number
+  debounceDuration?: number
   /**
-   * Ignore long events that are shorter than this duration.
+   * Ignore long-task spans that are shorter than this duration.
    */
-  skipDebounceForLongEventsShorterThan?: number
+  skipDebounceForSpansShorterThan?: number
 }
-
+// rename to skipSpansShorterThanDebounceDuration?
 /**
  * Definition of a trace that includes conditions on when to end, debounce, and interrupt.
  */
@@ -395,6 +396,9 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
   requiredToEnd: SpanMatchCriteria<ScopeT>[]
   debounceOn?: SpanMatchCriteria<ScopeT>[]
   interruptOn?: SpanMatchCriteria<ScopeT>[]
+
+  debounceDuration?: number
+  timeoutDuration?: number
 
   /**
    * Indicates the operation should continue capturing events until interactivity is reached after the operation ends.
