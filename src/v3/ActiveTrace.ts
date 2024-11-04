@@ -7,7 +7,7 @@ import type {
   CompleteTraceDefinition,
   ScopeBase,
   Span,
-  SpanAndAnnotationEntry,
+  SpanAndAnnotationEntry as SpanAndAnnotation,
   SpanAnnotation,
   SpanAnnotationRecord,
   Timestamp,
@@ -81,6 +81,9 @@ type StatesBase = Record<TraceStates, StateHandlersBase>
 type TraceStateMachineSideEffectHandlers =
   TraceStateMachine<ScopeBase>['sideEffectFns']
 
+const DEFAULT_DEBOUNCE_DURATION = 500
+const DEFAULT_TIMEOUT_DURATION = 45_000
+
 export class TraceStateMachine<ScopeT extends ScopeBase> {
   readonly context: {
     readonly definition: CompleteTraceDefinition<ScopeT>
@@ -91,9 +94,20 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     readonly finalize: FinalizeFn
   }
   currentState: TraceStates = 'recording'
+  /** the span that ended at the furthest point in time */
+  lastRelevant: SpanAndAnnotation<ScopeT> | undefined
+  debounceDeadline: number = Number.POSITIVE_INFINITY
+  timeoutDeadline: number = Number.POSITIVE_INFINITY
+
   readonly states = {
     recording: {
-      onProcessSpan: (spanAndAnnotation: SpanAndAnnotationEntry<ScopeT>) => {
+      onEnterState: () => {
+        this.timeoutDeadline =
+          this.context.input.startTime.epoch +
+          (this.context.definition.timeoutDuration ?? DEFAULT_TIMEOUT_DURATION)
+      },
+
+      onProcessSpan: (spanAndAnnotation: SpanAndAnnotation<ScopeT>) => {
         // does span satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
@@ -111,6 +125,14 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
+
+            // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
+            if (
+              spanAndAnnotation.annotation.operationRelativeEndTime >
+              (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+            ) {
+              this.lastRelevant = spanAndAnnotation
+            }
           }
         }
 
@@ -124,19 +146,43 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         transitionToState: 'interrupted',
         interruptionReason: reason,
       }),
-
-      onTimeout: () => ({
-        transitionToState: 'interrupted',
-        interruptionReason: 'timeout',
-      }),
     },
 
     debouncing: {
       onEnterState: (payload: OnEnterDebouncing) => {
-        // TODO: start debouncing timeout
+        if (!this.context.definition.debounceOn) {
+          return { transitionToState: 'complete' }
+        }
+        if (this.lastRelevant) {
+          // set the first debounce deadline
+          this.debounceDeadline =
+            this.lastRelevant.span.startTime.epoch +
+            this.lastRelevant.span.duration +
+            (this.context.definition.debounceDuration ??
+              DEFAULT_DEBOUNCE_DURATION)
+        }
+        return undefined
       },
 
-      onProcessSpan: (spanAndAnnotation: SpanAndAnnotationEntry<ScopeT>) => {
+      onProcessSpan: (spanAndAnnotation: SpanAndAnnotation<ScopeT>) => {
+        const spanEndTimeEpoch =
+          spanAndAnnotation.span.startTime.epoch +
+          spanAndAnnotation.span.duration
+        if (spanEndTimeEpoch > this.timeoutDeadline) {
+          // we consider this interrupted, because of the clamping of the total duration of the operation
+          // as potential other events could have happened and prolonged the operation
+          // we can be a little picky, because we expect to record many operations
+          // it's best to compare like-to-like
+          return {
+            transitionToState: 'interrupted',
+            interruptionReason: 'timeout',
+          }
+        }
+        if (spanEndTimeEpoch > this.debounceDeadline) {
+          // done debouncing
+          return { transitionToState: 'complete' }
+        }
+
         for (const definition of this.context.definition.requiredToEnd) {
           const { span } = spanAndAnnotation
           if (
@@ -157,9 +203,21 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         if (this.context.definition.debounceOn) {
           for (const definition of this.context.definition.debounceOn) {
             if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
-              // TODO: (re)start debounce timer relative from the time of the event
-              // (not from the time of processing of the event, because it may be asynchronous)
-              // i.e. deadline is spanAndAnnotation.entry.startTime.now + spanAndAnnotation.entry.duration + 500
+              // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
+              if (
+                spanAndAnnotation.annotation.operationRelativeEndTime >
+                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+              ) {
+                this.lastRelevant = spanAndAnnotation
+
+                // update the debounce timer relative from the time of the span end
+                // (not from the time of processing of the event, because it may be asynchronous)
+                this.debounceDeadline =
+                  this.lastRelevant.span.startTime.epoch +
+                  this.lastRelevant.span.duration +
+                  (this.context.definition.debounceDuration ??
+                    DEFAULT_DEBOUNCE_DURATION)
+              }
 
               return undefined
             }
@@ -168,30 +226,39 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         return undefined
       },
 
-      onTimerExpired: () => {
-        if (this.context.definition.captureInteractive) {
-          return { transitionToState: 'waiting-for-interactive' }
-        }
-        return { transitionToState: 'complete' }
-      },
-
       onInterrupt: (reason: TraceInterruptionReason) => ({
         transitionToState: 'interrupted',
         interruptionReason: reason,
-      }),
-
-      onTimeout: () => ({
-        transitionToState: 'interrupted',
-        interruptionReason: 'timeout',
       }),
     },
 
     'waiting-for-interactive': {
       onEnterState: (payload: OnEnterWaitingForInteractive) => {
+        if (!this.context.definition.captureInteractive) {
+          return { transitionToState: 'complete' }
+        }
+
         // TODO: start the timer for tti debouncing
+        return undefined
       },
 
-      onProcessSpan: (spanAndAnnotation: SpanAndAnnotationEntry<ScopeT>) => {
+      onProcessSpan: (spanAndAnnotation: SpanAndAnnotation<ScopeT>) => {
+        const spanEndTimeEpoch =
+          spanAndAnnotation.span.startTime.epoch +
+          spanAndAnnotation.span.duration
+        if (spanEndTimeEpoch > this.timeoutDeadline) {
+          // we consider this complete, because we have a complete trace
+          // it's just missing the bonus data from when the browser became "interactive"
+          return {
+            transitionToState: 'complete',
+            interruptionReason: 'timeout',
+          }
+        }
+
+        // TODO: if we match the interactive criteria, transition to complete
+        // reference https://docs.google.com/document/d/1GGiI9-7KeY3TPqS3YT271upUVimo-XiL5mwWorDUD4c/edit?tab=t.0#heading=h.tnffljnohmy9
+        // return { transitionToState: 'complete' }
+
         // TODO
         // here we only debounce on longtasks and long-animation-frame
         // (hardcoded match criteria)
@@ -208,20 +275,13 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             }
           }
         }
-      },
 
-      onTimerExpired: () =>
-        // no more long tasks or long animation frames, transition to complete
-        ({ transitionToState: 'complete' }),
+        return undefined
+      },
 
       onInterrupt: (reason: TraceInterruptionReason) =>
         // we captured a complete trace, however the interactive data is missing
         ({ transitionToState: 'complete', interruptionReason: reason }),
-
-      onTimeout: () => ({
-        transitionToState: 'complete',
-        interruptionReason: 'timeout',
-      }),
     },
 
     // terminal states:
@@ -285,7 +345,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   readonly definition: CompleteTraceDefinition<ScopeT>
   readonly input: ActiveTraceConfig<ScopeT>
 
-  recordedItems: SpanAndAnnotationEntry<ScopeT>[] = []
+  recordedItems: SpanAndAnnotation<ScopeT>[] = []
   stateMachine: TraceStateMachine<ScopeT>
   startTime: Timestamp
   occurrenceCounters = new Map<string, number>()
@@ -316,9 +376,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     this.stateMachine.emit('onInterrupt', reason)
   }
 
-  processSpan(
-    span: Span<ScopeT>,
-  ): SpanAnnotationRecord | undefined {
+  processSpan(span: Span<ScopeT>): SpanAnnotationRecord | undefined {
     // check if valid for this trace:
     if (span.startTime.now < this.startTime.now) {
       return undefined
@@ -334,7 +392,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       occurrence,
     }
 
-    const spanAndAnnotation: SpanAndAnnotationEntry<ScopeT> = {
+    const spanAndAnnotation: SpanAndAnnotation<ScopeT> = {
       span,
       annotation,
     }
