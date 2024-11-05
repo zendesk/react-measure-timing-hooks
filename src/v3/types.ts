@@ -393,6 +393,14 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
   // to ensure we cannot start a trace without the required scope keys
   requiredScopeKeys: keyof ScopeT[]
 
+  /**
+   * This may include components that have to be rendered with all data
+   * to consider the operation as visually complete
+   * this is close to the idea of "Largest Contentful Paint"
+   * but rather than using "Largest" as a shorthand,
+   * we're giving the power to the engineer to manually define
+   * which parts of the product are "critical" or are most important
+   */
   requiredToEnd: SpanMatchCriteria<ScopeT>[]
   debounceOn?: SpanMatchCriteria<ScopeT>[]
   interruptOn?: SpanMatchCriteria<ScopeT>[]

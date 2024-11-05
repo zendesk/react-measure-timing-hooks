@@ -96,6 +96,8 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   currentState: TraceStates = 'recording'
   /** the span that ended at the furthest point in time */
   lastRelevant: SpanAndAnnotation<ScopeT> | undefined
+  /** it is set once the LRS value is established */
+  lastRequiredSpan: SpanAndAnnotation<ScopeT> | undefined
   debounceDeadline: number = Number.POSITIVE_INFINITY
   timeoutDeadline: number = Number.POSITIVE_INFINITY
 
@@ -148,6 +150,13 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       }),
     },
 
+    // we enter the debouncing state once all requiredToEnd entries have been seen
+    // it is necessary due to the nature of React rendering,
+    // as even once we reach the visually complete state of a component,
+    // the component might continue to re-render
+    // and change the final visual output of the component
+    // we want to ensure the end of the operation captures
+    // the final, settled state of the component
     debouncing: {
       onEnterState: (payload: OnEnterDebouncing) => {
         if (!this.context.definition.debounceOn) {
@@ -237,6 +246,8 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         if (!this.context.definition.captureInteractive) {
           return { transitionToState: 'complete' }
         }
+
+        this.lastRequiredSpan = this.lastRelevant
 
         // TODO: start the timer for tti debouncing
         return undefined
