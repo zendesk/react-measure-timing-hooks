@@ -1,6 +1,13 @@
-import { getCommonUrlForTracing } from "../main";
-import { ensureTimestamp } from "./ensureTimestamp";
-import { Attributes, SpanType, InitiatorType, ScopeBase, Timestamp, Span } from "./types"
+import { getCommonUrlForTracing } from '../main'
+import { ensureTimestamp } from './ensureTimestamp'
+import {
+  Attributes,
+  InitiatorType,
+  ScopeBase,
+  Span,
+  SpanType,
+  Timestamp,
+} from './types'
 
 /**
  * Maps Performance Entry to Trace Entry
@@ -10,21 +17,25 @@ import { Attributes, SpanType, InitiatorType, ScopeBase, Timestamp, Span } from 
 export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
   inputEntry: PerformanceEntry,
 ): Span<ScopeT> | undefined {
-
   // react in dev mode generates hundreds of these marks, ignore them
   if (inputEntry.entryType === 'mark' && inputEntry.name.startsWith('--')) {
     return undefined
   }
 
   const attributes =
-    'details' in inputEntry && typeof inputEntry.detail === 'object' && inputEntry.details !== null
-      ? inputEntry.details as Attributes
+    'details' in inputEntry &&
+    typeof inputEntry.detail === 'object' &&
+    inputEntry.details !== null
+      ? (inputEntry.details as Attributes)
       : {}
 
-  const type = inputEntry.entryType as SpanType;
-  let { name } = inputEntry;
+  const type = inputEntry.entryType as SpanType
+  let { name } = inputEntry
 
-  if (inputEntry.entryType === 'resource' || inputEntry.entryType === 'navigation') {
+  if (
+    inputEntry.entryType === 'resource' ||
+    inputEntry.entryType === 'navigation'
+  ) {
     const { commonUrl, query, hash } = getCommonUrlForTracing(inputEntry.name)
     name = commonUrl
 
@@ -43,22 +54,26 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
         resourceDetails: {
           initiatorType: resourceTiming.initiatorType as InitiatorType,
           query,
-          hash
-        }
+          hash,
+        },
       }
     }
-  } else if (inputEntry.entryType !== 'mark' && inputEntry.entryType !== 'measure') {
-    name = `${inputEntry.entryType}${inputEntry.name &&
+  } else if (
+    inputEntry.entryType !== 'mark' &&
+    inputEntry.entryType !== 'measure'
+  ) {
+    name = `${inputEntry.entryType}${
+      inputEntry.name &&
       inputEntry.name !== 'unknown' &&
       inputEntry.name.length > 0 &&
       inputEntry.entryType !== inputEntry.name
-      ? `/${inputEntry.name}`
-      : ''
-      }`
+        ? `/${inputEntry.name}`
+        : ''
+    }`
   }
 
   const timestamp: Partial<Timestamp> = {
-    now: inputEntry.startTime
+    now: inputEntry.startTime,
   }
 
   const traceEntry: Span<ScopeT> = {
