@@ -2,20 +2,20 @@
 import { ActiveTrace } from './ActiveTrace'
 import { ensureTimestamp } from './ensureTimestamp'
 import type {
-  CompleteTraceDefinition,
-  ComputedSpanDefinition,
-  ComputedValueDefinition,
   ReportFn,
   ScopeBase,
-  Span,
   SpanAnnotationRecord,
-  SpanMatchCriteria,
-  StartTraceConfig,
   TraceDefinition,
   TraceManagerConfig,
   Tracer,
-  TraceRecording,
 } from './types'
+import type {
+  CompleteTraceDefinition,
+  ComputedSpanDefinition,
+  ComputedValueDefinition,
+} from './traceRecordingTypes'
+import type { TraceRecording } from './traceRecordingTypes'
+import type { Span, SpanMatchCriteria, StartTraceConfig } from './spanTypes'
 
 /**
  * Class representing the centralized trace performance manager.

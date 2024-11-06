@@ -1,4 +1,5 @@
-import { ScopeBase, SpanAndAnnotationEntry, SpanMatcher } from './types'
+import { ScopeBase, SpanAndAnnotationEntry } from './types'
+import { SpanMatcher } from './spanTypes'
 
 /**
  * Matches criteria against a performance entry event.
@@ -44,18 +45,18 @@ export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
     !attributes ||
     Boolean(
       span.attributes &&
-      Object.entries(attributes).every(
-        ([key, value]) => span.attributes?.[key] === value,
-      ),
+        Object.entries(attributes).every(
+          ([key, value]) => span.attributes?.[key] === value,
+        ),
     )
 
   const matchesScope =
     !scope ||
     Boolean(
       span.scope &&
-      Object.entries(scope).every(
-        ([key, value]) => span.scope?.[key] === value,
-      ),
+        Object.entries(scope).every(
+          ([key, value]) => span.scope?.[key] === value,
+        ),
     )
 
   const spanIsIdle = 'isIdle' in span ? span.isIdle : false
