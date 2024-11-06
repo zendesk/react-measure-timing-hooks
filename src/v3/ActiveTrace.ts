@@ -2,17 +2,18 @@
 /* eslint-disable max-classes-per-file */
 import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
 import { ensureTimestamp } from './ensureTimestamp'
+import type { ActiveTraceConfig, Span } from './spanTypes'
 import type {
-  ActiveTraceConfig,
   CompleteTraceDefinition,
+  TraceRecording,
+} from './traceRecordingTypes'
+import type {
   ScopeBase,
-  Span,
   SpanAndAnnotationEntry as SpanAndAnnotation,
   SpanAnnotation,
   SpanAnnotationRecord,
   Timestamp,
   TraceInterruptionReason,
-  TraceRecording,
 } from './types'
 import type {
   DistributiveOmit,

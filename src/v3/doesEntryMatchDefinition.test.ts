@@ -1,12 +1,11 @@
 import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
+import type { ScopeBase, SpanAnnotation } from './types'
 import type {
   ComponentRenderSpan,
-  ScopeBase,
   Span,
-  SpanAnnotation,
   SpanBase,
   SpanMatcher,
-} from './types'
+} from './spanTypes'
 
 // Mock data for TraceEntryBase
 interface TestScopeT extends ScopeBase {

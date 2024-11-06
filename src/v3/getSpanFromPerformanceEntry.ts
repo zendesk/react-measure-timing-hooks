@@ -1,13 +1,7 @@
 import { getCommonUrlForTracing } from '../main'
 import { ensureTimestamp } from './ensureTimestamp'
-import {
-  Attributes,
-  InitiatorType,
-  ScopeBase,
-  Span,
-  SpanType,
-  Timestamp,
-} from './types'
+import { ScopeBase, Timestamp } from './types'
+import { Attributes, InitiatorType, Span, SpanType } from './spanTypes'
 
 /**
  * Maps Performance Entry to Trace Entry
