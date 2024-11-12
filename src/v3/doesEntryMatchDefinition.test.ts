@@ -1,11 +1,11 @@
 import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
-import type { ScopeBase, SpanAnnotation } from './types'
 import type {
   ComponentRenderSpan,
   Span,
   SpanBase,
   SpanMatcher,
 } from './spanTypes'
+import type { ScopeBase, SpanAnnotation } from './types'
 
 // Mock data for TraceEntryBase
 interface TestScopeT extends ScopeBase {
@@ -62,7 +62,7 @@ describe('doesEntryMatchDefinition', () => {
     it('should return true for a matching entry based on name', () => {
       const matcher: SpanMatcher<TestScopeT> = { name: 'testEntry' }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -75,7 +75,7 @@ describe('doesEntryMatchDefinition', () => {
         name: (name: string) => name.startsWith('test'),
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -88,7 +88,7 @@ describe('doesEntryMatchDefinition', () => {
         name: /^test/,
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -96,12 +96,12 @@ describe('doesEntryMatchDefinition', () => {
       )
     })
 
-    it('should return false for a non-matching entry based on name', () => {
+    it('should return false for a non-matching span based on name', () => {
       const matcher: SpanMatcher<TestScopeT> = {
         name: 'nonMatchingEntry',
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -111,12 +111,12 @@ describe('doesEntryMatchDefinition', () => {
   })
 
   describe('performanceEntryName', () => {
-    it('should return true for a matching entry based on performanceEntryName', () => {
+    it('should return true for a matching span based on performanceEntryName', () => {
       const matcher: SpanMatcher<TestScopeT> = {
         performanceEntryName: 'testEntry',
       }
       const mockEntryAndAnnotation = {
-        entry: mockPerformanceEntry,
+        span: mockPerformanceEntry,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -129,7 +129,7 @@ describe('doesEntryMatchDefinition', () => {
         performanceEntryName: 'nonMatchingEntry',
       }
       const mockEntryAndAnnotation = {
-        entry: mockPerformanceEntry,
+        span: mockPerformanceEntry,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -143,7 +143,7 @@ describe('doesEntryMatchDefinition', () => {
       it('should return true for matching attributes', () => {
         const matcher: SpanMatcher<TestScopeT> = { type: 'element' }
         const mockEntryAndAnnotation = {
-          entry: mockEntryBase,
+          span: mockEntryBase,
           annotation: mockAnnotation,
         }
         expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -156,7 +156,7 @@ describe('doesEntryMatchDefinition', () => {
           type: 'component-render',
         }
         const mockEntryAndAnnotation = {
-          entry: mockEntryBase,
+          span: mockEntryBase,
           annotation: mockAnnotation,
         }
         expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -172,7 +172,7 @@ describe('doesEntryMatchDefinition', () => {
           name: 'testEntry',
         }
         const mockEntryAndAnnotation = {
-          entry: mockComponentEntry,
+          span: mockComponentEntry,
           annotation: mockAnnotation,
         }
         expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -186,7 +186,7 @@ describe('doesEntryMatchDefinition', () => {
           name: 'nonMatchingEntry',
         }
         const mockEntryAndAnnotation = {
-          entry: mockComponentEntry,
+          span: mockComponentEntry,
           annotation: mockAnnotation,
         }
         expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -200,7 +200,7 @@ describe('doesEntryMatchDefinition', () => {
     it('should return true when status does match', () => {
       const matcher: SpanMatcher<TestScopeT> = { status: 'ok' }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -211,7 +211,7 @@ describe('doesEntryMatchDefinition', () => {
     it('should return false when status does not match', () => {
       const matcher: SpanMatcher<TestScopeT> = { status: 'error' }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -228,7 +228,7 @@ describe('doesEntryMatchDefinition', () => {
         occurrence: 1,
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       // Assuming occurrence logic is implemented in the function
@@ -243,7 +243,7 @@ describe('doesEntryMatchDefinition', () => {
         occurrence: 2,
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       // Assuming occurrence logic is implemented in the function
@@ -259,7 +259,7 @@ describe('doesEntryMatchDefinition', () => {
         attributes: { attr1: 'value1' },
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -272,7 +272,7 @@ describe('doesEntryMatchDefinition', () => {
         attributes: { attr1: 'wrongValue' },
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -290,7 +290,7 @@ describe('doesEntryMatchDefinition', () => {
         },
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -307,7 +307,7 @@ describe('doesEntryMatchDefinition', () => {
         },
       }
       const mockEntryAndAnnotation = {
-        entry: mockEntryBase,
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -324,7 +324,7 @@ describe('doesEntryMatchDefinition', () => {
 
     it('should return true for isIdle matching', () => {
       const mockEntryAndAnnotation = {
-        entry: mockComponentEntry,
+        span: mockComponentEntry,
         annotation: mockAnnotation,
       }
       expect(
@@ -335,7 +335,7 @@ describe('doesEntryMatchDefinition', () => {
     it('should return false for non-matching isIdle', () => {
       const mockEntry = { ...mockComponentEntry, isIdle: false }
       const mockEntryAndAnnotation = {
-        entry: mockEntry,
+        span: mockEntry,
         annotation: mockAnnotation,
       }
       expect(
@@ -357,7 +357,7 @@ describe('doesEntryMatchDefinition', () => {
         type: 'element',
       }
       const mockEntryAndAnnotation = {
-        entry: mockPerformanceEntry,
+        span: mockPerformanceEntry,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
@@ -377,7 +377,7 @@ describe('doesEntryMatchDefinition', () => {
         type: 'element',
       }
       const mockEntryAndAnnotation = {
-        entry: mockPerformanceEntry,
+        span: mockPerformanceEntry,
         annotation: mockAnnotation,
       }
       expect(doesEntryMatchDefinition(mockEntryAndAnnotation, matcher)).toBe(
