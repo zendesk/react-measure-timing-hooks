@@ -111,6 +111,21 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       },
 
       onProcessSpan: (spanAndAnnotation: SpanAndAnnotation<ScopeT>) => {
+        const spanEndTimeEpoch =
+          spanAndAnnotation.span.startTime.epoch +
+          spanAndAnnotation.span.duration
+
+        if (spanEndTimeEpoch > this.timeoutDeadline) {
+          // we consider this interrupted, because of the clamping of the total duration of the operation
+          // as potential other events could have happened and prolonged the operation
+          // we can be a little picky, because we expect to record many operations
+          // it's best to compare like-to-like
+          return {
+            transitionToState: 'interrupted',
+            interruptionReason: 'timeout',
+          }
+        }
+
         // does span satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
@@ -421,13 +436,16 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       transitionPayload.transitionToState !== 'interrupted'
     ) {
       this.recordedItems.push(spanAndAnnotation)
-
       return {
         [this.definition.name]: annotation,
       }
     }
 
     return undefined
+  }
+
+  startRecording() {
+    this.stateMachine.emit('onEnterState', undefined)
   }
 
   private get computedValues(): TraceRecording<ScopeT>['computedValues'] {

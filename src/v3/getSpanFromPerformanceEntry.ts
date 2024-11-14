@@ -1,7 +1,7 @@
 import { getCommonUrlForTracing } from '../main'
 import { ensureTimestamp } from './ensureTimestamp'
-import { ScopeBase, Timestamp } from './types'
 import { Attributes, InitiatorType, Span, SpanType } from './spanTypes'
+import { ScopeBase, Timestamp } from './types'
 
 /**
  * Maps Performance Entry to Trace Entry
@@ -18,8 +18,8 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
 
   const attributes =
     'details' in inputEntry &&
-    typeof inputEntry.detail === 'object' &&
-    inputEntry.details !== null
+      typeof inputEntry.detail === 'object' &&
+      inputEntry.details !== null
       ? (inputEntry.details as Attributes)
       : {}
 
@@ -56,14 +56,13 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
     inputEntry.entryType !== 'mark' &&
     inputEntry.entryType !== 'measure'
   ) {
-    name = `${inputEntry.entryType}${
-      inputEntry.name &&
-      inputEntry.name !== 'unknown' &&
-      inputEntry.name.length > 0 &&
-      inputEntry.entryType !== inputEntry.name
+    name = `${inputEntry.entryType}${inputEntry.name &&
+        inputEntry.name !== 'unknown' &&
+        inputEntry.name.length > 0 &&
+        inputEntry.entryType !== inputEntry.name
         ? `/${inputEntry.name}`
         : ''
-    }`
+      }`
   }
 
   const timestamp: Partial<Timestamp> = {
