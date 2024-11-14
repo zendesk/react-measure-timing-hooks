@@ -8,6 +8,8 @@ const isLongTask = (entry: PerformanceEntry) =>
 export function createCPUIdleProcessor(
   fmp: number,
   getQuietWindowDuration?: (currentEndTime: number, fmp: number) => number,
+  clusterPadding = CLUSTER_PADDING,
+  heavyClusterThreshold = HEAVY_CLUSTER_THRESHOLD,
 ) {
   let possibleFirstCPUIdleTimestamp = fmp
   let longTaskClusterDurationTotal = 0 // Total duration of the current long task cluster
@@ -48,7 +50,7 @@ export function createCPUIdleProcessor(
     // Calculate time since the last long task
     const gapSincePreviousTask = entry.startTime - endTimeStampOfLastLongTask
 
-    if (isEntryLongTask && gapSincePreviousTask < CLUSTER_PADDING) {
+    if (isEntryLongTask && gapSincePreviousTask < clusterPadding) {
       // Continue to expand the existing cluster
       // If less than 1 second since the last long task
       // Include the time passed since the last long task in the cluster duration
@@ -56,7 +58,7 @@ export function createCPUIdleProcessor(
       endTimeStampOfLastLongTask = entryEndTime // Update the end timestamp of the last long task
 
       // If the cluster duration exceeds 250ms, update the first CPU idle timestamp
-      if (longTaskClusterDurationTotal >= HEAVY_CLUSTER_THRESHOLD) {
+      if (longTaskClusterDurationTotal >= heavyClusterThreshold) {
         // Met criteria for Heavy Cluster
         possibleFirstCPUIdleTimestamp = endTimeStampOfLastLongTask // Move to the end of the cluster
       }
@@ -83,33 +85,4 @@ export function createCPUIdleProcessor(
 
     return undefined
   }
-}
-
-// Constants for the quiet window exponential decay calculation
-const INITIAL_QUIET_WINDOW_SIZE = 5_000 // 5 seconds in milliseconds
-const MINIMUM_QUIET_WINDOW_SIZE = 1_000 // 1 second in milliseconds
-// eslint-disable-next-line no-magic-numbers
-const DECAY_RATE = Math.log(2) / 15 // Derived from 1/15 * log(2)
-
-/**
- * Calculate the dynamic quiet window duration based on the time since FMP.
- *
- * @param {number} currentEndTime - The current end time of the window being considered.
- * @param {number} fmp - The timestamp of the First Meaningful Paint (FMP).
- * @returns {number} - The required quiet window duration in milliseconds.
- */
-export function getDynamicQuietWindowDuration(
-  currentEndTime: number,
-  fmp: number,
-): number {
-  // Time elapsed since FMP
-  const timeSinceFMP = currentEndTime - fmp
-
-  // Calculate the required quiet window size based on the exponential decay formula
-  const quietWindowDuration =
-    INITIAL_QUIET_WINDOW_SIZE * Math.exp((-DECAY_RATE * timeSinceFMP) / 1_000) +
-    MINIMUM_QUIET_WINDOW_SIZE
-
-  // Ensure the duration does not drop below the minimum
-  return Math.max(quietWindowDuration, MINIMUM_QUIET_WINDOW_SIZE)
 }
