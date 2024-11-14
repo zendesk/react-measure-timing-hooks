@@ -1,5 +1,5 @@
-import { OperationManager } from '../../v2/operation'
 import { defaultEventProcessor } from '../../v2/defaultEventProcessor'
+import { OperationManager } from '../../v2/operation'
 
 export const operationManager = new OperationManager({
   // performance: {
