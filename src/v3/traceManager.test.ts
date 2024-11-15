@@ -23,7 +23,7 @@ describe('TraceManager', () => {
     jest.clearAllTimers()
   })
 
-  it('[need trace recording] tracks operation', () => {
+  it('tracks operation', () => {
     const traceDefinition: TraceDefinition<TicketIdScope> = {
       name: 'ticket.basic-operation',
       type: 'operation',
@@ -32,7 +32,9 @@ describe('TraceManager', () => {
       },
       requiredToEnd: [{
         name: 'end',
-        // type: 'mark',
+      }],
+      debounceOn: [{
+        name: 'debounce'
       }],
     }
 
@@ -78,8 +80,7 @@ describe('TraceManager', () => {
     }
 
     traceManager.processSpan(span3)
-    jest.advanceTimersByTime(50)
-
+    jest.advanceTimersByTime(2_000)
 
     const span4: Span<TicketIdScope> = {
       type: 'mark',
@@ -90,119 +91,108 @@ describe('TraceManager', () => {
     }
 
     traceManager.processSpan(span4)
-    jest.advanceTimersByTime(50)
-
-    // console.log(traceManager.activeTrace?.recordedItems)
-
-    // const traceRecording: TraceRecording<TicketIdScope> = {
-    //   id: 'test-id',
-    //   name: 'ticket.basic-operation',
-    //   scope: {},
-    //   type: 'operation',
-    //   status: 'ok',
-    //   duration: 0,
-    //   startTillInteractive: null,
-    //   completeTillInteractive: null,
-    //   attributes: {},
-    //   computedSpans: {},
-    //   computedValues: {},
-    //   spanAttributes: {},
-    //   entries: [],
-    // }
-
-    // traceManager.activeTrace?.finalize({
-    //   transitionFromState: 'recording',
-    // })
 
     expect(reportFn).toHaveBeenCalled();
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'ticket.basic-operation',
-        // duration: 100,
+        duration: 100,
         status: 'ok',
         interruptionReason: undefined,
-        entries: expect.arrayContaining([
+        entries: [
           expect.objectContaining({ name: 'start' }),
           expect.objectContaining({ name: 'middle' }),
-          // TESTING TODO: REPORT FN DOES NOT INCLUDE THE END SPAN
-          // expect.objectContaining({ name: 'end' }),
-        ]),
+          expect.objectContaining({ name: 'end' }),
+        ],
       }),
     )
 
   })
 
-  it(`correctly captures the operation's duration`, () => {
-    const ticketId = '13024'
-    const name = 'ticket.activation'
-    // const lastEventRelativeEndTime = 1_706.599_999_999_627_5
+  it('tracks operation with only requiredToEnd defined', () => {
     const traceDefinition: TraceDefinition<TicketIdScope> = {
-      name: 'ticket.activation',
+      name: 'ticket.basic-operation',
       type: 'operation',
-      requiredScopeKeys: [],
+      requiredScopeKeys: {
+        ticketId: 1,
+      },
       requiredToEnd: [{
         name: 'end',
-        type: 'mark',
       }],
-      waitUntilInteractive: true,
-      timeout: 60_000,
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        ticketId: 13_024
+        'ticketId': 1,
       }
     }
 
-    tracer.start(startConfig)
+    const traceId = tracer.start(startConfig)
+    expect(traceId).toBe('trace-id')
 
-    const events = [
-      { startTime: 0, duration: 0, name: 'start' },
-      { startTime: 500, duration: 0, name: 'middle' },
-      { startTime: 1_000, duration: 0, name: 'end' },
-      // { startTime: 1_002, duration: 0, name: 'post-end-span' },
-    ]
-
-    for (const event of events) {
-      const span: Span<TicketIdScope> = {
-        type: 'mark',
-        name: event.name,
-        startTime: ensureTimestamp({ now: event.startTime }),
-        duration: event.duration,
-        attributes: { ticketId },
-      }
-      traceManager.processSpan(span)
-      jest.advanceTimersByTime(500)
+    // Simulate start mark
+    const span1: Span<TicketIdScope> = {
+      type: 'mark',
+      name: 'start',
+      startTime: ensureTimestamp(),
+      duration: 0,
+      attributes: {},
     }
 
-    // Active Trace ends once the *next* span is processed
-    const postEndSpan: Span<TicketIdScope> = {
+    traceManager.processSpan(span1)
+    jest.advanceTimersByTime(50)
+
+    const span2: Span<TicketIdScope> = {
+      type: 'mark',
+      name: 'middle',
+      startTime: ensureTimestamp(),
+      duration: 0,
+      attributes: {},
+    }
+
+    traceManager.processSpan(span2)
+    jest.advanceTimersByTime(50)
+
+    const span3: Span<TicketIdScope> = {
+      type: 'mark',
+      name: 'end',
+      startTime: ensureTimestamp(),
+      duration: 0,
+      attributes: {},
+    }
+
+    traceManager.processSpan(span3)
+    jest.advanceTimersByTime(2_000)
+
+    const span4: Span<TicketIdScope> = {
       type: 'mark',
       name: 'post-end-span',
       startTime: ensureTimestamp(),
       duration: 0,
       attributes: {},
     }
-    traceManager.processSpan(postEndSpan)
-    jest.advanceTimersByTime(500)
 
-    expect(reportFn).toHaveBeenCalled()
+    traceManager.processSpan(span4)
+
+    expect(reportFn).toHaveBeenCalled();
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        name,
-        duration: 500, //TESTING TODO: Wrong! should be 1000 but we arent including the last span
-        entries: expect.arrayContaining([
+        name: 'ticket.basic-operation',
+        duration: 100,
+        status: 'ok',
+        interruptionReason: undefined,
+        entries: [
           expect.objectContaining({ name: 'start' }),
           expect.objectContaining({ name: 'middle' }),
-          // TESTING TODO: why are we missing the end?
-          // expect.objectContaining({ name: 'end' }),
-        ]),
+          expect.objectContaining({ name: 'end' }),
+        ],
       }),
     )
+
   })
 
-  it('[need to add this functionality] correctly captures the entire operation when intermediate entries are pushed out-of-order', () => {
+  it('[need to add re-order functionality] correctly captures the entire operation when intermediate entries are pushed out-of-order', () => {
     const id = '12345'
     const debounceBy = 1_000
     const traceDefinition: TraceDefinition<TicketIdScope> = {
@@ -211,6 +201,9 @@ describe('TraceManager', () => {
       requiredScopeKeys: [],
       requiredToEnd: [{
         name: 'ticket-end'
+      }],
+      debounceOn: [{
+        name: 'ticket-debounce',
       }],
     }
 
@@ -249,16 +242,15 @@ describe('TraceManager', () => {
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'ticket.activation',
-        // duration: 3_000,
+        duration: 3_000,
         status: 'ok',
         interruptionReason: undefined,
-        entries: expect.arrayContaining([
+        entries: ([
           expect.objectContaining({ name: 'ticket-start' }),
           expect.objectContaining({ name: 'ticket-processing' }),
-          expect.objectContaining({ name: 'ticket-middle' }),
           expect.objectContaining({ name: 'ticket-out-of-order' }),
-          // TESTING TODO: why are we missing the end?
-          // expect.objectContaining({ name: 'ticket-end' }),
+          expect.objectContaining({ name: 'ticket-middle' }),
+          expect.objectContaining({ name: 'ticket-end' }),
         ])
       })
     )
@@ -311,18 +303,18 @@ describe('TraceManager', () => {
           type: 'operation',
           interruptionReason: 'timeout',
           status: 'interrupted',
-          entries: expect.arrayContaining([
+          entries: [
             expect.objectContaining({
               name: 'start',
             }),
             // does not include the timed-out-render span
-          ])
+          ]
         }
       ),
     )
   })
 
-  it.only('interrupts itself when another operation is started', () => {
+  it('interrupts itself when another operation is started', () => {
     const traceDefinition: TraceDefinition<TicketIdScope> = {
       name: 'ticket.interrupt-operation',
       type: 'operation',
@@ -339,6 +331,8 @@ describe('TraceManager', () => {
       },
     }
 
+    tracer.start(startConfig)
+
     const span: Span<TicketIdScope> = {
       type: 'mark',
       name: 'start',
@@ -346,20 +340,13 @@ describe('TraceManager', () => {
       duration: 0,
       attributes: {},
     }
-
     traceManager.processSpan(span)
     jest.advanceTimersByTime(500)
 
-    tracer.start(startConfig)
-    jest.advanceTimersByTime(100)
-
     // start another trace
     tracer.start(startConfig)
-    expect(reportFn).toHaveBeenCalledTimes(1)
-    jest.advanceTimersByTime(1_000)
 
     expect(reportFn).toHaveBeenCalledTimes(1)
-
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining(
         {
@@ -367,11 +354,11 @@ describe('TraceManager', () => {
           interruptionReason: 'another-trace-started',
           status: 'interrupted',
           type: 'operation',
-          entries: expect.arrayContaining([
+          entries: [
             expect.objectContaining({
               name: 'start',
             }),
-          ])
+          ]
         }
       ),
     )
@@ -481,7 +468,7 @@ describe('TraceManager', () => {
         status: 'ok',
         interruptionReason: undefined,
         duration: 451, // 50 + 1 + 200 + 200
-        entries: expect.arrayContaining([
+        entries: [
           expect.objectContaining({
             name: 'start',
           }),
@@ -494,13 +481,13 @@ describe('TraceManager', () => {
           expect.objectContaining({
             name: 'debounce-shorter-than-debounceDuration',
           }),
-          // expect.objectContaining({
-          //   name: 'debounce-longer-than-debounceDuration',
-          // }),
+          expect.objectContaining({
+            name: 'debounce-longer-than-debounceDuration',
+          }),
           // expect.objectContaining({
           //   name: 'post-end-span',
           // }),
-        ]),
+        ],
       }
       ))
   })
@@ -557,12 +544,12 @@ describe('TraceManager', () => {
         interruptionReason: 'matched-on-interrupt',
         status: 'interrupted',
         type: 'operation',
-        entries: expect.arrayContaining([
+        entries: [
           expect.objectContaining({
             name: 'start',
           }),
           // interrupt span is not included
-        ]),
+        ],
       }),
     )
   })
@@ -691,6 +678,76 @@ describe('TraceManager', () => {
 
       expect(reportFn).toHaveBeenCalledTimes(2)
     })
+  })
+
+  it(`[needs fixture] correctly captures the operation's duration`, () => {
+    const ticketId = '13024'
+    const name = 'ticket.activation'
+    // const lastEventRelativeEndTime = 1_706.599_999_999_627_5
+    const traceDefinition: TraceDefinition<TicketIdScope> = {
+      name: 'ticket.activation',
+      type: 'operation',
+      requiredScopeKeys: [],
+      requiredToEnd: [{
+        name: 'end',
+        type: 'mark',
+      }],
+      waitUntilInteractive: true,
+      timeout: 60_000,
+    }
+
+    const tracer = traceManager.createTracer(traceDefinition)
+    const startConfig: StartTraceConfig<TicketIdScope> = {
+      scope: {
+        ticketId: 13_024
+      }
+    }
+
+    tracer.start(startConfig)
+
+    const events = [
+      { startTime: 0, duration: 0, name: 'start' },
+      { startTime: 500, duration: 0, name: 'middle' },
+      { startTime: 1_000, duration: 0, name: 'end' },
+      // { startTime: 1_002, duration: 0, name: 'post-end-span' },
+    ]
+
+    for (const event of events) {
+      const span: Span<TicketIdScope> = {
+        type: 'mark',
+        name: event.name,
+        startTime: ensureTimestamp({ now: event.startTime }),
+        duration: event.duration,
+        attributes: { ticketId },
+      }
+      traceManager.processSpan(span)
+      jest.advanceTimersByTime(500)
+    }
+
+    // Active Trace ends once the *next* span is processed
+    const postEndSpan: Span<TicketIdScope> = {
+      type: 'mark',
+      name: 'post-end-span',
+      startTime: ensureTimestamp(),
+      duration: 0,
+      attributes: {},
+    }
+    traceManager.processSpan(postEndSpan)
+    jest.advanceTimersByTime(500)
+
+    expect(reportFn).toHaveBeenCalled()
+    expect(reportFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name,
+        duration: 500, //TESTING TODO: Wrong! should be 1000 but we arent including the last span
+        entries: [
+          expect.objectContaining({ name: 'start' }),
+          expect.objectContaining({ name: 'middle' }),
+          // TESTING TODO: why are we missing the end?
+          // expect.objectContaining({ name: 'end' }),
+        ],
+      }),
+    )
   })
 })
 
