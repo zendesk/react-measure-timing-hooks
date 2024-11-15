@@ -1,4 +1,3 @@
-// import { Trace } from './Trace'
 import { ActiveTrace } from './ActiveTrace'
 import { ensureTimestamp } from './ensureTimestamp'
 import type { Span, SpanMatchCriteria, StartTraceConfig } from './spanTypes'
@@ -6,7 +5,7 @@ import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
   ComputedValueDefinition,
-  TraceRecording
+  TraceRecording,
 } from './traceRecordingTypes'
 import type {
   ReportFn,
@@ -88,7 +87,6 @@ export class TraceManager<ScopeT extends ScopeBase> {
     })
 
     this.activeTrace = activeTrace
-    activeTrace.startRecording()
 
     return id
   }
