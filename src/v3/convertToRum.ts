@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 import { ComponentRenderSpan, Span } from './spanTypes'
 import { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
-import { ScopeBase, SpanAndAnnotationEntry } from './types'
+import { ScopeBase, SpanAndAnnotation } from './types'
 
 export interface EmbeddedEntry {
   count: number
@@ -46,7 +46,7 @@ function isRenderEntry<ScopeT extends ScopeBase>(
 
 function updateEmbeddedEntry<ScopeT extends ScopeBase>(
   embeddedEntry: EmbeddedEntry,
-  spanAndAnnotation: SpanAndAnnotationEntry<ScopeT>,
+  spanAndAnnotation: SpanAndAnnotation<ScopeT>,
 ): EmbeddedEntry {
   const { annotation, span } = spanAndAnnotation
   return {
@@ -65,7 +65,7 @@ function updateEmbeddedEntry<ScopeT extends ScopeBase>(
 function createEmbeddedEntry<ScopeT extends ScopeBase>({
   span,
   annotation,
-}: SpanAndAnnotationEntry<ScopeT>): EmbeddedEntry {
+}: SpanAndAnnotation<ScopeT>): EmbeddedEntry {
   return {
     count: 1,
     totalDuration: span.duration,

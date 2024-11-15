@@ -3,7 +3,7 @@ import type { Attributes, SpanMatchCriteria } from './spanTypes'
 import type {
   MapTuple,
   ScopeBase,
-  SpanAndAnnotationEntry,
+  SpanAndAnnotation,
   TraceDefinition,
   TraceInterruptionReason,
   TraceStatus,
@@ -61,8 +61,9 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
 
 export interface TraceRecording<ScopeT extends ScopeBase>
   extends TraceRecordingBase<ScopeT> {
-  entries: SpanAndAnnotationEntry<ScopeT>[]
-} /**
+  entries: SpanAndAnnotation<ScopeT>[]
+}
+/**
  * Definition of custom spans
  */
 // IMPLEMENTATION TODO: Create ComputedSpanMatchCriteria
@@ -84,7 +85,7 @@ export interface ComputedValueDefinition<
   matches: [...MatchersT]
   computeValueFromMatches: (
     // as many matches as match of type Span<ScopeT>
-    matches: MapTuple<MatchersT, SpanAndAnnotationEntry<ScopeT>>,
+    matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>>,
   ) => number | string | boolean
 }
 /**

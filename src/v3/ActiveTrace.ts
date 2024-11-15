@@ -7,6 +7,12 @@ import {
   type PerformanceEntryLike,
   createCPUIdleProcessor,
 } from './firstCPUIdle'
+import {
+  getAttributes,
+  getComputedSpans,
+  getComputedValues,
+  getSpanAttributes,
+} from './recordingComputeUtils'
 import type { ActiveTraceConfig, Span } from './spanTypes'
 import type {
   CompleteTraceDefinition,
@@ -14,10 +20,9 @@ import type {
 } from './traceRecordingTypes'
 import type {
   ScopeBase,
-  SpanAndAnnotationEntry as SpanAndAnnotation,
+  SpanAndAnnotation,
   SpanAnnotation,
   SpanAnnotationRecord,
-  Timestamp,
   TraceInterruptionReason,
 } from './types'
 import type {
@@ -192,7 +197,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             if (
               !this.lastRelevant ||
               spanAndAnnotation.annotation.operationRelativeEndTime >
-              (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
             ) {
               this.lastRelevant = spanAndAnnotation
             }
@@ -425,12 +430,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       },
 
       onInterrupt: (reason: TraceInterruptionReason) =>
-      // we captured a complete trace, however the interactive data is missing
-      ({
-        transitionToState: 'complete',
-        interruptionReason: reason,
-        lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-      }),
+        // we captured a complete trace, however the interactive data is missing
+        ({
+          transitionToState: 'complete',
+          interruptionReason: reason,
+          lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+        }),
     },
 
     // terminal states:
@@ -497,7 +502,6 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
 
   recordedItems: SpanAndAnnotation<ScopeT>[] = []
   stateMachine: TraceStateMachine<ScopeT>
-  startTime: Timestamp
   occurrenceCounters = new Map<string, number>()
 
   processedPerformanceEntries: WeakMap<
@@ -512,8 +516,10 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     input: ActiveTraceConfig<ScopeT>,
   ) {
     this.definition = definition
-    this.input = input
-    this.startTime = ensureTimestamp(input.startTime)
+    this.input = {
+      ...input,
+      startTime: ensureTimestamp(input.startTime),
+    }
     this.stateMachine = new TraceStateMachine({
       definition,
       input,
@@ -534,7 +540,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
 
   processSpan(span: Span<ScopeT>): SpanAnnotationRecord | undefined {
     // check if valid for this trace:
-    if (span.startTime.now < this.startTime.now) {
+    if (span.startTime.now < this.input.startTime.now) {
       return undefined
     }
 
@@ -556,9 +562,10 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
 
       const annotation: SpanAnnotation = {
         id: this.input.id,
-        operationRelativeStartTime: span.startTime.now - this.startTime.now,
+        operationRelativeStartTime:
+          span.startTime.now - this.input.startTime.now,
         operationRelativeEndTime:
-          span.startTime.now - this.startTime.now + span.duration,
+          span.startTime.now - this.input.startTime.now + span.duration,
         occurrence,
       }
 
@@ -612,91 +619,6 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     return undefined
   }
 
-  private get computedValues(): TraceRecording<ScopeT>['computedValues'] {
-    const computedValues: TraceRecording<ScopeT>['computedValues'] = {}
-
-    this.definition.computedValueDefinitions.forEach((definition) => {
-      const { name, matches, computeValueFromMatches } = definition
-
-      const matchingRecordedEntries = this.recordedItems.filter(
-        (spanAndAnnotation) =>
-          matches.some((matchCriteria) =>
-            doesEntryMatchDefinition(
-              spanAndAnnotation,
-              matchCriteria,
-              this.input.scope,
-            ),
-          ),
-      )
-
-      computedValues[name] = computeValueFromMatches(matchingRecordedEntries)
-    })
-
-    return computedValues
-  }
-
-  // IMPLEMENTATION TODO: 1) Handle the case where start span being the operation's start time, 2) Handle the case where end span being the operation's end time
-  private get computedSpans(): TraceRecording<ScopeT>['computedSpans'] {
-    // loop through the computed span definitions, check for entries that match in recorded items. calculate the startoffset and duration
-    const computedSpans: TraceRecording<ScopeT>['computedSpans'] = {}
-
-    this.definition.computedSpanDefinitions.forEach((definition) => {
-      const { startSpan, endSpan, name } = definition
-      const matchingStartEntry = this.recordedItems.find((spanAndAnnotation) =>
-        doesEntryMatchDefinition(
-          spanAndAnnotation,
-          startSpan,
-          this.input.scope,
-        ),
-      )
-      const matchingEndEntry = this.recordedItems.find((spanAndAnnotation) =>
-        doesEntryMatchDefinition(spanAndAnnotation, endSpan, this.input.scope),
-      )
-
-      if (matchingStartEntry && matchingEndEntry) {
-        const duration =
-          matchingEndEntry.span.startTime.now -
-          matchingStartEntry.span.startTime.now
-
-        computedSpans[name] = {
-          duration,
-          // DECISION: After considering which events happen first and which one is defined as the start
-          // the start offset is always going to be anchored to the start span.
-          // cases: 
-          // ------S------E (+ computed val)
-          // -----E------S (- computed val)
-          // computedSpan.startOffset + computedSpan.duration = computedSpan.endOffset
-          startOffset:
-            matchingStartEntry.span.startTime.now - this.startTime.now,
-        }
-      }
-    })
-
-    return computedSpans
-  }
-
-  // IMPLEMENTATION TODO: Not that useful in its current form
-  private get spanAttributes(): TraceRecording<ScopeT>['spanAttributes'] {
-    // loop through recorded items, create a entry based on the name
-    const spanAttributes: TraceRecording<ScopeT>['spanAttributes'] = {}
-
-    this.recordedItems.forEach(({ span }) => {
-      const { attributes, name } = span
-      const existingAttributes = spanAttributes[name] ?? {}
-      spanAttributes[name] = {
-        ...existingAttributes,
-        ...attributes,
-      }
-    })
-
-    return spanAttributes
-  }
-
-  // IMPLEMENTATION TODO: implementation of gathering Trace level attributes
-  private get attributes(): TraceRecording<ScopeT>['attributes'] {
-    return {}
-  }
-
   private createTraceRecording = ({
     transitionFromState,
     interruptionReason,
@@ -705,19 +627,24 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   }: FinalState<ScopeT>): TraceRecording<ScopeT> => {
     const { id, scope } = this.input
     const { name } = this.definition
-    const { computedSpans, computedValues, spanAttributes, attributes } = this
+    const computedSpans = getComputedSpans(this)
+    const computedValues = getComputedValues(this)
+    const spanAttributes = getSpanAttributes(this)
+    const attributes = getAttributes(this)
 
     const anyErrors = this.recordedItems.some(
       ({ span }) => span.status === 'error',
     )
-    const duration = lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
+    const duration =
+      lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
     return {
       id,
       name,
       scope,
       type: 'operation',
       duration,
-      startTillInteractive: cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null,
+      startTillInteractive:
+        cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null,
       // last entry until the tti?
       completeTillInteractive: 0,
       // ?: If we have any error entries then should we mark the status as 'error'
@@ -725,14 +652,14 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
         interruptionReason && transitionFromState !== 'waiting-for-interactive'
           ? 'interrupted'
           : anyErrors
-            ? 'error'
-            : 'ok',
+          ? 'error'
+          : 'ok',
       computedSpans,
       computedValues,
       attributes,
       spanAttributes,
       interruptionReason,
-      entries: this.recordedItems
+      entries: this.recordedItems,
     }
   }
 }
