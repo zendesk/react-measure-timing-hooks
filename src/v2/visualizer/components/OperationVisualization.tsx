@@ -20,10 +20,9 @@ import {
   Combobox,
   Field,
   IComboboxProps,
-  Label as GardenLabel,
   Option,
-} from '@zendeskgarden/react-dropdowns.next'
-import { Col, Row } from '@zendeskgarden/react-grid'
+} from '@zendeskgarden/react-dropdowns'
+import { Grid as GardenGrid } from '@zendeskgarden/react-grid'
 import { ThemeProvider } from '@zendeskgarden/react-theming'
 import TicketData from '../../../2024/ticket-fixtures/ticket-open-new-format-slow.json'
 import type {
@@ -231,10 +230,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ state, setState }) => {
 
   return (
     <LegendDemo title="">
-      <Row justifyContent="center">
-        <Col sm={13}>
+      <GardenGrid.Row justifyContent="center">
+        <GardenGrid.Col sm={13}>
           <Field>
-            <GardenLabel>Filter</GardenLabel>
+            <Field.Label>Filter</Field.Label>
             <Combobox
               isAutocomplete
               isMultiselectable
@@ -252,8 +251,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ state, setState }) => {
               )}
             </Combobox>
           </Field>
-        </Col>
-      </Row>
+        </GardenGrid.Col>
+      </GardenGrid.Row>
     </LegendDemo>
   )
 }
