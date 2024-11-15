@@ -60,7 +60,7 @@ const ticketOperationTracer = traceManager.createTracer({
 const simulateEventPeriodically = (ticketId: number | null) => {
   const interval = setInterval(() => {
     performance.mark(`ticket-${ticketId}-event`)
-  }, 2_000)
+  }, 4_000)
 
   return () => void clearInterval(interval)
 }
@@ -72,22 +72,6 @@ export const App: React.FC = () => {
     () => simulateEventPeriodically(selectedTicketId),
     [selectedTicketId],
   )
-
-  observePerformanceWithTraceManager(traceManager, [
-    'element',
-    'event',
-    'first-input',
-    'largest-contentful-paint',
-    'layout-shift',
-    // 'long-animation-frame',
-    'longtask',
-    'mark',
-    'measure',
-    'navigation',
-    'paint',
-    'resource',
-    'visibility-state',
-  ])
 
   const handleTicketClick = (id: number) => {
     // traceManager.startOperation({

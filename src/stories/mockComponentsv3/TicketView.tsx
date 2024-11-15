@@ -10,6 +10,7 @@ import { Paragraph, Span, XXL } from '@zendeskgarden/react-typography'
 import { ReactComponent as UserIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
 import { TimingComponent } from '../../v2/element'
 import { mockTickets } from './mockTickets'
+import { triggerLongTasks } from './simulateLongTasks'
 import { useBeacon } from './traceManager'
 
 export const StyledSpan = styled(Span).attrs({ isBold: true, hue: 'blue' })`
@@ -39,6 +40,16 @@ export const TicketView: React.FC<TicketViewProps> = ({
     renderedOutput: cached ? 'content' : 'loading',
     isIdle: cached,
   })
+
+  useEffect(
+    () =>
+      triggerLongTasks({
+        minTime: 50,
+        maxTime: 100,
+        totalClusterDuration: 300,
+      }),
+    [ticketId, cached],
+  )
 
   const ticket = mockTickets.find((ticket) => ticket.id === ticketId)
 

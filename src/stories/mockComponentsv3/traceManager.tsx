@@ -1,4 +1,5 @@
 import { generateUseBeacon } from '../../v3/hooks'
+import { observePerformanceWithTraceManager } from '../../v3/observePerformanceWithTraceManager'
 import { TraceManager } from '../../v3/traceManager'
 
 export interface TicketIdScope {
@@ -12,5 +13,21 @@ export const traceManager = new TraceManager<TicketIdScope>({
   },
   generateId: () => Math.random().toString(36).slice(2),
 })
+
+observePerformanceWithTraceManager(traceManager, [
+  'element',
+  'event',
+  'first-input',
+  'largest-contentful-paint',
+  'layout-shift',
+  'long-animation-frame',
+  'longtask',
+  'mark',
+  'measure',
+  'navigation',
+  'paint',
+  'resource',
+  'visibility-state',
+])
 
 export const useBeacon = generateUseBeacon(traceManager)
