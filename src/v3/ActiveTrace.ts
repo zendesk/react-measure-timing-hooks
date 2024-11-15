@@ -192,7 +192,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             if (
               !this.lastRelevant ||
               spanAndAnnotation.annotation.operationRelativeEndTime >
-                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+              (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
             ) {
               this.lastRelevant = spanAndAnnotation
             }
@@ -425,12 +425,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       },
 
       onInterrupt: (reason: TraceInterruptionReason) =>
-        // we captured a complete trace, however the interactive data is missing
-        ({
-          transitionToState: 'complete',
-          interruptionReason: reason,
-          lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-        }),
+      // we captured a complete trace, however the interactive data is missing
+      ({
+        transitionToState: 'complete',
+        interruptionReason: reason,
+        lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+      }),
     },
 
     // terminal states:
@@ -584,6 +584,8 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       spanAndAnnotation,
     )
 
+    // IMPLEMENTATION TODO: Add a tag or metadata value to the span that was the last required or cpu idle
+
     const shouldRecord =
       !existingAnnotation &&
       (!transition || transition.transitionToState !== 'interrupted')
@@ -633,7 +635,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     return computedValues
   }
 
-  // TODO: What if want to have a computed span that is just the offset duration from the start to one event?
+  // IMPLEMENTATION TODO: 1) Handle the case where start span being the operation's start time, 2) Handle the case where end span being the operation's end time
   private get computedSpans(): TraceRecording<ScopeT>['computedSpans'] {
     // loop through the computed span definitions, check for entries that match in recorded items. calculate the startoffset and duration
     const computedSpans: TraceRecording<ScopeT>['computedSpans'] = {}
@@ -652,14 +654,18 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       )
 
       if (matchingStartEntry && matchingEndEntry) {
-        // TODO: is starttime.now correct or should it use epoch? when is each case useful?
         const duration =
           matchingEndEntry.span.startTime.now -
           matchingStartEntry.span.startTime.now
 
         computedSpans[name] = {
           duration,
-          // TODO: might need to consider this as which event happened first and not which one was assumed to be the "start"
+          // DECISION: After considering which events happen first and which one is defined as the start
+          // the start offset is always going to be anchored to the start span.
+          // cases: 
+          // ------S------E (+ computed val)
+          // -----E------S (- computed val)
+          // computedSpan.startOffset + computedSpan.duration = computedSpan.endOffset
           startOffset:
             matchingStartEntry.span.startTime.now - this.startTime.now,
         }
@@ -669,7 +675,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     return computedSpans
   }
 
-  // TODO: Not that useful in its current form
+  // IMPLEMENTATION TODO: Not that useful in its current form
   private get spanAttributes(): TraceRecording<ScopeT>['spanAttributes'] {
     // loop through recorded items, create a entry based on the name
     const spanAttributes: TraceRecording<ScopeT>['spanAttributes'] = {}
@@ -686,7 +692,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     return spanAttributes
   }
 
-  // TODO: implementation of gathering Trace level attributes
+  // IMPLEMENTATION TODO: implementation of gathering Trace level attributes
   private get attributes(): TraceRecording<ScopeT>['attributes'] {
     return {}
   }
@@ -701,22 +707,17 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     const { name } = this.definition
     const { computedSpans, computedValues, spanAttributes, attributes } = this
 
-    const lastEntry = this.recordedItems.at(-1)
     const anyErrors = this.recordedItems.some(
       ({ span }) => span.status === 'error',
     )
-    // TODO: this wont work. we need to keep an end time that is set during the debounce state. Then calc the duration from the diff of that and the start time
-    const duration = lastEntry
-      ? lastEntry.span.startTime.now - this.startTime.now
-      : 0
+    const duration = lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
     return {
       id,
       name,
       scope,
       type: 'operation',
       duration,
-      // TODO: TTI times are figured out by logic in state machine and then stored on the class somewhere?
-      startTillInteractive: 0, // duration + tti time
+      startTillInteractive: cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null,
       // last entry until the tti?
       completeTillInteractive: 0,
       // ?: If we have any error entries then should we mark the status as 'error'
@@ -724,15 +725,14 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
         interruptionReason && transitionFromState !== 'waiting-for-interactive'
           ? 'interrupted'
           : anyErrors
-          ? 'error'
-          : 'ok',
+            ? 'error'
+            : 'ok',
       computedSpans,
       computedValues,
       attributes,
       spanAttributes,
       interruptionReason,
-      // TODO: remove render entries (I forgot why this TODO was here... why do we remove the render entries at this point?)
-      entries: this.recordedItems.map(({ span }) => span),
+      entries: this.recordedItems
     }
   }
 }

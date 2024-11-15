@@ -756,12 +756,11 @@ describe('TraceManager', () => {
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining({
         name,
-        duration: 500, // TESTING TODO: Wrong! should be 1000 but we arent including the last span
+        duration: 1_000,
         entries: [
           expect.objectContaining({ name: 'start' }),
           expect.objectContaining({ name: 'middle' }),
-          // TESTING TODO: why are we missing the end?
-          // expect.objectContaining({ name: 'end' }),
+          expect.objectContaining({ name: 'end' }),
         ],
       }),
     )

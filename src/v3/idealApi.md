@@ -51,8 +51,6 @@ A **User Operation Trace** represents a process that results in a change to the 
 
 It is started by a user's action (e.g. a click, a hover, or a key press event) and ends once the desired new state has been reached.
 
-(TODO: what about traces that start by an external action, like another user, or something external in the world triggering a change in the UI?)
-
 It may be configured to include all events until the user is able to interact with the page.
 
 The duration of the User Operation Trace represents the user's experience of the process. Such metric can be used to track regressions or improvements to the performance of the process.
@@ -297,7 +295,6 @@ interface Trace {
   id: string
 
   // name of the trace / operation
-  // TODO: naming convention
   name: string
 
   type: 'user-operation' | 'process'
