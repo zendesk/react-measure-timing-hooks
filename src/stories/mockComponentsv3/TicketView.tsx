@@ -8,13 +8,7 @@ import { Well } from '@zendeskgarden/react-notifications'
 import { DEFAULT_THEME, PALETTE } from '@zendeskgarden/react-theming'
 import { Paragraph, Span, XXL } from '@zendeskgarden/react-typography'
 import { ReactComponent as UserIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
-import { VISIBLE_STATE } from '../../main'
 import { TimingComponent } from '../../v2/element'
-import {
-  useCaptureRenderBeaconTask,
-  useRenderProcessTrace,
-} from '../../v2/hooks'
-import { observePerformanceWithTraceManager } from '../../v3/observePerformanceWithTraceManager'
 import { mockTickets } from './mockTickets'
 import { useBeacon } from './traceManager'
 
@@ -43,14 +37,13 @@ export const TicketView: React.FC<TicketViewProps> = ({
     name: 'TicketView',
     scope: { ticketId },
     renderedOutput: cached ? 'content' : 'loading',
-    isIdle: false,
+    isIdle: cached,
   })
 
   const ticket = mockTickets.find((ticket) => ticket.id === ticketId)
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      performance.mark('TicketViewLoaded')
       onLoaded?.()
       // eslint-disable-next-line no-magic-numbers
     }, 1_500)
