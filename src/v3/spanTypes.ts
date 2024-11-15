@@ -95,7 +95,7 @@ export interface SpanBase<ScopeT extends ScopeBase> {
 }
 
 export interface ComponentRenderSpan<ScopeT extends ScopeBase>
-  extends SpanBase<ScopeT>,
+  extends Omit<SpanBase<ScopeT>, 'scope'>,
     BeaconConfig<ScopeT> {
   type: ComponentLifecycleSpanType
   errorInfo?: ErrorInfo
