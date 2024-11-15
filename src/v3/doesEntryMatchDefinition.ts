@@ -1,5 +1,5 @@
 import { SpanMatcher } from './spanTypes'
-import { ScopeBase, SpanAndAnnotationEntry } from './types'
+import { ScopeBase, SpanAndAnnotation } from './types'
 
 /**
  * Matches criteria against a performance entry event.
@@ -8,7 +8,7 @@ import { ScopeBase, SpanAndAnnotationEntry } from './types'
  * @returns {boolean} `true` if the event matches the criteria, `false` otherwise.
  */
 export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
-  { span, annotation }: SpanAndAnnotationEntry<ScopeT>,
+  { span, annotation }: SpanAndAnnotation<ScopeT>,
   match: SpanMatcher<ScopeT>,
   scope: ScopeT,
 ): boolean {
@@ -29,8 +29,8 @@ export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
     (typeof name === 'string'
       ? span.name === name
       : typeof name === 'function'
-        ? name(span.name)
-        : name.test(span.name))
+      ? name(span.name)
+      : name.test(span.name))
 
   const performanceEntryNameMatches =
     !performanceEntryName ||
