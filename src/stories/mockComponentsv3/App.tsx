@@ -7,18 +7,11 @@ import {
   Chrome,
   Content,
   Footer,
-  FooterItem,
   Header,
-  HeaderItem,
-  HeaderItemIcon,
-  HeaderItemText,
   Main,
   Nav,
-  NavItem,
-  NavItemIcon,
-  NavItemText,
 } from '@zendeskgarden/react-chrome'
-import { PALETTE } from '@zendeskgarden/react-theming'
+import { PALETTE, ThemeProvider } from '@zendeskgarden/react-theming'
 import { ReactComponent as MenuTrayIcon } from '@zendeskgarden/svg-icons/src/16/grid-2x2-stroke.svg'
 import { ReactComponent as PersonIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
 import { ReactComponent as ClearIcon } from '@zendeskgarden/svg-icons/src/26/arrow-right-left.svg'
@@ -32,7 +25,7 @@ import { TicketList } from './TicketList'
 import { TicketView } from './TicketView'
 import { traceManager } from './traceManager'
 
-const tracer = traceManager.createTracer({
+const ticketOperationTracer = traceManager.createTracer({
   name: `ticket-activation`,
   type: 'operation',
   // requiredScopeKeys: TicketIdScope,
@@ -120,7 +113,7 @@ export const App: React.FC = () => {
     //   waitUntilInteractive: true,
     //   interruptSelf: true,
     // })
-    tracer.start({ scope: { ticketId: id } })
+    ticketOperationTracer.start({ scope: { ticketId: id } })
 
     setSelectedTicketId(id)
   }
@@ -130,85 +123,90 @@ export const App: React.FC = () => {
   }
 
   return (
-    <Chrome isFluid>
-      <Nav aria-label="chrome default example">
-        <NavItem hasLogo>
-          <NavItemIcon>
-            <ProductIcon style={{ color: PALETTE.green[400] }} />
-          </NavItemIcon>
-          <NavItemText>Zendesk Garden</NavItemText>
-        </NavItem>
-        <NavItem
-          isCurrent={!selectedTicketId}
-          onClick={() => void handleBack()}
-          title="Ticket List"
-        >
-          <NavItemIcon>
-            <HomeIcon />
-          </NavItemIcon>
-          <NavItemText>Ticket List</NavItemText>
-        </NavItem>
-        <NavItem
-          onClick={() => {
-            setSelectedTicketIds([])
-            setSelectedTicketId(null)
-          }}
-          title="Reset Cache"
-        >
-          <NavItemIcon>
-            <ClearIcon />
-          </NavItemIcon>
-          <NavItemText>Reset</NavItemText>
-        </NavItem>
-        <NavItem hasBrandmark title="Zendesk">
-          <NavItemIcon>
-            <ZendeskIcon />
-          </NavItemIcon>
-          <NavItemText>Zendesk</NavItemText>
-        </NavItem>
-      </Nav>
-      <Body hasFooter>
-        <Header>
-          <HeaderItem>
-            <HeaderItemIcon>
-              <MenuTrayIcon />
-            </HeaderItemIcon>
-            <HeaderItemText isClipped>Products</HeaderItemText>
-          </HeaderItem>
-          <HeaderItem isRound>
-            <HeaderItemIcon>
-              <PersonIcon />
-            </HeaderItemIcon>
-            <HeaderItemText isClipped>User</HeaderItemText>
-          </HeaderItem>
-        </Header>
-        <Content>
-          <Main style={{ padding: 28 }}>
-            {selectedTicketId === null ? (
-              <TicketList
-                tickets={mockTickets}
-                onTicketClick={handleTicketClick}
-              />
-            ) : (
-              <TicketView
-                ticketId={selectedTicketId}
-                cached={selectedTicketIds.includes(selectedTicketId)}
-                onLoaded={() => {
-                  setSelectedTicketIds([...selectedTicketIds, selectedTicketId])
-                }}
-              />
-            )}
-          </Main>
-        </Content>
-        <Footer>
-          <FooterItem>
-            <Button isBasic>Cancel</Button>
-          </FooterItem>
-          <FooterItem>
-            <Button isPrimary>Save</Button>
-          </FooterItem>
-        </Footer>
-      </Body>
-    </Chrome>
+    <ThemeProvider>
+      <Chrome isFluid>
+        <Nav aria-label="chrome default example">
+          <Nav.Item hasLogo>
+            <Nav.ItemIcon>
+              <ProductIcon style={{ color: PALETTE.green[400] }} />
+            </Nav.ItemIcon>
+            <Nav.ItemText>Zendesk Garden</Nav.ItemText>
+          </Nav.Item>
+          <Nav.Item
+            isCurrent={!selectedTicketId}
+            onClick={() => void handleBack()}
+            title="Ticket List"
+          >
+            <Nav.ItemIcon>
+              <HomeIcon />
+            </Nav.ItemIcon>
+            <Nav.ItemText>Ticket List</Nav.ItemText>
+          </Nav.Item>
+          <Nav.Item
+            onClick={() => {
+              setSelectedTicketIds([])
+              setSelectedTicketId(null)
+            }}
+            title="Reset Cache"
+          >
+            <Nav.ItemIcon>
+              <ClearIcon />
+            </Nav.ItemIcon>
+            <Nav.ItemText>Reset</Nav.ItemText>
+          </Nav.Item>
+          <Nav.Item hasBrandmark title="Zendesk">
+            <Nav.ItemIcon>
+              <ZendeskIcon />
+            </Nav.ItemIcon>
+            <Nav.ItemText>Zendesk</Nav.ItemText>
+          </Nav.Item>
+        </Nav>
+        <Body>
+          <Header>
+            <Header.Item>
+              <Header.ItemIcon>
+                <MenuTrayIcon />
+              </Header.ItemIcon>
+              <Header.ItemText isClipped>Products</Header.ItemText>
+            </Header.Item>
+            <Header.Item isRound>
+              <Header.ItemIcon>
+                <PersonIcon />
+              </Header.ItemIcon>
+              <Header.ItemText isClipped>User</Header.ItemText>
+            </Header.Item>
+          </Header>
+          <Content>
+            <Main style={{ padding: 28 }}>
+              {selectedTicketId === null ? (
+                <TicketList
+                  tickets={mockTickets}
+                  onTicketClick={handleTicketClick}
+                />
+              ) : (
+                <TicketView
+                  ticketId={selectedTicketId}
+                  cached={selectedTicketIds.includes(selectedTicketId)}
+                  onLoaded={() => {
+                    setSelectedTicketIds([
+                      ...selectedTicketIds,
+                      selectedTicketId,
+                    ])
+                  }}
+                />
+              )}
+            </Main>
+          </Content>
+          <Footer>
+            <Footer.Item>
+              <Button isBasic>Cancel</Button>
+            </Footer.Item>
+            <Footer.Item>
+              <Button isPrimary>Save</Button>
+            </Footer.Item>
+          </Footer>
+        </Body>
+      </Chrome>
+    </ThemeProvider>
   )
 }
