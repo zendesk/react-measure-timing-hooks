@@ -45,7 +45,7 @@ export type ReportFn<ScopeT extends ScopeBase> = (
 
 export interface TraceManagerConfig<ScopeT extends ScopeBase> {
   reportFn: ReportFn<ScopeT>
-  // TODO: embeddedSpanTypes: SpanType[] would actually goes to configuration of the "convertRecordingToRum" function
+  // NEED CLARIFIATION TODO: what are the embeddedSpanTypes: SpanType[] that would actually goes to configuration of the "convertRecordingToRum" function
   // which would be called inside of reportFn
   generateId: () => string
 

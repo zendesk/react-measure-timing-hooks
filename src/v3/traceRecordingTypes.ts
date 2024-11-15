@@ -19,7 +19,6 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
   /**
    * name of the trace / operation
    */
-  // TODO: define naming convention
   name: string
 
   scope: ScopeT
@@ -30,8 +29,9 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
   // (except if it happened while in the waiting-for-interactive state)
   status: TraceStatus
 
+  // STRICTER TYPE TODO: separate out trace recording into a union of trace recording and interrupted trace recording (fields that will be different: interruption reason,duration, and status)
   interruptionReason?: TraceInterruptionReason
-  duration: number
+  duration: number | null
 
   startTillInteractive: number | null
   completeTillInteractive: number | null
@@ -65,12 +65,13 @@ export interface TraceRecording<ScopeT extends ScopeBase>
 } /**
  * Definition of custom spans
  */
-
+// IMPLEMENTATION TODO: Create ComputedSpanMatchCriteria
 export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
   name: string
-  startSpan: SpanMatchCriteria<ScopeT>
-  endSpan: SpanMatchCriteria<ScopeT>
+  startSpan: SpanMatchCriteria<ScopeT> // | 'operation-start'
+  endSpan: SpanMatchCriteria<ScopeT> // | 'operation-end'
 }
+
 /**
  * Definition of custom values
  */

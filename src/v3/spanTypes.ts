@@ -80,7 +80,6 @@ export interface SpanBase<ScopeT extends ScopeBase> {
   /**
    * Status of the span ('error' or 'ok').
    */
-  // TODO: come back to this decision
   status?: SpanStatus
 
   /**
@@ -96,7 +95,7 @@ export interface SpanBase<ScopeT extends ScopeBase> {
 
 export interface ComponentRenderSpan<ScopeT extends ScopeBase>
   extends Omit<SpanBase<ScopeT>, 'scope'>,
-    BeaconConfig<ScopeT> {
+  BeaconConfig<ScopeT> {
   type: ComponentLifecycleSpanType
   errorInfo?: ErrorInfo
 }
@@ -172,7 +171,7 @@ export interface SpanMatchCriteria<ScopeT extends ScopeBase> {
   /**
    * The occurrence of the span with the same name within the operation.
    */
-  occurrence?: number // TODO add support for fn maching? | ((occurrence: number) => boolean)
+  occurrence?: number // FEATURE TODO: add support for fn maching? | ((occurrence: number) => boolean)
 
   /**
    * only applicable for component-lifecycle entries
