@@ -33,6 +33,7 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
   interruptionReason?: TraceInterruptionReason
   duration: number | null
 
+  // TODO: should we call this durationTillInteractive for consistency?
   startTillInteractive: number | null
   completeTillInteractive: number | null
 

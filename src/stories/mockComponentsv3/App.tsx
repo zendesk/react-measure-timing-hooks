@@ -35,9 +35,6 @@ const ticketOperationTracer = traceManager.createTracer({
       scopeKeys: ['ticketId'],
       type: 'component-render',
       isIdle: true,
-      // isIdle: true,
-      // status: 'ok',
-      // occurrence: 2,
     },
   ],
   requiredScopeKeys: ['ticketId'],
@@ -56,6 +53,7 @@ const ticketOperationTracer = traceManager.createTracer({
       type: 'component-unmount',
     },
   ],
+  captureInteractive: true,
 })
 
 // simulate an event every 2 seconds
