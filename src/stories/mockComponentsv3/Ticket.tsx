@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import React from 'react'
 import { Cell, Row } from '@zendeskgarden/react-tables'
 

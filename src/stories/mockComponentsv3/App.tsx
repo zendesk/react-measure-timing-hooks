@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable no-magic-numbers */
+import React, { useEffect, useState } from 'react'
 import { Button } from '@zendeskgarden/react-buttons'
 import {
   Body,
@@ -23,17 +25,62 @@ import { ReactComponent as ClearIcon } from '@zendeskgarden/svg-icons/src/26/arr
 import { ReactComponent as ProductIcon } from '@zendeskgarden/svg-icons/src/26/garden.svg'
 import { ReactComponent as HomeIcon } from '@zendeskgarden/svg-icons/src/26/home-fill.svg'
 import { ReactComponent as ZendeskIcon } from '@zendeskgarden/svg-icons/src/26/zendesk.svg'
+import { observePerformanceWithTraceManager } from '../../v3/observePerformanceWithTraceManager'
 // CYN: NEED UPDATE
 import { mockTickets } from './mockTickets'
 import { TicketList } from './TicketList'
 import { TicketView } from './TicketView'
-import type { TicketIdScope } from './traceManager'
 import { traceManager } from './traceManager'
-import { observePerformanceWithTraceManager } from '../../v3/observePerformanceWithTraceManager'
+
+const tracer = traceManager.createTracer({
+  name: `ticket-activation`,
+  type: 'operation',
+  // requiredScopeKeys: TicketIdScope,
+  requiredToEnd: [
+    {
+      name: 'TicketView',
+      scopeKeys: ['ticketId'],
+      type: 'component-render',
+      isIdle: true,
+      // isIdle: true,
+      // status: 'ok',
+      // occurrence: 2,
+    },
+  ],
+  requiredScopeKeys: ['ticketId'],
+  // debounceDuration: 1_000,
+  timeoutDuration: 45_000,
+  debounceOn: [
+    {
+      name: 'TicketView',
+      scopeKeys: ['ticketId'],
+    },
+  ],
+  interruptOn: [
+    {
+      name: 'TicketView',
+      scopeKeys: ['ticketId'],
+      type: 'component-unmount',
+    },
+  ],
+})
+
+// simulate an event every 2 seconds
+const simulateEventPeriodically = (ticketId: number | null) => {
+  const interval = setInterval(() => {
+    performance.mark(`ticket-${ticketId}-event`)
+  }, 2_000)
+
+  return () => void clearInterval(interval)
+}
 
 export const App: React.FC = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const [selectedTicketIds, setSelectedTicketIds] = useState<number[]>([])
+  useEffect(
+    () => simulateEventPeriodically(selectedTicketId),
+    [selectedTicketId],
+  )
 
   observePerformanceWithTraceManager(traceManager, [
     'element',
@@ -73,52 +120,7 @@ export const App: React.FC = () => {
     //   waitUntilInteractive: true,
     //   interruptSelf: true,
     // })
-    const tracer = traceManager.createTracer({
-      name: `ticket-activation`,
-      type: 'operation',
-      // requiredScopeKeys: TicketIdScope,
-      requiredToEnd: [
-        {
-          name: 'TicketView',
-          scope: {
-            ticketId: id,
-          },
-          type: 'component-unmount',
-          // isIdle: true,
-          status: 'ok',
-          // occurrence: 2,
-        },
-      ],
-      requiredScopeKeys: ['ticketId'],
-      // debounceDuration: 1_000,
-      timeoutDuration: 45_000,
-      // debounceOn: [
-      //   {
-      //     match: { attributes: { ticketId: id } },
-
-      //   },
-      // ],
-      interruptOn: [
-        {
-          name: 'TicketView',
-          scope: {
-            ticketId: id,
-          },
-          type: 'component-unmount',
-        },
-      ],
-    })
-    tracer.start({
-      scope: {
-        ticketId: id,
-      },
-      attributes: {
-        ticketId: id,
-      },
-      startTime: {
-        now: performance.now(),
-      },
-    })
+    tracer.start({ scope: { ticketId: id } })
 
     setSelectedTicketId(id)
   }
