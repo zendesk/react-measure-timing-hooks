@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import React from 'react'
 import {
   Body,
@@ -7,9 +8,9 @@ import {
   HeaderRow,
   Table,
 } from '@zendeskgarden/react-tables'
-import { Ticket } from './Ticket'
-import type { Ticket as TicketType } from './mockTickets'
 import { XL } from '@zendeskgarden/react-typography'
+import type { Ticket as TicketType } from './mockTickets'
+import { Ticket } from './Ticket'
 
 interface TicketListProps {
   tickets: TicketType[]

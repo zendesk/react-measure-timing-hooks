@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import React, { useEffect } from 'react'
 import styled from 'styled-components'
 import { Timeline } from '@zendeskgarden/react-accordions'
@@ -13,10 +14,9 @@ import {
   useCaptureRenderBeaconTask,
   useRenderProcessTrace,
 } from '../../v2/hooks'
-import { mockTickets } from './mockTickets'
-import { traceManager } from './traceManager'
-import { generateUseBeacon } from '../../v3/hooks'
 import { observePerformanceWithTraceManager } from '../../v3/observePerformanceWithTraceManager'
+import { mockTickets } from './mockTickets'
+import { useBeacon } from './traceManager'
 
 export const StyledSpan = styled(Span).attrs({ isBold: true, hue: 'blue' })`
   margin-left: ${DEFAULT_THEME.space.base * 2}px;
@@ -39,40 +39,11 @@ export const TicketView: React.FC<TicketViewProps> = ({
   cached = false,
   onLoaded,
 }) => {
-  // useRenderProcessTrace(
-  //   {
-  //     operationManager: traceManager,
-  //     operationName: 'TicketView',
-  //     onEnd: (trace) => {
-  //       console.log('TicketView trace', trace, 'ticketId', ticketId)
-  //     },
-  //     track: [
-  //       { match: { attributes: { ticketId } } },
-  //       {
-  //         //debounce on any event that has the same ticket id
-  //         match: { attributes: { ticketId, visibleState: 'complete' } }, //required to end the operation, ticket fully loaded!
-  //         requiredToEnd: true,
-  //       },
-  //     ],
-  //   },
-  //   [ticketId],
-  // )
-
-  // useCaptureRenderBeaconTask({
-  //   componentName: 'TicketView',
-  //   attributes: { ticketId, loading: !cached },
-  //   visibleState: cached ? VISIBLE_STATE.COMPLETE : VISIBLE_STATE.LOADING,
-  //   operationManager: traceManager,
-  // })
-
-  // observePerformanceWithTraceManager(traceManager, [])
-  const tracingBeacon = generateUseBeacon(traceManager)
-  tracingBeacon({
+  useBeacon({
     name: 'TicketView',
     scope: { ticketId },
-    renderedOutput: 'content',
+    renderedOutput: cached ? 'content' : 'loading',
     isIdle: false,
-    attributes: { ticketId },
   })
 
   const ticket = mockTickets.find((ticket) => ticket.id === ticketId)

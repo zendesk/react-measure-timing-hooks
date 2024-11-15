@@ -1,3 +1,4 @@
+import { generateUseBeacon } from '../../v3/hooks'
 import { TraceManager } from '../../v3/traceManager'
 
 export interface TicketIdScope {
@@ -11,3 +12,5 @@ export const traceManager = new TraceManager<TicketIdScope>({
   },
   generateId: () => Math.random().toString(36).slice(2),
 })
+
+export const useBeacon = generateUseBeacon(traceManager)
