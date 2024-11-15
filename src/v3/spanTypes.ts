@@ -94,8 +94,8 @@ export interface SpanBase<ScopeT extends ScopeBase> {
 }
 
 export interface ComponentRenderSpan<ScopeT extends ScopeBase>
-  extends Omit<SpanBase<ScopeT>, 'scope'>,
-  BeaconConfig<ScopeT> {
+  extends Omit<SpanBase<ScopeT>, 'scope' | 'attributes'>,
+    BeaconConfig<ScopeT> {
   type: ComponentLifecycleSpanType
   errorInfo?: ErrorInfo
 }
@@ -140,10 +140,10 @@ export type Span<ScopeT extends ScopeBase> =
   | SpanBase<ScopeT>
   | ComponentRenderSpan<ScopeT>
   | ResourceSpan<ScopeT>
+
 /**
  * Criteria for matching performance entries.
  */
-
 export interface SpanMatchCriteria<ScopeT extends ScopeBase> {
   /**
    * The common name of the span to match. Can be a string, RegExp, or function.

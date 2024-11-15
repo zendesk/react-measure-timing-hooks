@@ -7,17 +7,9 @@ import {
   type PerformanceEntryLike,
   createCPUIdleProcessor,
 } from './firstCPUIdle'
-import {
-  getAttributes,
-  getComputedSpans,
-  getComputedValues,
-  getSpanAttributes,
-} from './recordingComputeUtils'
+import { createTraceRecording } from './recordingComputeUtils'
 import type { ActiveTraceConfig, Span } from './spanTypes'
-import type {
-  CompleteTraceDefinition,
-  TraceRecording,
-} from './traceRecordingTypes'
+import type { CompleteTraceDefinition } from './traceRecordingTypes'
 import type {
   ScopeBase,
   SpanAndAnnotation,
@@ -31,7 +23,7 @@ import type {
   StateHandlerPayloads,
 } from './typeUtils'
 
-interface FinalState<ScopeT extends ScopeBase> {
+export interface FinalState<ScopeT extends ScopeBase> {
   transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
   cpuIdleSpanAndAnnotation?: SpanAndAnnotation<ScopeT>
@@ -39,7 +31,7 @@ interface FinalState<ScopeT extends ScopeBase> {
 }
 
 type InitialTraceState = 'recording'
-type NonTerminalTraceStates =
+export type NonTerminalTraceStates =
   | InitialTraceState
   | 'debouncing'
   | 'waiting-for-interactive'
@@ -166,6 +158,13 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           }
         }
 
+        console.log(
+          `# processing span ${spanAndAnnotation.span.name} ${spanAndAnnotation.annotation.occurrence}`,
+          'requiredToEnd',
+          this.context.definition.requiredToEnd,
+          'this span',
+          spanAndAnnotation,
+        )
         for (let i = 0; i < this.context.definition.requiredToEnd.length; i++) {
           if (!this.context.requiredToEndIndexChecklist.has(i)) {
             // we previously checked off this index
@@ -556,7 +555,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
 
     let spanAndAnnotation: SpanAndAnnotation<ScopeT>
 
-    if (!existingAnnotation) {
+    if (existingAnnotation) {
+      spanAndAnnotation = existingAnnotation
+      // update the span in the recording
+      spanAndAnnotation.span = span
+    } else {
       const occurrence = this.occurrenceCounters.get(span.name) ?? 1
       this.occurrenceCounters.set(span.name, occurrence + 1)
 
@@ -567,6 +570,8 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
         operationRelativeEndTime:
           span.startTime.now - this.input.startTime.now + span.duration,
         occurrence,
+        recordedInState: this.stateMachine
+          .currentState as NonTerminalTraceStates,
       }
 
       spanAndAnnotation = {
@@ -580,10 +585,6 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
           spanAndAnnotation,
         )
       }
-    } else {
-      spanAndAnnotation = existingAnnotation
-      // update the span in the recording
-      spanAndAnnotation.span = span
     }
 
     const transition = this.stateMachine.emit(
@@ -591,7 +592,18 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       spanAndAnnotation,
     )
 
-    // IMPLEMENTATION TODO: Add a tag or metadata value to the span that was the last required or cpu idle
+    // Tag the span annotations:
+    if (transition?.transitionToState === 'complete') {
+      if (transition.lastRequiredSpanAndAnnotation) {
+        // mutate the annotation to mark the span as complete
+        transition.lastRequiredSpanAndAnnotation.annotation.markedComplete =
+          true
+      }
+      if (transition.cpuIdleSpanAndAnnotation) {
+        // mutate the annotation to mark the span as interactive
+        transition.cpuIdleSpanAndAnnotation.annotation.markedInteractive = true
+      }
+    }
 
     const shouldRecord =
       !existingAnnotation &&
@@ -606,60 +618,35 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       transition?.transitionToState === 'interrupted' ||
       transition?.transitionToState === 'complete'
     ) {
-      const traceRecording = this.createTraceRecording(transition)
+      const endOfOperationSpan =
+        (transition?.transitionToState === 'complete' &&
+          (transition.cpuIdleSpanAndAnnotation ??
+            transition.lastRequiredSpanAndAnnotation)) ||
+        spanAndAnnotation
+      const traceRecording = createTraceRecording(
+        {
+          definition: this.definition,
+          // only keep items captured until the endOfOperationSpan
+          recordedItems: this.recordedItems.filter(
+            (item) =>
+              item.span.startTime.now + item.span.duration <=
+              endOfOperationSpan.span.startTime.now +
+                endOfOperationSpan.span.duration,
+          ),
+          input: this.input,
+        },
+        transition,
+      )
       this.input.onEnd(traceRecording)
     }
 
     if (shouldRecord) {
+      // the return value is used for reporting the annotation externally (e.g. to the RUM agent)
       return {
         [this.definition.name]: spanAndAnnotation.annotation,
       }
     }
 
     return undefined
-  }
-
-  private createTraceRecording = ({
-    transitionFromState,
-    interruptionReason,
-    cpuIdleSpanAndAnnotation,
-    lastRequiredSpanAndAnnotation,
-  }: FinalState<ScopeT>): TraceRecording<ScopeT> => {
-    const { id, scope } = this.input
-    const { name } = this.definition
-    const computedSpans = getComputedSpans(this)
-    const computedValues = getComputedValues(this)
-    const spanAttributes = getSpanAttributes(this)
-    const attributes = getAttributes(this)
-
-    const anyErrors = this.recordedItems.some(
-      ({ span }) => span.status === 'error',
-    )
-    const duration =
-      lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
-    return {
-      id,
-      name,
-      scope,
-      type: 'operation',
-      duration,
-      startTillInteractive:
-        cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null,
-      // last entry until the tti?
-      completeTillInteractive: 0,
-      // ?: If we have any error entries then should we mark the status as 'error'
-      status:
-        interruptionReason && transitionFromState !== 'waiting-for-interactive'
-          ? 'interrupted'
-          : anyErrors
-          ? 'error'
-          : 'ok',
-      computedSpans,
-      computedValues,
-      attributes,
-      spanAttributes,
-      interruptionReason,
-      entries: this.recordedItems,
-    }
   }
 }

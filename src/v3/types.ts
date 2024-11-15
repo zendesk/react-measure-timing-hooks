@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 
+import type { NonTerminalTraceStates } from './ActiveTrace'
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
 import type {
   Span,
@@ -137,6 +138,18 @@ export interface SpanAnnotation {
    * Relative end time of the event within the operation.
    */
   operationRelativeEndTime: number
+  /**
+   * The state the event was recorded in.
+   */
+  recordedInState: NonTerminalTraceStates
+  /**
+   * If true, this is the last required span in the operation.
+   */
+  markedComplete?: boolean
+  /**
+   * If true, this is the span that marked the operation as interactive.
+   */
+  markedInteractive?: boolean
 }
 
 export interface SpanAnnotationRecord {

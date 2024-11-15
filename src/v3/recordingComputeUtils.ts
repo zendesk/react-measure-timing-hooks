@@ -1,3 +1,4 @@
+import type { FinalState } from './ActiveTrace'
 import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
 import type { ActiveTraceConfig } from './spanTypes'
 import type {
@@ -102,4 +103,50 @@ export function getAttributes<ScopeT extends ScopeBase>({
   input,
 }: ComputeRecordingData<ScopeT>): TraceRecording<ScopeT>['attributes'] {
   return {}
+}
+
+export function createTraceRecording<ScopeT extends ScopeBase>(
+  data: ComputeRecordingData<ScopeT>,
+  {
+    transitionFromState,
+    interruptionReason,
+    cpuIdleSpanAndAnnotation,
+    lastRequiredSpanAndAnnotation,
+  }: FinalState<ScopeT>,
+): TraceRecording<ScopeT> {
+  const { definition, recordedItems, input } = data
+  const { id, scope } = input
+  const { name } = definition
+  const computedSpans = getComputedSpans(data)
+  const computedValues = getComputedValues(data)
+  const spanAttributes = getSpanAttributes(data)
+  const attributes = getAttributes(data)
+
+  const anyErrors = recordedItems.some(({ span }) => span.status === 'error')
+  const duration =
+    lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
+  return {
+    id,
+    name,
+    scope,
+    type: 'operation',
+    duration,
+    startTillInteractive:
+      cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null,
+    // last entry until the tti?
+    completeTillInteractive: 0,
+    // ?: If we have any error entries then should we mark the status as 'error'
+    status:
+      interruptionReason && transitionFromState !== 'waiting-for-interactive'
+        ? 'interrupted'
+        : anyErrors
+        ? 'error'
+        : 'ok',
+    computedSpans,
+    computedValues,
+    attributes,
+    spanAttributes,
+    interruptionReason,
+    entries: recordedItems,
+  }
 }
