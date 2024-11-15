@@ -9,7 +9,7 @@ export interface BeaconConfig<ScopeT extends ScopeBase> {
   scope: ScopeT
   renderedOutput: RenderedOutput
   isIdle: boolean
-  attributes: Attributes
+  attributes?: Attributes
   error?: Error
 }
 
