@@ -457,6 +457,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   startTime: Timestamp
   occurrenceCounters = new Map<string, number>()
 
+  processedPerformanceEntries: WeakMap<
+    PerformanceEntry,
+    SpanAndAnnotation<ScopeT>
+  > = new WeakMap()
+
   constructor(
     definition: CompleteTraceDefinition<ScopeT>,
     input: ActiveTraceConfig<ScopeT>,
@@ -489,20 +494,46 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     if (span.startTime.now < this.startTime.now) {
       return undefined
     }
-    const occurrence = this.occurrenceCounters.get(span.name) ?? 1
-    this.occurrenceCounters.set(span.name, occurrence + 1)
 
-    const annotation: SpanAnnotation = {
-      id: this.input.id,
-      operationRelativeStartTime: span.startTime.now - this.startTime.now,
-      operationRelativeEndTime:
-        span.startTime.now - this.startTime.now + span.duration,
-      occurrence,
-    }
+    // check if the performanceEntry has already been processed
+    // a single performanceEntry can have Spans created from it multiple times
+    // we allow this in case the Span comes from different contexts
+    // currently the version of the Span wins,
+    // but we could consider creating some customizable logic
+    // re-processing the same span should be safe
+    const existingAnnotation =
+      span.performanceEntry &&
+      this.processedPerformanceEntries.get(span.performanceEntry)
 
-    const spanAndAnnotation: SpanAndAnnotation<ScopeT> = {
-      span,
-      annotation,
+    let spanAndAnnotation: SpanAndAnnotation<ScopeT>
+
+    if (!existingAnnotation) {
+      const occurrence = this.occurrenceCounters.get(span.name) ?? 1
+      this.occurrenceCounters.set(span.name, occurrence + 1)
+
+      const annotation: SpanAnnotation = {
+        id: this.input.id,
+        operationRelativeStartTime: span.startTime.now - this.startTime.now,
+        operationRelativeEndTime:
+          span.startTime.now - this.startTime.now + span.duration,
+        occurrence,
+      }
+
+      spanAndAnnotation = {
+        span,
+        annotation,
+      }
+
+      if (span.performanceEntry) {
+        this.processedPerformanceEntries.set(
+          span.performanceEntry,
+          spanAndAnnotation,
+        )
+      }
+    } else {
+      spanAndAnnotation = existingAnnotation
+      // update the span in the recording
+      spanAndAnnotation.span = span
     }
 
     const transitionPayload = this.stateMachine.emit(
@@ -512,16 +543,18 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     // console.log('transitionPayload', transitionPayload)
     // if the final state is interrupted,
     // we decided that we should not record the entry nor annotate it externally
+    // TODO: this if statement needs to be validated/rethought
     if (
-      !transitionPayload ||
-      transitionPayload.transitionToState === 'complete' ||
-      // TODO: this condition doesn't make sense
-      transitionPayload.transitionToState !== 'interrupted'
+      !existingAnnotation &&
+      (!transitionPayload ||
+        transitionPayload.transitionToState === 'complete' ||
+        // TODO: this condition doesn't make sense
+        transitionPayload.transitionToState !== 'interrupted')
     ) {
       console.log('# PUSH INTO RECORDED ITEMS', spanAndAnnotation)
       this.recordedItems.push(spanAndAnnotation)
       return {
-        [this.definition.name]: annotation,
+        [this.definition.name]: spanAndAnnotation.annotation,
       }
     }
 

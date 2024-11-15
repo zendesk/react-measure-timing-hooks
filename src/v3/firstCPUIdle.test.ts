@@ -1,6 +1,6 @@
 import './test/asciiTimelineSerializer'
 import { createCPUIdleProcessor } from './firstCPUIdle'
-import { Check, FMP, Idle, LongTask, makeTimeline } from './test/makeTimeline'
+import { Check, FMP, Idle, LongTask, makeEntries } from './test/makeTimeline'
 
 function getFirstCPUIdleEntry({
   fmpTime,
@@ -23,7 +23,7 @@ function getFirstCPUIdleEntry({
 
 describe('createCPUIdleProcessor', () => {
   it('No long tasks after FMP, FirstCPUIdle immediately after FMP + quiet window', () => {
-    const { entries, fmpTime } = makeTimeline([
+    const { entries, fmpTime } = makeEntries([
       Idle(200),
       FMP,
       Idle(4_000),
@@ -41,7 +41,7 @@ describe('createCPUIdleProcessor', () => {
   })
 
   it('One light cluster after FMP, FirstCPUIdle at FMP', () => {
-    const { entries, fmpTime } = makeTimeline([
+    const { entries, fmpTime } = makeEntries([
       Idle(200),
       FMP,
       Idle(100),
@@ -63,7 +63,7 @@ describe('createCPUIdleProcessor', () => {
   })
 
   it('One heavy cluster after FMP, FirstCPUIdle after the cluster', () => {
-    const { entries, fmpTime } = makeTimeline([
+    const { entries, fmpTime } = makeEntries([
       Idle(200),
       FMP,
       Idle(100),
@@ -86,7 +86,7 @@ describe('createCPUIdleProcessor', () => {
   })
 
   it('Multiple heavy clusters, FirstCPUIdle updated to end of last cluster', () => {
-    const { entries, fmpTime } = makeTimeline([
+    const { entries, fmpTime } = makeEntries([
       Idle(200),
       FMP,
       Idle(100),
@@ -112,12 +112,7 @@ describe('createCPUIdleProcessor', () => {
   })
 
   it('Checking before the quiet window has passed - no long tasks processed, FirstCPUIdle not found', () => {
-    const { entries, fmpTime } = makeTimeline([
-      Idle(200),
-      FMP,
-      Idle(200),
-      Check,
-    ])
+    const { entries, fmpTime } = makeEntries([Idle(200), FMP, Idle(200), Check])
     expect(entries).toMatchInlineSnapshot(`
       events    | fmp          check
       timeline  | |-<⋯ +200 ⋯>-|
@@ -129,7 +124,7 @@ describe('createCPUIdleProcessor', () => {
   })
 
   it('One heavy cluster, followed by two light, value is after 1st heavy cluster', () => {
-    const { entries, fmpTime } = makeTimeline([
+    const { entries, fmpTime } = makeEntries([
       Idle(200),
       FMP,
       Idle(100),
@@ -158,7 +153,7 @@ describe('createCPUIdleProcessor', () => {
   })
 
   it('Continuous heavy clusters', () => {
-    const { entries, fmpTime } = makeTimeline([
+    const { entries, fmpTime } = makeEntries([
       FMP,
       Idle(200),
       LongTask(300),
@@ -206,7 +201,7 @@ describe('createCPUIdleProcessor', () => {
   })
 
   it('Light cluster followed by a heavy cluster a second later, FirstCPUIdle updated', () => {
-    const { entries, fmpTime } = makeTimeline([
+    const { entries, fmpTime } = makeEntries([
       Idle(200),
       FMP,
       LongTask(50),
@@ -239,7 +234,7 @@ describe('createCPUIdleProcessor', () => {
   })
 
   it('A long task overlaps FMP, we consider FirstCPUIdle after the long task', () => {
-    const { entries, fmpTime } = makeTimeline([
+    const { entries, fmpTime } = makeEntries([
       Idle(200),
       FMP,
       LongTask(110, { start: 150 }), // Overlaps with FMP

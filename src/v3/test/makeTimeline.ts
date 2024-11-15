@@ -47,7 +47,7 @@ export const FMP: FmpStub = {
   entryType: 'fmp',
 }
 
-export function makeTimeline(events: Stub[]): {
+export function makeEntries(events: Stub[]): {
   entries: PerformanceEntry[]
   fmpTime: number | null
 } {

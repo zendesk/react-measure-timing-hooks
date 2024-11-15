@@ -9,7 +9,9 @@ export interface PerformanceEntryLike {
 }
 
 export type CPUIdleLongTaskProcessor<T extends number | PerformanceEntryLike> =
-  (entry: T extends PerformanceEntryLike ? T : never) => T | undefined
+  (
+    entry: T extends PerformanceEntryLike ? T : PerformanceEntryLike,
+  ) => T | undefined
 
 export interface CPUIdleProcessorOptions {
   getQuietWindowDuration?: (currentEndTime: number, fmp: number) => number
