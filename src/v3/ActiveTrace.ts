@@ -154,7 +154,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           }
         }
 
-        console.log('# requiredToEndIndexChecklist', this.context.requiredToEndIndexChecklist, spanAndAnnotation)
+        console.log(
+          '# requiredToEndIndexChecklist',
+          this.context.requiredToEndIndexChecklist,
+          spanAndAnnotation,
+        )
         if (this.context.requiredToEndIndexChecklist.size === 0) {
           return { transitionToState: 'debouncing' }
         }
@@ -344,6 +348,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       ),
     }
     this.sideEffectFns = sideEffectFns
+    this.emit('onEnterState', undefined)
   }
 
   /**
@@ -435,7 +440,8 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     // if the final state is interrupted,
     // we decided that we should not record the entry nor annotate it externally
     if (
-      !transitionPayload || transitionPayload.transitionToState === 'complete' ||
+      !transitionPayload ||
+      transitionPayload.transitionToState === 'complete' ||
       transitionPayload.transitionToState !== 'interrupted'
     ) {
       console.log('# PUSH INTO RECORDED ITEMS', spanAndAnnotation)
@@ -446,10 +452,6 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     }
 
     return undefined
-  }
-
-  startRecording() {
-    this.stateMachine.emit('onEnterState', undefined)
   }
 
   private get computedValues(): TraceRecording<ScopeT>['computedValues'] {
