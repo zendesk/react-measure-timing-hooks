@@ -11,6 +11,9 @@ const EVENTS = 'events'
 const TIMELINE = 'timeline'
 const TIME = 'time (ms)'
 
+const DEFAULT_MAX_WIDTH = 80
+const DEFAULT_GAP_THRESHOLD = 0.2
+
 // Function to format durations nicely
 function formatDuration(duration: number): string {
   // Display in milliseconds
@@ -27,8 +30,8 @@ export function generateAsciiTimeline(
   entries: PerformanceEntry[],
   options: TimelineOptions = {},
 ): string {
-  const maxWidth = options.width ?? 80 // default max width
-  const gapThreshold = options.gapThreshold ?? 0.2 // default gap threshold
+  const maxWidth = options.width ?? DEFAULT_MAX_WIDTH
+  const gapThreshold = options.gapThreshold ?? DEFAULT_GAP_THRESHOLD
 
   if (entries.length === 0) {
     return ''

@@ -27,22 +27,24 @@ describe('TraceManager', () => {
     const traceDefinition: TraceDefinition<TicketIdScope> = {
       name: 'ticket.basic-operation',
       type: 'operation',
-      requiredScopeKeys: {
-        ticketId: 1,
-      },
-      requiredToEnd: [{
-        name: 'end',
-      }],
-      debounceOn: [{
-        name: 'debounce'
-      }],
+      requiredScopeKeys: ['ticketId'],
+      requiredToEnd: [
+        {
+          name: 'end',
+        },
+      ],
+      debounceOn: [
+        {
+          name: 'debounce',
+        },
+      ],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        'ticketId': 1,
-      }
+        ticketId: 1,
+      },
     }
 
     const traceId = tracer.start(startConfig)
@@ -92,7 +94,7 @@ describe('TraceManager', () => {
 
     traceManager.processSpan(span4)
 
-    expect(reportFn).toHaveBeenCalled();
+    expect(reportFn).toHaveBeenCalled()
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'ticket.basic-operation',
@@ -106,26 +108,25 @@ describe('TraceManager', () => {
         ],
       }),
     )
-
   })
 
   it('tracks operation with only requiredToEnd defined', () => {
     const traceDefinition: TraceDefinition<TicketIdScope> = {
       name: 'ticket.basic-operation',
       type: 'operation',
-      requiredScopeKeys: {
-        ticketId: 1,
-      },
-      requiredToEnd: [{
-        name: 'end',
-      }],
+      requiredScopeKeys: ['ticketId'],
+      requiredToEnd: [
+        {
+          name: 'end',
+        },
+      ],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        'ticketId': 1,
-      }
+        ticketId: 1,
+      },
     }
 
     const traceId = tracer.start(startConfig)
@@ -175,7 +176,7 @@ describe('TraceManager', () => {
 
     traceManager.processSpan(span4)
 
-    expect(reportFn).toHaveBeenCalled();
+    expect(reportFn).toHaveBeenCalled()
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'ticket.basic-operation',
@@ -189,7 +190,6 @@ describe('TraceManager', () => {
         ],
       }),
     )
-
   })
 
   it('[need to add re-order functionality] correctly captures the entire operation when intermediate entries are pushed out-of-order', () => {
@@ -199,18 +199,22 @@ describe('TraceManager', () => {
       name: 'ticket.activation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [{
-        name: 'ticket-end'
-      }],
-      debounceOn: [{
-        name: 'ticket-debounce',
-      }],
+      requiredToEnd: [
+        {
+          name: 'ticket-end',
+        },
+      ],
+      debounceOn: [
+        {
+          name: 'ticket-debounce',
+        },
+      ],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        ticketId: 1
+        ticketId: 1,
       },
     }
 
@@ -245,14 +249,14 @@ describe('TraceManager', () => {
         duration: 3_000,
         status: 'ok',
         interruptionReason: undefined,
-        entries: ([
+        entries: [
           expect.objectContaining({ name: 'ticket-start' }),
           expect.objectContaining({ name: 'ticket-processing' }),
           expect.objectContaining({ name: 'ticket-out-of-order' }),
           expect.objectContaining({ name: 'ticket-middle' }),
           expect.objectContaining({ name: 'ticket-end' }),
-        ])
-      })
+        ],
+      }),
     )
   })
 
@@ -260,10 +264,12 @@ describe('TraceManager', () => {
     const traceDefinition: TraceDefinition<TicketIdScope> = {
       name: 'ticket.timeout-operation',
       type: 'operation',
-      requiredScopeKeys: { ticketId: 'test-id' },
-      requiredToEnd: [{
-        name: 'end'
-      }],
+      requiredScopeKeys: ['ticketId'],
+      requiredToEnd: [
+        {
+          name: 'end',
+        },
+      ],
       timeoutDuration: 500,
     }
 
@@ -297,20 +303,18 @@ describe('TraceManager', () => {
 
     expect(reportFn).toHaveBeenCalled()
     expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining(
-        {
-          name: 'ticket.timeout-operation',
-          type: 'operation',
-          interruptionReason: 'timeout',
-          status: 'interrupted',
-          entries: [
-            expect.objectContaining({
-              name: 'start',
-            }),
-            // does not include the timed-out-render span
-          ]
-        }
-      ),
+      expect.objectContaining({
+        name: 'ticket.timeout-operation',
+        type: 'operation',
+        interruptionReason: 'timeout',
+        status: 'interrupted',
+        entries: [
+          expect.objectContaining({
+            name: 'start',
+          }),
+          // does not include the timed-out-render span
+        ],
+      }),
     )
   })
 
@@ -319,15 +323,17 @@ describe('TraceManager', () => {
       name: 'ticket.interrupt-operation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [{
-        name: 'end',
-      }],
+      requiredToEnd: [
+        {
+          name: 'end',
+        },
+      ],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        ticketId: 1
+        ticketId: 1,
       },
     }
 
@@ -348,19 +354,17 @@ describe('TraceManager', () => {
 
     expect(reportFn).toHaveBeenCalledTimes(1)
     expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining(
-        {
-          name: 'ticket.interrupt-operation',
-          interruptionReason: 'another-trace-started',
-          status: 'interrupted',
-          type: 'operation',
-          entries: [
-            expect.objectContaining({
-              name: 'start',
-            }),
-          ]
-        }
-      ),
+      expect.objectContaining({
+        name: 'ticket.interrupt-operation',
+        interruptionReason: 'another-trace-started',
+        status: 'interrupted',
+        type: 'operation',
+        entries: [
+          expect.objectContaining({
+            name: 'start',
+          }),
+        ],
+      }),
     )
   })
 
@@ -369,13 +373,15 @@ describe('TraceManager', () => {
       name: 'ticket.debounce-operation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [{
-        name: 'end'
-      }],
+      requiredToEnd: [
+        {
+          name: 'end',
+        },
+      ],
       debounceOn: [
         {
           type: 'mark',
-          name: (name: string) => name.startsWith('debounce')
+          name: (name: string) => name.startsWith('debounce'),
         },
       ],
       captureInteractive: true,
@@ -385,7 +391,7 @@ describe('TraceManager', () => {
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        ticketId: 1
+        ticketId: 1,
       },
     }
 
@@ -488,8 +494,8 @@ describe('TraceManager', () => {
           //   name: 'post-end-span',
           // }),
         ],
-      }
-      ))
+      }),
+    )
   })
 
   it('interrupts the trace when interruptOn criteria is met', () => {
@@ -497,18 +503,22 @@ describe('TraceManager', () => {
       name: 'ticket.interrupt-on-operation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [{
-        name: 'end',
-      }],
-      interruptOn: [{
-        name: 'interrupt',
-      }],
+      requiredToEnd: [
+        {
+          name: 'end',
+        },
+      ],
+      interruptOn: [
+        {
+          name: 'interrupt',
+        },
+      ],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        ticketId: 1
+        ticketId: 1,
       },
     }
 
@@ -562,13 +572,13 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [],
-        waitUntilInteractive: { timeout: 5_000, debounceLongTasksBy },
+        captureInteractive: { timeout: 5_000, debounceLongTasksBy },
       }
 
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<TicketIdScope> = {
         scope: {
-          ticketId: 1
+          ticketId: 1,
         },
       }
 
@@ -624,13 +634,16 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [],
-        waitUntilInteractive: { timeout: interactiveTimeout, debounceLongTasksBy },
+        captureInteractive: {
+          timeout: interactiveTimeout,
+          debounceLongTasksBy,
+        },
       }
 
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<TicketIdScope> = {
         scope: {
-          ticketId: 1
+          ticketId: 1,
         },
       }
 
@@ -659,7 +672,9 @@ describe('TraceManager', () => {
 
       const longTaskEveryMs = 150
       const longTaskDuration = 200
-      const longTasksCount = Math.ceil(interactiveTimeout / (longTaskEveryMs + longTaskDuration))
+      const longTasksCount = Math.ceil(
+        interactiveTimeout / (longTaskEveryMs + longTaskDuration),
+      )
       let remainingLongTasks = longTasksCount
 
       while (remainingLongTasks--) {
@@ -688,19 +703,21 @@ describe('TraceManager', () => {
       name: 'ticket.activation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [{
-        name: 'end',
-        type: 'mark',
-      }],
-      waitUntilInteractive: true,
+      requiredToEnd: [
+        {
+          name: 'end',
+          type: 'mark',
+        },
+      ],
+      captureInteractive: true,
       timeout: 60_000,
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        ticketId: 13_024
-      }
+        ticketId: 13_024,
+      },
     }
 
     tracer.start(startConfig)
@@ -739,7 +756,7 @@ describe('TraceManager', () => {
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining({
         name,
-        duration: 500, //TESTING TODO: Wrong! should be 1000 but we arent including the last span
+        duration: 500, // TESTING TODO: Wrong! should be 1000 but we arent including the last span
         entries: [
           expect.objectContaining({ name: 'start' }),
           expect.objectContaining({ name: 'middle' }),
@@ -750,4 +767,3 @@ describe('TraceManager', () => {
     )
   })
 })
-

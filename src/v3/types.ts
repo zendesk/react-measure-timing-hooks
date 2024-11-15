@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 
+import type { CPUIdleProcessorOptions } from './firstCPUIdle'
 import type {
   Span,
   SpanMatchCriteria,
@@ -31,6 +32,7 @@ export type TraceStatus = SpanStatus | 'interrupted'
 
 export type TraceInterruptionReason =
   | 'timeout'
+  | 'waiting-for-interactive-timeout'
   | 'another-trace-started'
   | 'manually-aborted'
   | 'idle-component-no-longer-idle'
@@ -71,19 +73,11 @@ export interface Tracer<ScopeT extends ScopeBase> {
   ) => void
 }
 
-export interface CaptureInteractiveConfig {
+export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
   /**
-   * How long to wait for the page to be interactive.
+   * How long to wait for CPU Idle before giving up.
    */
   timeout: number
-  /**
-   * Duration to debounce long-tasks before considering the page interactive.
-   */
-  debounceDuration?: number
-  /**
-   * Ignore long-task spans that are shorter than this duration.
-   */
-  skipDebounceForSpansShorterThan?: number
 }
 
 /**
@@ -99,7 +93,7 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
 
   // TODO: implement this with typechecking
   // to ensure we cannot start a trace without the required scope keys
-  requiredScopeKeys: keyof ScopeT[]
+  requiredScopeKeys: (keyof ScopeT)[]
 
   /**
    * This may include components that have to be rendered with all data

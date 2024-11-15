@@ -114,8 +114,8 @@ export function getEventsFromTimeline(
     }
     entries.push({
       duration: 0,
+      name: `${stub.entryType}`,
       ...stub,
-      name: `${stub.entryType}`, // ${'duration' in stub ? `(${stub.duration})` : ''}
       startTime: currentTime,
     } as PerformanceEntry)
   }

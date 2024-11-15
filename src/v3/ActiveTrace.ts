@@ -2,6 +2,11 @@
 /* eslint-disable max-classes-per-file */
 import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
 import { ensureTimestamp } from './ensureTimestamp'
+import {
+  type CPUIdleLongTaskProcessor,
+  type PerformanceEntryLike,
+  createCPUIdleProcessor,
+} from './firstCPUIdle'
 import type { ActiveTraceConfig, Span } from './spanTypes'
 import type {
   CompleteTraceDefinition,
@@ -21,9 +26,11 @@ import type {
   StateHandlerPayloads,
 } from './typeUtils'
 
-interface CreateTraceRecordingConfig {
+interface CreateTraceRecordingConfig<ScopeT extends ScopeBase> {
   transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
+  cpuIdleSpanAndAnnotation?: SpanAndAnnotation<ScopeT>
+  lastRequiredSpanAndAnnotation?: SpanAndAnnotation<ScopeT>
 }
 
 type InitialTraceState = 'recording'
@@ -40,10 +47,9 @@ interface OnEnterInterrupted {
   interruptionReason: TraceInterruptionReason
 }
 
-interface OnEnterComplete {
+interface OnEnterComplete<ScopeT extends ScopeBase>
+  extends CreateTraceRecordingConfig<ScopeT> {
   transitionToState: 'complete'
-  transitionFromState: NonTerminalTraceStates
-  interruptionReason?: TraceInterruptionReason
 }
 
 interface OnEnterWaitingForInteractive {
@@ -56,34 +62,44 @@ interface OnEnterDebouncing {
   transitionFromState: NonTerminalTraceStates
 }
 
-type OnEnterStatePayload =
+type OnEnterStatePayload<ScopeT extends ScopeBase> =
   | OnEnterInterrupted
-  | OnEnterComplete
+  | OnEnterComplete<ScopeT>
   | OnEnterDebouncing
   | OnEnterWaitingForInteractive
 
-export type Transition = DistributiveOmit<
-  OnEnterStatePayload,
+export type Transition<ScopeT extends ScopeBase> = DistributiveOmit<
+  OnEnterStatePayload<ScopeT>,
   'transitionFromState'
 >
 
-type FinalizeFn = (config: CreateTraceRecordingConfig) => void
+type FinalizeFn<ScopeT extends ScopeBase> = (
+  config: CreateTraceRecordingConfig<ScopeT>,
+) => void
 
 export type States<ScopeT extends ScopeBase> =
   TraceStateMachine<ScopeT>['states']
 
-interface StateHandlersBase {
+interface StateHandlersBase<ScopeT extends ScopeBase> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [handler: string]: (payload: any) => void | undefined | Transition
+  [handler: string]: (payload: any) => void | undefined | Transition<ScopeT>
 }
 
-type StatesBase = Record<TraceStates, StateHandlersBase>
+type StatesBase<ScopeT extends ScopeBase> = Record<
+  TraceStates,
+  StateHandlersBase<ScopeT>
+>
 
-type TraceStateMachineSideEffectHandlers =
-  TraceStateMachine<ScopeBase>['sideEffectFns']
+type TraceStateMachineSideEffectHandlers<ScopeT extends ScopeBase> =
+  TraceStateMachine<ScopeT>['sideEffectFns']
 
 const DEFAULT_DEBOUNCE_DURATION = 500
 const DEFAULT_TIMEOUT_DURATION = 45_000
+const DEFAULT_INTERACTIVE_TIMEOUT_DURATION = 10_000
+
+type EntryType<ScopeT extends ScopeBase> = PerformanceEntryLike & {
+  entry: SpanAndAnnotation<ScopeT>
+}
 
 export class TraceStateMachine<ScopeT extends ScopeBase> {
   readonly context: {
@@ -92,14 +108,18 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     readonly requiredToEndIndexChecklist: Set<number>
   }
   readonly sideEffectFns: {
-    readonly finalize: FinalizeFn
+    readonly finalize: FinalizeFn<ScopeT>
   }
   currentState: TraceStates = 'recording'
   /** the span that ended at the furthest point in time */
   lastRelevant: SpanAndAnnotation<ScopeT> | undefined
   /** it is set once the LRS value is established */
   lastRequiredSpan: SpanAndAnnotation<ScopeT> | undefined
+  cpuIdleLongTaskProcessor:
+    | CPUIdleLongTaskProcessor<EntryType<ScopeT>>
+    | undefined
   debounceDeadline: number = Number.POSITIVE_INFINITY
+  interactiveDeadline: number = Number.POSITIVE_INFINITY
   timeoutDeadline: number = Number.POSITIVE_INFINITY
 
   readonly states = {
@@ -181,7 +201,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     debouncing: {
       onEnterState: (payload: OnEnterDebouncing) => {
         if (!this.context.definition.debounceOn) {
-          return { transitionToState: 'complete' }
+          return { transitionToState: 'waiting-for-interactive' }
         }
         if (this.lastRelevant) {
           // set the first debounce deadline
@@ -210,7 +230,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         }
         if (spanEndTimeEpoch > this.debounceDeadline) {
           // done debouncing
-          return { transitionToState: 'complete' }
+          return { transitionToState: 'waiting-for-interactive' }
         }
 
         for (const definition of this.context.definition.requiredToEnd) {
@@ -264,11 +284,39 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
     'waiting-for-interactive': {
       onEnterState: (payload: OnEnterWaitingForInteractive) => {
-        if (!this.context.definition.captureInteractive) {
+        this.lastRequiredSpan = this.lastRelevant
+        const interactiveConfig = this.context.definition.captureInteractive
+        if (!interactiveConfig) {
+          // nothing to do in this state, move to 'complete'
+          return {
+            transitionToState: 'complete',
+            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+          }
+        }
+
+        if (this.lastRequiredSpan) {
+          this.interactiveDeadline =
+            this.lastRequiredSpan.span.startTime.epoch +
+            this.lastRequiredSpan.span.duration +
+            ((typeof interactiveConfig === 'object' &&
+              interactiveConfig.timeout) ||
+              DEFAULT_INTERACTIVE_TIMEOUT_DURATION)
+        } else {
+          // TODO: do we want an error state? will this condition every be true?
           return { transitionToState: 'complete' }
         }
 
-        this.lastRequiredSpan = this.lastRelevant
+        this.cpuIdleLongTaskProcessor = createCPUIdleProcessor<
+          EntryType<ScopeT>
+        >(
+          {
+            entryType: this.lastRequiredSpan.span.type,
+            startTime: this.lastRequiredSpan.span.startTime.now,
+            duration: this.lastRequiredSpan.span.duration,
+            entry: this.lastRequiredSpan,
+          },
+          typeof interactiveConfig === 'object' ? interactiveConfig : {},
+        )
 
         // TODO: start the timer for tti debouncing
         return undefined
@@ -284,16 +332,36 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           return {
             transitionToState: 'complete',
             interruptionReason: 'timeout',
+            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
           }
         }
 
-        // TODO: if we match the interactive criteria, transition to complete
-        // reference https://docs.google.com/document/d/1GGiI9-7KeY3TPqS3YT271upUVimo-XiL5mwWorDUD4c/edit?tab=t.0#heading=h.tnffljnohmy9
-        // return { transitionToState: 'complete' }
+        if (spanEndTimeEpoch > this.interactiveDeadline) {
+          // we consider this complete, because we have a complete trace
+          // it's just missing the bonus data from when the browser became "interactive"
+          return {
+            transitionToState: 'complete',
+            interruptionReason: 'waiting-for-interactive-timeout',
+            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+          }
+        }
 
-        // TODO
-        // here we only debounce on longtasks and long-animation-frame
-        // (hardcoded match criteria)
+        const cpuIdleMatch = this.cpuIdleLongTaskProcessor?.({
+          entryType: spanAndAnnotation.span.type,
+          startTime: spanAndAnnotation.span.startTime.now,
+          duration: spanAndAnnotation.span.duration,
+          entry: spanAndAnnotation,
+        })
+
+        if (cpuIdleMatch !== undefined) {
+          // if we match the interactive criteria, transition to complete
+          // reference https://docs.google.com/document/d/1GGiI9-7KeY3TPqS3YT271upUVimo-XiL5mwWorDUD4c/edit
+          return {
+            transitionToState: 'complete',
+            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
+          }
+        }
 
         // if the entry matches any of the interruptOn criteria,
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
@@ -303,6 +371,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
               return {
                 transitionToState: 'complete',
                 interruptionReason: 'matched-on-interrupt',
+                lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
               }
             }
           }
@@ -313,7 +382,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
       onInterrupt: (reason: TraceInterruptionReason) =>
         // we captured a complete trace, however the interactive data is missing
-        ({ transitionToState: 'complete', interruptionReason: reason }),
+        ({
+          transitionToState: 'complete',
+          interruptionReason: reason,
+          lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+        }),
     },
 
     // terminal states:
@@ -324,12 +397,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     },
 
     complete: {
-      onEnterState: (payload: OnEnterComplete) => {
+      onEnterState: (payload: OnEnterComplete<ScopeT>) => {
         console.log('# complete payload', payload)
         this.sideEffectFns.finalize(payload)
       },
     },
-  } satisfies StatesBase
+  } satisfies StatesBase<ScopeT>
 
   constructor({
     definition,
@@ -338,7 +411,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   }: {
     definition: CompleteTraceDefinition<ScopeT>
     input: ActiveTraceConfig<ScopeT>
-    sideEffectFns: TraceStateMachineSideEffectHandlers
+    sideEffectFns: TraceStateMachineSideEffectHandlers<ScopeT>
   }) {
     this.context = {
       definition,
@@ -357,7 +430,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   emit<EventName extends keyof StateHandlerPayloads<ScopeT>>(
     event: EventName,
     payload: StateHandlerPayloads<ScopeT>[EventName],
-  ): OnEnterStatePayload | undefined {
+  ): OnEnterStatePayload<ScopeT> | undefined {
     const currentStateHandlers = this.states[this.currentState] as Partial<
       MergedStateHandlerMethods<ScopeT>
     >
@@ -365,7 +438,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     if (transitionPayload) {
       const transitionFromState = this.currentState as NonTerminalTraceStates
       this.currentState = transitionPayload.transitionToState
-      const onEnterStateEvent: OnEnterStatePayload = {
+      const onEnterStateEvent: OnEnterStatePayload<ScopeT> = {
         transitionFromState,
         ...transitionPayload,
       }
@@ -400,7 +473,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     })
   }
 
-  finalize = (config: CreateTraceRecordingConfig) => {
+  finalize = (config: CreateTraceRecordingConfig<ScopeT>) => {
     const traceRecording = this.createTraceRecording(config)
     console.log('# recording?', traceRecording)
     this.input.onEnd(traceRecording)
@@ -442,6 +515,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     if (
       !transitionPayload ||
       transitionPayload.transitionToState === 'complete' ||
+      // TODO: this condition doesn't make sense
       transitionPayload.transitionToState !== 'interrupted'
     ) {
       console.log('# PUSH INTO RECORDED ITEMS', spanAndAnnotation)
@@ -530,7 +604,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   private createTraceRecording = ({
     transitionFromState,
     interruptionReason,
-  }: CreateTraceRecordingConfig): TraceRecording<ScopeT> => {
+  }: CreateTraceRecordingConfig<ScopeT>): TraceRecording<ScopeT> => {
     const { id, scope } = this.input
     const { name } = this.definition
     const { computedSpans, computedValues, spanAttributes, attributes } = this
