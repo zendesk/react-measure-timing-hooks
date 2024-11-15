@@ -1,4 +1,5 @@
 import { getSpanFromPerformanceEntry } from './getSpanFromPerformanceEntry'
+import type { NativePerformanceEntryType } from './spanTypes'
 import type { TraceManager } from './traceManager'
 import type { ScopeBase } from './types'
 
@@ -23,7 +24,7 @@ import type { ScopeBase } from './types'
 
 export const observePerformanceWithTraceManager = <ScopeT extends ScopeBase>(
   traceManager: TraceManager<ScopeT>,
-  entryTypes: string[],
+  entryTypes: NativePerformanceEntryType[],
 ) => {
   const observer = new PerformanceObserver((entryList) => {
     entryList.getEntries().forEach((entry) => {

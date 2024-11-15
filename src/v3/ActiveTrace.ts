@@ -116,6 +116,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   interactiveDeadline: number = Number.POSITIVE_INFINITY
   timeoutDeadline: number = Number.POSITIVE_INFINITY
 
+  // while debouncing, we need to buffer any spans that come in so they can be re-processed
+  // once we transition to the 'waiting-for-interactive' state
+  // otherwise we might miss out on spans that are relevant to calculating the interactive
+  debouncingSpanBuffer: SpanAndAnnotation<ScopeT>[] = []
+
   readonly states = {
     recording: {
       onEnterState: () => {
@@ -158,13 +163,6 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           }
         }
 
-        console.log(
-          `# processing span ${spanAndAnnotation.span.name} ${spanAndAnnotation.annotation.occurrence}`,
-          'requiredToEnd',
-          this.context.definition.requiredToEnd,
-          'this span',
-          spanAndAnnotation,
-        )
         for (let i = 0; i < this.context.definition.requiredToEnd.length; i++) {
           if (!this.context.requiredToEndIndexChecklist.has(i)) {
             // we previously checked off this index
@@ -258,6 +256,9 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             interruptionReason: 'timeout',
           }
         }
+
+        this.debouncingSpanBuffer.push(spanAndAnnotation)
+
         if (spanEndTimeEpoch > this.debounceDeadline) {
           // done debouncing
           return { transitionToState: 'waiting-for-interactive' }
@@ -360,6 +361,27 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           },
           typeof interactiveConfig === 'object' ? interactiveConfig : {},
         )
+
+        // sort the buffer before processing
+        // DECISION TODO: do we want to sort by end time or start time?
+        this.debouncingSpanBuffer.sort(
+          (a, b) =>
+            a.span.startTime.now +
+            a.span.duration -
+            (b.span.startTime.now + b.span.duration),
+        )
+
+        // process any spans that were buffered during the debouncing phase
+        while (this.debouncingSpanBuffer.length > 0) {
+          const span = this.debouncingSpanBuffer.shift()!
+          const transition: OnEnterStatePayload<ScopeT> | undefined = this.emit(
+            'onProcessSpan',
+            span,
+          )
+          if (transition) {
+            return transition
+          }
+        }
 
         return undefined
       },
@@ -608,6 +630,15 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     const shouldRecord =
       !existingAnnotation &&
       (!transition || transition.transitionToState !== 'interrupted')
+
+    console.log(
+      `# processed span ${spanAndAnnotation.span.type} ${spanAndAnnotation.span.name} ${spanAndAnnotation.annotation.occurrence}`,
+      spanAndAnnotation,
+      'shouldRecord?',
+      shouldRecord,
+      'transition?',
+      transition,
+    )
 
     // DECISION: if the final state is interrupted, we should not record the entry nor annotate it externally
     if (shouldRecord) {

@@ -1,6 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import React from 'react'
-import { Cell, Row } from '@zendeskgarden/react-tables'
+import { Table } from '@zendeskgarden/react-tables'
 
 interface TicketProps {
   id: number
@@ -9,12 +9,12 @@ interface TicketProps {
 }
 
 export const Ticket: React.FC<TicketProps> = ({ id, subject, onClick }) => (
-  <Row
+  <Table.Row
     onClick={() => void onClick(id)}
     style={{ cursor: 'pointer' }}
     isStriped={id % 2 === 0}
   >
-    <Cell width={70}>{id}</Cell>
-    <Cell>{subject}</Cell>
-  </Row>
+    <Table.Cell width={70}>{id}</Table.Cell>
+    <Table.Cell>{subject}</Table.Cell>
+  </Table.Row>
 )
