@@ -149,7 +149,13 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // does span satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
-            if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
+            if (
+              doesEntryMatchDefinition(
+                spanAndAnnotation,
+                definition,
+                this.context.input.scope,
+              )
+            ) {
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'matched-on-interrupt',
@@ -160,7 +166,13 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
         for (let i = 0; i < this.context.definition.requiredToEnd.length; i++) {
           const definition = this.context.definition.requiredToEnd[i]!
-          if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
+          if (
+            doesEntryMatchDefinition(
+              spanAndAnnotation,
+              definition,
+              this.context.input.scope,
+            )
+          ) {
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
 
@@ -236,7 +248,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         for (const definition of this.context.definition.requiredToEnd) {
           const { span } = spanAndAnnotation
           if (
-            doesEntryMatchDefinition(spanAndAnnotation, definition) &&
+            doesEntryMatchDefinition(
+              spanAndAnnotation,
+              definition,
+              this.context.input.scope,
+            ) &&
             definition.isIdle &&
             'isIdle' in span &&
             span.isIdle
@@ -252,7 +268,13 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
           for (const definition of this.context.definition.debounceOn) {
-            if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
+            if (
+              doesEntryMatchDefinition(
+                spanAndAnnotation,
+                definition,
+                this.context.input.scope,
+              )
+            ) {
               // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
               if (
                 spanAndAnnotation.annotation.operationRelativeEndTime >
@@ -367,7 +389,13 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
         if (this.context.definition.interruptOn) {
           for (const definition of this.context.definition.interruptOn) {
-            if (doesEntryMatchDefinition(spanAndAnnotation, definition)) {
+            if (
+              doesEntryMatchDefinition(
+                spanAndAnnotation,
+                definition,
+                this.context.input.scope,
+              )
+            ) {
               return {
                 transitionToState: 'complete',
                 interruptionReason: 'matched-on-interrupt',
@@ -570,7 +598,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       const matchingRecordedEntries = this.recordedItems.filter(
         (spanAndAnnotation) =>
           matches.some((matchCriteria) =>
-            doesEntryMatchDefinition(spanAndAnnotation, matchCriteria),
+            doesEntryMatchDefinition(
+              spanAndAnnotation,
+              matchCriteria,
+              this.input.scope,
+            ),
           ),
       )
 
@@ -588,10 +620,14 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     this.definition.computedSpanDefinitions.forEach((definition) => {
       const { startSpan, endSpan, name } = definition
       const matchingStartEntry = this.recordedItems.find((spanAndAnnotation) =>
-        doesEntryMatchDefinition(spanAndAnnotation, startSpan),
+        doesEntryMatchDefinition(
+          spanAndAnnotation,
+          startSpan,
+          this.input.scope,
+        ),
       )
       const matchingEndEntry = this.recordedItems.find((spanAndAnnotation) =>
-        doesEntryMatchDefinition(spanAndAnnotation, endSpan),
+        doesEntryMatchDefinition(spanAndAnnotation, endSpan, this.input.scope),
       )
 
       if (matchingStartEntry && matchingEndEntry) {

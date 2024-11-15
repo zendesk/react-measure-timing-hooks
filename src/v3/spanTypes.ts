@@ -164,7 +164,10 @@ export interface SpanMatchCriteria<ScopeT extends ScopeBase> {
   status?: SpanStatus
   type?: SpanType
 
-  scope?: ScopeT
+  /**
+   * A list of scope keys to match against the span.
+   */
+  scopeKeys?: (keyof ScopeT)[]
 
   /**
    * The occurrence of the span with the same name within the operation.

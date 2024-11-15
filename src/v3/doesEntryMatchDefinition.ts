@@ -10,6 +10,7 @@ import { ScopeBase, SpanAndAnnotationEntry } from './types'
 export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
   { span, annotation }: SpanAndAnnotationEntry<ScopeT>,
   match: SpanMatcher<ScopeT>,
+  scope: ScopeT,
 ): boolean {
   if (typeof match === 'function') {
     return match(span)
@@ -20,7 +21,7 @@ export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
     type,
     status,
     attributes,
-    scope,
+    scopeKeys,
     occurrence,
   } = match
   const nameMatches =
@@ -45,18 +46,19 @@ export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
     !attributes ||
     Boolean(
       span.attributes &&
-      Object.entries(attributes).every(
-        ([key, value]) => span.attributes?.[key] === value,
-      ),
+        Object.entries(attributes).every(
+          ([key, value]) => span.attributes?.[key] === value,
+        ),
     )
 
   const matchesScope =
-    !scope ||
+    !scopeKeys ||
     Boolean(
       span.scope &&
-      Object.entries(scope).every(
-        ([key, value]) => span.scope?.[key] === value,
-      ),
+        Object.entries(scope).every(
+          ([key, value]) =>
+            scopeKeys.includes(key) && span.scope?.[key] === value,
+        ),
     )
 
   const spanIsIdle = 'isIdle' in span ? span.isIdle : false
