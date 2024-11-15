@@ -26,7 +26,7 @@ import type {
   StateHandlerPayloads,
 } from './typeUtils'
 
-interface CreateTraceRecordingConfig<ScopeT extends ScopeBase> {
+interface FinalState<ScopeT extends ScopeBase> {
   transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
   cpuIdleSpanAndAnnotation?: SpanAndAnnotation<ScopeT>
@@ -47,8 +47,7 @@ interface OnEnterInterrupted {
   interruptionReason: TraceInterruptionReason
 }
 
-interface OnEnterComplete<ScopeT extends ScopeBase>
-  extends CreateTraceRecordingConfig<ScopeT> {
+interface OnEnterComplete<ScopeT extends ScopeBase> extends FinalState<ScopeT> {
   transitionToState: 'complete'
 }
 
@@ -73,9 +72,7 @@ export type Transition<ScopeT extends ScopeBase> = DistributiveOmit<
   'transitionFromState'
 >
 
-type FinalizeFn<ScopeT extends ScopeBase> = (
-  config: CreateTraceRecordingConfig<ScopeT>,
-) => void
+type FinalizeFn<ScopeT extends ScopeBase> = (config: FinalState<ScopeT>) => void
 
 export type States<ScopeT extends ScopeBase> =
   TraceStateMachine<ScopeT>['states']
@@ -108,7 +105,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     readonly requiredToEndIndexChecklist: Set<number>
   }
   readonly sideEffectFns: {
-    readonly finalize: FinalizeFn<ScopeT>
+    readonly storeFinalizeState: FinalizeFn<ScopeT>
   }
   currentState: TraceStates = 'recording'
   /** the span that ended at the furthest point in time */
@@ -165,6 +162,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         }
 
         for (let i = 0; i < this.context.definition.requiredToEnd.length; i++) {
+          if (!this.context.requiredToEndIndexChecklist.has(i)) {
+            // we previously checked off this index
+            // eslint-disable-next-line no-continue
+            continue
+          }
+
           const definition = this.context.definition.requiredToEnd[i]!
           if (
             doesEntryMatchDefinition(
@@ -173,24 +176,29 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
               this.context.input.scope,
             )
           ) {
+            console.log(
+              '# got a match!',
+              'span',
+              spanAndAnnotation,
+              'matches',
+              definition,
+              'remaining items',
+              this.context.requiredToEndIndexChecklist,
+            )
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
 
             // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
             if (
+              !this.lastRelevant ||
               spanAndAnnotation.annotation.operationRelativeEndTime >
-              (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
             ) {
               this.lastRelevant = spanAndAnnotation
             }
           }
         }
 
-        console.log(
-          '# requiredToEndIndexChecklist',
-          this.context.requiredToEndIndexChecklist,
-          spanAndAnnotation,
-        )
         if (this.context.requiredToEndIndexChecklist.size === 0) {
           return { transitionToState: 'debouncing' }
         }
@@ -212,17 +220,23 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
     // the final, settled state of the component
     debouncing: {
       onEnterState: (payload: OnEnterDebouncing) => {
+        if (!this.lastRelevant) {
+          // this should never happen
+          return {
+            transitionToState: 'interrupted',
+            interruptionReason: 'invalid-state-transition',
+          }
+        }
         if (!this.context.definition.debounceOn) {
           return { transitionToState: 'waiting-for-interactive' }
         }
-        if (this.lastRelevant) {
-          // set the first debounce deadline
-          this.debounceDeadline =
-            this.lastRelevant.span.startTime.epoch +
-            this.lastRelevant.span.duration +
-            (this.context.definition.debounceDuration ??
-              DEFAULT_DEBOUNCE_DURATION)
-        }
+        // set the first debounce deadline
+        this.debounceDeadline =
+          this.lastRelevant.span.startTime.epoch +
+          this.lastRelevant.span.duration +
+          (this.context.definition.debounceDuration ??
+            DEFAULT_DEBOUNCE_DURATION)
+
         return undefined
       },
 
@@ -306,6 +320,14 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
     'waiting-for-interactive': {
       onEnterState: (payload: OnEnterWaitingForInteractive) => {
+        if (!this.lastRelevant) {
+          // this should never happen
+          return {
+            transitionToState: 'interrupted',
+            interruptionReason: 'invalid-state-transition',
+          }
+        }
+
         this.lastRequiredSpan = this.lastRelevant
         const interactiveConfig = this.context.definition.captureInteractive
         if (!interactiveConfig) {
@@ -316,17 +338,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           }
         }
 
-        if (this.lastRequiredSpan) {
-          this.interactiveDeadline =
-            this.lastRequiredSpan.span.startTime.epoch +
-            this.lastRequiredSpan.span.duration +
-            ((typeof interactiveConfig === 'object' &&
-              interactiveConfig.timeout) ||
-              DEFAULT_INTERACTIVE_TIMEOUT_DURATION)
-        } else {
-          // TODO: do we want an error state? will this condition every be true?
-          return { transitionToState: 'complete' }
-        }
+        this.interactiveDeadline =
+          this.lastRequiredSpan.span.startTime.epoch +
+          this.lastRequiredSpan.span.duration +
+          ((typeof interactiveConfig === 'object' &&
+            interactiveConfig.timeout) ||
+            DEFAULT_INTERACTIVE_TIMEOUT_DURATION)
 
         this.cpuIdleLongTaskProcessor = createCPUIdleProcessor<
           EntryType<ScopeT>
@@ -340,7 +357,6 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           typeof interactiveConfig === 'object' ? interactiveConfig : {},
         )
 
-        // TODO: start the timer for tti debouncing
         return undefined
       },
 
@@ -419,15 +435,14 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
     // terminal states:
     interrupted: {
-      onEnterState: (payload: OnEnterInterrupted) => {
-        this.sideEffectFns.finalize(payload)
+      onEnterState: (_payload: OnEnterInterrupted) => {
+        // terminal state, but we reuse the payload for generating the report in ActiveTrace
       },
     },
 
     complete: {
-      onEnterState: (payload: OnEnterComplete<ScopeT>) => {
-        console.log('# complete payload', payload)
-        this.sideEffectFns.finalize(payload)
+      onEnterState: (_payload: OnEnterComplete<ScopeT>) => {
+        // terminal state, but we reuse the payload for generating the report in ActiveTrace
       },
     },
   } satisfies StatesBase<ScopeT>
@@ -490,6 +505,8 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     SpanAndAnnotation<ScopeT>
   > = new WeakMap()
 
+  finalState: FinalState<ScopeT> | undefined
+
   constructor(
     definition: CompleteTraceDefinition<ScopeT>,
     input: ActiveTraceConfig<ScopeT>,
@@ -501,15 +518,13 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       definition,
       input,
       sideEffectFns: {
-        finalize: this.finalize,
+        storeFinalizeState: this.storeFinalizeState,
       },
     })
   }
 
-  finalize = (config: CreateTraceRecordingConfig<ScopeT>) => {
-    const traceRecording = this.createTraceRecording(config)
-    console.log('# recording?', traceRecording)
-    this.input.onEnd(traceRecording)
+  storeFinalizeState = (config: FinalState<ScopeT>) => {
+    this.finalState = config
   }
 
   // this is public API only and should not be called internally
@@ -564,23 +579,29 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       spanAndAnnotation.span = span
     }
 
-    const transitionPayload = this.stateMachine.emit(
+    const transition = this.stateMachine.emit(
       'onProcessSpan',
       spanAndAnnotation,
     )
-    // console.log('transitionPayload', transitionPayload)
-    // if the final state is interrupted,
-    // we decided that we should not record the entry nor annotate it externally
-    // TODO: this if statement needs to be validated/rethought
-    if (
+
+    const shouldRecord =
       !existingAnnotation &&
-      (!transitionPayload ||
-        transitionPayload.transitionToState === 'complete' ||
-        // TODO: this condition doesn't make sense
-        transitionPayload.transitionToState !== 'interrupted')
-    ) {
-      console.log('# PUSH INTO RECORDED ITEMS', spanAndAnnotation)
+      (!transition || transition.transitionToState !== 'interrupted')
+
+    // DECISION: if the final state is interrupted, we should not record the entry nor annotate it externally
+    if (shouldRecord) {
       this.recordedItems.push(spanAndAnnotation)
+    }
+
+    if (
+      transition?.transitionToState === 'interrupted' ||
+      transition?.transitionToState === 'complete'
+    ) {
+      const traceRecording = this.createTraceRecording(transition)
+      this.input.onEnd(traceRecording)
+    }
+
+    if (shouldRecord) {
       return {
         [this.definition.name]: spanAndAnnotation.annotation,
       }
@@ -673,7 +694,9 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   private createTraceRecording = ({
     transitionFromState,
     interruptionReason,
-  }: CreateTraceRecordingConfig<ScopeT>): TraceRecording<ScopeT> => {
+    cpuIdleSpanAndAnnotation,
+    lastRequiredSpanAndAnnotation,
+  }: FinalState<ScopeT>): TraceRecording<ScopeT> => {
     const { id, scope } = this.input
     const { name } = this.definition
     const { computedSpans, computedValues, spanAttributes, attributes } = this
@@ -701,8 +724,8 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
         interruptionReason && transitionFromState !== 'waiting-for-interactive'
           ? 'interrupted'
           : anyErrors
-            ? 'error'
-            : 'ok',
+          ? 'error'
+          : 'ok',
       computedSpans,
       computedValues,
       attributes,
