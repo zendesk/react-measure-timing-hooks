@@ -37,6 +37,7 @@ export type TraceInterruptionReason =
   | 'manually-aborted'
   | 'idle-component-no-longer-idle'
   | 'matched-on-interrupt'
+  | 'invalid-state-transition'
 
 export type ReportFn<ScopeT extends ScopeBase> = (
   trace: TraceRecording<ScopeT>,
