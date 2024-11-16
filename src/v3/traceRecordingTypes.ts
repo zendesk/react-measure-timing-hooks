@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { SpanMatchCriteria } from './spanMatchTypes'
+import type { SpanMatcher } from './spanMatchTypes'
 import type { Attributes } from './spanTypes'
 import type {
   MapTuple,
@@ -71,8 +71,8 @@ export interface TraceRecording<ScopeT extends ScopeBase>
 // IMPLEMENTATION TODO: Create ComputedSpanMatchCriteria
 export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
   name: string
-  startSpan: SpanMatchCriteria<ScopeT> // | 'operation-start'
-  endSpan: SpanMatchCriteria<ScopeT> // | 'operation-end'
+  startSpan: SpanMatcher<ScopeT> // TODO: | 'operation-start'
+  endSpan: SpanMatcher<ScopeT> // TODO: | 'operation-end'
 }
 
 /**
@@ -81,7 +81,7 @@ export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
 
 export interface ComputedValueDefinition<
   ScopeT extends ScopeBase,
-  MatchersT extends SpanMatchCriteria<ScopeT>[],
+  MatchersT extends SpanMatcher<ScopeT>[],
 > {
   name: string
   matches: [...MatchersT]
@@ -99,6 +99,6 @@ export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
   computedSpanDefinitions: readonly ComputedSpanDefinition<ScopeT>[]
   computedValueDefinitions: readonly ComputedValueDefinition<
     ScopeT,
-    SpanMatchCriteria<ScopeT>[]
+    SpanMatcher<ScopeT>[]
   >[]
 }

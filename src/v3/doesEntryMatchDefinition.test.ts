@@ -1,6 +1,18 @@
-import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
+import {
+  all,
+  attributes,
+  doesEntryMatchDefinition,
+  isIdle,
+  name,
+  not,
+  occurrence,
+  performanceEntryName,
+  scopeKeys,
+  some,
+  status,
+  type,
+} from './doesEntryMatchDefinition'
 import type { SpanAnnotation } from './spanAnnotationTypes'
-import type { SpanMatcher } from './spanMatchTypes'
 import type { ComponentRenderSpan, Span, SpanBase } from './spanTypes'
 import type { ScopeBase } from './types'
 
@@ -61,7 +73,7 @@ const mockAnnotation: SpanAnnotation = {
 describe('doesEntryMatchDefinition', () => {
   describe('name', () => {
     it('should return true for a matching entry based on name', () => {
-      const matcher: SpanMatcher<TestScopeT> = { name: 'testEntry' }
+      const matcher = name('testEntry')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -72,9 +84,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return true for function matchers for name', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: (name: string) => name.startsWith('test'),
-      }
+      const matcher = name((n: string) => n.startsWith('test'))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -85,9 +95,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return true for regex matchers for name', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: /^test/,
-      }
+      const matcher = name(/^test/)
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -98,9 +106,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false for a non-matching span based on name', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: 'nonMatchingEntry',
-      }
+      const matcher = name('nonMatchingEntry')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -113,9 +119,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('performanceEntryName', () => {
     it('should return true for a matching span based on performanceEntryName', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        performanceEntryName: 'testEntry',
-      }
+      const matcher = performanceEntryName('testEntry')
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
         annotation: mockAnnotation,
@@ -126,9 +130,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false for a non-matching performanceEntryName', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        performanceEntryName: 'nonMatchingEntry',
-      }
+      const matcher = performanceEntryName('nonMatchingEntry')
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
         annotation: mockAnnotation,
@@ -142,7 +144,7 @@ describe('doesEntryMatchDefinition', () => {
   describe('type', () => {
     describe('for Native Performance Entry', () => {
       it('should return true for matching attributes', () => {
-        const matcher: SpanMatcher<TestScopeT> = { type: 'element' }
+        const matcher = type('element')
         const mockSpanAndAnnotation = {
           span: mockEntryBase,
           annotation: mockAnnotation,
@@ -153,9 +155,7 @@ describe('doesEntryMatchDefinition', () => {
       })
 
       it('should return false for non-matching attributes', () => {
-        const matcher: SpanMatcher<TestScopeT> = {
-          type: 'component-render',
-        }
+        const matcher = type('component-render')
         const mockSpanAndAnnotation = {
           span: mockEntryBase,
           annotation: mockAnnotation,
@@ -168,10 +168,7 @@ describe('doesEntryMatchDefinition', () => {
 
     describe('for ComponentRenderTraceEntry', () => {
       it('should return true for a matching ComponentRenderTraceEntry', () => {
-        const matcher: SpanMatcher<TestScopeT> = {
-          type: 'component-render',
-          name: 'testEntry',
-        }
+        const matcher = all(type('component-render'), name('testEntry'))
         const mockSpanAndAnnotation = {
           span: mockComponentEntry,
           annotation: mockAnnotation,
@@ -182,10 +179,7 @@ describe('doesEntryMatchDefinition', () => {
       })
 
       it('should return false for a non-matching ComponentRenderTraceEntry', () => {
-        const matcher: SpanMatcher<TestScopeT> = {
-          type: 'component-render',
-          name: 'nonMatchingEntry',
-        }
+        const matcher = all(type('component-render'), name('nonMatchingEntry'))
         const mockSpanAndAnnotation = {
           span: mockComponentEntry,
           annotation: mockAnnotation,
@@ -199,7 +193,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('status', () => {
     it('should return true when status does match', () => {
-      const matcher: SpanMatcher<TestScopeT> = { status: 'ok' }
+      const matcher = status('ok')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -210,7 +204,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false when status does not match', () => {
-      const matcher: SpanMatcher<TestScopeT> = { status: 'error' }
+      const matcher = status('error')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -223,10 +217,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('occurrence', () => {
     it('should return true for occurrence matching', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: 'testEntry',
-        occurrence: 1,
-      }
+      const matcher = all(name('testEntry'), occurrence(1))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -238,10 +229,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false for non-matching occurrence', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: 'testEntry',
-        occurrence: 2,
-      }
+      const matcher = all(name('testEntry'), occurrence(2))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -255,9 +243,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('attributes', () => {
     it('should return true for matching attributes', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        attributes: { attr1: 'value1' },
-      }
+      const matcher = attributes({ attr1: 'value1' })
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -268,9 +254,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false for non-matching attributes', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        attributes: { attr1: 'wrongValue' },
-      }
+      const matcher = attributes({ attr1: 'wrongValue' })
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -283,10 +267,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('scopeKeys', () => {
     it('should return true when scope does match', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: 'testEntry',
-        scopeKeys: ['ticketId'],
-      }
+      const matcher = all(name('testEntry'), scopeKeys(['ticketId']))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -301,10 +282,7 @@ describe('doesEntryMatchDefinition', () => {
         ticketId: '123',
         userId: '123',
       }
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: 'testEntry',
-        scopeKeys: ['ticketId', 'userId'],
-      }
+      const matcher = all(name('testEntry'), scopeKeys(['ticketId', 'userId']))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -316,10 +294,7 @@ describe('doesEntryMatchDefinition', () => {
   })
 
   describe('isIdle', () => {
-    const mockMatcher: SpanMatcher<TestScopeT> = {
-      name: 'testEntry',
-      isIdle: true,
-    }
+    const mockMatcher = all(name('testEntry'), isIdle(true))
 
     it('should return true for isIdle matching', () => {
       const mockSpanAndAnnotation = {
@@ -345,14 +320,14 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('combination of conditions', () => {
     it('should return true when all conditions match', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: 'testEntry',
-        performanceEntryName: 'testEntry',
-        attributes: { attr1: 'value1' },
-        scopeKeys: ['ticketId'],
-        status: 'ok',
-        type: 'element',
-      }
+      const matcher = all(
+        name('testEntry'),
+        performanceEntryName('testEntry'),
+        attributes({ attr1: 'value1' }),
+        scopeKeys(['ticketId']),
+        status('ok'),
+        type('element'),
+      )
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
         annotation: mockAnnotation,
@@ -363,14 +338,14 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false when all conditions match but name', () => {
-      const matcher: SpanMatcher<TestScopeT> = {
-        name: 'testEntries', // does not match
-        performanceEntryName: 'testEntry',
-        attributes: { attr1: 'value1' },
-        scopeKeys: ['ticketId'],
-        status: 'ok',
-        type: 'element',
-      }
+      const matcher = all(
+        name('testEntries'), // does not match
+        performanceEntryName('testEntry'),
+        attributes({ attr1: 'value1' }),
+        scopeKeys(['ticketId']),
+        status('ok'),
+        type('element'),
+      )
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
         annotation: mockAnnotation,

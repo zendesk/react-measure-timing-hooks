@@ -8,14 +8,14 @@ import {
   createCPUIdleProcessor,
 } from './firstCPUIdle'
 import { createTraceRecording } from './recordingComputeUtils'
-import type { ActiveTraceConfig, Span } from './spanTypes'
-import type { CompleteTraceDefinition } from './traceRecordingTypes'
-import type { ScopeBase, TraceInterruptionReason } from './types'
 import type {
   SpanAndAnnotation,
   SpanAnnotation,
   SpanAnnotationRecord,
 } from './spanAnnotationTypes'
+import type { ActiveTraceConfig, Span } from './spanTypes'
+import type { CompleteTraceDefinition } from './traceRecordingTypes'
+import type { ScopeBase, TraceInterruptionReason } from './types'
 import type {
   DistributiveOmit,
   MergedStateHandlerMethods,
@@ -263,15 +263,15 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           return { transitionToState: 'waiting-for-interactive' }
         }
 
-        for (const definition of this.context.definition.requiredToEnd) {
+        for (const matcher of this.context.definition.requiredToEnd) {
           const { span } = spanAndAnnotation
           if (
             doesEntryMatchDefinition(
               spanAndAnnotation,
-              definition,
+              matcher,
               this.context.input.scope,
             ) &&
-            definition.isIdle &&
+            matcher.isIdle &&
             'isIdle' in span &&
             span.isIdle
           ) {
@@ -285,11 +285,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
-          for (const definition of this.context.definition.debounceOn) {
+          for (const matcher of this.context.definition.debounceOn) {
             if (
               doesEntryMatchDefinition(
                 spanAndAnnotation,
-                definition,
+                matcher,
                 this.context.input.scope,
               )
             ) {
@@ -373,10 +373,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // process any spans that were buffered during the debouncing phase
         while (this.debouncingSpanBuffer.length > 0) {
           const span = this.debouncingSpanBuffer.shift()!
-          const transition: OnEnterStatePayload<ScopeT> | undefined = this.emit(
+          const transition = this.emit(
             'onProcessSpan',
             span,
-          )
+            // below cast is necessary due to circular type reference
+          ) as Transition<ScopeT> | undefined
           if (transition) {
             return transition
           }
@@ -429,11 +430,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // if the entry matches any of the interruptOn criteria,
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
         if (this.context.definition.interruptOn) {
-          for (const definition of this.context.definition.interruptOn) {
+          for (const matcher of this.context.definition.interruptOn) {
             if (
               doesEntryMatchDefinition(
                 spanAndAnnotation,
-                definition,
+                matcher,
                 this.context.input.scope,
               )
             ) {
