@@ -1,6 +1,6 @@
 import { TicketIdScope } from '../stories/mockComponentsv3/traceManager'
-import * as matchSpan from './doesEntryMatchDefinition'
 import { ensureTimestamp } from './ensureTimestamp'
+import * as matchSpan from './matchSpan'
 import type { Span, StartTraceConfig } from './spanTypes'
 import { TraceManager } from './traceManager'
 // import type { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
@@ -96,16 +96,17 @@ describe('TraceManager', () => {
         interruptionReason: undefined,
         entries: [
           expect.objectContaining({
-            span: expect.objectContaining({ name: "start" })
+            span: expect.objectContaining({ name: 'start' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "middle" })
+            span: expect.objectContaining({ name: 'middle' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "end" })
-          })
+            span: expect.objectContaining({ name: 'end' }),
+          }),
         ],
-      }))
+      }),
+    )
   })
 
   it('tracks operation with only requiredToEnd defined', () => {
@@ -179,14 +180,14 @@ describe('TraceManager', () => {
         interruptionReason: undefined,
         entries: [
           expect.objectContaining({
-            span: expect.objectContaining({ name: "start" })
+            span: expect.objectContaining({ name: 'start' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "middle" })
+            span: expect.objectContaining({ name: 'middle' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "end" })
-          })
+            span: expect.objectContaining({ name: 'end' }),
+          }),
         ],
       }),
     )
@@ -243,20 +244,20 @@ describe('TraceManager', () => {
         interruptionReason: undefined,
         entries: [
           expect.objectContaining({
-            span: expect.objectContaining({ name: "ticket-start" })
+            span: expect.objectContaining({ name: 'ticket-start' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "ticket-processing" })
+            span: expect.objectContaining({ name: 'ticket-processing' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "ticket-middle" })
+            span: expect.objectContaining({ name: 'ticket-middle' }),
           }),
           // IMPLEMENTATION TODO: Add reordering functionality ticket-out-of-order should be before ticket-middle
           expect.objectContaining({
-            span: expect.objectContaining({ name: "ticket-out-of-order" })
+            span: expect.objectContaining({ name: 'ticket-out-of-order' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "ticket-end" })
+            span: expect.objectContaining({ name: 'ticket-end' }),
           }),
         ],
       }),
@@ -309,7 +310,7 @@ describe('TraceManager', () => {
         status: 'interrupted',
         entries: [
           expect.objectContaining({
-            span: expect.objectContaining({ name: "start" })
+            span: expect.objectContaining({ name: 'start' }),
           }),
         ],
       }),
@@ -355,7 +356,7 @@ describe('TraceManager', () => {
         type: 'operation',
         entries: [
           expect.objectContaining({
-            span: expect.objectContaining({ name: "start" })
+            span: expect.objectContaining({ name: 'start' }),
           }),
         ],
       }),
@@ -461,19 +462,25 @@ describe('TraceManager', () => {
         duration: 451, // 50 + 1 + 200 + 200
         entries: [
           expect.objectContaining({
-            span: expect.objectContaining({ name: "start" })
+            span: expect.objectContaining({ name: 'start' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "end" })
+            span: expect.objectContaining({ name: 'end' }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "debounce-shorter-than-debounceDuration" })
+            span: expect.objectContaining({
+              name: 'debounce-shorter-than-debounceDuration',
+            }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "debounce-shorter-than-debounceDuration" })
+            span: expect.objectContaining({
+              name: 'debounce-shorter-than-debounceDuration',
+            }),
           }),
           expect.objectContaining({
-            span: expect.objectContaining({ name: "debounce-longer-than-debounceDuration" })
+            span: expect.objectContaining({
+              name: 'debounce-longer-than-debounceDuration',
+            }),
           }),
         ],
       }),
@@ -530,7 +537,7 @@ describe('TraceManager', () => {
         type: 'operation',
         entries: [
           expect.objectContaining({
-            span: expect.objectContaining({ name: "start" })
+            span: expect.objectContaining({ name: 'start' }),
           }),
           // interrupt span is not included
         ],
@@ -545,7 +552,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         requiredScopeKeys: [],
-        requiredToEnd: [],
+        requiredToEnd: [{ name: 'end' }],
         captureInteractive: { timeout: 5_000, debounceLongTasksBy },
       }
 
@@ -607,7 +614,7 @@ describe('TraceManager', () => {
         name: 'ticket.timeout-operation',
         type: 'operation',
         requiredScopeKeys: [],
-        requiredToEnd: [],
+        requiredToEnd: [{ name: 'never' }],
         captureInteractive: {
           timeout: interactiveTimeout,
           debounceLongTasksBy,
@@ -729,7 +736,7 @@ describe('TraceManager', () => {
     expect(reportFn).toHaveBeenCalled()
     expect(reportFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        name,
+        name: traceDefinition.name,
         duration: 1_000,
         entries: [
           expect.objectContaining({ name: 'start' }),

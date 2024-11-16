@@ -1,14 +1,41 @@
-import { SpanAndAnnotation } from './spanAnnotationTypes'
-import { type SpanMatcherTags, SpanMatcher } from './spanMatchTypes'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes, SpanStatus, SpanType } from './spanTypes'
 import { ScopeBase } from './types'
+
+export interface SpanMatcherTags {
+  isIdle?: boolean
+}
+
+/**
+ * Function type for matching performance entries.
+ */
+export type SpanMatcherFn<ScopeT extends ScopeBase> = ((
+  spanAndAnnotation: SpanAndAnnotation<ScopeT>,
+  scope: ScopeT,
+) => boolean) &
+  SpanMatcherTags
+
+export interface SpanMatchDefinition<ScopeT extends ScopeBase> {
+  name?: string | RegExp | ((name: string) => boolean)
+  performanceEntryName?: string | RegExp | ((name: string) => boolean)
+  type?: SpanType
+  status?: SpanStatus
+  attributes?: Attributes
+  scopes?: (keyof ScopeT)[]
+  occurrence?: number | ((occurrence: number) => boolean)
+  isIdle?: boolean
+}
+
+export type SpanMatch<ScopeT extends ScopeBase> =
+  | SpanMatcherFn<ScopeT>
+  | SpanMatchDefinition<ScopeT>
 
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.
  */
 export function withName<ScopeT extends ScopeBase>(
   value: string | RegExp | ((name: string) => boolean),
-): SpanMatcher<ScopeT> {
+): SpanMatcherFn<ScopeT> {
   return ({ span }) => {
     if (typeof value === 'string') return span.name === value
     if (value instanceof RegExp) return value.test(span.name)
@@ -21,7 +48,7 @@ export function withName<ScopeT extends ScopeBase>(
  */
 export function withPerformanceEntryName<ScopeT extends ScopeBase>(
   value: string | RegExp | ((name: string) => boolean),
-): SpanMatcher<ScopeT> {
+): SpanMatcherFn<ScopeT> {
   return ({ span }) => {
     const entryName = span.performanceEntry?.name
     if (!entryName) return false
@@ -33,13 +60,13 @@ export function withPerformanceEntryName<ScopeT extends ScopeBase>(
 
 export function withType<ScopeT extends ScopeBase>(
   value: SpanType,
-): SpanMatcher<ScopeT> {
+): SpanMatcherFn<ScopeT> {
   return ({ span }) => span.type === value
 }
 
 export function withStatus<ScopeT extends ScopeBase>(
   value: SpanStatus,
-): SpanMatcher<ScopeT> {
+): SpanMatcherFn<ScopeT> {
   return ({ span }) => span.status === value
 }
 
@@ -48,7 +75,7 @@ export function withStatus<ScopeT extends ScopeBase>(
  */
 export function withAttributes<ScopeT extends ScopeBase>(
   attrs: Attributes,
-): SpanMatcher<ScopeT> {
+): SpanMatcherFn<ScopeT> {
   return ({ span }) => {
     if (!span.attributes) return false
     return Object.entries(attrs).every(
@@ -62,7 +89,7 @@ export function withAttributes<ScopeT extends ScopeBase>(
  */
 export function withMatchingScopes<ScopeT extends ScopeBase>(
   keys: (keyof ScopeT)[],
-): SpanMatcher<ScopeT> {
+): SpanMatcherFn<ScopeT> {
   return ({ span }, scope) => {
     if (!span.scope) return false
     return keys.every((key) => span.scope![key] === scope[key])
@@ -74,7 +101,7 @@ export function withMatchingScopes<ScopeT extends ScopeBase>(
  */
 export function withOccurrence<ScopeT extends ScopeBase>(
   value: number | ((occurrence: number) => boolean),
-): SpanMatcher<ScopeT> {
+): SpanMatcherFn<ScopeT> {
   return ({ annotation }) => {
     if (typeof value === 'number') return annotation.occurrence === value
     return value(annotation.occurrence)
@@ -86,8 +113,8 @@ export function withOccurrence<ScopeT extends ScopeBase>(
  */
 export function whenIdle<ScopeT extends ScopeBase>(
   value = true,
-): SpanMatcher<ScopeT> {
-  const matcherFn: SpanMatcher<ScopeT> = ({ span }) =>
+): SpanMatcherFn<ScopeT> {
+  const matcherFn: SpanMatcherFn<ScopeT> = ({ span }) =>
     'isIdle' in span ? span.isIdle === value : false
   return Object.assign(
     matcherFn,
@@ -98,48 +125,52 @@ export function whenIdle<ScopeT extends ScopeBase>(
 
 // logical combinators:
 export function withAllConditions<ScopeT extends ScopeBase>(
-  ...matchers: SpanMatcher<ScopeT>[]
-): SpanMatcher<ScopeT> {
+  ...matchers: SpanMatcherFn<ScopeT>[]
+): SpanMatcherFn<ScopeT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
   }
-  const matcherFn: SpanMatcher<ScopeT> = (...args) =>
+  const matcherFn: SpanMatcherFn<ScopeT> = (...args) =>
     matchers.every((matcher) => matcher(...args))
   return Object.assign(matcherFn, tags)
 }
 
 export function withOneOfConditions<ScopeT extends ScopeBase>(
-  ...matchers: SpanMatcher<ScopeT>[]
-): SpanMatcher<ScopeT> {
+  ...matchers: SpanMatcherFn<ScopeT>[]
+): SpanMatcherFn<ScopeT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
   }
-  const matcherFn: SpanMatcher<ScopeT> = (...args) =>
+  const matcherFn: SpanMatcherFn<ScopeT> = (...args) =>
     matchers.some((matcher) => matcher(...args))
   return Object.assign(matcherFn, tags)
 }
 
 export function not<ScopeT extends ScopeBase>(
-  matcher: SpanMatcher<ScopeT>,
-): SpanMatcher<ScopeT> {
+  matcher: SpanMatcherFn<ScopeT>,
+): SpanMatcherFn<ScopeT> {
   // since not is a negation, we don't carry over tags
   return (...args) => !matcher(...args)
 }
 
-/**
- * Matches criteria against a performance entry event.
- * @param match - The match criteria or function.
- * @param event - The performance entry event.
- * @returns {boolean} `true` if the event matches the criteria, `false` otherwise.
- */
-export function doesEntryMatchDefinition<ScopeT extends ScopeBase>(
-  spanAndAnnotation: SpanAndAnnotation<ScopeT>,
-  match: SpanMatcher<ScopeT>,
-  scope: ScopeT,
-): boolean {
-  return match(spanAndAnnotation, scope)
+export function fromDefinition<ScopeT extends ScopeBase>(
+  definition: SpanMatchDefinition<ScopeT>,
+): SpanMatcherFn<ScopeT> {
+  const matchers: SpanMatcherFn<ScopeT>[] = []
+  if (definition.name) matchers.push(withName(definition.name))
+  if (definition.performanceEntryName)
+    matchers.push(withPerformanceEntryName(definition.performanceEntryName))
+  if (definition.type) matchers.push(withType(definition.type))
+  if (definition.status) matchers.push(withStatus(definition.status))
+  if (definition.attributes)
+    matchers.push(withAttributes(definition.attributes))
+  if (definition.scopes) matchers.push(withMatchingScopes(definition.scopes))
+  if (definition.occurrence)
+    matchers.push(withOccurrence(definition.occurrence))
+  if (definition.isIdle) matchers.push(whenIdle(definition.isIdle))
+  return withAllConditions(...matchers)
 }

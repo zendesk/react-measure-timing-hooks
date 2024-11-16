@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 /* eslint-disable max-classes-per-file */
-import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
 import { ensureTimestamp } from './ensureTimestamp'
 import {
   type CPUIdleLongTaskProcessor,
@@ -14,8 +13,11 @@ import type {
   SpanAnnotationRecord,
 } from './spanAnnotationTypes'
 import type { ActiveTraceConfig, Span } from './spanTypes'
-import type { CompleteTraceDefinition } from './traceRecordingTypes'
-import type { ScopeBase, TraceInterruptionReason } from './types'
+import type {
+  CompleteTraceDefinition,
+  ScopeBase,
+  TraceInterruptionReason,
+} from './types'
 import type {
   DistributiveOmit,
   MergedStateHandlerMethods,
@@ -146,14 +148,8 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
         // does span satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
-          for (const definition of this.context.definition.interruptOn) {
-            if (
-              doesEntryMatchDefinition(
-                spanAndAnnotation,
-                definition,
-                this.context.input.scope,
-              )
-            ) {
+          for (const match of this.context.definition.interruptOn) {
+            if (match(spanAndAnnotation, this.context.input.scope)) {
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'matched-on-interrupt',
@@ -169,20 +165,14 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             continue
           }
 
-          const definition = this.context.definition.requiredToEnd[i]!
-          if (
-            doesEntryMatchDefinition(
-              spanAndAnnotation,
-              definition,
-              this.context.input.scope,
-            )
-          ) {
+          const matcher = this.context.definition.requiredToEnd[i]!
+          if (matcher(spanAndAnnotation, this.context.input.scope)) {
             console.log(
               '# got a match!',
               'span',
               spanAndAnnotation,
               'matches',
-              definition,
+              matcher,
               'remaining items',
               this.context.requiredToEndIndexChecklist,
             )
@@ -266,11 +256,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         for (const matcher of this.context.definition.requiredToEnd) {
           const { span } = spanAndAnnotation
           if (
-            doesEntryMatchDefinition(
-              spanAndAnnotation,
-              matcher,
-              this.context.input.scope,
-            ) &&
+            matcher(spanAndAnnotation, this.context.input.scope) &&
             matcher.isIdle &&
             'isIdle' in span &&
             span.isIdle
@@ -286,13 +272,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
           for (const matcher of this.context.definition.debounceOn) {
-            if (
-              doesEntryMatchDefinition(
-                spanAndAnnotation,
-                matcher,
-                this.context.input.scope,
-              )
-            ) {
+            if (matcher(spanAndAnnotation, this.context.input.scope)) {
               // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
               if (
                 spanAndAnnotation.annotation.operationRelativeEndTime >
@@ -431,13 +411,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
         if (this.context.definition.interruptOn) {
           for (const matcher of this.context.definition.interruptOn) {
-            if (
-              doesEntryMatchDefinition(
-                spanAndAnnotation,
-                matcher,
-                this.context.input.scope,
-              )
-            ) {
+            if (matcher(spanAndAnnotation, this.context.input.scope)) {
               return {
                 transitionToState: 'complete',
                 interruptionReason: 'matched-on-interrupt',
@@ -557,15 +531,16 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   // this is public API only and should not be called internally
   interrupt(reason: TraceInterruptionReason) {
     const transition = this.stateMachine.emit('onInterrupt', reason)
+    if (!transition) return
 
     const traceRecording = createTraceRecording(
       {
         definition: this.definition,
-        // only keep items captured until the endOfOperationSpan
+        // TODO: only keep items captured until the endOfOperationSpan
         recordedItems: this.recordedItems,
         input: this.input,
       },
-      transition
+      transition,
     )
 
     this.input.onEnd(traceRecording)

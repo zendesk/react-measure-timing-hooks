@@ -15,12 +15,12 @@ type HandlerToPayloadTuples<
   State extends TraceStates = TraceStates,
 > = State extends State
   ? {
-    [K in keyof States<ScopeT>[State]]: States<ScopeT>[State][K] extends (
-      ...args: infer ArgsT
-    ) => infer ReturnT
-    ? [K, ArgsT[0], ReturnT]
-    : never
-  }[keyof States<ScopeT>[State]]
+      [K in keyof States<ScopeT>[State]]: States<ScopeT>[State][K] extends (
+        ...args: infer ArgsT
+      ) => infer ReturnT
+        ? [K, ArgsT[0], ReturnT]
+        : never
+    }[keyof States<ScopeT>[State]]
   : never
 
 type TupleToObject<T extends [PropertyKey, any, any]> = Prettify<{
@@ -44,3 +44,4 @@ export type MergedStateHandlerMethods<ScopeT extends ScopeBase> = {
     payload: StateHandlerPayloads<ScopeT>[K],
   ) => StateHandlerReturnTypes<ScopeT>[K]
 }
+export type ArrayWithAtLeastOneElement<T> = [T, ...T[]]
