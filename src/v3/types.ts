@@ -1,11 +1,12 @@
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
-import type { SpanMatcher } from './spanMatchTypes'
+import type { SpanMatch, SpanMatcherFn } from './matchSpan'
 import type { SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
 import type {
   ComputedSpanDefinition,
   ComputedValueDefinition,
   TraceRecording,
 } from './traceRecordingTypes'
+import type { ArrayWithAtLeastOneElement } from './typeUtils'
 
 export interface Timestamp {
   // absolute count of ms from epoch
@@ -62,7 +63,7 @@ export interface Tracer<ScopeT extends ScopeBase> {
     computedSpanDefinition: ComputedSpanDefinition<ScopeT>,
   ) => void
 
-  defineComputedValue: <MatchersT extends SpanMatcher<ScopeT>[]>(
+  defineComputedValue: <MatchersT extends SpanMatcherFn<ScopeT>[]>(
     computedValueDefinition: ComputedValueDefinition<ScopeT, MatchersT>,
   ) => void
 }
@@ -74,10 +75,10 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
   timeout: number
 }
 
-type ArrayWithAtLeastOneElement<T> = [T, ...T[]]
-
 /**
  * Definition of a trace that includes conditions on when to end, debounce, and interrupt.
+ * The "input" version will be transformed into the standardized version internally,
+ * converting all matchers into functions.
  */
 export interface TraceDefinition<ScopeT extends ScopeBase> {
   /**
@@ -92,17 +93,16 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
   requiredScopeKeys: (keyof ScopeT)[]
 
   /**
-   * This may include components that have to be rendered with all data
+   * This may include renders spans of components that have to be rendered with all data
    * to consider the operation as visually complete
    * this is close to the idea of "Largest Contentful Paint"
    * but rather than using "Largest" as a shorthand,
    * we're giving the power to the engineer to manually define
    * which parts of the product are "critical" or most important
    */
-  requiredToEnd: ArrayWithAtLeastOneElement<SpanMatcher<ScopeT>>
-  debounceOn?: ArrayWithAtLeastOneElement<SpanMatcher<ScopeT>>
-  interruptOn?: ArrayWithAtLeastOneElement<SpanMatcher<ScopeT>>
-
+  requiredToEnd: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
+  debounceOn?: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
+  interruptOn?: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
   debounceDuration?: number
   timeoutDuration?: number
 
@@ -111,4 +111,21 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
    * Provide a boolean or a configuration object.
    */
   captureInteractive?: boolean | CaptureInteractiveConfig
+}
+
+/**
+ * Trace Definition with added fields and converting all matchers into functions.
+ * Used internally by the TraceManager.
+ */
+export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
+  extends TraceDefinition<ScopeT> {
+  computedSpanDefinitions: readonly ComputedSpanDefinition<ScopeT>[]
+  computedValueDefinitions: readonly ComputedValueDefinition<
+    ScopeT,
+    SpanMatcherFn<ScopeT>[]
+  >[]
+
+  requiredToEnd: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
+  debounceOn?: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
+  interruptOn?: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
 }

@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
+import type { SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { SpanMatcher } from './spanMatchTypes'
 import type { Attributes } from './spanTypes'
 import type {
   MapTuple,
   ScopeBase,
-  TraceDefinition,
   TraceInterruptionReason,
   TraceStatus,
   TraceType,
@@ -71,8 +70,8 @@ export interface TraceRecording<ScopeT extends ScopeBase>
 // IMPLEMENTATION TODO: Create ComputedSpanMatchCriteria
 export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
   name: string
-  startSpan: SpanMatcher<ScopeT> // TODO: | 'operation-start'
-  endSpan: SpanMatcher<ScopeT> // TODO: | 'operation-end'
+  startSpan: SpanMatcherFn<ScopeT> // TODO: | 'operation-start'
+  endSpan: SpanMatcherFn<ScopeT> // TODO: | 'operation-end'
 }
 
 /**
@@ -81,7 +80,7 @@ export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
 
 export interface ComputedValueDefinition<
   ScopeT extends ScopeBase,
-  MatchersT extends SpanMatcher<ScopeT>[],
+  MatchersT extends SpanMatcherFn<ScopeT>[],
 > {
   name: string
   matches: [...MatchersT]
@@ -89,16 +88,4 @@ export interface ComputedValueDefinition<
     // as many matches as match of type Span<ScopeT>
     matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>>,
   ) => number | string | boolean
-}
-/**
- * Trace Definition with added fields
- */
-
-export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
-  extends TraceDefinition<ScopeT> {
-  computedSpanDefinitions: readonly ComputedSpanDefinition<ScopeT>[]
-  computedValueDefinitions: readonly ComputedValueDefinition<
-    ScopeT,
-    SpanMatcher<ScopeT>[]
-  >[]
 }

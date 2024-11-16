@@ -1,12 +1,8 @@
 import type { FinalState } from './ActiveTrace'
-import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceConfig } from './spanTypes'
-import type {
-  CompleteTraceDefinition,
-  TraceRecording,
-} from './traceRecordingTypes'
-import type { ScopeBase } from './types'
+import type { TraceRecording } from './traceRecordingTypes'
+import type { CompleteTraceDefinition, ScopeBase } from './types'
 
 interface ComputeRecordingData<ScopeT extends ScopeBase> {
   definition: CompleteTraceDefinition<ScopeT>
@@ -25,9 +21,7 @@ export function getComputedValues<ScopeT extends ScopeBase>({
     const { name, matches, computeValueFromMatches } = definition
 
     const matchingRecordedEntries = recordedItems.filter((spanAndAnnotation) =>
-      matches.some((matchCriteria) =>
-        doesEntryMatchDefinition(spanAndAnnotation, matchCriteria, input.scope),
-      ),
+      matches.some((matcher) => matcher(spanAndAnnotation, input.scope)),
     )
 
     computedValues[name] = computeValueFromMatches(matchingRecordedEntries)
@@ -46,12 +40,16 @@ export function getComputedSpans<ScopeT extends ScopeBase>({
   const computedSpans: TraceRecording<ScopeT>['computedSpans'] = {}
 
   traceDefinition.computedSpanDefinitions.forEach((definition) => {
-    const { startSpan, endSpan, name } = definition
+    const {
+      startSpan: startSpanMatcher,
+      endSpan: endSpanMatcher,
+      name,
+    } = definition
     const matchingStartEntry = recordedItems.find((spanAndAnnotation) =>
-      doesEntryMatchDefinition(spanAndAnnotation, startSpan, input.scope),
+      startSpanMatcher(spanAndAnnotation, input.scope),
     )
     const matchingEndEntry = recordedItems.find((spanAndAnnotation) =>
-      doesEntryMatchDefinition(spanAndAnnotation, endSpan, input.scope),
+      endSpanMatcher(spanAndAnnotation, input.scope),
     )
 
     if (matchingStartEntry && matchingEndEntry) {
