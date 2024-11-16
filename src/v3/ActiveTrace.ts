@@ -10,13 +10,12 @@ import {
 import { createTraceRecording } from './recordingComputeUtils'
 import type { ActiveTraceConfig, Span } from './spanTypes'
 import type { CompleteTraceDefinition } from './traceRecordingTypes'
+import type { ScopeBase, TraceInterruptionReason } from './types'
 import type {
-  ScopeBase,
   SpanAndAnnotation,
   SpanAnnotation,
   SpanAnnotationRecord,
-  TraceInterruptionReason,
-} from './types'
+} from './spanAnnotationTypes'
 import type {
   DistributiveOmit,
   MergedStateHandlerMethods,

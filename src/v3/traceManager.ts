@@ -1,6 +1,8 @@
 import { ActiveTrace } from './ActiveTrace'
 import { ensureTimestamp } from './ensureTimestamp'
-import type { Span, SpanMatchCriteria, StartTraceConfig } from './spanTypes'
+import type { SpanAnnotationRecord } from './spanAnnotationTypes'
+import type { SpanMatchCriteria } from './spanMatchTypes'
+import type { Span, StartTraceConfig } from './spanTypes'
 import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
@@ -10,7 +12,6 @@ import type {
 import type {
   ReportFn,
   ScopeBase,
-  SpanAnnotationRecord,
   TraceDefinition,
   TraceManagerConfig,
   Tracer,

@@ -1,5 +1,6 @@
-import { SpanMatcher } from './spanTypes'
-import { ScopeBase, SpanAndAnnotation } from './types'
+import { SpanAndAnnotation } from './spanAnnotationTypes'
+import { SpanMatcher } from './spanMatchTypes'
+import { ScopeBase } from './types'
 
 /**
  * Matches criteria against a performance entry event.

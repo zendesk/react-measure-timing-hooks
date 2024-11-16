@@ -1,11 +1,12 @@
 import type { FinalState } from './ActiveTrace'
 import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceConfig } from './spanTypes'
 import type {
   CompleteTraceDefinition,
   TraceRecording,
 } from './traceRecordingTypes'
-import type { ScopeBase, SpanAndAnnotation } from './types'
+import type { ScopeBase } from './types'
 
 interface ComputeRecordingData<ScopeT extends ScopeBase> {
   definition: CompleteTraceDefinition<ScopeT>

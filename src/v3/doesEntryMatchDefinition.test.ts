@@ -1,11 +1,8 @@
 import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
-import type {
-  ComponentRenderSpan,
-  Span,
-  SpanBase,
-  SpanMatcher,
-} from './spanTypes'
-import type { ScopeBase, SpanAnnotation } from './types'
+import type { SpanAnnotation } from './spanAnnotationTypes'
+import type { SpanMatcher } from './spanMatchTypes'
+import type { ComponentRenderSpan, Span, SpanBase } from './spanTypes'
+import type { ScopeBase } from './types'
 
 // Mock data for TraceEntryBase
 interface TestScopeT extends ScopeBase {
@@ -58,6 +55,7 @@ const mockAnnotation: SpanAnnotation = {
   occurrence: 1,
   operationRelativeEndTime: 0,
   operationRelativeStartTime: 0,
+  recordedInState: 'recording',
 }
 
 describe('doesEntryMatchDefinition', () => {
@@ -329,11 +327,7 @@ describe('doesEntryMatchDefinition', () => {
         annotation: mockAnnotation,
       }
       expect(
-        doesEntryMatchDefinition(
-          mockSpanAndAnnotation,
-          mockMatcher,
-          mockScope,
-        ),
+        doesEntryMatchDefinition(mockSpanAndAnnotation, mockMatcher, mockScope),
       ).toBe(true)
     })
 
@@ -344,11 +338,7 @@ describe('doesEntryMatchDefinition', () => {
         annotation: mockAnnotation,
       }
       expect(
-        doesEntryMatchDefinition(
-          mockSpanAndAnnotation,
-          mockMatcher,
-          mockScope,
-        ),
+        doesEntryMatchDefinition(mockSpanAndAnnotation, mockMatcher, mockScope),
       ).toBe(false)
     })
   })
