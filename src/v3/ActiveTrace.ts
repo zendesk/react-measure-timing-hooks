@@ -555,7 +555,19 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
 
   // this is public API only and should not be called internally
   interrupt(reason: TraceInterruptionReason) {
-    this.stateMachine.emit('onInterrupt', reason)
+    const transition = this.stateMachine.emit('onInterrupt', reason)
+
+    const traceRecording = createTraceRecording(
+      {
+        definition: this.definition,
+        // only keep items captured until the endOfOperationSpan
+        recordedItems: this.recordedItems,
+        input: this.input,
+      },
+      transition
+    )
+
+    this.input.onEnd(traceRecording)
   }
 
   processSpan(span: Span<ScopeT>): SpanAnnotationRecord | undefined {
