@@ -6,7 +6,7 @@ import { ScopeBase } from './types'
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.
  */
-export function name<ScopeT extends ScopeBase>(
+export function withName<ScopeT extends ScopeBase>(
   value: string | RegExp | ((name: string) => boolean),
 ): SpanMatcher<ScopeT> {
   return ({ span }) => {
@@ -19,7 +19,7 @@ export function name<ScopeT extends ScopeBase>(
 /**
  * The PerformanceEntry.name of the entry to match. Can be a string, RegExp, or function.
  */
-export function performanceEntryName<ScopeT extends ScopeBase>(
+export function withPerformanceEntryName<ScopeT extends ScopeBase>(
   value: string | RegExp | ((name: string) => boolean),
 ): SpanMatcher<ScopeT> {
   return ({ span }) => {
@@ -31,13 +31,13 @@ export function performanceEntryName<ScopeT extends ScopeBase>(
   }
 }
 
-export function type<ScopeT extends ScopeBase>(
+export function withType<ScopeT extends ScopeBase>(
   value: SpanType,
 ): SpanMatcher<ScopeT> {
   return ({ span }) => span.type === value
 }
 
-export function status<ScopeT extends ScopeBase>(
+export function withStatus<ScopeT extends ScopeBase>(
   value: SpanStatus,
 ): SpanMatcher<ScopeT> {
   return ({ span }) => span.status === value
@@ -46,7 +46,7 @@ export function status<ScopeT extends ScopeBase>(
 /**
  * The subset of attributes (metadata) to match against the span.
  */
-export function attributes<ScopeT extends ScopeBase>(
+export function withAttributes<ScopeT extends ScopeBase>(
   attrs: Attributes,
 ): SpanMatcher<ScopeT> {
   return ({ span }) => {
@@ -60,7 +60,7 @@ export function attributes<ScopeT extends ScopeBase>(
 /**
  * A list of scope keys to match against the span.
  */
-export function scopeKeys<ScopeT extends ScopeBase>(
+export function withMatchingScopes<ScopeT extends ScopeBase>(
   keys: (keyof ScopeT)[],
 ): SpanMatcher<ScopeT> {
   return ({ span }, scope) => {
@@ -72,7 +72,7 @@ export function scopeKeys<ScopeT extends ScopeBase>(
 /**
  * The occurrence of the span with the same name within the operation.
  */
-export function occurrence<ScopeT extends ScopeBase>(
+export function withOccurrence<ScopeT extends ScopeBase>(
   value: number | ((occurrence: number) => boolean),
 ): SpanMatcher<ScopeT> {
   return ({ annotation }) => {
@@ -84,8 +84,8 @@ export function occurrence<ScopeT extends ScopeBase>(
 /**
  * only applicable for component-lifecycle entries
  */
-export function isIdle<ScopeT extends ScopeBase>(
-  value: boolean,
+export function whenIdle<ScopeT extends ScopeBase>(
+  value = true,
 ): SpanMatcher<ScopeT> {
   const matcherFn: SpanMatcher<ScopeT> = ({ span }) =>
     'isIdle' in span ? span.isIdle === value : false
@@ -97,7 +97,7 @@ export function isIdle<ScopeT extends ScopeBase>(
 }
 
 // logical combinators:
-export function all<ScopeT extends ScopeBase>(
+export function withAllConditions<ScopeT extends ScopeBase>(
   ...matchers: SpanMatcher<ScopeT>[]
 ): SpanMatcher<ScopeT> {
   const tags: SpanMatcherTags = {}
@@ -110,7 +110,7 @@ export function all<ScopeT extends ScopeBase>(
   return Object.assign(matcherFn, tags)
 }
 
-export function some<ScopeT extends ScopeBase>(
+export function withOneOfConditions<ScopeT extends ScopeBase>(
   ...matchers: SpanMatcher<ScopeT>[]
 ): SpanMatcher<ScopeT> {
   const tags: SpanMatcherTags = {}

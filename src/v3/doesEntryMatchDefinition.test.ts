@@ -1,19 +1,7 @@
-import {
-  all,
-  attributes,
-  doesEntryMatchDefinition,
-  isIdle,
-  name,
-  not,
-  occurrence,
-  performanceEntryName,
-  scopeKeys,
-  some,
-  status,
-  type,
-} from './doesEntryMatchDefinition'
+import * as matchSpan from './doesEntryMatchDefinition'
+import { doesEntryMatchDefinition } from './doesEntryMatchDefinition'
 import type { SpanAnnotation } from './spanAnnotationTypes'
-import type { ComponentRenderSpan, Span, SpanBase } from './spanTypes'
+import type { ComponentRenderSpan, SpanBase } from './spanTypes'
 import type { ScopeBase } from './types'
 
 // Mock data for TraceEntryBase
@@ -73,7 +61,7 @@ const mockAnnotation: SpanAnnotation = {
 describe('doesEntryMatchDefinition', () => {
   describe('name', () => {
     it('should return true for a matching entry based on name', () => {
-      const matcher = name('testEntry')
+      const matcher = matchSpan.withName('testEntry')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -84,7 +72,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return true for function matchers for name', () => {
-      const matcher = name((n: string) => n.startsWith('test'))
+      const matcher = matchSpan.withName((n: string) => n.startsWith('test'))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -95,7 +83,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return true for regex matchers for name', () => {
-      const matcher = name(/^test/)
+      const matcher = matchSpan.withName(/^test/)
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -106,7 +94,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false for a non-matching span based on name', () => {
-      const matcher = name('nonMatchingEntry')
+      const matcher = matchSpan.withName('nonMatchingEntry')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -119,7 +107,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('performanceEntryName', () => {
     it('should return true for a matching span based on performanceEntryName', () => {
-      const matcher = performanceEntryName('testEntry')
+      const matcher = matchSpan.withPerformanceEntryName('testEntry')
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
         annotation: mockAnnotation,
@@ -130,7 +118,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false for a non-matching performanceEntryName', () => {
-      const matcher = performanceEntryName('nonMatchingEntry')
+      const matcher = matchSpan.withPerformanceEntryName('nonMatchingEntry')
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
         annotation: mockAnnotation,
@@ -144,7 +132,7 @@ describe('doesEntryMatchDefinition', () => {
   describe('type', () => {
     describe('for Native Performance Entry', () => {
       it('should return true for matching attributes', () => {
-        const matcher = type('element')
+        const matcher = matchSpan.withType('element')
         const mockSpanAndAnnotation = {
           span: mockEntryBase,
           annotation: mockAnnotation,
@@ -155,7 +143,7 @@ describe('doesEntryMatchDefinition', () => {
       })
 
       it('should return false for non-matching attributes', () => {
-        const matcher = type('component-render')
+        const matcher = matchSpan.withType('component-render')
         const mockSpanAndAnnotation = {
           span: mockEntryBase,
           annotation: mockAnnotation,
@@ -168,7 +156,10 @@ describe('doesEntryMatchDefinition', () => {
 
     describe('for ComponentRenderTraceEntry', () => {
       it('should return true for a matching ComponentRenderTraceEntry', () => {
-        const matcher = all(type('component-render'), name('testEntry'))
+        const matcher = matchSpan.withAllConditions(
+          matchSpan.withType('component-render'),
+          matchSpan.withName('testEntry'),
+        )
         const mockSpanAndAnnotation = {
           span: mockComponentEntry,
           annotation: mockAnnotation,
@@ -179,7 +170,10 @@ describe('doesEntryMatchDefinition', () => {
       })
 
       it('should return false for a non-matching ComponentRenderTraceEntry', () => {
-        const matcher = all(type('component-render'), name('nonMatchingEntry'))
+        const matcher = matchSpan.withAllConditions(
+          matchSpan.withType('component-render'),
+          matchSpan.withName('nonMatchingEntry'),
+        )
         const mockSpanAndAnnotation = {
           span: mockComponentEntry,
           annotation: mockAnnotation,
@@ -193,7 +187,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('status', () => {
     it('should return true when status does match', () => {
-      const matcher = status('ok')
+      const matcher = matchSpan.withStatus('ok')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -204,7 +198,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false when status does not match', () => {
-      const matcher = status('error')
+      const matcher = matchSpan.withStatus('error')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -217,7 +211,10 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('occurrence', () => {
     it('should return true for occurrence matching', () => {
-      const matcher = all(name('testEntry'), occurrence(1))
+      const matcher = matchSpan.withAllConditions(
+        matchSpan.withName('testEntry'),
+        matchSpan.withOccurrence(1),
+      )
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -229,7 +226,10 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false for non-matching occurrence', () => {
-      const matcher = all(name('testEntry'), occurrence(2))
+      const matcher = matchSpan.withAllConditions(
+        matchSpan.withName('testEntry'),
+        matchSpan.withOccurrence(2),
+      )
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -243,7 +243,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('attributes', () => {
     it('should return true for matching attributes', () => {
-      const matcher = attributes({ attr1: 'value1' })
+      const matcher = matchSpan.withAttributes({ attr1: 'value1' })
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -254,7 +254,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false for non-matching attributes', () => {
-      const matcher = attributes({ attr1: 'wrongValue' })
+      const matcher = matchSpan.withAttributes({ attr1: 'wrongValue' })
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -267,7 +267,10 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('scopeKeys', () => {
     it('should return true when scope does match', () => {
-      const matcher = all(name('testEntry'), scopeKeys(['ticketId']))
+      const matcher = matchSpan.withAllConditions(
+        matchSpan.withName('testEntry'),
+        matchSpan.withMatchingScopes(['ticketId']),
+      )
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -282,7 +285,10 @@ describe('doesEntryMatchDefinition', () => {
         ticketId: '123',
         userId: '123',
       }
-      const matcher = all(name('testEntry'), scopeKeys(['ticketId', 'userId']))
+      const matcher = matchSpan.withAllConditions(
+        matchSpan.withName('testEntry'),
+        matchSpan.withMatchingScopes(['ticketId', 'userId']),
+      )
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -294,7 +300,10 @@ describe('doesEntryMatchDefinition', () => {
   })
 
   describe('isIdle', () => {
-    const mockMatcher = all(name('testEntry'), isIdle(true))
+    const mockMatcher = matchSpan.withAllConditions(
+      matchSpan.withName('testEntry'),
+      matchSpan.whenIdle(true),
+    )
 
     it('should return true for isIdle matching', () => {
       const mockSpanAndAnnotation = {
@@ -320,13 +329,13 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('combination of conditions', () => {
     it('should return true when all conditions match', () => {
-      const matcher = all(
-        name('testEntry'),
-        performanceEntryName('testEntry'),
-        attributes({ attr1: 'value1' }),
-        scopeKeys(['ticketId']),
-        status('ok'),
-        type('element'),
+      const matcher = matchSpan.withAllConditions(
+        matchSpan.withName('testEntry'),
+        matchSpan.withPerformanceEntryName('testEntry'),
+        matchSpan.withAttributes({ attr1: 'value1' }),
+        matchSpan.withMatchingScopes(['ticketId']),
+        matchSpan.withStatus('ok'),
+        matchSpan.withType('element'),
       )
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
@@ -338,13 +347,13 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false when all conditions match but name', () => {
-      const matcher = all(
-        name('testEntries'), // does not match
-        performanceEntryName('testEntry'),
-        attributes({ attr1: 'value1' }),
-        scopeKeys(['ticketId']),
-        status('ok'),
-        type('element'),
+      const matcher = matchSpan.withAllConditions(
+        matchSpan.withName('testEntries'), // does not match
+        matchSpan.withPerformanceEntryName('testEntry'),
+        matchSpan.withAttributes({ attr1: 'value1' }),
+        matchSpan.withMatchingScopes(['ticketId']),
+        matchSpan.withStatus('ok'),
+        matchSpan.withType('element'),
       )
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
