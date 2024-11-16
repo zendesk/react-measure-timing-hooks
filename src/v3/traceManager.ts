@@ -1,7 +1,7 @@
 import { ActiveTrace } from './ActiveTrace'
 import { ensureTimestamp } from './ensureTimestamp'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
-import type { SpanMatchCriteria } from './spanMatchTypes'
+import type { SpanMatcher } from './spanMatchTypes'
 import type { Span, StartTraceConfig } from './spanTypes'
 import type {
   CompleteTraceDefinition,
@@ -34,7 +34,7 @@ export class TraceManager<ScopeT extends ScopeBase> {
     const computedSpanDefinitions: ComputedSpanDefinition<ScopeT>[] = []
     const computedValueDefinitions: ComputedValueDefinition<
       ScopeT,
-      SpanMatchCriteria<ScopeT>[]
+      SpanMatcher<ScopeT>[]
     >[] = []
     const completeTraceDefinition: CompleteTraceDefinition<ScopeT> = {
       ...traceDefinition,
@@ -48,10 +48,7 @@ export class TraceManager<ScopeT extends ScopeBase> {
       },
       defineComputedValue: (definition) => {
         computedValueDefinitions.push(
-          definition as ComputedValueDefinition<
-            ScopeT,
-            SpanMatchCriteria<ScopeT>[]
-          >,
+          definition as ComputedValueDefinition<ScopeT, SpanMatcher<ScopeT>[]>,
         )
       },
       start: (input) => this.startTrace(completeTraceDefinition, input),

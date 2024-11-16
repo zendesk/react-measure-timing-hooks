@@ -1,5 +1,5 @@
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
-import type { SpanMatchCriteria } from './spanMatchTypes'
+import type { SpanMatcher } from './spanMatchTypes'
 import type { SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
 import type {
   ComputedSpanDefinition,
@@ -62,7 +62,7 @@ export interface Tracer<ScopeT extends ScopeBase> {
     computedSpanDefinition: ComputedSpanDefinition<ScopeT>,
   ) => void
 
-  defineComputedValue: <MatchersT extends SpanMatchCriteria<ScopeT>[]>(
+  defineComputedValue: <MatchersT extends SpanMatcher<ScopeT>[]>(
     computedValueDefinition: ComputedValueDefinition<ScopeT, MatchersT>,
   ) => void
 }
@@ -73,6 +73,8 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
    */
   timeout: number
 }
+
+type ArrayWithAtLeastOneElement<T> = [T, ...T[]]
 
 /**
  * Definition of a trace that includes conditions on when to end, debounce, and interrupt.
@@ -97,9 +99,9 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
    * we're giving the power to the engineer to manually define
    * which parts of the product are "critical" or most important
    */
-  requiredToEnd: SpanMatchCriteria<ScopeT>[]
-  debounceOn?: SpanMatchCriteria<ScopeT>[]
-  interruptOn?: SpanMatchCriteria<ScopeT>[]
+  requiredToEnd: ArrayWithAtLeastOneElement<SpanMatcher<ScopeT>>
+  debounceOn?: ArrayWithAtLeastOneElement<SpanMatcher<ScopeT>>
+  interruptOn?: ArrayWithAtLeastOneElement<SpanMatcher<ScopeT>>
 
   debounceDuration?: number
   timeoutDuration?: number

@@ -1,4 +1,5 @@
 import { TicketIdScope } from '../stories/mockComponentsv3/traceManager'
+import { all, name, type } from './doesEntryMatchDefinition'
 import { ensureTimestamp } from './ensureTimestamp'
 import type { Span, StartTraceConfig } from './spanTypes'
 import { TraceManager } from './traceManager'
@@ -28,16 +29,8 @@ describe('TraceManager', () => {
       name: 'ticket.basic-operation',
       type: 'operation',
       requiredScopeKeys: ['ticketId'],
-      requiredToEnd: [
-        {
-          name: 'end',
-        },
-      ],
-      debounceOn: [
-        {
-          name: 'debounce',
-        },
-      ],
+      requiredToEnd: [name('end')],
+      debounceOn: [name('debounce')],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
@@ -120,11 +113,7 @@ describe('TraceManager', () => {
       name: 'ticket.basic-operation',
       type: 'operation',
       requiredScopeKeys: ['ticketId'],
-      requiredToEnd: [
-        {
-          name: 'end',
-        },
-      ],
+      requiredToEnd: [name('end')],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
@@ -210,16 +199,8 @@ describe('TraceManager', () => {
       name: 'ticket.activation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [
-        {
-          name: 'ticket-end',
-        },
-      ],
-      debounceOn: [
-        {
-          name: 'ticket-debounce',
-        },
-      ],
+      requiredToEnd: [name('ticket-end')],
+      debounceOn: [name('ticket-debounce')],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
@@ -287,11 +268,7 @@ describe('TraceManager', () => {
       name: 'ticket.timeout-operation',
       type: 'operation',
       requiredScopeKeys: ['ticketId'],
-      requiredToEnd: [
-        {
-          name: 'end',
-        },
-      ],
+      requiredToEnd: [name('end')],
       timeoutDuration: 500,
     }
 
@@ -344,11 +321,7 @@ describe('TraceManager', () => {
       name: 'ticket.interrupt-operation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [
-        {
-          name: 'end',
-        },
-      ],
+      requiredToEnd: [name('end')],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
@@ -394,17 +367,8 @@ describe('TraceManager', () => {
       name: 'ticket.debounce-operation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [
-        {
-          name: 'end',
-        },
-      ],
-      debounceOn: [
-        {
-          type: 'mark',
-          name: (name: string) => name.startsWith('debounce'),
-        },
-      ],
+      requiredToEnd: [name('end')],
+      debounceOn: [name((n: string) => n.startsWith('debounce'))],
       captureInteractive: true,
       debounceDuration: 300,
     }
@@ -521,16 +485,8 @@ describe('TraceManager', () => {
       name: 'ticket.interrupt-on-operation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [
-        {
-          name: 'end',
-        },
-      ],
-      interruptOn: [
-        {
-          name: 'interrupt',
-        },
-      ],
+      requiredToEnd: [name('end')],
+      interruptOn: [name('interrupt')],
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
@@ -715,20 +671,14 @@ describe('TraceManager', () => {
 
   it(`[needs fixture] correctly captures the operation's duration`, () => {
     const ticketId = '13024'
-    const name = 'ticket.activation'
     // const lastEventRelativeEndTime = 1_706.599_999_999_627_5
     const traceDefinition: TraceDefinition<TicketIdScope> = {
       name: 'ticket.activation',
       type: 'operation',
       requiredScopeKeys: [],
-      requiredToEnd: [
-        {
-          name: 'end',
-          type: 'mark',
-        },
-      ],
+      requiredToEnd: [all(name('end'), type('mark'))],
       captureInteractive: true,
-      timeout: 60_000,
+      timeoutDuration: 60_000,
     }
 
     const tracer = traceManager.createTracer(traceDefinition)
