@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
+import { SpanAndAnnotation } from './spanAnnotationTypes'
 import { ComponentRenderSpan, Span } from './spanTypes'
 import { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
-import { ScopeBase, SpanAndAnnotation } from './types'
+import { ScopeBase } from './types'
 
 export interface EmbeddedEntry {
   count: number

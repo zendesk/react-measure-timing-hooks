@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
-import type { Attributes, SpanMatchCriteria } from './spanTypes'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
+import type { SpanMatchCriteria } from './spanMatchTypes'
+import type { Attributes } from './spanTypes'
 import type {
   MapTuple,
   ScopeBase,
-  SpanAndAnnotation,
   TraceDefinition,
   TraceInterruptionReason,
   TraceStatus,
