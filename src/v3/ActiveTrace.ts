@@ -569,8 +569,9 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       // update the span in the recording
       spanAndAnnotation.span = span
     } else {
-      const occurrence = this.occurrenceCounters.get(span.name) ?? 1
-      this.occurrenceCounters.set(span.name, occurrence + 1)
+      const spanId = `${span.type}:${span.name}`
+      const occurrence = this.occurrenceCounters.get(spanId) ?? 1
+      this.occurrenceCounters.set(spanId, occurrence + 1)
 
       const annotation: SpanAnnotation = {
         id: this.input.id,
