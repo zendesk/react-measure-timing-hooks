@@ -4,6 +4,26 @@ import type { ActiveTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type { CompleteTraceDefinition, ScopeBase } from './types'
 
+/**
+ * ### Deriving SLIs and other metrics from a trace
+ *
+ * ℹ️ It is our recommendation that the primary way of creating duration metrics would be to derive them from data in the trace.
+ *
+ * Instead of the traditional approach of capturing isolated metrics imperatively in the code,
+ * the **trace** model allows us the flexibility to define and compute any number of metrics from the **trace recording**.
+ *
+ * We can distinguish the following types of metrics:
+ *
+ * 1. **Duration of a Computed Span** — the time between any two **spans** that appeared in the **trace**. For example:
+ *    1. _time between the user’s click on a ticket_ and _everything in the ticket page has fully rendered with content_ (duration of the entire operation)
+ *    2. _time between the user’s click on a ticket_ and _the moment the first piece of the ticket UI was displayed_ (duration of a segment of the operation)
+ *
+ * 2. **Computed Values** — any numerical value derived from the **spans** or their attributes. For example:
+ *    1. _The total number of times the log component re-rendered while loading the ticket_
+ *    2. _The total number of requests made while loading the ticket_
+ *    3. _The total number of iframe apps were initialized while loading the ticket_
+ */
+
 interface ComputeRecordingData<ScopeT extends ScopeBase> {
   definition: CompleteTraceDefinition<ScopeT>
   recordedItems: SpanAndAnnotation<ScopeT>[]
@@ -17,7 +37,7 @@ export function getComputedValues<ScopeT extends ScopeBase>({
 }: ComputeRecordingData<ScopeT>): TraceRecording<ScopeT>['computedValues'] {
   const computedValues: TraceRecording<ScopeT>['computedValues'] = {}
 
-  traceDefinition.computedValueDefinitions.forEach((definition) => {
+  for (const definition of traceDefinition.computedValueDefinitions) {
     const { name, matches, computeValueFromMatches } = definition
 
     const matchingRecordedEntries = recordedItems.filter((spanAndAnnotation) =>
@@ -25,57 +45,70 @@ export function getComputedValues<ScopeT extends ScopeBase>({
     )
 
     computedValues[name] = computeValueFromMatches(matchingRecordedEntries)
-  })
+  }
 
   return computedValues
 }
 
-// IMPLEMENTATION TODO: 1) Handle the case where start span being the operation's start time, 2) Handle the case where end span being the operation's end time
+const markedComplete = (spanAndAnnotation: SpanAndAnnotation<ScopeBase>) =>
+  spanAndAnnotation.annotation.markedComplete
+
+const markedInteractive = (spanAndAnnotation: SpanAndAnnotation<ScopeBase>) =>
+  spanAndAnnotation.annotation.markedInteractive
+
 export function getComputedSpans<ScopeT extends ScopeBase>({
   definition: traceDefinition,
   recordedItems,
   input,
 }: ComputeRecordingData<ScopeT>): TraceRecording<ScopeT>['computedSpans'] {
-  // loop through the computed span definitions, check for entries that match in recorded items. calculate the startoffset and duration
+  // loop through the computed span definitions, check for entries that match in recorded items, then calculate the startOffset and duration
   const computedSpans: TraceRecording<ScopeT>['computedSpans'] = {}
 
-  traceDefinition.computedSpanDefinitions.forEach((definition) => {
-    const {
-      startSpan: startSpanMatcher,
-      endSpan: endSpanMatcher,
-      name,
-    } = definition
-    const matchingStartEntry = recordedItems.find((spanAndAnnotation) =>
-      startSpanMatcher(spanAndAnnotation, input.scope),
-    )
+  for (const definition of traceDefinition.computedSpanDefinitions) {
+    const { startSpan: startSpanMatcher, endSpan, name } = definition
+    const matchingStartTime =
+      startSpanMatcher === 'operation-start'
+        ? input.startTime.now
+        : recordedItems.find((spanAndAnnotation) =>
+            startSpanMatcher(spanAndAnnotation, input.scope),
+          )?.span.startTime.now
+
+    const endSpanMatcher =
+      endSpan === 'operation-end'
+        ? markedComplete
+        : endSpan === 'interactive'
+        ? markedInteractive
+        : endSpan
+
     const matchingEndEntry = recordedItems.find((spanAndAnnotation) =>
       endSpanMatcher(spanAndAnnotation, input.scope),
     )
 
-    if (matchingStartEntry && matchingEndEntry) {
-      const duration =
-        matchingEndEntry.span.startTime.now -
-        matchingStartEntry.span.startTime.now
+    const matchingEndTime = matchingEndEntry
+      ? matchingEndEntry.span.startTime.now + matchingEndEntry.span.duration
+      : undefined
+
+    if (matchingStartTime && matchingEndTime) {
+      const duration = matchingEndTime - matchingStartTime
 
       computedSpans[name] = {
         duration,
         // DECISION: After considering which events happen first and which one is defined as the start
         // the start offset is always going to be anchored to the start span.
         // cases:
-        // ------S------E (+ computed val)
-        // -----E------S (- computed val)
-        // computedSpan.startOffset + computedSpan.duration = computedSpan.endOffset
-        startOffset:
-          matchingStartEntry.span.startTime.now - input.startTime.now,
+        // -----S------E (computed val is positive)
+        // -----E------S (computed val is negative)
+        // this way the `endOffset` can be derived as follows:
+        // endOffset = computedSpan.startOffset + computedSpan.duration
+        startOffset: matchingStartTime - input.startTime.now,
       }
     }
-  })
+  }
 
   return computedSpans
 }
 
-// IMPLEMENTATION TODO: Not that useful in its current form
-export function getSpanAttributes<ScopeT extends ScopeBase>({
+export function getSpanSummaryAttributes<ScopeT extends ScopeBase>({
   definition,
   recordedItems,
   input,
@@ -83,14 +116,15 @@ export function getSpanAttributes<ScopeT extends ScopeBase>({
   // loop through recorded items, create a entry based on the name
   const spanAttributes: TraceRecording<ScopeT>['spanAttributes'] = {}
 
-  recordedItems.forEach(({ span }) => {
+  for (const { span } of recordedItems) {
     const { attributes, name } = span
     const existingAttributes = spanAttributes[name] ?? {}
+    // IMPLEMENTATION TODO: add some basic span summarization, like count, total duration, etc.
     spanAttributes[name] = {
       ...existingAttributes,
       ...attributes,
     }
-  })
+  }
 
   return spanAttributes
 }
@@ -118,7 +152,7 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
   const { name } = definition
   const computedSpans = getComputedSpans(data)
   const computedValues = getComputedValues(data)
-  const spanAttributes = getSpanAttributes(data)
+  const spanAttributes = getSpanSummaryAttributes(data)
   const attributes = getAttributes(data)
 
   const anyErrors = recordedItems.some(({ span }) => span.status === 'error')
