@@ -65,7 +65,7 @@
     "prepare": "rrun husky install .config/husky && beemo create-config",
     "release": "beemo run-script release",
     "test": "echo disabled for now -- yarn test:format && yarn test:types && echo disabled for now -- yarn test:lint && yarn test:code",
-    "test:code": "rrun jest v2",
+    "test:code": "rrun jest v3",
     "test:format": "yarn rrun prettier --check \"./{src,tests,.config}/**/!(*.d).{.js,jsx,ts,tsx,json,md}\"",
     "test:lint": "rrun eslint 'src/**/*.{js,jsx,ts,tsx}'",
     "test:types": "yarn rrun tsc --noEmit",
@@ -168,6 +168,7 @@
     "style-loader": "^4.0.0",
     "styled-components": "^6.1.13",
     "ts-loader": "^9.5.1",
+    "typescript": "^5.6.3",
     "url-loader": "^4.1.1",
     "webpack": "5.96.1",
     "webpack-cli": "^5.1.4",
@@ -181,9 +182,10 @@
     "@types/react": "17.0.48",
     "webpack": "patch:webpack@npm:5.78.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch",
     "@swc/types": "0.1.7",
-    "@swc/core": "1.5.24"
+    "@swc/core": "1.5.24",
+    "typescript": "5.6.3"
   },
-  "packageManager": "yarn@4.2.2",
+  "packageManager": "yarn@4.5.1",
   "publishConfig": {
     "access": "public"
   },
