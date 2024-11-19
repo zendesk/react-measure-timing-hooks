@@ -89,7 +89,7 @@ type TraceStateMachineSideEffectHandlers<ScopeT extends ScopeBase> =
   TraceStateMachine<ScopeT>['sideEffectFns']
 
 const DEFAULT_DEBOUNCE_DURATION = 500
-const DEFAULT_TIMEOUT_DURATION = 45_000
+export const DEFAULT_TIMEOUT_DURATION = 45_000
 const DEFAULT_INTERACTIVE_TIMEOUT_DURATION = 10_000
 
 type EntryType<ScopeT extends ScopeBase> = PerformanceEntryLike & {
@@ -183,7 +183,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             if (
               !this.lastRelevant ||
               spanAndAnnotation.annotation.operationRelativeEndTime >
-                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+              (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
             ) {
               this.lastRelevant = spanAndAnnotation
             }
