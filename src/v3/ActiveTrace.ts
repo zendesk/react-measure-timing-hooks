@@ -548,7 +548,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
 
   processSpan(span: Span<ScopeT>): SpanAnnotationRecord | undefined {
     // check if valid for this trace:
-    if (span.startTime.now < this.input.startTime.now) {
+    if (span.startTime.now + span.duration < this.input.startTime.now) {
+      // TODO: maybe we should actually keep events that happened right before the trace started, e.g. 'event' spans for clicks?
+      console.log(
+        `# span ${span.type} ${span.name} is ignored because it started before the trace started at ${this.input.startTime.now}`,
+      )
       return undefined
     }
 
