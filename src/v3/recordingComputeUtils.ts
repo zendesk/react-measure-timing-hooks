@@ -150,6 +150,9 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
   const { definition, recordedItems, input } = data
   const { id, scope } = input
   const { name } = definition
+  // TODO: let's get this information from up top (in FinalState)
+  const wasInterrupted = interruptionReason && transitionFromState !== 'waiting-for-interactive';
+  // TODO: maybe we don't compute spans and values when interrupted
   const computedSpans = getComputedSpans(data)
   const computedValues = getComputedValues(data)
   const spanAttributes = getSpanSummaryAttributes(data)
@@ -170,7 +173,7 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
     completeTillInteractive: 0,
     // ?: If we have any error entries then should we mark the status as 'error'
     status:
-      interruptionReason && transitionFromState !== 'waiting-for-interactive'
+      wasInterrupted
         ? 'interrupted'
         : anyErrors
         ? 'error'
