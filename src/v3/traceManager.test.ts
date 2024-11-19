@@ -1,4 +1,5 @@
 import './test/asciiTimelineSerializer'
+import { DEFAULT_TIMEOUT_DURATION } from './ActiveTrace'
 import * as matchSpan from './matchSpan'
 import type { StartTraceConfig } from './spanTypes'
 import {
@@ -10,7 +11,6 @@ import {
 import processEntries from './test/processEntries'
 import { TraceManager } from './traceManager'
 import type { ReportFn, ScopeBase, TraceDefinition } from './types'
-import { DEFAULT_TIMEOUT_DURATION } from './ActiveTrace'
 
 describe('TraceManager', () => {
   let reportFn: jest.Mock
@@ -31,9 +31,9 @@ describe('TraceManager', () => {
     jest.clearAllTimers()
   })
 
-  // TESTING TODO: check with scope
+  // TESTING TODO: add test cases with scope
 
-  it('tracks operation with minimal requirements', () => {
+  it('tracks trace with minimal requirements', () => {
     const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
     const traceDefinition: TraceDefinition<ScopeBase> = {
       name: 'ticket.basic-operation',
@@ -60,11 +60,6 @@ describe('TraceManager', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<ReportFn<ScopeBase>>[0] = reportFn.mock.calls[0][0]
-    expect(report.name).toBe('ticket.basic-operation')
-    expect(report.duration).toBe(100)
-    expect(report.status).toBe('ok')
-    expect(report.interruptionReason).toBeUndefined()
-
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -74,10 +69,14 @@ describe('TraceManager', () => {
       timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
       time (ms) | 0           50          100
     `)
+    expect(report.name).toBe('ticket.basic-operation')
+    expect(report.duration).toBe(100)
+    expect(report.status).toBe('ok')
+    expect(report.interruptionReason).toBeUndefined()
   })
 
   describe('debounce', () => {
-    it('tracks operation when debouncedOn is defined but no debounce events', () => {
+    it('tracks trace when debouncedOn is defined but no debounce events', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.operation',
@@ -106,11 +105,6 @@ describe('TraceManager', () => {
 
       const report: Parameters<ReportFn<ScopeBase>>[0] =
         reportFn.mock.calls[0][0]
-      expect(report.name).toBe('ticket.operation')
-      expect(report.duration).toBe(100)
-      expect(report.status).toBe('ok')
-      expect(report.interruptionReason).toBeUndefined()
-
       expect(
         report.entries.map(
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -120,9 +114,13 @@ describe('TraceManager', () => {
         timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
         time (ms) | 0           50          100
       `)
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(100)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
     })
 
-    it('tracks operation correctly when debounced entries are seen', () => {
+    it('tracks trace correctly when debounced entries are seen', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.debounce-operation',
@@ -148,16 +146,10 @@ describe('TraceManager', () => {
       Time:   ${0}                      ${50}                   ${51}                                ${251}                             ${451}                           u ${1_051}
       `
       processEntries(entries, traceManager)
-
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<ReportFn<ScopeBase>>[0] =
         reportFn.mock.calls[0][0]
-      expect(report.name).toBe('ticket.debounce-operation')
-      expect(report.duration).toBe(451) // 50 + 1 + 200 + 200
-      expect(report.status).toBe('ok')
-      expect(report.interruptionReason).toBeUndefined()
-
       expect(
         report.entries.map(
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -169,9 +161,11 @@ describe('TraceManager', () => {
         time (ms) | 0                                                 50              251          451
         time (ms) |                                                     51
       `)
+      expect(report.name).toBe('ticket.debounce-operation')
+      expect(report.duration).toBe(451) // 50 + 1 + 200 + 200
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
     })
-
-    // TESTING TODO: isIdle (idle-component-no-longer-idle)
   })
 
   describe('interrupts', () => {
@@ -206,11 +200,6 @@ describe('TraceManager', () => {
 
       const report: Parameters<ReportFn<ScopeBase>>[0] =
         reportFn.mock.calls[0][0]
-      expect(report.name).toBe('ticket.interrupt-on-basic-operation')
-      expect(report.duration).toBeNull()
-      expect(report.status).toBe('interrupted')
-      expect(report.interruptionReason).toBe('matched-on-interrupt')
-
       expect(
         report.entries.map(
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -220,9 +209,13 @@ describe('TraceManager', () => {
         timeline  | |
         time (ms) | 0
       `)
+      expect(report.name).toBe('ticket.interrupt-on-basic-operation')
+      expect(report.duration).toBeNull()
+      expect(report.status).toBe('interrupted')
+      expect(report.interruptionReason).toBe('matched-on-interrupt')
     })
 
-    it('interrupts itself when another operation is started', () => {
+    it('interrupts itself when another trace is started', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.interrupt-itself-operation',
@@ -250,16 +243,10 @@ describe('TraceManager', () => {
       // Start another operation to interrupt the first one
       const newTraceId = tracer.start(startConfig)
       expect(newTraceId).toBe('trace-id')
-
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<ReportFn<ScopeBase>>[0] =
         reportFn.mock.calls[0][0]
-      expect(report.name).toBe('ticket.interrupt-itself-operation')
-      expect(report.duration).toBeNull()
-      expect(report.status).toBe('interrupted')
-      expect(report.interruptionReason).toBe('another-trace-started')
-
       expect(
         report.entries.map(
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -269,11 +256,21 @@ describe('TraceManager', () => {
         timeline  | |
         time (ms) | 0
       `)
+
+      expect(report.name).toBe('ticket.interrupt-itself-operation')
+      expect(report.duration).toBeNull()
+      expect(report.status).toBe('interrupted')
+      expect(report.interruptionReason).toBe('another-trace-started')
     })
 
+    // TESTING TODO: isIdle (idle-component-no-longer-idle)
+
     describe('timeout', () => {
-      it('timeouts when the basic operation when the default timeout duration is reached', () => {
-        const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      it('timeouts when the basic trace when the default timeout duration is reached', () => {
+        const traceManager = new TraceManager<ScopeBase>({
+          reportFn,
+          generateId,
+        })
         const traceDefinition: TraceDefinition<ScopeBase> = {
           name: 'ticket.timeout-operation',
           type: 'operation',
@@ -300,11 +297,6 @@ describe('TraceManager', () => {
 
         const report: Parameters<ReportFn<ScopeBase>>[0] =
           reportFn.mock.calls[0][0]
-        expect(report.name).toBe('ticket.timeout-operation')
-        expect(report.duration).toBeNull()
-        expect(report.status).toBe('interrupted')
-        expect(report.interruptionReason).toBe('timeout')
-
         expect(
           report.entries.map(
             (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -314,10 +306,17 @@ describe('TraceManager', () => {
           timeline  | |
           time (ms) | 0
         `)
+        expect(report.name).toBe('ticket.timeout-operation')
+        expect(report.duration).toBeNull()
+        expect(report.status).toBe('interrupted')
+        expect(report.interruptionReason).toBe('timeout')
       })
 
-      it('timeouts when the basic operation when a custom timeout duration is reached', () => {
-        const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      it('timeouts when the basic trace when a custom timeout duration is reached', () => {
+        const traceManager = new TraceManager<ScopeBase>({
+          reportFn,
+          generateId,
+        })
         const CUSTOM_TIMEOUT_DURATION = 500
         const traceDefinition: TraceDefinition<ScopeBase> = {
           name: 'ticket.timeout-operation',
@@ -345,11 +344,6 @@ describe('TraceManager', () => {
 
         const report: Parameters<ReportFn<ScopeBase>>[0] =
           reportFn.mock.calls[0][0]
-        expect(report.name).toBe('ticket.timeout-operation')
-        expect(report.duration).toBeNull()
-        expect(report.status).toBe('interrupted')
-        expect(report.interruptionReason).toBe('timeout')
-
         expect(
           report.entries.map(
             (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -359,12 +353,67 @@ describe('TraceManager', () => {
           timeline  | |
           time (ms) | 0
         `)
+        expect(report.name).toBe('ticket.timeout-operation')
+        expect(report.duration).toBeNull()
+        expect(report.status).toBe('interrupted')
+        expect(report.interruptionReason).toBe('timeout')
+      })
+
+      it('transitions from debouncing to timeout', () => {
+        const traceManager = new TraceManager<ScopeBase>({
+          reportFn,
+          generateId,
+        })
+        const CUSTOM_TIMEOUT_DURATION = 500
+        const traceDefinition: TraceDefinition<ScopeBase> = {
+          name: 'ticket.timeout-operation',
+          type: 'operation',
+          requiredScopeKeys: [],
+          requiredToEnd: [{ name: 'end' }],
+          debounceOn: [{ name: 'debounce' }],
+          timeoutDuration: CUSTOM_TIMEOUT_DURATION,
+        }
+        const tracer = traceManager.createTracer(traceDefinition)
+        const startConfig: StartTraceConfig<ScopeBase> = {
+          scope: {},
+        }
+
+        // start trace
+        const traceId = tracer.start(startConfig)
+        expect(traceId).toBe('trace-id')
+
+        // prettier-ignore
+        const { entries } = getEventsFromTimeline`
+        Events: ${Render('start', 0)}--${Render('end', 0)}--${Render('debounce', 0)}--${Check}}
+        Time:   ${0}                   ${50}                ${51}                     ${CUSTOM_TIMEOUT_DURATION + 1}
+        `
+        processEntries(entries, traceManager)
+        expect(reportFn).toHaveBeenCalled()
+
+        const report: Parameters<ReportFn<ScopeBase>>[0] =
+          reportFn.mock.calls[0][0]
+        expect(
+          report.entries.map(
+            (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+          ),
+        ).toMatchInlineSnapshot(`
+          events    |              debounce
+          events    | start       end
+          timeline  | |-<⋯ +50 ⋯>-||-
+          time (ms) | 0           50
+          time (ms) |              51
+        `)
+        expect(report.name).toBe('ticket.timeout-operation')
+        expect(report.duration).toBeNull()
+        expect(report.status).toBe('interrupted')
+        expect(report.interruptionReason).toBe('timeout')
       })
     })
   })
 
   describe('while capturing interactivity (when captureInteractive is defined)', () => {
-    it('correctly captures operation while waiting the long tasks to settle', () => {
+    // TESTING TODO: checking with debouncing, debounce deadline
+    it('correctly captures trace while waiting the long tasks to settle', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT = 5_000
       const traceDefinition: TraceDefinition<ScopeBase> = {
@@ -389,75 +438,26 @@ describe('TraceManager', () => {
       Time:   ${0}                      ${2_000}                ${2_001}                                ${2_001 + CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT - 5}
       `
       processEntries(entries, traceManager)
-
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<ReportFn<ScopeBase>>[0] =
         reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+          events    | start         end
+          timeline  | |-<⋯ +2000 ⋯>-|
+          time (ms) | 0             2000
+        `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
-
-      expect(
-        report.entries.map(
-          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
-        ),
-      ).toMatchInlineSnapshot(`
-        events    | start         end
-        timeline  | |-<⋯ +2000 ⋯>-|
-        time (ms) | 0             2000
-      `)
     })
 
-    it('timeouts the entire operation while operation is waiting for long tasks and operation times out', () => {
-      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
-      const traceDefinition: TraceDefinition<ScopeBase> = {
-        name: 'ticket.debounce-then-interrupted-operation',
-        type: 'operation',
-        requiredScopeKeys: [],
-        requiredToEnd: [{ name: 'end' }],
-        debounceOn: [{ name: 'debounce' }],
-        captureInteractive: true,
-        debounceDuration: 300,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<ScopeBase> = {
-        scope: {},
-      }
-
-      // start trace
-      tracer.start(startConfig)
-
-      // prettier-ignore
-      const { entries } = getEventsFromTimeline`
-      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${Render('debounce', 0)}------${Check}
-      Time:   ${0}                      ${50}                   ${100}                        ${DEFAULT_TIMEOUT_DURATION + 100}
-      `
-
-      processEntries(entries, traceManager)
-
-      expect(reportFn).toHaveBeenCalled()
-
-      const report: Parameters<ReportFn<ScopeBase>>[0] =
-        reportFn.mock.calls[0][0]
-      expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
-      expect(report.duration).toBeNull();
-      expect(report.status).toBe('interrupted')
-      expect(report.interruptionReason).toBe('timeout')
-
-      expect(
-        report.entries.map(
-          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
-        ),
-      ).toMatchInlineSnapshot(`
-        events    | start       end         debounce
-        timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
-        time (ms) | 0           50          100
-      `)
-    })
-
-    it('completes the operation even though it times out when long tasks keep appearing past custom capture interactive window', () => {
+    it('completes the trace even though it times out when long tasks keep appearing past custom capture interactive window', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT = 5_000
       const traceDefinition: TraceDefinition<ScopeBase> = {
@@ -482,28 +482,26 @@ describe('TraceManager', () => {
       Time:   ${0}                      ${2_000}                 ${2_001}                            ${2_000 + CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT}            
       `
       processEntries(entries, traceManager)
-
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<ReportFn<ScopeBase>>[0] =
         reportFn.mock.calls[0][0]
-      expect(report.name).toBe('ticket.operation')
-      expect(report.duration).toBe(2_000)
-      expect(report.status).toBe('ok')
-      expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
-
       expect(
         report.entries.map(
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start         end
-        timeline  | |-<⋯ +2000 ⋯>-|
-        time (ms) | 0             2000
-      `)
+          events    | start         end
+          timeline  | |-<⋯ +2000 ⋯>-|
+          time (ms) | 0             2000
+        `)
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(2_000)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
     })
 
-    it('completes the trace when a trace is interrupted while waiting for long tasks to settle', () => {
+    it('completes the trace when a trace is interrupted after it has ended AND while waiting for long tasks to settle', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.interrupt-during-long-task-operation',
@@ -530,25 +528,67 @@ describe('TraceManager', () => {
       `
 
       processEntries(entries, traceManager)
-
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<ReportFn<ScopeBase>>[0] =
         reportFn.mock.calls[0][0]
-      expect(report.name).toBe('ticket.interrupt-during-long-task-operation')
-      expect(report.duration).toBe(200)
-      expect(report.status).toBe('ok')
-      expect(report.interruptionReason).toBe('matched-on-interrupt')
-
       expect(
         report.entries.map(
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start        end
-        timeline  | |-<⋯ +200 ⋯>-|
-        time (ms) | 0            200
-      `)
+          events    | start        end
+          timeline  | |-<⋯ +200 ⋯>-|
+          time (ms) | 0            200
+        `)
+      expect(report.name).toBe('ticket.interrupt-during-long-task-operation')
+      expect(report.duration).toBe(200)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBe('matched-on-interrupt')
+    })
+
+    it('timeouts the entire trace while trace is waiting for long tasks AND entire trace times out', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.debounce-then-interrupted-operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        debounceOn: [{ name: 'debounce' }],
+        captureInteractive: true,
+        debounceDuration: 300,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      // start trace
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${Render('debounce', 0)}------${Check}
+      Time:   ${0}                      ${50}                   ${100}                        ${DEFAULT_TIMEOUT_DURATION + 100}
+      `
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+          events    | start       end         debounce
+          timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
+          time (ms) | 0           50          100
+        `)
+      expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
+      expect(report.duration).toBeNull()
+      expect(report.status).toBe('interrupted')
+      expect(report.interruptionReason).toBe('timeout')
     })
   })
 })
