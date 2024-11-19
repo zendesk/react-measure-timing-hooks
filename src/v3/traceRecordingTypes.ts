@@ -67,11 +67,10 @@ export interface TraceRecording<ScopeT extends ScopeBase>
 /**
  * Definition of custom spans
  */
-// IMPLEMENTATION TODO: Create ComputedSpanMatchCriteria
 export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
   name: string
-  startSpan: SpanMatcherFn<ScopeT> // TODO: | 'operation-start'
-  endSpan: SpanMatcherFn<ScopeT> // TODO: | 'operation-end'
+  startSpan: SpanMatcherFn<ScopeT> | 'operation-start'
+  endSpan: SpanMatcherFn<ScopeT> | 'operation-end' | 'interactive'
 }
 
 /**
