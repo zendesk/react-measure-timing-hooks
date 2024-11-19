@@ -57,6 +57,8 @@ const mockAnnotation: SpanAnnotation = {
   recordedInState: 'recording',
 }
 
+// TESTING TODO: ask chatgpt to add 'or' and 'not' tests
+
 describe('doesEntryMatchDefinition', () => {
   describe('name', () => {
     it('should return true for a matching entry based on name', () => {
