@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
+import type { SpanMatcherFn } from './matchSpan'
 import { SpanAndAnnotation } from './spanAnnotationTypes'
 import { ComponentRenderSpan, Span } from './spanTypes'
 import { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
@@ -35,7 +36,7 @@ export interface RumTraceRecording<ScopeT extends ScopeBase>
   nonEmbeddedSpans: string[]
 }
 
-function isRenderEntry<ScopeT extends ScopeBase>(
+export function isRenderEntry<ScopeT extends ScopeBase>(
   entry: Span<ScopeT>,
 ): entry is ComponentRenderSpan<ScopeT> {
   return (
@@ -79,35 +80,57 @@ function createEmbeddedEntry<ScopeT extends ScopeBase>({
   }
 }
 
+export const getSpanKey = <ScopeT extends ScopeBase>(span: Span<ScopeT>) =>
+  `${span.type}|${span.name}`
+
+export const defaultEmbedSpanSelector = <ScopeT extends ScopeBase>(
+  spanAndAnnotation: SpanAndAnnotation<ScopeT>,
+) => {
+  const { span } = spanAndAnnotation
+  return isRenderEntry(span)
+}
+
 export function convertTraceToRUM<ScopeT extends ScopeBase>(
   traceRecording: TraceRecording<ScopeT>,
+  embedSpanSelector: SpanMatcherFn<ScopeT> = defaultEmbedSpanSelector,
 ): RumTraceRecording<ScopeT> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording
-  const renderEntries = entries.filter(({ span }) => isRenderEntry(span))
-  const renderEntriesByName: {
+  const embeddedEntries: SpanAndAnnotation<ScopeT>[] = []
+  const nonEmbeddedSpans = new Set<string>()
+
+  for (const spanAndAnnotation of entries) {
+    const isEmbedded = embedSpanSelector(
+      spanAndAnnotation,
+      traceRecording.scope,
+    )
+    if (isEmbedded) {
+      embeddedEntries.push(spanAndAnnotation)
+    } else {
+      nonEmbeddedSpans.add(getSpanKey(spanAndAnnotation.span))
+    }
+  }
+  const embeddedSpans: {
     [typeAndName: string]: EmbeddedEntry
   } = {}
 
-  renderEntries.forEach((spanAndAnnotation) => {
+  for (const spanAndAnnotation of embeddedEntries) {
     const { span } = spanAndAnnotation
-    const { name, type } = span
-    const typeAndName = `${type}|${name}`
-    const existingEmbeddedEntry = renderEntriesByName[typeAndName]
+    const typeAndName = getSpanKey(span)
+    const existingEmbeddedEntry = embeddedSpans[typeAndName]
 
     if (existingEmbeddedEntry) {
-      renderEntriesByName[typeAndName] = updateEmbeddedEntry(
+      embeddedSpans[typeAndName] = updateEmbeddedEntry(
         existingEmbeddedEntry,
         spanAndAnnotation,
       )
     } else {
-      renderEntriesByName[typeAndName] = createEmbeddedEntry(spanAndAnnotation)
+      embeddedSpans[typeAndName] = createEmbeddedEntry(spanAndAnnotation)
     }
-  })
+  }
 
   return {
     ...otherTraceRecordingAttributes,
-    embeddedSpans: renderEntriesByName,
-    // IMPLEMENTATION TODO: get span string names for nonEmbeddedEntries
-    nonEmbeddedSpans: [],
+    embeddedSpans,
+    nonEmbeddedSpans: [...nonEmbeddedSpans],
   }
 }
