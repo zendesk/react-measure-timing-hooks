@@ -57,7 +57,7 @@ declare global {
     readonly entryType: 'largest-contentful-paint'
     readonly name: ''
     readonly duration: 0
-    readonly element: Element
+    readonly element: Element | null
     readonly renderTime: DOMHighResTimeStamp
     readonly loadTime: DOMHighResTimeStamp
     readonly id: string | ''

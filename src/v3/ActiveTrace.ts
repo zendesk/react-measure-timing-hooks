@@ -170,15 +170,15 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
           const matcher = this.context.definition.requiredToEnd[i]!
           if (matcher(spanAndAnnotation, this.context.input.scope)) {
-            console.log(
-              '# got a match!',
-              'span',
-              spanAndAnnotation,
-              'matches',
-              matcher,
-              'remaining items',
-              this.context.requiredToEndIndexChecklist,
-            )
+            // console.log(
+            //   '# got a match!',
+            //   'span',
+            //   spanAndAnnotation,
+            //   'matches',
+            //   matcher,
+            //   'remaining items',
+            //   this.context.requiredToEndIndexChecklist,
+            // )
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
 
@@ -186,7 +186,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             if (
               !this.lastRelevant ||
               spanAndAnnotation.annotation.operationRelativeEndTime >
-              (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
             ) {
               this.lastRelevant = spanAndAnnotation
             }
@@ -546,9 +546,9 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     // check if valid for this trace:
     if (span.startTime.now + span.duration < this.input.startTime.now) {
       // TODO: maybe we should actually keep events that happened right before the trace started, e.g. 'event' spans for clicks?
-      console.log(
-        `# span ${span.type} ${span.name} is ignored because it started before the trace started at ${this.input.startTime.now}`,
-      )
+      // console.log(
+      //   `# span ${span.type} ${span.name} is ignored because it started before the trace started at ${this.input.startTime.now}`,
+      // )
       return undefined
     }
 
@@ -619,14 +619,14 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       !existingAnnotation &&
       (!transition || transition.transitionToState !== 'interrupted')
 
-    console.log(
-      `# processed span ${spanAndAnnotation.span.type} ${spanAndAnnotation.span.name} ${spanAndAnnotation.annotation.occurrence}`,
-      spanAndAnnotation,
-      'shouldRecord?',
-      shouldRecord,
-      'transition?',
-      transition,
-    )
+    // console.log(
+    //   `# processed span ${spanAndAnnotation.span.type} ${spanAndAnnotation.span.name} ${spanAndAnnotation.annotation.occurrence}`,
+    //   spanAndAnnotation,
+    //   'shouldRecord?',
+    //   shouldRecord,
+    //   'transition?',
+    //   transition,
+    // )
 
     // DECISION: if the final state is interrupted, we should not record the entry nor annotate it externally
     if (shouldRecord) {

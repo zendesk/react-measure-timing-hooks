@@ -1,3 +1,4 @@
+/* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import debounce from 'lodash.debounce'
@@ -114,12 +115,10 @@ const TTLine: React.FC<TTLineProps> = ({
           <Label
             fontColor={color}
             title={title}
-            subtitle={
-              `${(hoverData.duration === 0
-                ? hoverData.operationStartOffset
-                : hoverData.duration
-              ).toFixed(2)} ms` ?? ''
-            }
+            subtitle={`${(hoverData.duration === 0
+              ? hoverData.operationStartOffset
+              : hoverData.duration
+            ).toFixed(2)} ms`}
             showAnchorLine={false}
             backgroundFill="gray"
             backgroundProps={{

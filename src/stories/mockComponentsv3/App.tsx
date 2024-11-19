@@ -32,7 +32,7 @@ const ticketOperationTracer = traceManager.createTracer({
   requiredToEnd: [
     {
       name: 'TicketView',
-      scopeKeys: ['ticketId'],
+      scopes: ['ticketId'],
       type: 'component-render',
       isIdle: true,
     },
@@ -43,13 +43,13 @@ const ticketOperationTracer = traceManager.createTracer({
   debounceOn: [
     {
       name: 'TicketView',
-      scopeKeys: ['ticketId'],
+      scopes: ['ticketId'],
     },
   ],
   interruptOn: [
     {
       name: 'TicketView',
-      scopeKeys: ['ticketId'],
+      scopes: ['ticketId'],
       type: 'component-unmount',
     },
   ],

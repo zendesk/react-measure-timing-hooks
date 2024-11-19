@@ -30,9 +30,9 @@ export const observePerformanceWithTraceManager = <ScopeT extends ScopeBase>(
     entryList.getEntries().forEach((entry) => {
       const traceEntry = getSpanFromPerformanceEntry<ScopeT>(entry)
       if (traceEntry !== undefined) {
-        if (entry.entryType === 'longtask') {
-          console.log('Long task detected:', traceEntry)
-        }
+        // if (entry.entryType === 'longtask') {
+        //   console.log('Long task detected:', traceEntry)
+        // }
         traceManager.processSpan(traceEntry)
       }
     })
