@@ -6,6 +6,7 @@ import {
   type PerformanceEntryLike,
   createCPUIdleProcessor,
 } from './firstCPUIdle'
+import { getSpanKey } from './getSpanKey'
 import { createTraceRecording } from './recordingComputeUtils'
 import type {
   SpanAndAnnotation,
@@ -568,7 +569,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       // update the span in the recording
       spanAndAnnotation.span = span
     } else {
-      const spanId = `${span.type}:${span.name}`
+      const spanId = getSpanKey(span)
       const occurrence = this.occurrenceCounters.get(spanId) ?? 1
       this.occurrenceCounters.set(spanId, occurrence + 1)
 

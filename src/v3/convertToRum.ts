@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
+import { getSpanKey } from './getSpanKey'
 import type { SpanMatcherFn } from './matchSpan'
 import { SpanAndAnnotation } from './spanAnnotationTypes'
 import { ComponentRenderSpan, Span } from './spanTypes'
@@ -79,9 +80,6 @@ function createEmbeddedEntry<ScopeT extends ScopeBase>({
     ],
   }
 }
-
-export const getSpanKey = <ScopeT extends ScopeBase>(span: Span<ScopeT>) =>
-  `${span.type}|${span.name}`
 
 export const defaultEmbedSpanSelector = <ScopeT extends ScopeBase>(
   spanAndAnnotation: SpanAndAnnotation<ScopeT>,
