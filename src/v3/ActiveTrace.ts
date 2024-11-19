@@ -117,9 +117,11 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   interactiveDeadline: number = Number.POSITIVE_INFINITY
   timeoutDeadline: number = Number.POSITIVE_INFINITY
 
-  // while debouncing, we need to buffer any spans that come in so they can be re-processed
-  // once we transition to the 'waiting-for-interactive' state
-  // otherwise we might miss out on spans that are relevant to calculating the interactive
+  /**
+   * while debouncing, we need to buffer any spans that come in so they can be re-processed
+   * once we transition to the 'waiting-for-interactive' state
+   * otherwise we might miss out on spans that are relevant to calculating the interactive
+   */
   debouncingSpanBuffer: SpanAndAnnotation<ScopeT>[] = []
 
   readonly states = {
@@ -425,12 +427,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       },
 
       onInterrupt: (reason: TraceInterruptionReason) =>
-      // we captured a complete trace, however the interactive data is missing
-      ({
-        transitionToState: 'complete',
-        interruptionReason: reason,
-        lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-      }),
+        // we captured a complete trace, however the interactive data is missing
+        ({
+          transitionToState: 'complete',
+          interruptionReason: reason,
+          lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+        }),
     },
 
     // terminal states:
@@ -533,17 +535,10 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     const transition = this.stateMachine.emit('onInterrupt', reason)
     if (!transition) return
 
-    const traceRecording = createTraceRecording(
-      {
-        definition: this.definition,
-        // TODO: only keep items captured until the endOfOperationSpan
-        recordedItems: this.recordedItems,
-        input: this.input,
-      },
+    this.prepareAndEmitRecording({
       transition,
-    )
-
-    this.input.onEnd(traceRecording)
+      lastRelevantSpanAndAnnotation: undefined,
+    })
   }
 
   processSpan(span: Span<ScopeT>): SpanAnnotationRecord | undefined {
@@ -637,30 +632,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       this.recordedItems.push(spanAndAnnotation)
     }
 
-    if (
-      transition?.transitionToState === 'interrupted' ||
-      transition?.transitionToState === 'complete'
-    ) {
-      const endOfOperationSpan =
-        (transition?.transitionToState === 'complete' &&
-          (transition.cpuIdleSpanAndAnnotation ??
-            transition.lastRequiredSpanAndAnnotation)) ||
-        spanAndAnnotation
-      const traceRecording = createTraceRecording(
-        {
-          definition: this.definition,
-          // only keep items captured until the endOfOperationSpan
-          recordedItems: this.recordedItems.filter(
-            (item) =>
-              item.span.startTime.now + item.span.duration <=
-              endOfOperationSpan.span.startTime.now +
-              endOfOperationSpan.span.duration,
-          ),
-          input: this.input,
-        },
+    if (transition) {
+      this.prepareAndEmitRecording({
         transition,
-      )
-      this.input.onEnd(traceRecording)
+        lastRelevantSpanAndAnnotation: spanAndAnnotation,
+      })
     }
 
     if (shouldRecord) {
@@ -671,5 +647,42 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     }
 
     return undefined
+  }
+
+  private prepareAndEmitRecording({
+    transition,
+    lastRelevantSpanAndAnnotation,
+  }: {
+    transition: OnEnterStatePayload<ScopeT>
+    lastRelevantSpanAndAnnotation: SpanAndAnnotation<ScopeT> | undefined
+  }) {
+    if (
+      transition.transitionToState === 'interrupted' ||
+      transition.transitionToState === 'complete'
+    ) {
+      const endOfOperationSpan =
+        (transition.transitionToState === 'complete' &&
+          (transition.cpuIdleSpanAndAnnotation ??
+            transition.lastRequiredSpanAndAnnotation)) ||
+        lastRelevantSpanAndAnnotation
+
+      const traceRecording = createTraceRecording(
+        {
+          definition: this.definition,
+          // only keep items captured until the endOfOperationSpan
+          recordedItems: endOfOperationSpan
+            ? this.recordedItems.filter(
+                (item) =>
+                  item.span.startTime.now + item.span.duration <=
+                  endOfOperationSpan.span.startTime.now +
+                    endOfOperationSpan.span.duration,
+              )
+            : this.recordedItems,
+          input: this.input,
+        },
+        transition,
+      )
+      this.input.onEnd(traceRecording)
+    }
   }
 }
