@@ -1,3 +1,11 @@
+export interface ComponentRenderStub {
+  // TODO: double check what this is
+  entryType: 'component-render'
+  duration: number
+  startTime?: number
+  name: string
+}
+
 export interface LongTaskStub {
   entryType: 'longtask'
   duration: number
@@ -21,7 +29,18 @@ export interface IdleStub {
   duration: number
 }
 
-export type Stub = LongTaskStub | MarkStub | FmpStub | IdleStub
+export type Stub = ComponentRenderStub | LongTaskStub | MarkStub | FmpStub | IdleStub
+
+export const Render = (
+  name: string,
+  duration: number,
+  options: { start?: number, isIdle?: boolean } = {},
+): ComponentRenderStub => ({
+  entryType: 'component-render',
+  duration,
+  startTime: options.start,
+  name,
+})
 
 export const LongTask = (
   duration: number,
@@ -97,7 +116,19 @@ export function getEventsFromTimeline(
   let fmpTime: number | null = null
 
   const stubs = exprs.filter((expr) => typeof expr !== 'number')
-  const [startTime, ...time] = exprs.filter((expr) => typeof expr === 'number')
+  const allNumbers = exprs.filter((expr) => typeof expr === 'number')
+  let startTime: number
+  let time: number[]
+
+  if (allNumbers.length === stubs.length + 1) {
+    startTime = allNumbers[0]!
+    time = allNumbers.slice(1)
+  } else if (allNumbers.length === stubs.length) {
+    startTime = allNumbers[0]!
+    time = allNumbers
+  } else {
+    throw new Error('Invalid timeline, mismatch of events and timestamps')
+  }
 
   if (startTime === undefined) {
     throw new Error('No time provided for the beginning of the timeline')

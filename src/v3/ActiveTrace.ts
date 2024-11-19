@@ -425,12 +425,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       },
 
       onInterrupt: (reason: TraceInterruptionReason) =>
-        // we captured a complete trace, however the interactive data is missing
-        ({
-          transitionToState: 'complete',
-          interruptionReason: reason,
-          lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-        }),
+      // we captured a complete trace, however the interactive data is missing
+      ({
+        transitionToState: 'complete',
+        interruptionReason: reason,
+        lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+      }),
     },
 
     // terminal states:
@@ -650,7 +650,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
             (item) =>
               item.span.startTime.now + item.span.duration <=
               endOfOperationSpan.span.startTime.now +
-                endOfOperationSpan.span.duration,
+              endOfOperationSpan.span.duration,
           ),
           input: this.input,
         },

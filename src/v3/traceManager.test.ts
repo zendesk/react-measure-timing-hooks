@@ -1,22 +1,28 @@
-import { TicketIdScope } from '../stories/mockComponentsv3/traceManager'
-import { ensureTimestamp } from './ensureTimestamp'
+import './test/asciiTimelineSerializer'
 import * as matchSpan from './matchSpan'
-import type { Span, StartTraceConfig } from './spanTypes'
+import type { StartTraceConfig } from './spanTypes'
+import {
+  Check,
+  getEventsFromTimeline,
+  LongTask,
+  Render,
+} from './test/makeTimeline'
+import processEntries from './test/processEntries'
 import { TraceManager } from './traceManager'
-// import type { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
-import type { TraceDefinition } from './types'
+import type { ReportFn, ScopeBase, TraceDefinition } from './types'
 
 describe('TraceManager', () => {
-  let traceManager: TraceManager<TicketIdScope>
   let reportFn: jest.Mock
   let generateId: jest.Mock
 
   jest.useFakeTimers()
 
   beforeEach(() => {
-    reportFn = jest.fn()
+    reportFn = jest.fn<
+      ReturnType<ReportFn<ScopeBase>>,
+      Parameters<ReportFn<ScopeBase>>
+    >()
     generateId = jest.fn().mockReturnValue('trace-id')
-    traceManager = new TraceManager<TicketIdScope>({ reportFn, generateId })
   })
 
   afterEach(() => {
@@ -24,605 +30,352 @@ describe('TraceManager', () => {
     jest.clearAllTimers()
   })
 
-  it('tracks operation', () => {
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
+  // TESTING TODO: check with scope
+
+  it('tracks operation with minimal requirements', () => {
+    const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+    const traceDefinition: TraceDefinition<ScopeBase> = {
       name: 'ticket.basic-operation',
       type: 'operation',
-      requiredScopeKeys: ['ticketId'],
-      requiredToEnd: [matchSpan.withName('end')],
-      debounceOn: [matchSpan.withName('debounce')],
+      requiredScopeKeys: [],
+      requiredToEnd: [{ name: 'end' }],
     }
-
     const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
-      scope: {
-        ticketId: 1,
-      },
+    const startConfig: StartTraceConfig<ScopeBase> = {
+      scope: {},
     }
 
+    // start trace
     const traceId = tracer.start(startConfig)
     expect(traceId).toBe('trace-id')
 
-    // Simulate start mark
-    const span1: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'start',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
+    // prettier-ignore
+    const { entries } = getEventsFromTimeline`
+    Events: ${Render('start', 0)}-----${Render('middle', 0)}-----${Render('end', 0)}---<===+2s===>----${Check}
+    Time:   ${0}                      ${50}                      ${100}                               ${2_100}
+    `
 
-    traceManager.processSpan(span1)
-    jest.advanceTimersByTime(50)
-
-    const span2: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'middle',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span2)
-    jest.advanceTimersByTime(50)
-
-    const span3: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'end',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span3)
-    jest.advanceTimersByTime(2_000)
-
-    const span4: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'post-end-span',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span4)
-
+    processEntries(entries, traceManager)
     expect(reportFn).toHaveBeenCalled()
-    expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'ticket.basic-operation',
-        duration: 100,
-        status: 'ok',
-        interruptionReason: undefined,
-        entries: [
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'start' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'middle' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'end' }),
-          }),
-        ],
-      }),
-    )
+
+    const report: Parameters<ReportFn<ScopeBase>>[0] = reportFn.mock.calls[0][0]
+    expect(report.name).toBe('ticket.basic-operation')
+    expect(report.duration).toBe(100)
+    expect(report.status).toBe('ok')
+    expect(report.interruptionReason).toBeUndefined()
+
+    expect(
+      report.entries.map(
+        (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+      ),
+    ).toMatchInlineSnapshot(`
+      events    | start       middle      end
+      timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
+      time (ms) | 0           50          100
+    `)
   })
 
-  it('tracks operation with only requiredToEnd defined', () => {
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
-      name: 'ticket.basic-operation',
-      type: 'operation',
-      requiredScopeKeys: ['ticketId'],
-      requiredToEnd: [matchSpan.withName('end')],
-    }
-
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
-      scope: {
-        ticketId: 1,
-      },
-    }
-
-    const traceId = tracer.start(startConfig)
-    expect(traceId).toBe('trace-id')
-
-    // Simulate start mark
-    const span1: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'start',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span1)
-    jest.advanceTimersByTime(50)
-
-    const span2: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'middle',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span2)
-    jest.advanceTimersByTime(50)
-
-    const span3: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'end',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span3)
-    jest.advanceTimersByTime(2_000)
-
-    const span4: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'post-end-span',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span4)
-
-    expect(reportFn).toHaveBeenCalled()
-    expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'ticket.basic-operation',
-        duration: 100,
-        status: 'ok',
-        interruptionReason: undefined,
-        entries: [
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'start' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'middle' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'end' }),
-          }),
-        ],
-      }),
-    )
-  })
-
-  it('[need to add re-order functionality] correctly captures the entire operation when intermediate entries are pushed out-of-order', () => {
-    const id = '12345'
-    const debounceBy = 1_000
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
-      name: 'ticket.activation',
-      type: 'operation',
-      requiredScopeKeys: [],
-      requiredToEnd: [matchSpan.withName('ticket-end')],
-      debounceOn: [matchSpan.withName('ticket-debounce')],
-    }
-
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
-      scope: {
-        ticketId: 1,
-      },
-    }
-
-    tracer.start(startConfig)
-
-    const entryTimes = [
-      { time: 1_000, state: 'start' },
-      { time: 2_000, state: 'processing' },
-      { time: 2_500, state: 'middle' },
-      { time: 2_400, state: 'out-of-order' },
-      { time: 3_000, state: 'end' },
-      { time: 3_001, state: 'post-end-span' },
-    ] as const
-
-    for (const { time, state } of entryTimes) {
-      const span: Span<TicketIdScope> = {
-        type: 'mark',
-        name: `ticket-${state}`,
-        startTime: ensureTimestamp({ now: time }),
-        duration: 0,
-        attributes: { ticketId: id },
-      }
-      traceManager.processSpan(span)
-      jest.advanceTimersByTime(Math.max(0, time - performance.now()))
-    }
-
-    jest.advanceTimersByTime(debounceBy + 1)
-
-    expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'ticket.activation',
-        duration: 3_000,
-        status: 'ok',
-        interruptionReason: undefined,
-        entries: [
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'ticket-start' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'ticket-processing' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'ticket-middle' }),
-          }),
-          // IMPLEMENTATION TODO: Add reordering functionality ticket-out-of-order should be before ticket-middle
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'ticket-out-of-order' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'ticket-end' }),
-          }),
-        ],
-      }),
-    )
-  })
-
-  it('timeouts the whole operation when the timeout is reached', () => {
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
-      name: 'ticket.timeout-operation',
-      type: 'operation',
-      requiredScopeKeys: ['ticketId'],
-      requiredToEnd: [matchSpan.withName('end')],
-      timeoutDuration: 500,
-    }
-
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
-      scope: { ticketId: 1 },
-    }
-
-    tracer.start(startConfig)
-
-    // we need to process a span in order to trigger a timeout
-    const span1: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'start',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-    traceManager.processSpan(span1)
-
-    jest.advanceTimersByTime(2_001)
-
-    const span2: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'timed-out-render',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-    traceManager.processSpan(span2)
-
-    expect(reportFn).toHaveBeenCalled()
-    expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'ticket.timeout-operation',
-        type: 'operation',
-        interruptionReason: 'timeout',
-        status: 'interrupted',
-        entries: [
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'start' }),
-          }),
-        ],
-      }),
-    )
-  })
-
-  it('interrupts itself when another operation is started', () => {
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
-      name: 'ticket.interrupt-operation',
-      type: 'operation',
-      requiredScopeKeys: [],
-      requiredToEnd: [matchSpan.withName('end')],
-    }
-
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
-      scope: {
-        ticketId: 1,
-      },
-    }
-
-    tracer.start(startConfig)
-
-    const span: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'start',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-    traceManager.processSpan(span)
-    jest.advanceTimersByTime(500)
-
-    // start another trace
-    tracer.start(startConfig)
-
-    expect(reportFn).toHaveBeenCalled()
-    expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'ticket.interrupt-operation',
-        interruptionReason: 'another-trace-started',
-        status: 'interrupted',
-        type: 'operation',
-        entries: [
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'start' }),
-          }),
-        ],
-      }),
-    )
-  })
-
-  it('does NOT stop a trace as long as debounced entries are seen', () => {
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
-      name: 'ticket.debounce-operation',
-      type: 'operation',
-      requiredScopeKeys: [],
-      requiredToEnd: [matchSpan.withName('end')],
-      debounceOn: [matchSpan.withName((n: string) => n.startsWith('debounce'))],
-      captureInteractive: true,
-      debounceDuration: 300,
-    }
-
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
-      scope: {
-        ticketId: 1,
-      },
-    }
-
-    tracer.start(startConfig)
-
-    const span1: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'start',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span1)
-    jest.advanceTimersByTime(50)
-
-    const span2: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'end',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span2)
-    jest.advanceTimersByTime(1)
-
-    // Simulate debounce mark
-    const span3: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'debounce-shorter-than-debounceDuration',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span3)
-    jest.advanceTimersByTime(200)
-
-    expect(reportFn).not.toHaveBeenCalled()
-
-    const span4: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'debounce-shorter-than-debounceDuration',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span4)
-    jest.advanceTimersByTime(200)
-
-    expect(reportFn).not.toHaveBeenCalled()
-
-    const span5: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'debounce-longer-than-debounceDuration',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span5)
-    jest.advanceTimersByTime(600)
-
-    const span6: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'post-end-span',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-    traceManager.processSpan(span6)
-
-    expect(reportFn).toHaveBeenCalled()
-    expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'ticket.debounce-operation',
-        type: 'operation',
-        status: 'ok',
-        interruptionReason: undefined,
-        duration: 451, // 50 + 1 + 200 + 200
-        entries: [
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'start' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'end' }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({
-              name: 'debounce-shorter-than-debounceDuration',
-            }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({
-              name: 'debounce-shorter-than-debounceDuration',
-            }),
-          }),
-          expect.objectContaining({
-            span: expect.objectContaining({
-              name: 'debounce-longer-than-debounceDuration',
-            }),
-          }),
-        ],
-      }),
-    )
-  })
-
-  it('interrupts the trace when interruptOn criteria is met', () => {
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
-      name: 'ticket.interrupt-on-operation',
-      type: 'operation',
-      requiredScopeKeys: [],
-      requiredToEnd: [matchSpan.withName('end')],
-      interruptOn: [matchSpan.withName('interrupt')],
-    }
-
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
-      scope: {
-        ticketId: 1,
-      },
-    }
-
-    tracer.start(startConfig)
-
-    const span1: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'start',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span1)
-    jest.advanceTimersByTime(100)
-
-    // Simulate interrupt mark
-    const span2: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'interrupt',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-
-    traceManager.processSpan(span2)
-    jest.advanceTimersByTime(1)
-
-    expect(reportFn).toHaveBeenCalled()
-    expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'ticket.interrupt-on-operation',
-        interruptionReason: 'matched-on-interrupt',
-        status: 'interrupted',
-        type: 'operation',
-        entries: [
-          expect.objectContaining({
-            span: expect.objectContaining({ name: 'start' }),
-          }),
-          // interrupt span is not included
-        ],
-      }),
-    )
-  })
-
-  describe('capturing interactivity', () => {
-    it('waits the long task debounce interval before emitting interactive event', () => {
-      const debounceLongTasksBy = 500
-      const traceDefinition: TraceDefinition<TicketIdScope> = {
+  describe('debounce', () => {
+    it('tracks operation when debouncedOn is defined but no debounce events', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.operation',
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: { timeout: 5_000, debounceLongTasksBy },
+        debounceOn: [{ name: 'debounce' }],
       }
 
       const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      // start trace
+      const traceId = tracer.start(startConfig)
+      expect(traceId).toBe('trace-id')
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('middle', 0)}-----${Render('end', 0)}---<===+2s===>----${Check}
+      Time:   ${0}                      ${50}                      ${100}                               ${2_100}
+      `
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(100)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start       middle      end
+        timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
+        time (ms) | 0           50          100
+      `)
+    })
+
+    it('tracks operation correctly when debounced entries are seen', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.debounce-operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [matchSpan.withName('end')],
+        debounceOn: [matchSpan.withName((n: string) => n.endsWith('debounce'))],
+        debounceDuration: 300,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
         scope: {
           ticketId: 1,
         },
       }
 
+      // start trace
       tracer.start(startConfig)
 
-      const span: Span<TicketIdScope> = {
-        type: 'mark',
-        name: 'start',
-        startTime: ensureTimestamp(),
-        duration: 0,
-        attributes: {},
-      }
-
-      traceManager.processSpan(span)
-      jest.advanceTimersByTime(2_000)
-
-      const endSpan: Span<TicketIdScope> = {
-        type: 'mark',
-        name: 'end',
-        startTime: ensureTimestamp(),
-        duration: 0,
-        attributes: {},
-      }
-
-      traceManager.processSpan(endSpan)
-      jest.advanceTimersByTime(1)
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${Render('shorter-debounce', 0)}-----${Render('short-debounce', 0)}-----${Render('long-debounce', 0)}-----${Check})}
+      Time:   ${0}                      ${50}                   ${51}                                ${251}                             ${451}                           u ${1_051}
+      `
+      processEntries(entries, traceManager)
 
       expect(reportFn).toHaveBeenCalled()
 
-      jest.advanceTimersByTime(300)
-      const longTaskSpan: Span<TicketIdScope> = {
-        type: 'longtask',
-        name: 'longtask',
-        startTime: ensureTimestamp(),
-        duration: 100,
-        attributes: {},
-      }
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(report.name).toBe('ticket.debounce-operation')
+      expect(report.duration).toBe(451) // 50 + 1 + 200 + 200
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
 
-      traceManager.processSpan(longTaskSpan)
-      jest.advanceTimersByTime(300)
-
-      traceManager.processSpan(longTaskSpan)
-      jest.advanceTimersByTime(600)
-
-      expect(reportFn).toHaveBeenCalledTimes(2)
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    |                                                     shorter-debounce           long-debounce
+        events    | start                                             end             short-debounce
+        timeline  | |-------------------------------------------------|-|-<⋯ +200 ⋯>--|-<⋯ +200 ⋯>-|
+        time (ms) | 0                                                 50              251          451
+        time (ms) |                                                     51
+      `)
     })
 
-    it('timeouts the interactive event if long tasks keep appearing', () => {
-      const debounceLongTasksBy = 500
-      const interactiveTimeout = 5_000
-      const traceDefinition: TraceDefinition<TicketIdScope> = {
-        name: 'ticket.timeout-operation',
+    // TESTING TODO: isIdle (idle-component-no-longer-idle)
+  })
+
+  describe('interrupts', () => {
+    it('interrupts a basic trace when interruptOn criteria is met', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.interrupt-on-basic-operation',
         type: 'operation',
         requiredScopeKeys: [],
-        requiredToEnd: [{ name: 'never' }],
-        captureInteractive: {
-          timeout: interactiveTimeout,
-          debounceLongTasksBy,
+        requiredToEnd: [matchSpan.withName('end')],
+        interruptOn: [matchSpan.withName('interrupt')],
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {
+          ticketId: 1,
         },
       }
 
+      // start trace
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('interrupt', 0)}-----${Render('end', 0)}
+      Time:   ${0}                      ${100}                      ${200}
+      `
+
+      processEntries(entries, traceManager)
+
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(report.name).toBe('ticket.interrupt-on-basic-operation')
+      expect(report.duration).toBeNull()
+      expect(report.status).toBe('interrupted')
+      expect(report.interruptionReason).toBe('matched-on-interrupt')
+
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start
+        timeline  | |
+        time (ms) | 0
+      `)
+    })
+
+    it('interrupts itself when another operation is started', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.interrupt-itself-operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        debounceOn: [{ name: 'debounce' }],
+      }
       const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      // start trace
+      const traceId = tracer.start(startConfig)
+      expect(traceId).toBe('trace-id')
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}
+      Time:   ${0}                 
+      `
+      processEntries(entries, traceManager)
+
+      // Start another operation to interrupt the first one
+      const newTraceId = tracer.start(startConfig)
+      expect(newTraceId).toBe('trace-id')
+
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(report.name).toBe('ticket.interrupt-itself-operation')
+      expect(report.duration).toBeNull()
+      expect(report.status).toBe('interrupted')
+      expect(report.interruptionReason).toBe('another-trace-started')
+
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start
+        timeline  | |
+        time (ms) | 0
+      `)
+    })
+
+    describe('timeout', () => {
+      it('timeouts when the basic operation when the timeout is reached', () => {
+        const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+        const traceDefinition: TraceDefinition<ScopeBase> = {
+          name: 'ticket.timeout-operation',
+          type: 'operation',
+          requiredScopeKeys: [],
+          requiredToEnd: [{ name: 'timed-out-render' }],
+          timeoutDuration: 500,
+        }
+        const tracer = traceManager.createTracer(traceDefinition)
+        const startConfig: StartTraceConfig<ScopeBase> = {
+          scope: {},
+        }
+
+        // start trace
+        const traceId = tracer.start(startConfig)
+        expect(traceId).toBe('trace-id')
+
+        // prettier-ignore
+        const { entries } = getEventsFromTimeline`
+        Events: ${Render('start', 0)}------${Render('timed-out-render', 0)}
+        Time:   ${0}                       ${500 + 1}
+        `
+        processEntries(entries, traceManager)
+        expect(reportFn).toHaveBeenCalled()
+
+        const report: Parameters<ReportFn<ScopeBase>>[0] =
+          reportFn.mock.calls[0][0]
+        expect(report.name).toBe('ticket.timeout-operation')
+        expect(report.duration).toBeNull()
+        expect(report.status).toBe('interrupted')
+        expect(report.interruptionReason).toBe('timeout')
+
+        expect(
+          report.entries.map(
+            (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+          ),
+        ).toMatchInlineSnapshot(`
+          events    | start
+          timeline  | |
+          time (ms) | 0
+        `)
+      })
+
+      it('timeouts when an operation is debouncing but has timed out', () => {
+        const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+        const traceDefinition: TraceDefinition<ScopeBase> = {
+          name: 'ticket.debounce-then-interrupted-operation',
+          type: 'operation',
+          requiredScopeKeys: [],
+          requiredToEnd: [{ name: 'end' }],
+          debounceOn: [{ name: 'debounce' }],
+          captureInteractive: true,
+          debounceDuration: 300,
+        }
+        const tracer = traceManager.createTracer(traceDefinition)
+        const startConfig: StartTraceConfig<ScopeBase> = {
+          scope: {},
+        }
+
+        // start trace
+        tracer.start(startConfig)
+
+        // prettier-ignore
+        const { entries } = getEventsFromTimeline`
+        Events: ${Render('start', 0)}-----${Render('end', 0)}-----${Render('debounce', 0)}------${Check}
+        Time:   ${0}                      ${50}                   ${100}                        ${100 + 10_000 + 1}
+        `
+
+        processEntries(entries, traceManager)
+
+        expect(reportFn).toHaveBeenCalled()
+
+        const report: Parameters<ReportFn<ScopeBase>>[0] =
+          reportFn.mock.calls[0][0]
+        expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
+        expect(report.duration).toBe(100)
+        expect(report.status).toBe('ok')
+        expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
+
+        expect(
+          report.entries.map(
+            (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+          ),
+        ).toMatchInlineSnapshot(`
+          events    | start       end         debounce
+          timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
+          time (ms) | 0           50          100
+        `)
+      })
+    })
+  })
+
+  describe('capturing interactivity (when captureInteractive is defined)', () => {
+    it('correctly captures duration while waiting the long tasks to settle', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: { timeout: 5_000 },
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
         scope: {
           ticketId: 1,
         },
@@ -630,120 +383,123 @@ describe('TraceManager', () => {
 
       tracer.start(startConfig)
 
-      const span1: Span<TicketIdScope> = {
-        type: 'mark',
-        name: 'start',
-        startTime: ensureTimestamp(),
-        duration: 0,
-        attributes: {},
-      }
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(50)}------<===5s===>---------${Check}
+      Time:   ${0}                      ${2_000}                ${2_001}                                ${2_001 + 5_000 - 5}
+      `
+      processEntries(entries, traceManager)
 
-      traceManager.processSpan(span1)
-      jest.advanceTimersByTime(2_000)
+      expect(reportFn).toHaveBeenCalled()
 
-      const span2: Span<TicketIdScope> = {
-        type: 'mark',
-        name: 'end',
-        startTime: ensureTimestamp(),
-        duration: 0,
-        attributes: {},
-      }
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(2_000)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
 
-      traceManager.processSpan(span2)
-
-      const longTaskEveryMs = 150
-      const longTaskDuration = 200
-      const longTasksCount = Math.ceil(
-        interactiveTimeout / (longTaskEveryMs + longTaskDuration),
-      )
-      let remainingLongTasks = longTasksCount
-
-      while (remainingLongTasks--) {
-        jest.advanceTimersByTime(longTaskEveryMs + longTaskDuration)
-        const longTaskSpan: Span<TicketIdScope> = {
-          type: 'longtask',
-          name: 'longtask',
-          startTime: ensureTimestamp(),
-          duration: longTaskDuration,
-          attributes: {},
-        }
-        traceManager.processSpan(longTaskSpan)
-      }
-
-      jest.advanceTimersByTime(debounceLongTasksBy)
-
-      expect(reportFn).toHaveBeenCalledTimes(2)
-    })
-  })
-
-  it(`[needs fixture] correctly captures the operation's duration`, () => {
-    const ticketId = '13024'
-    // const lastEventRelativeEndTime = 1_706.599_999_999_627_5
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
-      name: 'ticket.activation',
-      type: 'operation',
-      requiredScopeKeys: [],
-      requiredToEnd: [
-        // prettier-ignore
-        matchSpan.withAllConditions(
-          matchSpan.withName('end'),
-          matchSpan.withType('mark')
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
-      ],
-      captureInteractive: true,
-      timeoutDuration: 60_000,
-    }
+      ).toMatchInlineSnapshot(`
+        events    | start         end
+        timeline  | |-<⋯ +2000 ⋯>-|
+        time (ms) | 0             2000
+      `)
+    })
 
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
-      scope: {
-        ticketId: 13_024,
-      },
-    }
-
-    tracer.start(startConfig)
-
-    const events = [
-      { startTime: 0, duration: 0, name: 'start' },
-      { startTime: 500, duration: 0, name: 'middle' },
-      { startTime: 1_000, duration: 0, name: 'end' },
-      // { startTime: 1_002, duration: 0, name: 'post-end-span' },
-    ]
-
-    for (const event of events) {
-      const span: Span<TicketIdScope> = {
-        type: 'mark',
-        name: event.name,
-        startTime: ensureTimestamp({ now: event.startTime }),
-        duration: event.duration,
-        attributes: { ticketId },
+    it('timeouts if long tasks keep appearing', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: { timeout: 5_000 },
       }
-      traceManager.processSpan(span)
-      jest.advanceTimersByTime(500)
-    }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {
+          ticketId: 1,
+        },
+      }
 
-    // Active Trace ends once the *next* span is processed
-    const postEndSpan: Span<TicketIdScope> = {
-      type: 'mark',
-      name: 'post-end-span',
-      startTime: ensureTimestamp(),
-      duration: 0,
-      attributes: {},
-    }
-    traceManager.processSpan(postEndSpan)
-    jest.advanceTimersByTime(500)
+      tracer.start(startConfig)
 
-    expect(reportFn).toHaveBeenCalled()
-    expect(reportFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: traceDefinition.name,
-        duration: 1_000,
-        entries: [
-          expect.objectContaining({ name: 'start' }),
-          expect.objectContaining({ name: 'middle' }),
-          expect.objectContaining({ name: 'end' }),
-        ],
-      }),
-    )
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(49)}------<===5s===>------${LongTask(50)}
+      Time:   ${0}                      ${2_000}                 ${2_001}                            ${2_000 + 5_000}            
+      `
+      processEntries(entries, traceManager)
+
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(2_000)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
+
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start         end
+        timeline  | |-<⋯ +2000 ⋯>-|
+        time (ms) | 0             2000
+      `)
+    })
+
+    it('completes the trace when a trace is interrupted while waiting for long tasks to settle', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.interrupt-during-long-task-operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [matchSpan.withName('end')],
+        interruptOn: [matchSpan.withName('interrupt')],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {
+          ticketId: 1,
+        },
+      }
+
+      // start trace
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}---------${Render('end', 0)}---------${Render('interrupt', 0)}--${LongTask(100)}--${Check}
+      Time:   ${0}                          ${200}                      ${201}                      ${300}        ${5_000}   
+      `
+
+      processEntries(entries, traceManager)
+
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(report.name).toBe('ticket.interrupt-during-long-task-operation')
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBe('matched-on-interrupt')
+
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start        end
+        timeline  | |-<⋯ +200 ⋯>-|
+        time (ms) | 0            200
+      `)
+    })
   })
 })

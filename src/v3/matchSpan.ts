@@ -124,6 +124,7 @@ export function whenIdle<ScopeT extends ScopeBase>(
 }
 
 // logical combinators:
+// AND
 export function withAllConditions<ScopeT extends ScopeBase>(
   ...matchers: SpanMatcherFn<ScopeT>[]
 ): SpanMatcherFn<ScopeT> {
@@ -137,6 +138,7 @@ export function withAllConditions<ScopeT extends ScopeBase>(
   return Object.assign(matcherFn, tags)
 }
 
+// OR
 export function withOneOfConditions<ScopeT extends ScopeBase>(
   ...matchers: SpanMatcherFn<ScopeT>[]
 ): SpanMatcherFn<ScopeT> {
