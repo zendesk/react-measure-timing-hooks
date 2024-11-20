@@ -47,6 +47,7 @@ const mockComponentEntry: ComponentRenderSpan<TestScopeT> = {
   errorInfo: undefined,
   isIdle: true,
   renderedOutput: 'content',
+  renderCount: 1
 }
 
 const mockAnnotation: SpanAnnotation = {

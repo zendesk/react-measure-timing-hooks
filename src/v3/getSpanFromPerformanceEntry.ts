@@ -1,6 +1,6 @@
 import { getCommonUrlForTracing } from '../main'
 import { ensureTimestamp } from './ensureTimestamp'
-import { Attributes, InitiatorType, Span, SpanType } from './spanTypes'
+import { Attributes, InitiatorType, NativePerformanceEntryType, PerformanceEntrySpan, ResourceSpan } from './spanTypes'
 import { ScopeBase, Timestamp } from './types'
 
 /**
@@ -10,7 +10,7 @@ import { ScopeBase, Timestamp } from './types'
  */
 export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
   inputEntry: PerformanceEntry,
-): Span<ScopeT> | undefined {
+): PerformanceEntrySpan<ScopeT> | ResourceSpan<ScopeT> | undefined {
   // react in dev mode generates hundreds of these marks, ignore them
   if (inputEntry.entryType === 'mark' && inputEntry.name.startsWith('--')) {
     return undefined
@@ -23,22 +23,22 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
       ? (inputEntry.details as Attributes)
       : {}
 
-  const type = inputEntry.entryType as SpanType
+  const type = inputEntry.entryType as NativePerformanceEntryType
   let { name } = inputEntry
 
   if (
-    inputEntry.entryType === 'resource' ||
-    inputEntry.entryType === 'navigation'
+    type === 'resource' ||
+    type === 'navigation'
   ) {
     const { commonUrl, query, hash } = getCommonUrlForTracing(inputEntry.name)
     name = commonUrl
 
     // write a function in lotus to extract from datadog's SDK rather than hardcoding the implementation
-    if (inputEntry.entryType === 'resource') {
+    if (type === 'resource') {
       const resourceTiming = inputEntry as PerformanceResourceTiming
 
       return {
-        type,
+        type: 'resource',
         name,
         startTime: ensureTimestamp({ now: inputEntry.startTime }),
         attributes,
@@ -53,13 +53,13 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
       }
     }
   } else if (
-    inputEntry.entryType !== 'mark' &&
-    inputEntry.entryType !== 'measure'
+    type !== 'mark' &&
+    type !== 'measure'
   ) {
-    name = `${inputEntry.entryType}${inputEntry.name &&
+    name = `${type}${inputEntry.name &&
         inputEntry.name !== 'unknown' &&
         inputEntry.name.length > 0 &&
-        inputEntry.entryType !== inputEntry.name
+        type !== inputEntry.name
         ? `/${inputEntry.name}`
         : ''
       }`
@@ -69,7 +69,7 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
     now: inputEntry.startTime,
   }
 
-  const traceEntry: Span<ScopeT> = {
+  const traceEntry: PerformanceEntrySpan<ScopeT> = {
     type,
     name,
     startTime: ensureTimestamp(timestamp),
