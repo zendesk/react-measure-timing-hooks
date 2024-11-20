@@ -591,4 +591,6 @@ describe('TraceManager', () => {
       expect(report.interruptionReason).toBe('timeout')
     })
   })
+
+  // TESTING TODO: add test cases with getQuietWindowDuration
 })

@@ -85,6 +85,6 @@ export interface ComputedValueDefinition<
   matches: [...MatchersT]
   computeValueFromMatches: (
     // as many matches as match of type Span<ScopeT>
-    matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>>,
+    ...matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>[]>
   ) => number | string | boolean
 }

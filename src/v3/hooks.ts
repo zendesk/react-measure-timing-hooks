@@ -34,10 +34,7 @@ export const generateUseBeacon =
       const renderCountRef = useRef(0)
       renderCountRef.current += 1
 
-      const attributes = {
-        ...config.attributes,
-        renderCount: renderCountRef.current,
-      }
+      const { attributes } = config
 
       const status = config.error ? 'error' : 'ok'
 
@@ -47,6 +44,7 @@ export const generateUseBeacon =
         duration: 0,
         attributes,
         status,
+        renderCount: renderCountRef.current,
       })
 
       traceManager.processSpan(renderStartTaskEntry)
@@ -60,6 +58,7 @@ export const generateUseBeacon =
             duration: performance.now() - renderStartTaskEntry.startTime.now,
             status,
             attributes,
+            renderCount: renderCountRef.current,
           }),
         )
       })
@@ -75,6 +74,7 @@ export const generateUseBeacon =
             errorInfo: errorBoundaryMetadata?.errorInfo,
             duration: 0,
             status: errorBoundaryMetadata?.error ? 'error' : 'ok',
+            renderCount: renderCountRef.current,
           })
           traceManager.processSpan(unmountEntry)
         },

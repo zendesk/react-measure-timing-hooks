@@ -65,6 +65,7 @@ export class TraceManager<ScopeT extends ScopeBase> {
       computedValueDefinitions,
     }
 
+    // TESTING TODO: Add tests for define computed span and define computed value
     return {
       defineComputedSpan: (definition) => {
         computedSpanDefinitions.push(definition)

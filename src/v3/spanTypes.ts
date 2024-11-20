@@ -95,9 +95,10 @@ export interface SpanBase<ScopeT extends ScopeBase> {
 
 export interface ComponentRenderSpan<ScopeT extends ScopeBase>
   extends Omit<SpanBase<ScopeT>, 'scope' | 'attributes'>,
-    BeaconConfig<ScopeT> {
+  BeaconConfig<ScopeT> {
   type: ComponentLifecycleSpanType
   errorInfo?: ErrorInfo
+  renderCount: number
 }
 
 export type InitiatorType =
@@ -126,17 +127,22 @@ export type InitiatorType =
 
 export interface ResourceSpan<ScopeT extends ScopeBase>
   extends SpanBase<ScopeT> {
+  type: 'resource',
   resourceDetails: {
     initiatorType: InitiatorType
     query: Record<string, string | string[]>
     hash: string
   }
 }
+
+export interface PerformanceEntrySpan<ScopeT extends ScopeBase> extends SpanBase<ScopeT> {
+  type: Exclude<NativePerformanceEntryType, 'resource'>
+}
+
 /**
  * All possible trace entries
  */
-
 export type Span<ScopeT extends ScopeBase> =
-  | SpanBase<ScopeT>
+  | PerformanceEntrySpan<ScopeT>
   | ComponentRenderSpan<ScopeT>
   | ResourceSpan<ScopeT>

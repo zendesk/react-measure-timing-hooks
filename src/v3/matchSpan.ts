@@ -16,12 +16,15 @@ export type SpanMatcherFn<ScopeT extends ScopeBase> = ((
   SpanMatcherTags
 
 export interface SpanMatchDefinition<ScopeT extends ScopeBase> {
+  // IMPLEMENTATION TODO: take in scope as a second parameter
   name?: string | RegExp | ((name: string) => boolean)
+  // IMPLEMENTATION TODO: take in scope as a second parameter
   performanceEntryName?: string | RegExp | ((name: string) => boolean)
   type?: SpanType
   status?: SpanStatus
   attributes?: Attributes
   scopes?: (keyof ScopeT)[]
+  // IMPLEMENTATION TODO: take in scope as a second parameter
   occurrence?: number | ((occurrence: number) => boolean)
   isIdle?: boolean
 }

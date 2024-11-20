@@ -86,7 +86,7 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
    */
   name: string
 
-  type: TraceType
+  type?: TraceType
 
   // TODO: implement this with typechecking
   // to ensure we cannot start a trace without the required scope keys
