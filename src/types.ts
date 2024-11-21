@@ -10,7 +10,7 @@ import type { ActionLog } from './ActionLog'
 import type { ActionLogCache } from './ActionLogCache'
 import type { ACTION_TYPE, MARKER } from './constants'
 
-export type ReportFn<Metadata extends Record<string, unknown>> = (
+export type ReportFnV1<Metadata extends Record<string, unknown>> = (
   reportArgs: ReportArguments<Metadata>,
 ) => void
 
@@ -127,7 +127,7 @@ export interface StaticActionLogOptions<
 }
 
 export interface WithReportFn<CustomMetadata extends Record<string, unknown>> {
-  reportFn?: ReportFn<CustomMetadata>
+  reportFn?: ReportFnV1<CustomMetadata>
 
   /**
    * Will fire any time an action is added to the action log.
@@ -348,7 +348,7 @@ export interface StageDescription extends StateMeta {
   dependencyChanges: number
 }
 
-export interface Span {
+export interface TimingSpan {
   type: ActionType | 'ttr' | 'tti'
   description: string
   /** absolute timestamp of when render begun */

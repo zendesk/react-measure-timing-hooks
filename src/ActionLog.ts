@@ -25,7 +25,7 @@ import type {
   ActionWithStateMetadata,
   DynamicActionLogOptions,
   ReportArguments,
-  ReportFn,
+  ReportFnV1,
   ShouldResetOnDependencyChange,
   SpanAction,
   StageChangeAction,
@@ -134,7 +134,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     this.placementsCurrentlyRenderable.clear()
   }
 
-  private reportFn: ReportFn<CustomMetadata> = noop
+  private reportFn: ReportFnV1<CustomMetadata> = noop
 
   private shouldResetOnDependencyChangeFnBySource: Map<
     string,

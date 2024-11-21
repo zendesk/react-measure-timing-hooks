@@ -243,14 +243,14 @@ export type EventEntryType =
   | NativePerformanceEntryType
   | InternalPerformanceEntryType
 
-export interface InputEvent extends Omit<PerformanceEntryLike, 'entryType'> {
+export interface InputEvent extends Omit<PerformanceEntryLikeV2, 'entryType'> {
   readonly entryType: EventEntryType
   operations?: Record<string, EventOperationRelation>
   attributes?: Attributes
   event?: EventMetadata
 }
 
-export interface Event extends Omit<PerformanceEntryLike, 'entryType'> {
+export interface Event extends Omit<PerformanceEntryLikeV2, 'entryType'> {
   readonly entryType: EventEntryType
   readonly operations: Record<string, EventOperationRelation>
   readonly attributes: Attributes
@@ -284,7 +284,7 @@ export interface EventOperationRelation {
   operationRelativeEndTime: number
 }
 
-export interface PerformanceEntryLike {
+export interface PerformanceEntryLikeV2 {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/duration) */
   readonly duration: DOMHighResTimeStamp
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/PerformanceEntry/entryType) */
@@ -302,7 +302,7 @@ export interface PerformanceEntryLike {
 // }
 
 export type ObserveFn = (
-  onEntry: (entry: PerformanceEntryLike) => void,
+  onEntry: (entry: PerformanceEntryLikeV2) => void,
 ) => () => void
 
 export interface PerformanceApi {
@@ -310,7 +310,7 @@ export interface PerformanceApi {
 }
 
 export type EventProcessor = (
-  entry: InputEvent | PerformanceEntryLike,
+  entry: InputEvent | PerformanceEntryLikeV2,
 ) => Event | undefined
 
 export interface InstanceOptions {

@@ -16,7 +16,7 @@ import { ActionLog } from './ActionLog'
 import { DEFAULT_STAGES, INFORMATIVE_STAGES } from './constants'
 import { type Report, generateReport } from './generateReport'
 import * as performanceMock from './performanceMark'
-import type { ReportFn } from './types'
+import type { ReportFnV1 } from './types'
 import { useTimingMeasurement } from './useTimingMeasurement'
 import { resetMemoizedCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
 
@@ -82,7 +82,7 @@ describe('useTiming', () => {
 
   const originalPerformanceObserver = window.PerformanceObserver
 
-  const mockReportFn = jest.fn<void, Parameters<ReportFn<any>>>()
+  const mockReportFn = jest.fn<void, Parameters<ReportFnV1<any>>>()
 
   const id = 'test-component'
   const timeIncrement = 100

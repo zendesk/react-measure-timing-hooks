@@ -27,7 +27,7 @@ import {
   type ObserveFn,
   type OperationDefinition,
   type PerformanceApi,
-  type PerformanceEntryLike,
+  type PerformanceEntryLikeV2,
   FinalizationReason,
   OperationState,
 } from './types'
@@ -44,7 +44,7 @@ type TimeoutRef = ReturnType<typeof setTimeout>
  * TODO: Maybe it's named UserOperation to make it clear that it's user-initiated?
  * TODO: maybe have a Task/Process class with 'entryType' = 'task'
  */
-export class Operation implements PerformanceEntryLike {
+export class Operation implements PerformanceEntryLikeV2 {
   /**
    * The ID of the operation.
    */
@@ -600,7 +600,7 @@ export class Operation implements PerformanceEntryLike {
    * Handles tracking long events while waiting for interactivity.
    * @param event - The performance entry event to track.
    */
-  private handleInteractiveTracking(event: PerformanceEntryLike): void {
+  private handleInteractiveTracking(event: PerformanceEntryLikeV2): void {
     if (
       !BLOCKING_TASK_ENTRY_TYPES.includes(event.entryType) ||
       this.state !== 'waiting-for-interactive' ||
@@ -673,8 +673,8 @@ export class Operation implements PerformanceEntryLike {
       (typeof name === 'string'
         ? event.name === name
         : typeof name === 'function'
-          ? name(event.name)
-          : name.test(event.name))
+        ? name(event.name)
+        : name.test(event.name))
     const typeMatches = !type || event.entryType === type
     const attributeMatches =
       !attributes ||
@@ -843,7 +843,7 @@ export class OperationManager {
    * @param entry - The performance entry event to track.
    */
   scheduleEventProcessing(
-    entry: PerformanceEntryLike | InputEvent,
+    entry: PerformanceEntryLikeV2 | InputEvent,
   ): undefined | readonly Event[] {
     if (
       typeof entry.detail === 'object' &&

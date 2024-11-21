@@ -5,7 +5,7 @@ import { type Operation, OperationManager } from './operation'
 import {
   type Event,
   type OperationDefinition,
-  type PerformanceEntryLike,
+  type PerformanceEntryLikeV2,
 } from './types'
 
 describe('operation tracking', () => {
@@ -41,7 +41,7 @@ describe('operation tracking', () => {
     )
   }
 
-  let pushEntry: (entry: PerformanceEntryLike) => void = () => {
+  let pushEntry: (entry: PerformanceEntryLikeV2) => void = () => {
     //
   }
   const disconnectMock = jest.fn(() => {
@@ -53,7 +53,7 @@ describe('operation tracking', () => {
     pushEntry = onEntry
     return disconnectMock
   })
-  const pushEntries = (entries: (PerformanceEntryLike | Event)[]) => {
+  const pushEntries = (entries: (PerformanceEntryLikeV2 | Event)[]) => {
     entries.forEach(pushEntry)
   }
   beforeEach(() => {

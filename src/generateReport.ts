@@ -16,7 +16,7 @@ import {
 import type {
   ActionWithStateMetadata,
   ReportArguments,
-  Span,
+  TimingSpan,
   StageDescription,
 } from './types'
 import { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
@@ -34,7 +34,7 @@ export interface Report {
   includedStages: string[]
   hadError: boolean
   handled: boolean
-  spans: Span[]
+  spans: TimingSpan[]
   loadingStagesDuration: number
   flushReason: string
 }
@@ -68,7 +68,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
   ]
   const lastAction = [...actions].reverse()[0]
   const includedStages = new Set<string>()
-  const spans: Span[] = []
+  const spans: TimingSpan[] = []
 
   const markStage = ({
     stage,
@@ -228,7 +228,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
         timestamp,
         timeToStage,
         ...data
-      }): Span => ({
+      }): TimingSpan => ({
         type,
         description: `${pStage} to ${stage}`,
         startTime: startTime! + previousStageTimestamp,

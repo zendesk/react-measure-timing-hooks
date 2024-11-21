@@ -12,7 +12,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import { startOperation } from '../2024/operationTracking'
 import { onActionAddedCallback, useVisualizer } from '../lazyVisualizer'
 import { DEFAULT_STAGES, generateReport, generateTimingHooks } from '../main'
-import type { ReportFn } from '../types'
+import type { ReportFnV1 } from '../types'
 
 const { useStoryTimingInA, useStoryTimingInB } = generateTimingHooks(
   {
@@ -35,7 +35,7 @@ interface IArgs {
   dependency: 'one' | 'two'
   mounted: boolean
   isActive: boolean
-  reportFn: ReportFn<Record<string, unknown>>
+  reportFn: ReportFnV1<Record<string, unknown>>
   log: (...args: any[]) => void
   visualizer: boolean
 }
