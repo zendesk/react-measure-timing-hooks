@@ -75,6 +75,110 @@ describe('TraceManager', () => {
     expect(report.interruptionReason).toBeUndefined()
   })
 
+  it('correctly calculates a computed span', () => {
+    const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+    const traceDefinition: TraceDefinition<ScopeBase> = {
+      name: 'ticket.computed-span-operation',
+      type: 'operation',
+      requiredScopeKeys: [],
+      requiredToEnd: [{ name: 'end' }],
+    }
+    const tracer = traceManager.createTracer(traceDefinition)
+    const startConfig: StartTraceConfig<ScopeBase> = {
+      scope: {},
+    }
+
+    const computedSpanName = 'render-1-to-3'
+    // Define a computed span
+    tracer.defineComputedSpan({
+      name: computedSpanName,
+      startSpan: matchSpan.withName('render-1'),
+      endSpan: matchSpan.withName('render-3'),
+    })
+
+    // Start trace
+    const traceId = tracer.start(startConfig)
+    expect(traceId).toBe('trace-id')
+
+    // prettier-ignore
+    const { entries } = getEventsFromTimeline`
+    Events: ${Render('start', 0)}---${Render('render-1', 50)}----${Render('render-2', 50)}----${Render('render-3', 50)}--------${Render('end', 0)}
+    Time:   ${0}                    ${50}                     ${100}                       ${150}                        ${200}      
+    `
+
+    processEntries(entries, traceManager)
+    expect(reportFn).toHaveBeenCalled()
+
+    const report: Parameters<ReportFn<ScopeBase>>[0] = reportFn.mock.calls[0][0]
+    expect(report.name).toBe('ticket.computed-span-operation')
+    expect(report.duration).toBe(200)
+    expect(report.status).toBe('ok')
+    expect(report.interruptionReason).toBeUndefined()
+    expect(report.computedSpans[computedSpanName]?.startOffset).toBe(50)
+    expect(report.computedSpans[computedSpanName]?.duration).toBe(150)
+    expect(
+      report.entries.map(
+        (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+      ),
+    ).toMatchInlineSnapshot(`
+      events    | start       render-1(50)     render-2(50)     render-3(50)   end
+      timeline  | |-<⋯ +50 ⋯>-[++++++++++++++]-[++++++++++++++]-[++++++++++++++|
+      time (ms) | 0           50               100              150            200
+    `)
+  })
+
+  it('correctly calculates a computed value', () => {
+    const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+    const traceDefinition: TraceDefinition<ScopeBase> = {
+      name: 'ticket.computed-value-operation',
+      type: 'operation',
+      requiredScopeKeys: [],
+      requiredToEnd: [{ name: 'end' }],
+    }
+    const tracer = traceManager.createTracer(traceDefinition)
+    const startConfig: StartTraceConfig<ScopeBase> = {
+      scope: {},
+    }
+
+    // Define a computed value
+    tracer.defineComputedValue({
+      name: 'feature',
+      matches: [matchSpan.withName('feature')],
+      computeValueFromMatches: (feature) => feature.length,
+    })
+
+    // Start trace
+    const traceId = tracer.start(startConfig)
+    expect(traceId).toBe('trace-id')
+
+    // prettier-ignore
+    const { entries } = getEventsFromTimeline`
+    Events: ${Render('start', 0)}--${Render('feature', 50)}--${Render('feature', 50)}-${Render('end', 0)}
+    Time:   ${0}                   ${50}                     ${100}                    ${150}
+    `
+
+    processEntries(entries, traceManager)
+    expect(reportFn).toHaveBeenCalled()
+    const report: Parameters<ReportFn<ScopeBase>>[0] = reportFn.mock.calls[0][0]
+    expect(report.name).toBe('ticket.computed-value-operation')
+    expect(report.duration).toBe(150)
+    expect(report.status).toBe('ok')
+    expect(report.interruptionReason).toBeUndefined()
+    expect(report.computedValues).toEqual({
+      feature: 2,
+    })
+
+    expect(
+      report.entries.map(
+        (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+      ),
+    ).toMatchInlineSnapshot(`
+      events    | start       feature(50)              feature(50)             end
+      timeline  | |-<⋯ +50 ⋯>-[+++++++++++++++++++++++][+++++++++++++++++++++++|
+      time (ms) | 0           50                       100                     150
+    `)
+  })
+
   describe('debounce', () => {
     it('tracks trace when debouncedOn is defined but no debounce events', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
