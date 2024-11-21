@@ -12,8 +12,9 @@ export const VISIBLE_STATE = {
 } as const
 
 export const DEFAULT_DEBOUNCE_TIME = 500
+export const DEFAULT_CAPTURE_INTERACTIVE_TIME = 5_000;
 export const DEFAULT_CAPTURE_INTERACTIVE: Required<CaptureInteractiveConfig> = {
-  timeout: 5_000,
+  timeout: DEFAULT_CAPTURE_INTERACTIVE_TIME,
   debounceLongTasksBy: DEFAULT_DEBOUNCE_TIME,
   skipDebounceForLongEventsShorterThan: 0,
 }

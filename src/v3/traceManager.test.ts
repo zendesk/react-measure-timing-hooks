@@ -1,5 +1,8 @@
 import './test/asciiTimelineSerializer'
+import { DEFAULT_CAPTURE_INTERACTIVE_TIME } from '../main'
+import { TicketIdScope } from '../stories/mockComponentsv3/traceManager'
 import { DEFAULT_TIMEOUT_DURATION } from './ActiveTrace'
+import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
 import type { StartTraceConfig } from './spanTypes'
 import {
@@ -30,8 +33,6 @@ describe('TraceManager', () => {
     jest.clearAllMocks()
     jest.clearAllTimers()
   })
-
-  // TESTING TODO: add test cases with scope
 
   it('tracks trace with minimal requirements', () => {
     const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
@@ -179,6 +180,55 @@ describe('TraceManager', () => {
     `)
   })
 
+  it('tracks trace with scope ticketId: 4', () => {
+    const traceManager = new TraceManager<TicketIdScope>({
+      reportFn,
+      generateId,
+    })
+    const traceDefinition: TraceDefinition<TicketIdScope> = {
+      name: 'ticket.scope-operation',
+      type: 'operation',
+      requiredScopeKeys: [],
+      requiredToEnd: [{ name: 'end' }],
+    }
+    const tracer = traceManager.createTracer(traceDefinition)
+    const startConfig: StartTraceConfig<TicketIdScope> = {
+      scope: {
+        ticketId: 4,
+      },
+    }
+
+    // start trace
+    const traceId = tracer.start(startConfig)
+    expect(traceId).toBe('trace-id')
+
+    // prettier-ignore
+    const { entries } = getEventsFromTimeline`
+    Events: ${Render('start', 0)}-----${Render('middle', 0)}-----${Render('end', 0)}---<===+2s===>----${Check}
+    Time:   ${0}                      ${50}                      ${100}                               ${2_100}
+    `
+
+    processEntries(entries, traceManager)
+    expect(reportFn).toHaveBeenCalled()
+
+    const report: Parameters<ReportFn<TicketIdScope>>[0] =
+      reportFn.mock.calls[0][0]
+    expect(
+      report.entries.map(
+        (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+      ),
+    ).toMatchInlineSnapshot(`
+      events    | start       middle      end
+      timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
+      time (ms) | 0           50          100
+    `)
+    expect(report.name).toBe('ticket.scope-operation')
+    expect(report.duration).toBe(100)
+    expect(report.status).toBe('ok')
+    expect(report.interruptionReason).toBeUndefined()
+    expect(report.scope).toEqual({ ticketId: 4 })
+  })
+
   describe('debounce', () => {
     it('tracks trace when debouncedOn is defined but no debounce events', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
@@ -284,9 +334,7 @@ describe('TraceManager', () => {
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
-        scope: {
-          ticketId: 1,
-        },
+        scope: {},
       }
 
       // start trace
@@ -516,30 +564,25 @@ describe('TraceManager', () => {
   })
 
   describe('while capturing interactivity (when captureInteractive is defined)', () => {
-    // TESTING TODO: checking with debouncing, debounce deadline
     it('correctly captures trace while waiting the long tasks to settle', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
-      const CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT = 5_000
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.operation',
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: { timeout: CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT },
+        captureInteractive: true,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
-        scope: {
-          ticketId: 1,
-        },
+        scope: {},
       }
-
       tracer.start(startConfig)
 
       // prettier-ignore
       const { entries } = getEventsFromTimeline`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(50)}------<===5s===>---------${Check}
-      Time:   ${0}                      ${2_000}                ${2_001}                                ${2_001 + CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT - 5}
+      Time:   ${0}                      ${2_000}                ${2_001}                                ${2_001 + DEFAULT_CAPTURE_INTERACTIVE_TIME}
       `
       processEntries(entries, traceManager)
       expect(reportFn).toHaveBeenCalled()
@@ -557,11 +600,12 @@ describe('TraceManager', () => {
         `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
+      expect(report.startTillInteractive).toBe(2_000)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
 
-    it('completes the trace even though it times out when long tasks keep appearing past custom capture interactive window', () => {
+    it('completes the trace when a custom capture interactive timeouts', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT = 5_000
       const traceDefinition: TraceDefinition<ScopeBase> = {
@@ -573,9 +617,7 @@ describe('TraceManager', () => {
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
-        scope: {
-          ticketId: 1,
-        },
+        scope: {},
       }
 
       tracer.start(startConfig)
@@ -601,11 +643,12 @@ describe('TraceManager', () => {
         `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
+      expect(report.startTillInteractive).toBeNull();
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
     })
 
-    it('completes the trace when a trace is interrupted after it has ended AND while waiting for long tasks to settle', () => {
+    it('completes the trace when interrupted during waiting for capture interactive to finish', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.interrupt-during-long-task-operation',
@@ -617,9 +660,7 @@ describe('TraceManager', () => {
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
-        scope: {
-          ticketId: 1,
-        },
+        scope: {},
       }
 
       // start trace
@@ -647,11 +688,12 @@ describe('TraceManager', () => {
         `)
       expect(report.name).toBe('ticket.interrupt-during-long-task-operation')
       expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBeNull();
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('matched-on-interrupt')
     })
 
-    it('timeouts the entire trace while trace is waiting for long tasks AND entire trace times out', () => {
+    it('timeouts the trace while deboucing AND the last span is past the timeout duration', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.debounce-then-interrupted-operation',
@@ -691,10 +733,200 @@ describe('TraceManager', () => {
         `)
       expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
       expect(report.duration).toBeNull()
+      expect(report.startTillInteractive).toBeNull();
       expect(report.status).toBe('interrupted')
       expect(report.interruptionReason).toBe('timeout')
     })
-  })
 
-  // TESTING TODO: add test cases with getQuietWindowDuration
+    it('completes the trace when debouncing is done AND is waiting for capture interactive to finish', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT = 300
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.debounce-then-interrupted-operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        debounceOn: [{ name: 'debounce' }],
+        captureInteractive: { timeout: CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT },
+        debounceDuration: 100,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      // start trace
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}---------------------${Render('debounce', 100)}------------------${Check}
+      Time:   ${0}                      ${DEFAULT_TIMEOUT_DURATION - 500}       ${DEFAULT_TIMEOUT_DURATION - 499}           ${DEFAULT_TIMEOUT_DURATION + 1}
+      `
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start          end
+        timeline  | |-<⋯ +44500 ⋯>-|
+        time (ms) | 0              44500
+      `)
+      expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
+      expect(report.duration).toBe(44_500)
+      expect(report.startTillInteractive).toBeNull();
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBe('timeout')
+    })
+
+    it('uses getQuietWindowDuration from capture interactive config', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const CUSTOM_QUIET_WINDOW_DURATION = 2_000
+      const TRACE_DURATION = 1_000
+      const getQuietWindowDuration = jest
+        .fn()
+        .mockReturnValue(CUSTOM_QUIET_WINDOW_DURATION)
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: { timeout: 100, getQuietWindowDuration },
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(5)}------------${LongTask(5)}-----${Check}
+      Time:   ${0}                      ${TRACE_DURATION}       ${1_001}                  ${1_050}           ${1_200}        
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start         end
+        timeline  | |-<⋯ +1000 ⋯>-|
+        time (ms) | 0             1000
+      `)
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(TRACE_DURATION)
+      expect(report.startTillInteractive).toBeNull();
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
+      expect(getQuietWindowDuration).toHaveBeenCalled()
+      expect(getQuietWindowDuration).toHaveBeenCalledWith(1_055, TRACE_DURATION)
+    })
+
+    it('uses createQuietWindowDurationCalculator for getQuietWindowDuration in capture interactive config', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const CUSTOM_QUIET_WINDOW_DURATION = 2_000 // 3 seconds
+      const TRACE_DURATION = 1_000
+
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: {
+          timeout: 1_000,
+          getQuietWindowDuration: createQuietWindowDurationCalculator(),
+        },
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----------${LongTask(5)}----------------${LongTask(50)}---${Check}
+      Time:   ${0}                      ${TRACE_DURATION}             ${1_001}                      ${1_945}          ${2_001}         
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start         end
+        timeline  | |-<⋯ +1000 ⋯>-|
+        time (ms) | 0             1000
+      `)
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(TRACE_DURATION)
+      expect(report.startTillInteractive).toBeNull();
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
+    })
+
+    it('completes the trace after one heavy cluster following FMP', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}--${LongTask(50)}}-${LongTask(200)}-----${LongTask(50)}-----------${Check}
+      Time:   ${0}                      ${200}               ${300}           ${400}                ${650}                   ${3_200}
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start        end         task(50)    task(200)                      task(50)
+        timeline  | |-<⋯ +200 ⋯>-|-----------[++++]------[+++++++++++++++++++++++]------[++++]-
+        time (ms) | 0            200         300         400                            650
+      `)
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBe(700)
+      // TESTING TODO: are we testing enough of first idle time?
+      // expect(report.completeTillInteractive).toBe(650)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+  })
 })
