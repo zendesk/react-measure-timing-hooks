@@ -55,7 +55,7 @@
   "source": "src/main.ts",
   "types": "src/index.ts",
   "scripts": {
-    "dev": "rm -rf esm/* && echo \"export * from '../src/main'\" > ./esm/main.d.ts && yarn webpack build --mode development --entry ./src/main --watch",
+    "dev": "echo \"export * from '../src/main'\" > ./esm/main.d.ts && yarn webpack build --mode development --entry ./src/main --watch",
     "build": "yarn build:cjs && yarn build:esm && yarn copy:css",
     "build:cjs": "yarn rrun tsc --outDir cjs --module commonjs --target es2021",
     "build:esm": "rm -rf esm && yarn build:esm:ts && yarn build:esm:webpack && cp package.esm.json esm/package.json",

@@ -198,7 +198,7 @@ describe('TraceManager', () => {
     const tracer = traceManager.createTracer(traceDefinition)
     const startConfig: StartTraceConfig<TicketIdScope> = {
       scope: {
-        ticketId: 4,
+        ticketId: '4',
       },
     }
 
@@ -230,7 +230,7 @@ describe('TraceManager', () => {
     expect(report.duration).toBe(100)
     expect(report.status).toBe('ok')
     expect(report.interruptionReason).toBeUndefined()
-    expect(report.scope).toEqual({ ticketId: 4 })
+    expect(report.scope).toEqual({ ticketId: '4' })
   })
 
   describe('debounce', () => {
@@ -989,15 +989,14 @@ describe('TraceManager', () => {
         ...report
       }: Parameters<ReportFn<TicketIdScope>>[0] = reportFn.mock.calls[0][0]
 
-      const completeSpan = fixtureEntries.find(
-        ({ annotation }) => annotation.markedComplete,
-      )
-      const interactiveSpan = fixtureEntries.find(
-        ({ annotation }) => annotation.markedInteractive,
-      )
-
-      console.log(completeSpan)
-      console.log(interactiveSpan)
+      // const completeSpan = fixtureEntries.find(
+      //   ({ annotation }) => annotation.markedComplete,
+      // )
+      // const interactiveSpan = fixtureEntries.find(
+      //   ({ annotation }) => annotation.markedInteractive,
+      // )
+      // console.log(completeSpan)
+      // console.log(interactiveSpan)
 
       expect(report).toMatchInlineSnapshot(`
         {
@@ -1068,14 +1067,14 @@ describe('TraceManager', () => {
         ...report
       }: Parameters<ReportFn<TicketIdScope>>[0] = reportFn.mock.calls[0][0]
 
-      const completeSpan = fixtureEntries.find(
-        ({ annotation }) => annotation.markedComplete,
-      )
-      const interactiveSpan = fixtureEntries.find(
-        ({ annotation }) => annotation.markedInteractive,
-      )
-      console.log(completeSpan)
-      console.log(interactiveSpan)
+      // const completeSpan = fixtureEntries.find(
+      //   ({ annotation }) => annotation.markedComplete,
+      // )
+      // const interactiveSpan = fixtureEntries.find(
+      //   ({ annotation }) => annotation.markedInteractive,
+      // )
+      // console.log(completeSpan)
+      // console.log(interactiveSpan)
 
       expect(report).toMatchInlineSnapshot(`
         {

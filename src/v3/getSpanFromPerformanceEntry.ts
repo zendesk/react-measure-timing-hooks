@@ -1,12 +1,17 @@
 import { getCommonUrlForTracing } from '../main'
 import { ensureTimestamp } from './ensureTimestamp'
-import { Attributes, InitiatorType, NativePerformanceEntryType, PerformanceEntrySpan, ResourceSpan } from './spanTypes'
+import {
+  Attributes,
+  InitiatorType,
+  NativePerformanceEntryType,
+  PerformanceEntrySpan,
+  ResourceSpan,
+} from './spanTypes'
 import { ScopeBase, Timestamp } from './types'
 
 /**
- * Maps Performance Entry to Trace Entry
- * @param inputEntry - The performance entry event.
- * @returns {Span} The span.
+ * Maps Performance Entry to a Span
+ * @returns The span.
  */
 export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
   inputEntry: PerformanceEntry,
@@ -17,19 +22,16 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
   }
 
   const attributes =
-    'details' in inputEntry &&
-      typeof inputEntry.detail === 'object' &&
-      inputEntry.details !== null
-      ? (inputEntry.details as Attributes)
+    'detail' in inputEntry &&
+    typeof inputEntry.detail === 'object' &&
+    inputEntry.detail !== null
+      ? (inputEntry.detail as Attributes)
       : {}
 
   const type = inputEntry.entryType as NativePerformanceEntryType
   let { name } = inputEntry
 
-  if (
-    type === 'resource' ||
-    type === 'navigation'
-  ) {
+  if (type === 'resource' || type === 'navigation') {
     const { commonUrl, query, hash } = getCommonUrlForTracing(inputEntry.name)
     name = commonUrl
 
@@ -52,17 +54,15 @@ export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
         },
       }
     }
-  } else if (
-    type !== 'mark' &&
-    type !== 'measure'
-  ) {
-    name = `${type}${inputEntry.name &&
-        inputEntry.name !== 'unknown' &&
-        inputEntry.name.length > 0 &&
-        type !== inputEntry.name
+  } else if (type !== 'mark' && type !== 'measure') {
+    name = `${type}${
+      inputEntry.name &&
+      inputEntry.name !== 'unknown' &&
+      inputEntry.name.length > 0 &&
+      type !== inputEntry.name
         ? `/${inputEntry.name}`
         : ''
-      }`
+    }`
   }
 
   const timestamp: Partial<Timestamp> = {
