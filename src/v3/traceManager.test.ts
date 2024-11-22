@@ -1,10 +1,11 @@
 import './test/asciiTimelineSerializer'
 import { DEFAULT_CAPTURE_INTERACTIVE_TIME } from '../main'
-import { TicketIdScope } from '../stories/mockComponentsv3/traceManager'
 import { DEFAULT_TIMEOUT_DURATION } from './ActiveTrace'
+import { ensureTimestamp } from './ensureTimestamp'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
 import type { StartTraceConfig } from './spanTypes'
+import { type TicketIdScope, ticketActivationDefinition } from './test/fixtures'
 import {
   Check,
   getEventsFromTimeline,
@@ -12,6 +13,9 @@ import {
   Render,
 } from './test/makeTimeline'
 import processEntries from './test/processEntries'
+import { shouldCompleteAndHaveInteractiveTime } from './test/shouldCompleteAndHaveInteractiveTime'
+import { shouldNotEndWithInteractiveTimeout } from './test/shouldNotEndWithInteractiveTimeout'
+import { shouldNotEndWithInterruption } from './test/shouldNotEndWithInterruption'
 import { TraceManager } from './traceManager'
 import type { ReportFn, ScopeBase, TraceDefinition } from './types'
 
@@ -104,7 +108,7 @@ describe('TraceManager', () => {
     // prettier-ignore
     const { entries } = getEventsFromTimeline`
     Events: ${Render('start', 0)}---${Render('render-1', 50)}----${Render('render-2', 50)}----${Render('render-3', 50)}--------${Render('end', 0)}
-    Time:   ${0}                    ${50}                     ${100}                       ${150}                        ${200}      
+    Time:   ${0}                    ${50}                     ${100}                       ${150}                        ${200}
     `
 
     processEntries(entries, traceManager)
@@ -264,9 +268,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start       middle      end
-        timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
-        time (ms) | 0           50          100
+        events    | start                    middle                    end            check
+        timeline  | |------------------------|-------------------------|-<⋯ +2000 ⋯>--|
+        time (ms) | 0                        50                        100            2100
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(100)
@@ -309,11 +313,11 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |                                                     shorter-debounce           long-debounce
-        events    | start                                             end             short-debounce
-        timeline  | |-------------------------------------------------|-|-<⋯ +200 ⋯>--|-<⋯ +200 ⋯>-|
-        time (ms) | 0                                                 50              251          451
-        time (ms) |                                                     51
+        events    |          shorter-debounce
+        events    | start  end                            short-debounce               long-debounce check
+        timeline  | |------|-|----------------------------|----------------------------|-<⋯ +600 ⋯>--|
+        time (ms) | 0      50                             251                          451           1051
+        time (ms) |          51
       `)
       expect(report.name).toBe('ticket.debounce-operation')
       expect(report.duration).toBe(451) // 50 + 1 + 200 + 200
@@ -388,7 +392,7 @@ describe('TraceManager', () => {
       // prettier-ignore
       const { entries } = getEventsFromTimeline`
       Events: ${Render('start', 0)}
-      Time:   ${0}                 
+      Time:   ${0}
       `
       processEntries(entries, traceManager)
 
@@ -594,10 +598,12 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-          events    | start         end
-          timeline  | |-<⋯ +2000 ⋯>-|
-          time (ms) | 0             2000
-        `)
+        events    |                task(50)
+        events    | start         end                                                              check
+        timeline  | |-<⋯ +2000 ⋯>-|[++++++++++++++++++++++++++++++++++++++++++++++++]-<⋯ +4950 ⋯>--|
+        time (ms) | 0             2000                                                             7001
+        time (ms) |                2001
+      `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
       expect(report.startTillInteractive).toBe(2_000)
@@ -605,15 +611,15 @@ describe('TraceManager', () => {
       expect(report.interruptionReason).toBeUndefined()
     })
 
-    it('completes the trace when a custom capture interactive timeouts', () => {
+    it('completes the trace with waiting-for-interactive-timeout', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
-      const CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT = 5_000
+      const interactiveTimeout = 5_000
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.operation',
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: { timeout: CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT },
+        captureInteractive: { timeout: interactiveTimeout },
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -624,8 +630,8 @@ describe('TraceManager', () => {
 
       // prettier-ignore
       const { entries } = getEventsFromTimeline`
-      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(49)}------<===5s===>------${LongTask(50)}
-      Time:   ${0}                      ${2_000}                 ${2_001}                            ${2_000 + CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT}            
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(interactiveTimeout)}
+      Time:   ${0}                      ${2_000}                ${2_050}
       `
       processEntries(entries, traceManager)
       expect(reportFn).toHaveBeenCalled()
@@ -637,15 +643,17 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-          events    | start         end
-          timeline  | |-<⋯ +2000 ⋯>-|
-          time (ms) | 0             2000
-        `)
+        events    |                task(5000)
+        events    | start         end
+        timeline  | |-<⋯ +2000 ⋯>-|[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]-
+        time (ms) | 0             2000
+        time (ms) |                2050
+      `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
-      expect(report.startTillInteractive).toBeNull();
-      expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
+      expect(report.startTillInteractive).toBeNull()
+      expect(report.status).toBe('ok')
     })
 
     it('completes the trace when interrupted during waiting for capture interactive to finish', () => {
@@ -669,7 +677,7 @@ describe('TraceManager', () => {
       // prettier-ignore
       const { entries } = getEventsFromTimeline`
       Events: ${Render('start', 0)}---------${Render('end', 0)}---------${Render('interrupt', 0)}--${LongTask(100)}--${Check}
-      Time:   ${0}                          ${200}                      ${201}                     ${300}            ${5_000}   
+      Time:   ${0}                          ${200}                      ${201}                     ${300}            ${5_000}
       `
 
       processEntries(entries, traceManager)
@@ -682,13 +690,15 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-          events    | start        end
-          timeline  | |-<⋯ +200 ⋯>-|
-          time (ms) | 0            200
-        `)
+        events    |               interrupt
+        events    | start        end
+        timeline  | |-<⋯ +200 ⋯>-||-
+        time (ms) | 0            200
+        time (ms) |               201
+      `)
       expect(report.name).toBe('ticket.interrupt-during-long-task-operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBeNull();
+      expect(report.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('matched-on-interrupt')
     })
@@ -733,7 +743,7 @@ describe('TraceManager', () => {
         `)
       expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
       expect(report.duration).toBeNull()
-      expect(report.startTillInteractive).toBeNull();
+      expect(report.startTillInteractive).toBeNull()
       expect(report.status).toBe('interrupted')
       expect(report.interruptionReason).toBe('timeout')
     })
@@ -773,13 +783,15 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start          end
-        timeline  | |-<⋯ +44500 ⋯>-|
-        time (ms) | 0              44500
+        events    |                 debounce(100)
+        events    | start          end                                                            check
+        timeline  | |-<⋯ +44500 ⋯>-|[++++++++++]--------------------------------------------------|-
+        time (ms) | 0              44500                                                          45001
+        time (ms) |                 44501
       `)
       expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
       expect(report.duration).toBe(44_500)
-      expect(report.startTillInteractive).toBeNull();
+      expect(report.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('timeout')
     })
@@ -808,7 +820,7 @@ describe('TraceManager', () => {
       // prettier-ignore
       const { entries } = getEventsFromTimeline`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(5)}------------${LongTask(5)}-----${Check}
-      Time:   ${0}                      ${TRACE_DURATION}       ${1_001}                  ${1_050}           ${1_200}        
+      Time:   ${0}                      ${TRACE_DURATION}       ${1_001}                  ${1_050}           ${1_200}
       `
 
       processEntries(entries, traceManager)
@@ -821,13 +833,15 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start         end
-        timeline  | |-<⋯ +1000 ⋯>-|
-        time (ms) | 0             1000
+        events    |                task(5)
+        events    | start         end             task(5)                                          check
+        timeline  | |-<⋯ +1000 ⋯>-||--------------|------------------------------------------------|-
+        time (ms) | 0             1000            1050                                             1200
+        time (ms) |                1001
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(TRACE_DURATION)
-      expect(report.startTillInteractive).toBeNull();
+      expect(report.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
       expect(getQuietWindowDuration).toHaveBeenCalled()
@@ -859,7 +873,7 @@ describe('TraceManager', () => {
       // prettier-ignore
       const { entries } = getEventsFromTimeline`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----------${LongTask(5)}----------------${LongTask(50)}---${Check}
-      Time:   ${0}                      ${TRACE_DURATION}             ${1_001}                      ${1_945}          ${2_001}         
+      Time:   ${0}                      ${TRACE_DURATION}             ${1_001}                      ${1_945}          ${2_001}
       `
 
       processEntries(entries, traceManager)
@@ -872,13 +886,15 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start         end
-        timeline  | |-<⋯ +1000 ⋯>-|
-        time (ms) | 0             1000
+        events    |                task(5)
+        events    | start         end             task(50)                   check
+        timeline  | |-<⋯ +1000 ⋯>-|[]-<⋯ +939 ⋯>--[+++++++++++++++++++++++]--|-
+        time (ms) | 0             1000            1945                       2001
+        time (ms) |                1001
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(TRACE_DURATION)
-      expect(report.startTillInteractive).toBeNull();
+      expect(report.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
     })
@@ -915,9 +931,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start        end         task(50)    task(200)                      task(50)
-        timeline  | |-<⋯ +200 ⋯>-|-----------[++++]------[+++++++++++++++++++++++]------[++++]-
-        time (ms) | 0            200         300         400                            650
+        events    | start               end        task(50)  task(200)                task(50)           check
+        timeline  | |-------------------|----------[+++]-----[++++++++++++++++++]-----[+++]-<⋯ +2500 ⋯>--|
+        time (ms) | 0                   200        300       400                      650                3200
       `)
 
       expect(report.name).toBe('ticket.operation')
@@ -927,6 +943,161 @@ describe('TraceManager', () => {
       // expect(report.completeTillInteractive).toBe(650)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
+    })
+  })
+
+  describe('tests using fixtures', () => {
+    it('should complete with interactive time without interruption', () => {
+      const traceManager = new TraceManager<TicketIdScope>({
+        reportFn,
+        generateId,
+      })
+
+      const fixtureEntries = shouldCompleteAndHaveInteractiveTime
+
+      const scope = fixtureEntries.find((entry) => 'scope' in entry.span)!.span
+        .scope!
+
+      const tracer = traceManager.createTracer(ticketActivationDefinition)
+      const startConfig: StartTraceConfig<TicketIdScope> = {
+        scope,
+        startTime: fixtureEntries[0]!.span.startTime,
+      }
+
+      tracer.start(startConfig)
+
+      for (const entry of fixtureEntries) {
+        traceManager.processSpan(entry.span)
+      }
+      const lastFixtureSpan = fixtureEntries.at(-1)!.span
+      traceManager.processSpan({
+        name: 'check',
+        duration: 0,
+        startTime: ensureTimestamp({
+          now:
+            lastFixtureSpan.startTime.now + lastFixtureSpan.duration + 100_000,
+        }),
+        type: 'mark',
+        scope,
+        attributes: {},
+      })
+
+      expect(reportFn).toHaveBeenCalled()
+      const {
+        entries,
+        spanAttributes,
+        ...report
+      }: Parameters<ReportFn<TicketIdScope>>[0] = reportFn.mock.calls[0][0]
+
+      const completeSpan = fixtureEntries.find(
+        ({ annotation }) => annotation.markedComplete,
+      )
+      const interactiveSpan = fixtureEntries.find(
+        ({ annotation }) => annotation.markedInteractive,
+      )
+
+      console.log(completeSpan)
+      console.log(interactiveSpan)
+
+      expect(report).toMatchInlineSnapshot(`
+        {
+          "attributes": {},
+          "completeTillInteractive": 0,
+          "computedSpans": {},
+          "computedValues": {},
+          "duration": 1504.4000000059605,
+          "id": "trace-id",
+          "interruptionReason": undefined,
+          "name": "ticket.activation",
+          "scope": {
+            "ticketId": "74",
+          },
+          "startTillInteractive": 1504.4000000059605,
+          "status": "ok",
+          "type": "operation",
+        }
+      `)
+      // expect(report.duration).toBe(100)
+      // expect(report.interruptionReason).toBeUndefined()
+      // expect(report.startTillInteractive).toBe(700)
+    })
+
+    it('should not end with interruption', () => {
+      const traceManager = new TraceManager<TicketIdScope>({
+        reportFn,
+        generateId,
+      })
+
+      const fixtureEntries = shouldNotEndWithInteractiveTimeout
+
+      const scope = fixtureEntries.find((entry) => 'scope' in entry.span)!.span
+        .scope!
+      const tracer = traceManager.createTracer(ticketActivationDefinition)
+      const startConfig: StartTraceConfig<TicketIdScope> = {
+        scope,
+        startTime: {
+          ...fixtureEntries[0]!.span.startTime,
+          now:
+            fixtureEntries[0]!.span.startTime.now -
+            fixtureEntries[0]!.annotation.operationRelativeStartTime,
+        },
+      }
+
+      tracer.start(startConfig)
+
+      for (const entry of fixtureEntries) {
+        traceManager.processSpan(entry.span)
+      }
+      const lastFixtureSpan = fixtureEntries.at(-1)!.span
+      traceManager.processSpan({
+        type: 'mark',
+        name: 'check',
+        duration: 0,
+        startTime: ensureTimestamp({
+          now:
+            lastFixtureSpan.startTime.now + lastFixtureSpan.duration + 106_000,
+        }),
+        scope,
+        attributes: {},
+      })
+
+      expect(reportFn).toHaveBeenCalled()
+      const {
+        entries,
+        spanAttributes,
+        ...report
+      }: Parameters<ReportFn<TicketIdScope>>[0] = reportFn.mock.calls[0][0]
+
+      const completeSpan = fixtureEntries.find(
+        ({ annotation }) => annotation.markedComplete,
+      )
+      const interactiveSpan = fixtureEntries.find(
+        ({ annotation }) => annotation.markedInteractive,
+      )
+      console.log(completeSpan)
+      console.log(interactiveSpan)
+
+      expect(report).toMatchInlineSnapshot(`
+        {
+          "attributes": {},
+          "completeTillInteractive": 0,
+          "computedSpans": {},
+          "computedValues": {},
+          "duration": 1302.3999999910593,
+          "id": "trace-id",
+          "interruptionReason": undefined,
+          "name": "ticket.activation",
+          "scope": {
+            "ticketId": "74",
+          },
+          "startTillInteractive": 1302.3999999910593,
+          "status": "ok",
+          "type": "operation",
+        }
+      `)
+      // expect(report.duration).toBe(100)
+      // expect(report.interruptionReason).toBeUndefined()
+      // expect(report.startTillInteractive).toBe(700)
     })
   })
 })

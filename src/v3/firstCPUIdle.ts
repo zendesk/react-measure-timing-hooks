@@ -43,6 +43,8 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
 
   const returnType = typeof fmpOrEntry === 'number' ? 'number' : 'object'
 
+  // TODO: if a longtask straddles the FMP, then we should push the first CPU idle timestamp to the end of it
+  // TODO: potentially assume that FMP point is as if inside of a heavy cluster already
   return function processPerformanceEntry(
     entry: PerformanceEntryLike,
   ): T | undefined {
@@ -74,9 +76,11 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
           longTaskClusterDurationTotal =
             entry.duration - Math.abs(entry.startTime - fmp)
 
-          // Move to the end of the cluster:
-          possibleFirstCPUIdleTimestamp = endTimeStampOfLastLongTask
-          possibleFirstCPUIdleEntry = entry
+          if (endTimeStampOfLastLongTask > fmp) {
+            // Move to the end of the cluster:
+            possibleFirstCPUIdleTimestamp = endTimeStampOfLastLongTask
+            possibleFirstCPUIdleEntry = entry
+          }
         } else {
           longTaskClusterDurationTotal = entry.duration
         }
@@ -87,7 +91,11 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
     // Calculate time since the last long task
     const gapSincePreviousTask = entry.startTime - endTimeStampOfLastLongTask
 
-    if (isEntryLongTask && gapSincePreviousTask < clusterPadding) {
+    if (
+      isEntryLongTask &&
+      gapSincePreviousTask < clusterPadding &&
+      gapSincePreviousTask > 0
+    ) {
       // Continue to expand the existing cluster
       // If less than 1 second since the last long task
       // Include the time passed since the last long task in the cluster duration
@@ -96,7 +104,10 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
       lastLongTask = entry
 
       // If the cluster duration exceeds 250ms, update the first CPU idle timestamp
-      if (longTaskClusterDurationTotal >= heavyClusterThreshold) {
+      if (
+        longTaskClusterDurationTotal >= heavyClusterThreshold &&
+        endTimeStampOfLastLongTask > fmp
+      ) {
         // Met criteria for Heavy Cluster
         // Move to the end of the cluster
         possibleFirstCPUIdleTimestamp = endTimeStampOfLastLongTask

@@ -122,6 +122,8 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
    * while debouncing, we need to buffer any spans that come in so they can be re-processed
    * once we transition to the 'waiting-for-interactive' state
    * otherwise we might miss out on spans that are relevant to calculating the interactive
+   *
+   * if we have long tasks before FMP, we want to use them as a potential grouping post FMP.
    */
   debouncingSpanBuffer: SpanAndAnnotation<ScopeT>[] = []
 
@@ -170,15 +172,6 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 
           const matcher = this.context.definition.requiredToEnd[i]!
           if (matcher(spanAndAnnotation, this.context.input.scope)) {
-            // console.log(
-            //   '# got a match!',
-            //   'span',
-            //   spanAndAnnotation,
-            //   'matches',
-            //   matcher,
-            //   'remaining items',
-            //   this.context.requiredToEndIndexChecklist,
-            // )
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
 
@@ -256,18 +249,30 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           return { transitionToState: 'waiting-for-interactive' }
         }
 
-        for (const matcher of this.context.definition.requiredToEnd) {
-          const { span } = spanAndAnnotation
-          if (
-            matcher(spanAndAnnotation, this.context.input.scope) &&
-            matcher.isIdle &&
-            'isIdle' in span &&
-            span.isIdle
-          ) {
-            // check if we regressed on "isIdle", and if so, transition to interrupted with reason
-            return {
-              transitionToState: 'interrupted',
-              interruptionReason: 'idle-component-no-longer-idle',
+        const { span } = spanAndAnnotation
+
+        // even though we satisfied all the requiredToEnd conditions in the recording state,
+        // if we see a previously required render span that was requested to be idle, but is no longer idle,
+        // our trace is deemed invalid and should be interrupted
+        const isSpanNonIdleRender = 'isIdle' in span && !span.isIdle
+        // we want to match on all the conditions except for the "isIdle: true"
+        // for this reason we have to pretend to the matcher about "isIdle" or else our matcher condition would never evaluate to true
+        const idleRegressionCheckSpan = isSpanNonIdleRender && {
+          ...spanAndAnnotation,
+          span: { ...span, isIdle: true },
+        }
+        if (idleRegressionCheckSpan) {
+          for (const matcher of this.context.definition.requiredToEnd) {
+            if (
+              // TODO: rename matcher in the whole file to 'doesSpanMatch'
+              matcher(idleRegressionCheckSpan, this.context.input.scope) &&
+              matcher.isIdle
+            ) {
+              // check if we regressed on "isIdle", and if so, transition to interrupted with reason
+              return {
+                transitionToState: 'interrupted',
+                interruptionReason: 'idle-component-no-longer-idle',
+              }
             }
           }
         }
@@ -325,12 +330,17 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           }
         }
 
-        this.interactiveDeadline =
-          this.lastRequiredSpan.span.startTime.epoch +
-          this.lastRequiredSpan.span.duration +
-          ((typeof interactiveConfig === 'object' &&
+        const interruptMillisecondsAfterLastRequiredSpan =
+          (typeof interactiveConfig === 'object' &&
             interactiveConfig.timeout) ||
-            DEFAULT_INTERACTIVE_TIMEOUT_DURATION)
+          DEFAULT_INTERACTIVE_TIMEOUT_DURATION
+
+        const lastRequiredSpanEndTimeEpoch =
+          this.lastRequiredSpan.span.startTime.epoch +
+          this.lastRequiredSpan.span.duration
+        this.interactiveDeadline =
+          lastRequiredSpanEndTimeEpoch +
+          interruptMillisecondsAfterLastRequiredSpan
 
         this.cpuIdleLongTaskProcessor = createCPUIdleProcessor<
           EntryType<ScopeT>
@@ -370,6 +380,33 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       },
 
       onProcessSpan: (spanAndAnnotation: SpanAndAnnotation<ScopeT>) => {
+        const cpuIdleMatch = this.cpuIdleLongTaskProcessor?.({
+          entryType: spanAndAnnotation.span.type,
+          startTime: spanAndAnnotation.span.startTime.now,
+          duration: spanAndAnnotation.span.duration,
+          entry: spanAndAnnotation,
+        })
+
+        const cpuIdleTimestamp =
+          cpuIdleMatch !== undefined &&
+          cpuIdleMatch.entry.span.startTime.epoch +
+            cpuIdleMatch.entry.span.duration
+
+        // TODO (DECISION): should we also check whether (cpuIdleTimestamp <= this.interactiveDeadline)?
+        // it's technically more correct, but on the other hand if we crossed the interactive deadline
+        // and at the same time found out the real CpuIdle, it's probably fine to keep it
+        // as long as we don't cross the 'timeoutDeadline' it's probably ok.
+
+        if (cpuIdleTimestamp && cpuIdleTimestamp <= this.timeoutDeadline) {
+          // if we match the interactive criteria, transition to complete
+          // reference https://docs.google.com/document/d/1GGiI9-7KeY3TPqS3YT271upUVimo-XiL5mwWorDUD4c/edit
+          return {
+            transitionToState: 'complete',
+            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
+          }
+        }
+
         const spanEndTimeEpoch =
           spanAndAnnotation.span.startTime.epoch +
           spanAndAnnotation.span.duration
@@ -390,23 +427,6 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             transitionToState: 'complete',
             interruptionReason: 'waiting-for-interactive-timeout',
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-          }
-        }
-
-        const cpuIdleMatch = this.cpuIdleLongTaskProcessor?.({
-          entryType: spanAndAnnotation.span.type,
-          startTime: spanAndAnnotation.span.startTime.now,
-          duration: spanAndAnnotation.span.duration,
-          entry: spanAndAnnotation,
-        })
-
-        if (cpuIdleMatch !== undefined) {
-          // if we match the interactive criteria, transition to complete
-          // reference https://docs.google.com/document/d/1GGiI9-7KeY3TPqS3YT271upUVimo-XiL5mwWorDUD4c/edit
-          return {
-            transitionToState: 'complete',
-            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-            cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
           }
         }
 
@@ -543,8 +563,9 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
   }
 
   processSpan(span: Span<ScopeT>): SpanAnnotationRecord | undefined {
+    const spanEndTime = span.startTime.now + span.duration
     // check if valid for this trace:
-    if (span.startTime.now + span.duration < this.input.startTime.now) {
+    if (spanEndTime < this.input.startTime.now) {
       // TODO: maybe we should actually keep events that happened right before the trace started, e.g. 'event' spans for clicks?
       // console.log(
       //   `# span ${span.type} ${span.name} is ignored because it started before the trace started at ${this.input.startTime.now}`,
@@ -619,15 +640,6 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       !existingAnnotation &&
       (!transition || transition.transitionToState !== 'interrupted')
 
-    // console.log(
-    //   `# processed span ${spanAndAnnotation.span.type} ${spanAndAnnotation.span.name} ${spanAndAnnotation.annotation.occurrence}`,
-    //   spanAndAnnotation,
-    //   'shouldRecord?',
-    //   shouldRecord,
-    //   'transition?',
-    //   transition,
-    // )
-
     // DECISION: if the final state is interrupted, we should not record the entry nor annotate it externally
     if (shouldRecord) {
       this.recordedItems.push(spanAndAnnotation)
@@ -661,24 +673,25 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       transition.transitionToState === 'interrupted' ||
       transition.transitionToState === 'complete'
     ) {
-      const endOfOperationSpan =
-        (transition.transitionToState === 'complete' &&
-          (transition.cpuIdleSpanAndAnnotation ??
-            transition.lastRequiredSpanAndAnnotation)) ||
-        lastRelevantSpanAndAnnotation
+      // const endOfOperationSpan =
+      //   (transition.transitionToState === 'complete' &&
+      //     (transition.cpuIdleSpanAndAnnotation ??
+      //       transition.lastRequiredSpanAndAnnotation)) ||
+      //   lastRelevantSpanAndAnnotation
 
       const traceRecording = createTraceRecording(
         {
           definition: this.definition,
           // only keep items captured until the endOfOperationSpan
-          recordedItems: endOfOperationSpan
-            ? this.recordedItems.filter(
-                (item) =>
-                  item.span.startTime.now + item.span.duration <=
-                  endOfOperationSpan.span.startTime.now +
-                    endOfOperationSpan.span.duration,
-              )
-            : this.recordedItems,
+          // recordedItems: endOfOperationSpan
+          //   ? this.recordedItems.filter(
+          //       (item) =>
+          //         item.span.startTime.now + item.span.duration <=
+          //         endOfOperationSpan.span.startTime.now +
+          //           endOfOperationSpan.span.duration,
+          //     )
+          //   : this.recordedItems,
+          recordedItems: this.recordedItems,
           input: this.input,
         },
         transition,

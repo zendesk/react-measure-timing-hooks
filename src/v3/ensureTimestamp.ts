@@ -20,14 +20,6 @@ export const ensureTimestamp = (input?: Partial<Timestamp>): Timestamp => {
   const inputNow = input?.now
   const hasInputEpoch = typeof inputEpoch === 'number'
   const hasInputNow = typeof inputNow === 'number'
-  const hasData = hasInputEpoch || hasInputNow
-  if (!hasData) {
-    // no data provided, use current time
-    return {
-      now: performance.now(),
-      epoch: Date.now(),
-    }
-  }
   if (hasInputEpoch && hasInputNow) {
     return input as Timestamp
   }
@@ -42,22 +34,17 @@ export const ensureTimestamp = (input?: Partial<Timestamp>): Timestamp => {
     }
   }
   if (hasInputNow) {
-    const differenceFromNow = performance.now() - inputNow
-    const epoch = Date.now() + differenceFromNow
+    const elapsedTimeSinceInput = performance.now() - inputNow
+    const epoch = Date.now() - elapsedTimeSinceInput
     return {
       epoch,
       now: inputNow,
     }
   }
+  // no data provided, use current time
   return {
-    epoch:
-      input?.epoch ??
-      (input?.now ? performance.timeOrigin + input.now : Date.now()),
-    now:
-      input?.now ??
-      (input?.epoch
-        ? performance.now() - (performance.timeOrigin - input.epoch)
-        : performance.now()),
+    now: performance.now(),
+    epoch: Date.now(),
   }
 }
 
