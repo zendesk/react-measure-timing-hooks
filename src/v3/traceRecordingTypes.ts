@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
-import type { SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes } from './spanTypes'
 import type {
-  MapTuple,
   ScopeBase,
+  Timestamp,
   TraceInterruptionReason,
   TraceStatus,
   TraceType,
@@ -21,6 +20,7 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
    */
   name: string
 
+  startTime: Timestamp
   scope: ScopeT
 
   type: TraceType
@@ -53,6 +53,11 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
     [valueName: string]: number | string | boolean
   }
 
+  // TODO: should this get moved to convertToRum?
+  /**
+   * Merged attributes of the spans with the same type and name.
+   * If attributes changed, most recent ones overwrite older ones.
+   */
   spanAttributes: {
     [typeAndName: string]: {
       [attributeName: string]: unknown
@@ -63,28 +68,4 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
 export interface TraceRecording<ScopeT extends ScopeBase>
   extends TraceRecordingBase<ScopeT> {
   entries: SpanAndAnnotation<ScopeT>[]
-}
-/**
- * Definition of custom spans
- */
-export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
-  name: string
-  startSpan: SpanMatcherFn<ScopeT> | 'operation-start'
-  endSpan: SpanMatcherFn<ScopeT> | 'operation-end' | 'interactive'
-}
-
-/**
- * Definition of custom values
- */
-
-export interface ComputedValueDefinition<
-  ScopeT extends ScopeBase,
-  MatchersT extends SpanMatcherFn<ScopeT>[],
-> {
-  name: string
-  matches: [...MatchersT]
-  computeValueFromMatches: (
-    // as many matches as match of type Span<ScopeT>
-    ...matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>[]>
-  ) => number | string | boolean
 }

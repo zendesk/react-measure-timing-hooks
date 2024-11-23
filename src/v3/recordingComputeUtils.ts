@@ -70,15 +70,15 @@ export function getComputedSpans<ScopeT extends ScopeBase>({
       startSpanMatcher === 'operation-start'
         ? input.startTime.now
         : recordedItems.find((spanAndAnnotation) =>
-          startSpanMatcher(spanAndAnnotation, input.scope),
-        )?.span.startTime.now
+            startSpanMatcher(spanAndAnnotation, input.scope),
+          )?.span.startTime.now
 
     const endSpanMatcher =
       endSpan === 'operation-end'
         ? markedComplete
         : endSpan === 'interactive'
-          ? markedInteractive
-          : endSpan
+        ? markedInteractive
+        : endSpan
 
     const matchingEndEntry = recordedItems.find((spanAndAnnotation) =>
       endSpanMatcher(spanAndAnnotation, input.scope),
@@ -119,10 +119,11 @@ export function getSpanSummaryAttributes<ScopeT extends ScopeBase>({
   for (const { span } of recordedItems) {
     const { attributes, name } = span
     const existingAttributes = spanAttributes[name] ?? {}
-    // IMPLEMENTATION TODO: add some basic span summarization, like count, total duration, etc.
-    spanAttributes[name] = {
-      ...existingAttributes,
-      ...attributes,
+    if (attributes && Object.keys(attributes).length > 0) {
+      spanAttributes[name] = {
+        ...existingAttributes,
+        ...attributes,
+      }
     }
   }
 
@@ -151,7 +152,8 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
   const { id, scope } = input
   const { name } = definition
   // TODO: let's get this information from up top (in FinalState)
-  const wasInterrupted = interruptionReason && transitionFromState !== 'waiting-for-interactive';
+  const wasInterrupted =
+    interruptionReason && transitionFromState !== 'waiting-for-interactive'
   // TODO: maybe we don't compute spans and values when interrupted
   const computedSpans = getComputedSpans(data)
   const computedValues = getComputedValues(data)
@@ -161,23 +163,21 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
   const anyErrors = recordedItems.some(({ span }) => span.status === 'error')
   const duration =
     lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
-  const startTillInteractive = cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
+  const startTillInteractive =
+    cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
   return {
     id,
     name,
+    startTime: input.startTime,
     scope,
     type: 'operation',
     duration,
     startTillInteractive,
     // last entry until the tti?
-    completeTillInteractive: startTillInteractive && duration ? startTillInteractive - duration : null,
+    completeTillInteractive:
+      startTillInteractive && duration ? startTillInteractive - duration : null,
     // ?: If we have any error entries then should we mark the status as 'error'
-    status:
-      wasInterrupted
-        ? 'interrupted'
-        : anyErrors
-          ? 'error'
-          : 'ok',
+    status: wasInterrupted ? 'interrupted' : anyErrors ? 'error' : 'ok',
     computedSpans,
     computedValues,
     attributes,

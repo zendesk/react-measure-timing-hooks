@@ -15,11 +15,14 @@ export type SpanMatcherFn<ScopeT extends ScopeBase> = ((
 ) => boolean) &
   SpanMatcherTags
 
+type NameMatcher<ScopeT extends ScopeBase> =
+  | string
+  | RegExp
+  | ((name: string, scope: ScopeT) => boolean)
+
 export interface SpanMatchDefinition<ScopeT extends ScopeBase> {
-  // IMPLEMENTATION TODO: take in scope as a second parameter
-  name?: string | RegExp | ((name: string) => boolean)
-  // IMPLEMENTATION TODO: take in scope as a second parameter
-  performanceEntryName?: string | RegExp | ((name: string) => boolean)
+  name?: NameMatcher<ScopeT>
+  performanceEntryName?: NameMatcher<ScopeT>
   type?: SpanType
   status?: SpanStatus
   attributes?: Attributes
@@ -37,12 +40,12 @@ export type SpanMatch<ScopeT extends ScopeBase> =
  * The common name of the span to match. Can be a string, RegExp, or function.
  */
 export function withName<ScopeT extends ScopeBase>(
-  value: string | RegExp | ((name: string) => boolean),
+  value: NameMatcher<ScopeT>,
 ): SpanMatcherFn<ScopeT> {
-  return ({ span }) => {
+  return ({ span }, scope) => {
     if (typeof value === 'string') return span.name === value
     if (value instanceof RegExp) return value.test(span.name)
-    return value(span.name)
+    return value(span.name, scope)
   }
 }
 
@@ -50,14 +53,14 @@ export function withName<ScopeT extends ScopeBase>(
  * The PerformanceEntry.name of the entry to match. Can be a string, RegExp, or function.
  */
 export function withPerformanceEntryName<ScopeT extends ScopeBase>(
-  value: string | RegExp | ((name: string) => boolean),
+  value: NameMatcher<ScopeT>,
 ): SpanMatcherFn<ScopeT> {
-  return ({ span }) => {
+  return ({ span }, scope) => {
     const entryName = span.performanceEntry?.name
     if (!entryName) return false
     if (typeof value === 'string') return entryName === value
     if (value instanceof RegExp) return value.test(entryName)
-    return value(entryName)
+    return value(entryName, scope)
   }
 }
 
@@ -108,6 +111,16 @@ export function withOccurrence<ScopeT extends ScopeBase>(
   return ({ annotation }) => {
     if (typeof value === 'number') return annotation.occurrence === value
     return value(annotation.occurrence)
+  }
+}
+
+export function withComponentRenderCount<ScopeT extends ScopeBase>(
+  name: string,
+  renderCount: number,
+): SpanMatcherFn<ScopeT> {
+  return ({ span }) => {
+    if (!('renderCount' in span)) return false
+    return span.name === name && span.renderCount === renderCount
   }
 }
 

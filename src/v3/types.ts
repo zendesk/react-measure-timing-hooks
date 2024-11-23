@@ -1,12 +1,9 @@
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
 import type { SpanMatch, SpanMatcherFn } from './matchSpan'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
-import type {
-  ComputedSpanDefinition,
-  ComputedValueDefinition,
-  TraceRecording,
-} from './traceRecordingTypes'
-import type { ArrayWithAtLeastOneElement } from './typeUtils'
+import type { TraceRecording } from './traceRecordingTypes'
+import type { ArrayWithAtLeastOneElement, MapTuple } from './typeUtils'
 
 export interface Timestamp {
   // absolute count of ms from epoch
@@ -47,10 +44,6 @@ export interface TraceManagerConfig<ScopeT extends ScopeBase> {
    * The span types that should be omitted from the trace report.
    */
   spanTypesOmittedFromReport?: SpanType[]
-}
-
-export type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
-  [Index in keyof KeysTuple]: MapToValue // T[KeysTuple[Index]]
 }
 
 export interface Tracer<ScopeT extends ScopeBase> {
@@ -100,6 +93,7 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
    * we're giving the power to the engineer to manually define
    * which parts of the product are "critical" or most important
    */
+  // TODO: should we rename `requiredToEnd` to `requiredToComplete` for consistency?
   requiredToEnd: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
   debounceOn?: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
   interruptOn?: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
@@ -128,4 +122,28 @@ export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
   requiredToEnd: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
   debounceOn?: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
   interruptOn?: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
+}
+
+/**
+ * Definition of custom spans
+ */
+export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
+  name: string
+  startSpan: SpanMatcherFn<ScopeT> | 'operation-start'
+  endSpan: SpanMatcherFn<ScopeT> | 'operation-end' | 'interactive'
+}
+
+/**
+ * Definition of custom values
+ */
+export interface ComputedValueDefinition<
+  ScopeT extends ScopeBase,
+  MatchersT extends SpanMatcherFn<ScopeT>[],
+> {
+  name: string
+  matches: [...MatchersT]
+  computeValueFromMatches: (
+    // as many matches as match of type Span<ScopeT>
+    ...matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>[]>
+  ) => number | string | boolean
 }

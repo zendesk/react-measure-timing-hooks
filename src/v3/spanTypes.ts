@@ -31,7 +31,7 @@ export interface StartTraceConfig<ScopeT extends ScopeBase> {
   scope: ScopeT
   startTime?: Partial<Timestamp>
   /**
-   * any attributes that should be
+   * any attributes that are relevant to the entire trace
    */
   attributes?: Attributes
 }
@@ -95,7 +95,7 @@ export interface SpanBase<ScopeT extends ScopeBase> {
 
 export interface ComponentRenderSpan<ScopeT extends ScopeBase>
   extends Omit<SpanBase<ScopeT>, 'scope' | 'attributes'>,
-  BeaconConfig<ScopeT> {
+    BeaconConfig<ScopeT> {
   type: ComponentLifecycleSpanType
   errorInfo?: ErrorInfo
   renderCount: number
@@ -127,7 +127,7 @@ export type InitiatorType =
 
 export interface ResourceSpan<ScopeT extends ScopeBase>
   extends SpanBase<ScopeT> {
-  type: 'resource',
+  type: 'resource'
   resourceDetails: {
     initiatorType: InitiatorType
     query: Record<string, string | string[]>
@@ -135,7 +135,8 @@ export interface ResourceSpan<ScopeT extends ScopeBase>
   }
 }
 
-export interface PerformanceEntrySpan<ScopeT extends ScopeBase> extends SpanBase<ScopeT> {
+export interface PerformanceEntrySpan<ScopeT extends ScopeBase>
+  extends SpanBase<ScopeT> {
   type: Exclude<NativePerformanceEntryType, 'resource'>
 }
 

@@ -45,3 +45,6 @@ export type MergedStateHandlerMethods<ScopeT extends ScopeBase> = {
   ) => StateHandlerReturnTypes<ScopeT>[K]
 }
 export type ArrayWithAtLeastOneElement<T> = [T, ...T[]]
+export type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
+  [Index in keyof KeysTuple]: MapToValue // T[KeysTuple[Index]]
+}

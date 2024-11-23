@@ -3,13 +3,11 @@ import { ensureTimestamp } from './ensureTimestamp'
 import { type SpanMatcherFn, fromDefinition } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { Span, StartTraceConfig } from './spanTypes'
-import type {
-  ComputedSpanDefinition,
-  ComputedValueDefinition,
-  TraceRecording,
-} from './traceRecordingTypes'
+import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
+  ComputedSpanDefinition,
+  ComputedValueDefinition,
   ReportFn,
   ScopeBase,
   TraceDefinition,
@@ -37,24 +35,38 @@ export class TraceManager<ScopeT extends ScopeBase> {
       ScopeT,
       SpanMatcherFn<ScopeT>[]
     >[] = []
-    const requiredToEnd = traceDefinition.requiredToEnd.map(
-      (matcherFnOrDefinition) =>
-        typeof matcherFnOrDefinition === 'function'
-          ? matcherFnOrDefinition
-          : fromDefinition(matcherFnOrDefinition),
-    ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
-    const debounceOn = traceDefinition.debounceOn?.map(
-      (matcherFnOrDefinition) =>
-        typeof matcherFnOrDefinition === 'function'
-          ? matcherFnOrDefinition
-          : fromDefinition(matcherFnOrDefinition),
-    ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>> | undefined
-    const interruptOn = traceDefinition.interruptOn?.map(
-      (matcherFnOrDefinition) =>
-        typeof matcherFnOrDefinition === 'function'
-          ? matcherFnOrDefinition
-          : fromDefinition(matcherFnOrDefinition),
-    ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>> | undefined
+    const requiredToEnd =
+      traceDefinition.requiredToEnd && traceDefinition.requiredToEnd.length > 0
+        ? (traceDefinition.requiredToEnd.map((matcherFnOrDefinition) =>
+            typeof matcherFnOrDefinition === 'function'
+              ? matcherFnOrDefinition
+              : fromDefinition(matcherFnOrDefinition),
+          ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>)
+        : undefined
+
+    if (!requiredToEnd) {
+      throw new Error(
+        'requiredToEnd must be defined, as a trace will never end otherwise',
+      )
+    }
+
+    const debounceOn =
+      traceDefinition.debounceOn && traceDefinition.debounceOn.length > 0
+        ? (traceDefinition.debounceOn.map((matcherFnOrDefinition) =>
+            typeof matcherFnOrDefinition === 'function'
+              ? matcherFnOrDefinition
+              : fromDefinition(matcherFnOrDefinition),
+          ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>)
+        : undefined
+
+    const interruptOn =
+      traceDefinition.interruptOn && traceDefinition.interruptOn.length > 0
+        ? (traceDefinition.interruptOn.map((matcherFnOrDefinition) =>
+            typeof matcherFnOrDefinition === 'function'
+              ? matcherFnOrDefinition
+              : fromDefinition(matcherFnOrDefinition),
+          ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>)
+        : undefined
 
     const completeTraceDefinition: CompleteTraceDefinition<ScopeT> = {
       ...traceDefinition,
