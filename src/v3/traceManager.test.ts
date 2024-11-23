@@ -4,7 +4,7 @@ import { DEFAULT_TIMEOUT_DURATION } from './ActiveTrace'
 import { ensureTimestamp } from './ensureTimestamp'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
-import type { StartTraceConfig } from './spanTypes'
+import type { Span, StartTraceConfig } from './spanTypes'
 import { type TicketIdScope, ticketActivationDefinition } from './test/fixtures'
 import {
   Check,
@@ -18,6 +18,23 @@ import { shouldNotEndWithInteractiveTimeout } from './test/shouldNotEndWithInter
 import { shouldNotEndWithInterruption } from './test/shouldNotEndWithInterruption'
 import { TraceManager } from './traceManager'
 import type { ReportFn, ScopeBase, TraceDefinition } from './types'
+
+function processCheckSpan(
+  traceManager: TraceManager<TicketIdScope>,
+  lastFixtureSpan: Span<TicketIdScope>,
+  scope: TicketIdScope,
+) {
+  traceManager.processSpan({
+    name: 'check',
+    duration: 0,
+    startTime: ensureTimestamp({
+      now: lastFixtureSpan.startTime.now + lastFixtureSpan.duration + 10_000,
+    }),
+    type: 'mark',
+    scope,
+    attributes: {},
+  })
+}
 
 describe('TraceManager', () => {
   let reportFn: jest.Mock
@@ -211,7 +228,6 @@ describe('TraceManager', () => {
     Events: ${Render('start', 0)}-----${Render('middle', 0)}-----${Render('end', 0)}---<===+2s===>----${Check}
     Time:   ${0}                      ${50}                      ${100}                               ${2_100}
     `
-
     processEntries(entries, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
@@ -850,7 +866,7 @@ describe('TraceManager', () => {
 
     it('uses createQuietWindowDurationCalculator for getQuietWindowDuration in capture interactive config', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
-      const CUSTOM_QUIET_WINDOW_DURATION = 2_000 // 3 seconds
+      // const CUSTOM_QUIET_WINDOW_DURATION = 2_000 // 2 seconds
       const TRACE_DURATION = 1_000
 
       const traceDefinition: TraceDefinition<ScopeBase> = {
@@ -899,7 +915,95 @@ describe('TraceManager', () => {
       expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
     })
 
-    it('completes the trace after one heavy cluster following FMP', () => {
+    it('No long tasks after FMP, FirstCPUIdle immediately after FMP + quiet window', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}----------${LongTask(400)}-----${Check}
+      Time:   ${0}                      ${200}                       ${4_600}             ${5_000}
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start                 end            task(400)
+        timeline  | |---------------------|-<⋯ +4400 ⋯>--[++++++++++++++++++++++++++++++++++++++++++]
+        time (ms) | 0                     200            4600
+      `)
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBe(200)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('One light cluster after FMP, FirstCPUIdle at FMP', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}----------${LongTask(50)}------${LongTask(50)}-----${LongTask(50)}---------${Check}
+      Time:   ${0}                      ${200}                       ${300}               ${400}              ${450}                  ${3_050}
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start                    end          task(50)    task(50)task(50)          check
+        timeline  | |------------------------|------------[++++]------[++++]--[++++]-<⋯ +2550 ⋯>|
+        time (ms) | 0                        200          300         400     450               3050
+      `)
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBe(200)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('One heavy cluster after FMP, FirstCPUIdle after the cluster', () => {
       const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
       const traceDefinition: TraceDefinition<ScopeBase> = {
         name: 'ticket.operation',
@@ -940,7 +1044,294 @@ describe('TraceManager', () => {
       expect(report.duration).toBe(200)
       expect(report.startTillInteractive).toBe(700)
       // TESTING TODO: are we testing enough of first idle time?
-      // expect(report.completeTillInteractive).toBe(650)
+      expect(report.completeTillInteractive).toBe(500)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('Multiple heavy clusters, FirstCPUIdle updated to end of last cluster', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(200)}-----${LongTask(200)}-----${LongTask(200)}-----${Check}
+      Time:   ${0}                      ${200}                 ${300}              ${900}              ${1500}             ${3800}
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start   end  task(200)               task(200)               task(200)             check
+        timeline  | |-------|----[++++++]----------------[++++++]----------------[++++++]-<⋯ +2100 ⋯>--|
+        time (ms) | 0       200  300                     900                     1500                  3800
+      `)
+
+      const lastLongTask = entries.at(-2)!
+      const expectedResult = lastLongTask.startTime + lastLongTask.duration
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBe(expectedResult)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('Checking before the quiet window has passed - no long tasks processed, FirstCPUIdle not found', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${Check}
+      Time:   ${0}                      ${200}                  ${2_400}
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start                                                             end            check
+        timeline  | |-----------------------------------------------------------------|-<⋯ +2200 ⋯>--|
+        time (ms) | 0                                                                 200            2400
+      `)
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBe(200)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('completes the trace with one heavy cluster followed by two light clusters, value is after 1st heavy cluster', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(200)}-----${LongTask(100)}-----${LongTask(200)}-----${LongTask(200)}-----${Check}
+      Time:   ${0}                      ${200}                  ${300}               ${600}               ${1_700}             ${2_900}             ${4_650}
+        }           
+    `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start     end   task(200)      task(100)          task(200)              task(200)
+        timeline  | |---------|-----[++++++++]-----[+++]-<⋯ +1000 ⋯>--[++++++++]-<⋯ +1000 ⋯>-[++++++++]
+        time (ms) | 0         200   300            600                1700                   2900
+      `)
+
+      const lastHeavyClusterLongTask = entries.at(3)!
+      const expectedResult =
+        lastHeavyClusterLongTask.startTime + lastHeavyClusterLongTask.duration
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBe(expectedResult)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('completes the trace with continuous heavy clusters', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${Check}
+      Time:   ${0}                      ${200}                  ${550}               ${900}               ${1_250}             ${1_600}             ${1_950}             ${2_300}             ${2_650}             ${3_000}             ${3_350}             ${3_700}             ${4_050}             ${4_400}             ${4_750}             ${5_100}             ${7_450}
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    |                task(300)   task(300)   task(300)   task(300)
+        events    |   end      task(300)   task(300)   task(300)   task(300)   task(300)
+        events    | start  task(300)   task(300)   task(300)   task(300)   task(300)            check
+        timeline  | |-|----[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-<⋯ +2050 ⋯>--|
+        time (ms) | 0 200  550 900 1250    1950    2650    3350    4050    4750                 7450
+        time (ms) |                    1600    2300    3000    3700    4400    5100
+      `)
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      // TESTING TODO: Hmm. shouldnt this be undefined?
+      // expect(report.startTillInteractive).toBeUndefined()
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('completes the trace with a light cluster followed by a heavy cluster a second later, FirstCPUIdle updated', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(50)}----------${LongTask(50)}----------${LongTask(50)}--------${LongTask(50)}---------${LongTask(200)}-------${LongTask(200)}--------${Check}
+      Time:   ${0}                      ${200}                 ${300}                    ${350}                   ${1_450}               ${1_550}                ${1_650}               ${1_900}                ${4_150}
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    |                                            task(200)
+        events    |                      task(50)          task(50)
+        events    | start      end   task(50)           task(50)            task(200)                check
+        timeline  | |----------|-----[]--[]-<⋯ +1050 ⋯>-[]-[]--[+++++++++]--[+++++++++]-<⋯ +2050 ⋯>--|
+        time (ms) | 0          200   300 350            1450   1650         1900                     4150
+        time (ms) |                                        1550
+      `)
+
+      const lastLongTask = entries.at(-2)!
+      const expectedResult = lastLongTask.startTime + lastLongTask.duration
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBe(expectedResult)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('completes the trace with a long task overlapping FMP, FirstCPUIdle after the long task', () => {
+      const traceManager = new TraceManager<ScopeBase>({ reportFn, generateId })
+      const traceDefinition: TraceDefinition<ScopeBase> = {
+        name: 'ticket.operation',
+        type: 'operation',
+        requiredScopeKeys: [],
+        requiredToEnd: [{ name: 'end' }],
+        captureInteractive: true,
+      }
+      const tracer = traceManager.createTracer(traceDefinition)
+      const startConfig: StartTraceConfig<ScopeBase> = {
+        scope: {},
+      }
+
+      tracer.start(startConfig)
+
+      // prettier-ignore
+      const { entries } = getEventsFromTimeline`
+      Events: ${Render('start', 0)}----------${LongTask(110, { start: 150 })}----${Render('end', 0)}-----${Check}
+      Time:   ${0}                           ${150}                              ${200}                  ${2_500}
+      `
+
+      processEntries(entries, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report: Parameters<ReportFn<ScopeBase>>[0] =
+        reportFn.mock.calls[0][0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    |
+        events    | start                                task(110)     end                        check
+        timeline  | |------------------------------------[+++++++++++++++++++++++++]-<⋯ +2240 ⋯>--|
+        timeline  | ---------------------------------------------------|⋯ +2300 ⋯>-----------------
+        time (ms) | 0                                    150           200                        2500
+      `)
+
+      const lastLongTask = entries.at(-2)!
+      const expectedResult = lastLongTask.startTime + lastLongTask.duration
+
+      expect(report.name).toBe('ticket.operation')
+      expect(report.duration).toBe(200)
+      expect(report.startTillInteractive).toBe(expectedResult)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -970,17 +1361,7 @@ describe('TraceManager', () => {
         traceManager.processSpan(entry.span)
       }
       const lastFixtureSpan = fixtureEntries.at(-1)!.span
-      traceManager.processSpan({
-        name: 'check',
-        duration: 0,
-        startTime: ensureTimestamp({
-          now:
-            lastFixtureSpan.startTime.now + lastFixtureSpan.duration + 100_000,
-        }),
-        type: 'mark',
-        scope,
-        attributes: {},
-      })
+      processCheckSpan(traceManager, lastFixtureSpan, scope)
 
       expect(reportFn).toHaveBeenCalled()
       const {
@@ -988,15 +1369,6 @@ describe('TraceManager', () => {
         spanAttributes,
         ...report
       }: Parameters<ReportFn<TicketIdScope>>[0] = reportFn.mock.calls[0][0]
-
-      // const completeSpan = fixtureEntries.find(
-      //   ({ annotation }) => annotation.markedComplete,
-      // )
-      // const interactiveSpan = fixtureEntries.find(
-      //   ({ annotation }) => annotation.markedInteractive,
-      // )
-      // console.log(completeSpan)
-      // console.log(interactiveSpan)
 
       expect(report).toMatchInlineSnapshot(`
         {
@@ -1016,9 +1388,9 @@ describe('TraceManager', () => {
           "type": "operation",
         }
       `)
-      // expect(report.duration).toBe(100)
-      // expect(report.interruptionReason).toBeUndefined()
-      // expect(report.startTillInteractive).toBe(700)
+      expect(report.duration).toBeCloseTo(1_504.4)
+      expect(report.interruptionReason).toBeUndefined()
+      expect(report.startTillInteractive).toBeCloseTo(1_504.4)
     })
 
     it('should not end with interruption', () => {
@@ -1048,17 +1420,7 @@ describe('TraceManager', () => {
         traceManager.processSpan(entry.span)
       }
       const lastFixtureSpan = fixtureEntries.at(-1)!.span
-      traceManager.processSpan({
-        type: 'mark',
-        name: 'check',
-        duration: 0,
-        startTime: ensureTimestamp({
-          now:
-            lastFixtureSpan.startTime.now + lastFixtureSpan.duration + 106_000,
-        }),
-        scope,
-        attributes: {},
-      })
+      processCheckSpan(traceManager, lastFixtureSpan, scope)
 
       expect(reportFn).toHaveBeenCalled()
       const {
@@ -1066,15 +1428,6 @@ describe('TraceManager', () => {
         spanAttributes,
         ...report
       }: Parameters<ReportFn<TicketIdScope>>[0] = reportFn.mock.calls[0][0]
-
-      // const completeSpan = fixtureEntries.find(
-      //   ({ annotation }) => annotation.markedComplete,
-      // )
-      // const interactiveSpan = fixtureEntries.find(
-      //   ({ annotation }) => annotation.markedInteractive,
-      // )
-      // console.log(completeSpan)
-      // console.log(interactiveSpan)
 
       expect(report).toMatchInlineSnapshot(`
         {
@@ -1094,9 +1447,9 @@ describe('TraceManager', () => {
           "type": "operation",
         }
       `)
-      // expect(report.duration).toBe(100)
-      // expect(report.interruptionReason).toBeUndefined()
-      // expect(report.startTillInteractive).toBe(700)
+      expect(report.duration).toBeCloseTo(1_302.4)
+      expect(report.interruptionReason).toBeUndefined()
+      expect(report.startTillInteractive).toBeCloseTo(1_302.4)
     })
   })
 })

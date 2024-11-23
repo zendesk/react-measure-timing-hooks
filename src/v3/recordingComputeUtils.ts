@@ -70,15 +70,15 @@ export function getComputedSpans<ScopeT extends ScopeBase>({
       startSpanMatcher === 'operation-start'
         ? input.startTime.now
         : recordedItems.find((spanAndAnnotation) =>
-            startSpanMatcher(spanAndAnnotation, input.scope),
-          )?.span.startTime.now
+          startSpanMatcher(spanAndAnnotation, input.scope),
+        )?.span.startTime.now
 
     const endSpanMatcher =
       endSpan === 'operation-end'
         ? markedComplete
         : endSpan === 'interactive'
-        ? markedInteractive
-        : endSpan
+          ? markedInteractive
+          : endSpan
 
     const matchingEndEntry = recordedItems.find((spanAndAnnotation) =>
       endSpanMatcher(spanAndAnnotation, input.scope),
@@ -161,23 +161,23 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
   const anyErrors = recordedItems.some(({ span }) => span.status === 'error')
   const duration =
     lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
+  const startTillInteractive = cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
   return {
     id,
     name,
     scope,
     type: 'operation',
     duration,
-    startTillInteractive:
-      cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null,
+    startTillInteractive,
     // last entry until the tti?
-    completeTillInteractive: 0,
+    completeTillInteractive: startTillInteractive && duration ? startTillInteractive - duration : null,
     // ?: If we have any error entries then should we mark the status as 'error'
     status:
       wasInterrupted
         ? 'interrupted'
         : anyErrors
-        ? 'error'
-        : 'ok',
+          ? 'error'
+          : 'ok',
     computedSpans,
     computedValues,
     attributes,
