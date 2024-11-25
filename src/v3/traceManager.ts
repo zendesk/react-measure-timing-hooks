@@ -1,6 +1,7 @@
 import { ActiveTrace } from './ActiveTrace'
+import { convertMatchersToFns, ensureMatcherFn } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
-import { type SpanMatcherFn, fromDefinition } from './matchSpan'
+import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { Span, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
@@ -14,7 +15,6 @@ import type {
   TraceManagerConfig,
   Tracer,
 } from './types'
-import type { ArrayWithAtLeastOneElement } from './typeUtils'
 
 /**
  * Class representing the centralized trace performance manager.
@@ -35,14 +35,10 @@ export class TraceManager<ScopeT extends ScopeBase> {
       ScopeT,
       SpanMatcherFn<ScopeT>[]
     >[] = []
-    const requiredToEnd =
-      traceDefinition.requiredToEnd && traceDefinition.requiredToEnd.length > 0
-        ? (traceDefinition.requiredToEnd.map((matcherFnOrDefinition) =>
-            typeof matcherFnOrDefinition === 'function'
-              ? matcherFnOrDefinition
-              : fromDefinition(matcherFnOrDefinition),
-          ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>)
-        : undefined
+
+    const requiredToEnd = convertMatchersToFns<ScopeT>(
+      traceDefinition.requiredToEnd,
+    )
 
     if (!requiredToEnd) {
       throw new Error(
@@ -50,23 +46,10 @@ export class TraceManager<ScopeT extends ScopeBase> {
       )
     }
 
-    const debounceOn =
-      traceDefinition.debounceOn && traceDefinition.debounceOn.length > 0
-        ? (traceDefinition.debounceOn.map((matcherFnOrDefinition) =>
-            typeof matcherFnOrDefinition === 'function'
-              ? matcherFnOrDefinition
-              : fromDefinition(matcherFnOrDefinition),
-          ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>)
-        : undefined
-
-    const interruptOn =
-      traceDefinition.interruptOn && traceDefinition.interruptOn.length > 0
-        ? (traceDefinition.interruptOn.map((matcherFnOrDefinition) =>
-            typeof matcherFnOrDefinition === 'function'
-              ? matcherFnOrDefinition
-              : fromDefinition(matcherFnOrDefinition),
-          ) as ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>)
-        : undefined
+    const debounceOn = convertMatchersToFns<ScopeT>(traceDefinition.debounceOn)
+    const interruptOn = convertMatchersToFns<ScopeT>(
+      traceDefinition.interruptOn,
+    )
 
     const completeTraceDefinition: CompleteTraceDefinition<ScopeT> = {
       ...traceDefinition,
@@ -79,15 +62,17 @@ export class TraceManager<ScopeT extends ScopeBase> {
 
     return {
       defineComputedSpan: (definition) => {
-        computedSpanDefinitions.push(definition)
+        computedSpanDefinitions.push({
+          ...definition,
+          startSpan: ensureMatcherFn(definition.startSpan),
+          endSpan: ensureMatcherFn(definition.endSpan),
+        })
       },
       defineComputedValue: (definition) => {
-        computedValueDefinitions.push(
-          definition as ComputedValueDefinition<
-            ScopeT,
-            SpanMatcherFn<ScopeT>[]
-          >,
-        )
+        computedValueDefinitions.push({
+          ...definition,
+          matches: definition.matches.map((m) => ensureMatcherFn(m)),
+        } as ComputedValueDefinition<ScopeT, SpanMatcherFn<ScopeT>[]>)
       },
       start: (input) => this.startTrace(completeTraceDefinition, input),
     }

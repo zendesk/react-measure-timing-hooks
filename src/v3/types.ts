@@ -1,5 +1,5 @@
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
-import type { SpanMatch, SpanMatcherFn } from './matchSpan'
+import type { SpanMatch, SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
@@ -53,11 +53,13 @@ export interface Tracer<ScopeT extends ScopeBase> {
   start: (input: StartTraceConfig<ScopeT>) => string
 
   defineComputedSpan: (
-    computedSpanDefinition: ComputedSpanDefinition<ScopeT>,
+    computedSpanDefinition: ComputedSpanDefinitionInput<ScopeT>,
   ) => void
 
-  defineComputedValue: <MatchersT extends SpanMatcherFn<ScopeT>[]>(
-    computedValueDefinition: ComputedValueDefinition<ScopeT, MatchersT>,
+  defineComputedValue: <
+    MatchersT extends (SpanMatcherFn<ScopeT> | SpanMatchDefinition<ScopeT>)[],
+  >(
+    computedValueDefinition: ComputedValueDefinitionInput<ScopeT, MatchersT>,
   ) => void
 }
 
@@ -144,6 +146,36 @@ export interface ComputedValueDefinition<
   matches: [...MatchersT]
   computeValueFromMatches: (
     // as many matches as match of type Span<ScopeT>
+    ...matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>[]>
+  ) => number | string | boolean
+}
+
+/**
+ * Definition of custom spans input
+ */
+export interface ComputedSpanDefinitionInput<ScopeT extends ScopeBase> {
+  name: string
+  startSpan:
+    | SpanMatcherFn<ScopeT>
+    | SpanMatchDefinition<ScopeT>
+    | 'operation-start'
+  endSpan:
+    | SpanMatcherFn<ScopeT>
+    | SpanMatchDefinition<ScopeT>
+    | 'operation-end'
+    | 'interactive'
+}
+
+/**
+ * Definition of custom values input
+ */
+export interface ComputedValueDefinitionInput<
+  ScopeT extends ScopeBase,
+  MatchersT extends (SpanMatcherFn<ScopeT> | SpanMatchDefinition<ScopeT>)[],
+> {
+  name: string
+  matches: [...MatchersT]
+  computeValueFromMatches: (
     ...matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>[]>
   ) => number | string | boolean
 }
