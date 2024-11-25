@@ -1,7 +1,7 @@
-const INITIAL_QUIET_WINDOW_SIZE = 5_000 // 5 seconds at FMP
-const X_SECONDS = 15 // 15 seconds after FMP
-const QUITE_WINDOW_SIZE_AT_X = 3_000 // 3 seconds at some specified point in time x
-const MINIMUM_QUIET_WINDOW_SIZE = 1_000 // 1 second as t -> infinity
+const INITIAL_QUIET_WINDOW_SIZE = 5_000 // Google's value: 5 seconds at FMP
+const X_SECONDS = 15 // Google's value: 15 seconds after FMP
+const QUITE_WINDOW_SIZE_AT_X = 3_000 // Google's value: 3 seconds at some specified point in time x
+const MINIMUM_QUIET_WINDOW_SIZE = 1_000 // Google's value: 1 second as t -> infinity
 
 /**
  * Create a function to calculate the dynamic quiet window duration based on configurable decay points.

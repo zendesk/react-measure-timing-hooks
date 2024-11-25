@@ -1,6 +1,6 @@
 import './test/asciiTimelineSerializer'
 import { DEFAULT_CAPTURE_INTERACTIVE_TIME } from '../main'
-import { DEFAULT_TIMEOUT_DURATION } from './ActiveTrace'
+import { DEFAULT_TIMEOUT_DURATION } from './constants'
 import { ensureTimestamp } from './ensureTimestamp'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
@@ -34,6 +34,16 @@ function processCheckSpan(
     scope,
     attributes: {},
   })
+}
+
+const GOOGLES_QUIET_WINDOW_DURATION = 2_000
+const GOOGLES_CLUSTER_PADDING = 1_000
+const GOOGLES_HEAVY_CLUSTER_THRESHOLD = 250
+
+const cpuIdleProcessorOptions = {
+  getQuietWindowDuration: () => GOOGLES_QUIET_WINDOW_DURATION,
+  clusterPadding: GOOGLES_CLUSTER_PADDING,
+  heavyClusterThreshold: GOOGLES_HEAVY_CLUSTER_THRESHOLD,
 }
 
 describe('TraceManager', () => {
@@ -591,7 +601,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -635,7 +645,10 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: { timeout: interactiveTimeout },
+        captureInteractive: {
+          ...cpuIdleProcessorOptions,
+          timeout: interactiveTimeout,
+        },
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -680,7 +693,7 @@ describe('TraceManager', () => {
         requiredScopeKeys: [],
         requiredToEnd: [matchSpan.withName('end')],
         interruptOn: [matchSpan.withName('interrupt')],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -727,7 +740,7 @@ describe('TraceManager', () => {
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
         debounceDuration: 300,
       }
       const tracer = traceManager.createTracer(traceDefinition)
@@ -773,7 +786,10 @@ describe('TraceManager', () => {
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
-        captureInteractive: { timeout: CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT },
+        captureInteractive: {
+          ...cpuIdleProcessorOptions,
+          timeout: CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT,
+        },
         debounceDuration: 100,
       }
       const tracer = traceManager.createTracer(traceDefinition)
@@ -824,7 +840,11 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: { timeout: 100, getQuietWindowDuration },
+        captureInteractive: {
+          ...cpuIdleProcessorOptions,
+          timeout: 100,
+          getQuietWindowDuration,
+        },
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -875,6 +895,7 @@ describe('TraceManager', () => {
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: {
+          ...cpuIdleProcessorOptions,
           timeout: 1_000,
           getQuietWindowDuration: createQuietWindowDurationCalculator(),
         },
@@ -922,7 +943,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -966,7 +987,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -1010,7 +1031,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -1056,7 +1077,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -1068,7 +1089,7 @@ describe('TraceManager', () => {
       // prettier-ignore
       const { entries } = getEventsFromTimeline`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(200)}-----${LongTask(200)}-----${LongTask(200)}-----${Check}
-      Time:   ${0}                      ${200}                 ${300}              ${900}              ${1500}             ${3800}
+      Time:   ${0}                      ${200}                 ${300}              ${900}              ${1_500}             ${3_800}
       `
 
       processEntries(entries, traceManager)
@@ -1103,7 +1124,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -1147,7 +1168,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -1160,7 +1181,7 @@ describe('TraceManager', () => {
       const { entries } = getEventsFromTimeline`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(200)}-----${LongTask(100)}-----${LongTask(200)}-----${LongTask(200)}-----${Check}
       Time:   ${0}                      ${200}                  ${300}               ${600}               ${1_700}             ${2_900}             ${4_650}
-        }           
+        }
     `
 
       processEntries(entries, traceManager)
@@ -1196,7 +1217,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -1244,7 +1265,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -1294,7 +1315,7 @@ describe('TraceManager', () => {
         type: 'operation',
         requiredScopeKeys: [],
         requiredToEnd: [{ name: 'end' }],
-        captureInteractive: true,
+        captureInteractive: cpuIdleProcessorOptions,
       }
       const tracer = traceManager.createTracer(traceDefinition)
       const startConfig: StartTraceConfig<ScopeBase> = {
@@ -1384,6 +1405,10 @@ describe('TraceManager', () => {
             "ticketId": "74",
           },
           "startTillInteractive": 1504.4000000059605,
+          "startTime": {
+            "epoch": 1732230167488.4,
+            "now": 298438.60000000894,
+          },
           "status": "ok",
           "type": "operation",
         }
@@ -1443,6 +1468,10 @@ describe('TraceManager', () => {
             "ticketId": "74",
           },
           "startTillInteractive": 1302.3999999910593,
+          "startTime": {
+            "epoch": 1732236012113.3,
+            "now": 34982.5,
+          },
           "status": "ok",
           "type": "operation",
         }

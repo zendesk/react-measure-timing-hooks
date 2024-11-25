@@ -1,6 +1,6 @@
-const QUIET_WINDOW_DURATION = 2_000 // 2 seconds
-const CLUSTER_PADDING = 1_000 // 1 second
-const HEAVY_CLUSTER_THRESHOLD = 250 // 250ms
+const DEFAULT_QUIET_WINDOW_DURATION = 2_000 // Google used 2 seconds
+const DEFAULT_CLUSTER_PADDING = 1_000 // Google used 1 second
+const DEFAULT_HEAVY_CLUSTER_THRESHOLD = 250 // Google used 250ms
 
 export interface PerformanceEntryLike {
   entryType: string
@@ -25,8 +25,8 @@ const isLongTask = (entry: PerformanceEntryLike) =>
 export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
   fmpOrEntry: T,
   {
-    clusterPadding = CLUSTER_PADDING,
-    heavyClusterThreshold = HEAVY_CLUSTER_THRESHOLD,
+    clusterPadding = DEFAULT_CLUSTER_PADDING,
+    heavyClusterThreshold = DEFAULT_HEAVY_CLUSTER_THRESHOLD,
     getQuietWindowDuration,
   }: CPUIdleProcessorOptions = {},
 ): CPUIdleLongTaskProcessor<T> {
@@ -51,7 +51,8 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
     const entryEndTime = entry.startTime + entry.duration
     const isEntryLongTask = isLongTask(entry)
     const quietWindowDuration =
-      getQuietWindowDuration?.(entryEndTime, fmp) ?? QUIET_WINDOW_DURATION
+      getQuietWindowDuration?.(entryEndTime, fmp) ??
+      DEFAULT_QUIET_WINDOW_DURATION
 
     // If this is the first long task
     if (endTimeStampOfLastLongTask === null) {

@@ -67,7 +67,7 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
   /**
    * How long to wait for CPU Idle before giving up.
    */
-  timeout: number
+  timeout?: number
 }
 
 /**

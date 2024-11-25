@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 /* eslint-disable max-classes-per-file */
+import {
+  DEFAULT_DEBOUNCE_DURATION,
+  DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
+  DEFAULT_TIMEOUT_DURATION,
+} from './constants'
 import { ensureTimestamp } from './ensureTimestamp'
 import {
   type CPUIdleLongTaskProcessor,
@@ -88,10 +93,6 @@ type StatesBase<ScopeT extends ScopeBase> = Record<
 
 type TraceStateMachineSideEffectHandlers<ScopeT extends ScopeBase> =
   TraceStateMachine<ScopeT>['sideEffectFns']
-
-const DEFAULT_DEBOUNCE_DURATION = 500
-export const DEFAULT_TIMEOUT_DURATION = 45_000
-const DEFAULT_INTERACTIVE_TIMEOUT_DURATION = 10_000
 
 type EntryType<ScopeT extends ScopeBase> = PerformanceEntryLike & {
   entry: SpanAndAnnotation<ScopeT>

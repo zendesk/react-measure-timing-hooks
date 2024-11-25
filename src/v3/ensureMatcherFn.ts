@@ -23,6 +23,7 @@ export function ensureMatcherFn<
       : fromDefinition(matcherFnOrDefinition)
   ) as MatcherInputT extends string ? MatcherInputT : SpanMatcherFn<ScopeT>
 }
+
 export function convertMatchersToFns<ScopeT extends ScopeBase>(
   matchers: SpanMatch<ScopeT>[] | undefined,
 ): ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>> | undefined {
