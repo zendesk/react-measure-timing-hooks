@@ -294,9 +294,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start                    middle                    end            check
-        timeline  | |------------------------|-------------------------|-<⋯ +2000 ⋯>--|
-        time (ms) | 0                        50                        100            2100
+        events    | start       middle      end
+        timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
+        time (ms) | 0           50          100
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(100)
@@ -339,11 +339,11 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |          shorter-debounce
-        events    | start  end                            short-debounce               long-debounce check
-        timeline  | |------|-|----------------------------|----------------------------|-<⋯ +600 ⋯>--|
-        time (ms) | 0      50                             251                          451           1051
-        time (ms) |          51
+        events    |                                                     shorter-debounce           long-debounce
+        events    | start                                             end             short-debounce
+        timeline  | |-------------------------------------------------|-|-<⋯ +200 ⋯>--|-<⋯ +200 ⋯>-|
+        time (ms) | 0                                                 50              251          451
+        time (ms) |                                                     51
       `)
       expect(report.name).toBe('ticket.debounce-operation')
       expect(report.duration).toBe(451) // 50 + 1 + 200 + 200
@@ -624,11 +624,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |                task(50)
-        events    | start         end                                                              check
-        timeline  | |-<⋯ +2000 ⋯>-|[++++++++++++++++++++++++++++++++++++++++++++++++]-<⋯ +4950 ⋯>--|
-        time (ms) | 0             2000                                                             7001
-        time (ms) |                2001
+        events    | start         end
+        timeline  | |-<⋯ +2000 ⋯>-|
+        time (ms) | 0             2000
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
@@ -672,11 +670,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |                task(5000)
         events    | start         end
-        timeline  | |-<⋯ +2000 ⋯>-|[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]-
+        timeline  | |-<⋯ +2000 ⋯>-|
         time (ms) | 0             2000
-        time (ms) |                2050
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
@@ -719,11 +715,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |               interrupt
         events    | start        end
-        timeline  | |-<⋯ +200 ⋯>-||-
+        timeline  | |-<⋯ +200 ⋯>-|
         time (ms) | 0            200
-        time (ms) |               201
       `)
       expect(report.name).toBe('ticket.interrupt-during-long-task-operation')
       expect(report.duration).toBe(200)
@@ -815,11 +809,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |                 debounce(100)
-        events    | start          end                                                            check
-        timeline  | |-<⋯ +44500 ⋯>-|[++++++++++]--------------------------------------------------|-
-        time (ms) | 0              44500                                                          45001
-        time (ms) |                 44501
+        events    | start          end
+        timeline  | |-<⋯ +44500 ⋯>-|
+        time (ms) | 0              44500
       `)
       expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
       expect(report.duration).toBe(44_500)
@@ -869,11 +861,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |                task(5)
-        events    | start         end             task(5)                                          check
-        timeline  | |-<⋯ +1000 ⋯>-||--------------|------------------------------------------------|-
-        time (ms) | 0             1000            1050                                             1200
-        time (ms) |                1001
+        events    | start         end
+        timeline  | |-<⋯ +1000 ⋯>-|
+        time (ms) | 0             1000
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(TRACE_DURATION)
@@ -923,11 +913,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |                task(5)
-        events    | start         end             task(50)                   check
-        timeline  | |-<⋯ +1000 ⋯>-|[]-<⋯ +939 ⋯>--[+++++++++++++++++++++++]--|-
-        time (ms) | 0             1000            1945                       2001
-        time (ms) |                1001
+        events    | start         end
+        timeline  | |-<⋯ +1000 ⋯>-|
+        time (ms) | 0             1000
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(TRACE_DURATION)
@@ -968,9 +956,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start                 end            task(400)
-        timeline  | |---------------------|-<⋯ +4400 ⋯>--[++++++++++++++++++++++++++++++++++++++++++]
-        time (ms) | 0                     200            4600
+        events    | start        end
+        timeline  | |-<⋯ +200 ⋯>-|
+        time (ms) | 0            200
       `)
 
       expect(report.name).toBe('ticket.operation')
@@ -1012,9 +1000,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start                    end          task(50)    task(50)task(50)          check
-        timeline  | |------------------------|------------[++++]------[++++]--[++++]-<⋯ +2550 ⋯>|
-        time (ms) | 0                        200          300         400     450               3050
+        events    | start        end
+        timeline  | |-<⋯ +200 ⋯>-|
+        time (ms) | 0            200
       `)
 
       expect(report.name).toBe('ticket.operation')
@@ -1056,9 +1044,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start               end        task(50)  task(200)                task(50)           check
-        timeline  | |-------------------|----------[+++]-----[++++++++++++++++++]-----[+++]-<⋯ +2500 ⋯>--|
-        time (ms) | 0                   200        300       400                      650                3200
+        events    | start        end         task(50)    task(200)                      task(50)
+        timeline  | |-<⋯ +200 ⋯>-|-----------[++++]------[+++++++++++++++++++++++]------[++++]-
+        time (ms) | 0            200         300         400                            650
       `)
 
       expect(report.name).toBe('ticket.operation')
@@ -1102,9 +1090,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start   end  task(200)               task(200)               task(200)             check
-        timeline  | |-------|----[++++++]----------------[++++++]----------------[++++++]-<⋯ +2100 ⋯>--|
-        time (ms) | 0       200  300                     900                     1500                  3800
+        events    | start        end    task(200)                 task(200)                task(200)
+        timeline  | |------------|------[+++++++++++]-<⋯ +400 ⋯>--[+++++++++++]-<⋯ +400 ⋯>-[+++++++++++]
+        time (ms) | 0            200    300                       900                      1500
       `)
 
       const lastLongTask = entries.at(-2)!
@@ -1149,9 +1137,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start                                                             end            check
-        timeline  | |-----------------------------------------------------------------|-<⋯ +2200 ⋯>--|
-        time (ms) | 0                                                                 200            2400
+        events    | start        end
+        timeline  | |-<⋯ +200 ⋯>-|
+        time (ms) | 0            200
       `)
 
       expect(report.name).toBe('ticket.operation')
@@ -1194,9 +1182,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start     end   task(200)      task(100)          task(200)              task(200)
-        timeline  | |---------|-----[++++++++]-----[+++]-<⋯ +1000 ⋯>--[++++++++]-<⋯ +1000 ⋯>-[++++++++]
-        time (ms) | 0         200   300            600                1700                   2900
+        events    | start        end         task(200)                            task(100)
+        timeline  | |-<⋯ +200 ⋯>-|-----------[+++++++++++++++++++++++]------------[++++++++++]-
+        time (ms) | 0            200         300                                  600
       `)
 
       const lastHeavyClusterLongTask = entries.at(3)!
@@ -1242,12 +1230,10 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |                task(300)   task(300)   task(300)   task(300)
-        events    |   end      task(300)   task(300)   task(300)   task(300)   task(300)
-        events    | start  task(300)   task(300)   task(300)   task(300)   task(300)            check
-        timeline  | |-|----[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-[+]-<⋯ +2050 ⋯>--|
-        time (ms) | 0 200  550 900 1250    1950    2650    3350    4050    4750                 7450
-        time (ms) |                    1600    2300    3000    3700    4400    5100
+        events    |   end        task(300) task(300) task(300) task(300) task(300) task(300) task(300)
+        events    | start   task(300) task(300) task(300) task(300) task(300) task(300) task(300)
+        timeline  | |-|-----[++]-[++]-[++]-[++]-[++]-[++]-[++]-[++]-[++]-[++]-[++]-[++]-[++]-[++]-
+        time (ms) | 0 200   550  900  1250 1600 1950 2300 2650 3000 3350 3700 4050 4400 4750 5100
       `)
 
       expect(report.name).toBe('ticket.operation')
@@ -1290,12 +1276,10 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |                                            task(200)
-        events    |                      task(50)          task(50)
-        events    | start      end   task(50)           task(50)            task(200)                check
-        timeline  | |----------|-----[]--[]-<⋯ +1050 ⋯>-[]-[]--[+++++++++]--[+++++++++]-<⋯ +2050 ⋯>--|
-        time (ms) | 0          200   300 350            1450   1650         1900                     4150
-        time (ms) |                                        1550
+        events    |                          task(50)            task(50)
+        events    | start        end    task(50)            task(50)   task(200)       task(200)
+        timeline  | |------------|------[+]--[+]-<⋯ +1050 ⋯>[+]--[+]---[+++++++++++]---[+++++++++++]-
+        time (ms) | 0            200    300  350            1450 1550  1650            1900
       `)
 
       const lastLongTask = entries.at(-2)!
@@ -1340,11 +1324,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    |
-        events    | start                                task(110)     end                        check
-        timeline  | |------------------------------------[+++++++++++++++++++++++++]-<⋯ +2240 ⋯>--|
-        timeline  | ---------------------------------------------------|⋯ +2300 ⋯>-----------------
-        time (ms) | 0                                    150           200                        2500
+        events    | start        end
+        timeline  | |-<⋯ +200 ⋯>-|
+        time (ms) | 0            200
       `)
 
       const lastLongTask = entries.at(-2)!
