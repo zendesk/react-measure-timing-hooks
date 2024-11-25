@@ -66,29 +66,30 @@ export function getComputedSpans<ScopeT extends ScopeBase>({
 
   for (const definition of traceDefinition.computedSpanDefinitions) {
     const { startSpan: startSpanMatcher, endSpan, name } = definition
-    const matchingStartTime =
-      startSpanMatcher === 'operation-start'
-        ? input.startTime.now
-        : recordedItems.find((spanAndAnnotation) =>
-            startSpanMatcher(spanAndAnnotation, input.scope),
-          )?.span.startTime.now
+
+    const matchingStartEntry = typeof startSpanMatcher === 'function' ? recordedItems.find((spanAndAnnotation) =>
+      startSpanMatcher(spanAndAnnotation, input.scope),
+    ) : undefined
+
+    const matchingStartTime = matchingStartEntry ? matchingStartEntry.span.startTime.now : input.startTime.now
 
     const endSpanMatcher =
       endSpan === 'operation-end'
         ? markedComplete
         : endSpan === 'interactive'
-        ? markedInteractive
-        : endSpan
+          ? markedInteractive
+          : endSpan
 
-    const matchingEndEntry = recordedItems.find((spanAndAnnotation) =>
-      endSpanMatcher(spanAndAnnotation, input.scope),
+    const matchingEndEntry = recordedItems.findLast((spanAndAnnotation) =>
+      endSpanMatcher(spanAndAnnotation, input.scope)
     )
+    console.log('trace matchingEntries', name, { matchingStartEntry, matchingEndEntry })
 
     const matchingEndTime = matchingEndEntry
       ? matchingEndEntry.span.startTime.now + matchingEndEntry.span.duration
       : undefined
 
-    if (matchingStartTime && matchingEndTime) {
+    if (typeof matchingStartTime === 'number' && typeof matchingEndTime === 'number') {
       const duration = matchingEndTime - matchingStartTime
 
       computedSpans[name] = {

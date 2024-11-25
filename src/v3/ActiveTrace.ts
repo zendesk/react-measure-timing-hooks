@@ -180,7 +180,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             if (
               !this.lastRelevant ||
               spanAndAnnotation.annotation.operationRelativeEndTime >
-                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+              (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
             ) {
               this.lastRelevant = spanAndAnnotation
             }
@@ -391,7 +391,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         const cpuIdleTimestamp =
           cpuIdleMatch !== undefined &&
           cpuIdleMatch.entry.span.startTime.epoch +
-            cpuIdleMatch.entry.span.duration
+          cpuIdleMatch.entry.span.duration
 
         // TODO (DECISION): should we also check whether (cpuIdleTimestamp <= this.interactiveDeadline)?
         // it's technically more correct, but on the other hand if we crossed the interactive deadline
@@ -449,12 +449,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       },
 
       onInterrupt: (reason: TraceInterruptionReason) =>
-        // we captured a complete trace, however the interactive data is missing
-        ({
-          transitionToState: 'complete',
-          interruptionReason: reason,
-          lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-        }),
+      // we captured a complete trace, however the interactive data is missing
+      ({
+        transitionToState: 'complete',
+        interruptionReason: reason,
+        lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+      }),
     },
 
     // terminal states:
@@ -674,25 +674,24 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       transition.transitionToState === 'interrupted' ||
       transition.transitionToState === 'complete'
     ) {
-      // const endOfOperationSpan =
-      //   (transition.transitionToState === 'complete' &&
-      //     (transition.cpuIdleSpanAndAnnotation ??
-      //       transition.lastRequiredSpanAndAnnotation)) ||
-      //   lastRelevantSpanAndAnnotation
+      const endOfOperationSpan =
+        (transition.transitionToState === 'complete' &&
+          (transition.cpuIdleSpanAndAnnotation ??
+            transition.lastRequiredSpanAndAnnotation)) ||
+        lastRelevantSpanAndAnnotation
 
       const traceRecording = createTraceRecording(
         {
           definition: this.definition,
           // only keep items captured until the endOfOperationSpan
-          // recordedItems: endOfOperationSpan
-          //   ? this.recordedItems.filter(
-          //       (item) =>
-          //         item.span.startTime.now + item.span.duration <=
-          //         endOfOperationSpan.span.startTime.now +
-          //           endOfOperationSpan.span.duration,
-          //     )
-          //   : this.recordedItems,
-          recordedItems: this.recordedItems,
+          recordedItems: endOfOperationSpan
+            ? this.recordedItems.filter(
+              (item) =>
+                item.span.startTime.now + item.span.duration <=
+                endOfOperationSpan.span.startTime.now +
+                endOfOperationSpan.span.duration,
+            )
+            : this.recordedItems,
           input: this.input,
         },
         transition,

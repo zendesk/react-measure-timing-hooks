@@ -131,7 +131,13 @@ export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
  */
 export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
   name: string
+  /**
+   * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
+   */
   startSpan: SpanMatcherFn<ScopeT> | 'operation-start'
+  /**
+   * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
+   */
   endSpan: SpanMatcherFn<ScopeT> | 'operation-end' | 'interactive'
 }
 
@@ -156,14 +162,14 @@ export interface ComputedValueDefinition<
 export interface ComputedSpanDefinitionInput<ScopeT extends ScopeBase> {
   name: string
   startSpan:
-    | SpanMatcherFn<ScopeT>
-    | SpanMatchDefinition<ScopeT>
-    | 'operation-start'
+  | SpanMatcherFn<ScopeT>
+  | SpanMatchDefinition<ScopeT>
+  | 'operation-start'
   endSpan:
-    | SpanMatcherFn<ScopeT>
-    | SpanMatchDefinition<ScopeT>
-    | 'operation-end'
-    | 'interactive'
+  | SpanMatcherFn<ScopeT>
+  | SpanMatchDefinition<ScopeT>
+  | 'operation-end'
+  | 'interactive'
 }
 
 /**
