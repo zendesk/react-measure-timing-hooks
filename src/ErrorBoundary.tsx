@@ -5,14 +5,14 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import { Component, useEffect, useRef, type DependencyList } from 'react'
+import { type DependencyList, Component, useEffect, useRef } from 'react'
 
 export interface ErrorMetadata {
   error: Error
   errorInfo: React.ErrorInfo
 }
 
-let errorMetadataCurrentlyBeingThrown: undefined | ErrorMetadata = undefined
+let errorMetadataCurrentlyBeingThrown: undefined | ErrorMetadata
 
 export const useOnErrorBoundaryDidCatch = (
   onCaughtError: (metadata: ErrorMetadata) => void,

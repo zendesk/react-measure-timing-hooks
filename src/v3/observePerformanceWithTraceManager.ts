@@ -24,12 +24,20 @@ export const getBestSupportedEntryTypes = (): NativePerformanceEntryType[] =>
  *          PerformanceObserver, stopping the observation of
  *          performance entries.
  */
-export const observePerformanceWithTraceManager = <ScopeT extends ScopeBase>(
-  traceManager: TraceManager<ScopeT>,
+export const observePerformanceWithTraceManager = <ScopeT extends ScopeBase>({
+  traceManager,
   entryTypes = getBestSupportedEntryTypes(),
-) => {
+  keep,
+}: {
+  traceManager: TraceManager<ScopeT>
+  entryTypes?: NativePerformanceEntryType[]
+  keep?: (entry: PerformanceEntry) => boolean
+}) => {
   const observer = new PerformanceObserver((entryList) => {
     entryList.getEntries().forEach((entry) => {
+      if (keep !== undefined && !keep(entry)) {
+        return
+      }
       const traceEntry = getSpanFromPerformanceEntry<ScopeT>(entry)
       if (traceEntry !== undefined) {
         traceManager.processSpan(traceEntry)

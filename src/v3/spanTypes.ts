@@ -97,6 +97,7 @@ export interface ComponentRenderSpan<ScopeT extends ScopeBase>
   extends Omit<SpanBase<ScopeT>, 'scope' | 'attributes'>,
     BeaconConfig<ScopeT> {
   type: ComponentLifecycleSpanType
+  isIdle: boolean
   errorInfo?: ErrorInfo
   renderCount: number
 }
