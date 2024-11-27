@@ -19,7 +19,8 @@ export interface ComputedRenderSpan {
   // time relative to beginning of the trace
   startOffset: number
   timeToData: number
-  timeToRendered: number
+  timeToLoading: number
+  timeToContent: number
   renderCount: number
   sumOfDurations: number
 }
