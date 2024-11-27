@@ -9,6 +9,21 @@ import type {
   TraceType,
 } from './types'
 
+export interface ComputedSpan {
+  // time relative to beginning of the trace
+  startOffset: number
+  duration: number
+}
+
+export interface ComputedRenderSpan {
+  // time relative to beginning of the trace
+  startOffset: number
+  timeToData: number
+  timeToRendered: number
+  renderCount: number
+  sumOfDurations: number
+}
+
 export interface TraceRecordingBase<ScopeT extends ScopeBase> {
   /**
    * random generated unique value or provided by the user at start
@@ -42,11 +57,14 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
 
   // these are manually defined and have to be unique
   computedSpans: {
-    [spanName: string]: {
-      // time relative to beginning of the trace
-      startOffset: number
-      duration: number
-    }
+    [spanName: string]: ComputedSpan
+  }
+
+  /**
+   * For each render beacon, the time from the first render start until the last render end *and idle*.
+   */
+  computedRenderBeaconSpans: {
+    [spanName: string]: ComputedRenderSpan
   }
 
   computedValues: {

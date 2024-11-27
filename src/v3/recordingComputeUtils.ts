@@ -1,3 +1,4 @@
+/* eslint-disable no-continue */
 import type { FinalState } from './ActiveTrace'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceConfig } from './spanTypes'
@@ -67,29 +68,36 @@ export function getComputedSpans<ScopeT extends ScopeBase>({
   for (const definition of traceDefinition.computedSpanDefinitions) {
     const { startSpan: startSpanMatcher, endSpan, name } = definition
 
-    const matchingStartEntry = typeof startSpanMatcher === 'function' ? recordedItems.find((spanAndAnnotation) =>
-      startSpanMatcher(spanAndAnnotation, input.scope),
-    ) : undefined
+    const matchingStartEntry =
+      typeof startSpanMatcher === 'function'
+        ? recordedItems.find((spanAndAnnotation) =>
+            startSpanMatcher(spanAndAnnotation, input.scope),
+          )
+        : undefined
 
-    const matchingStartTime = matchingStartEntry ? matchingStartEntry.span.startTime.now : input.startTime.now
+    const matchingStartTime = matchingStartEntry
+      ? matchingStartEntry.span.startTime.now
+      : input.startTime.now
 
     const endSpanMatcher =
       endSpan === 'operation-end'
         ? markedComplete
         : endSpan === 'interactive'
-          ? markedInteractive
-          : endSpan
+        ? markedInteractive
+        : endSpan
 
     const matchingEndEntry = recordedItems.findLast((spanAndAnnotation) =>
-      endSpanMatcher(spanAndAnnotation, input.scope)
+      endSpanMatcher(spanAndAnnotation, input.scope),
     )
-    console.log('trace matchingEntries', name, { matchingStartEntry, matchingEndEntry })
 
     const matchingEndTime = matchingEndEntry
       ? matchingEndEntry.span.startTime.now + matchingEndEntry.span.duration
       : undefined
 
-    if (typeof matchingStartTime === 'number' && typeof matchingEndTime === 'number') {
+    if (
+      typeof matchingStartTime === 'number' &&
+      typeof matchingEndTime === 'number'
+    ) {
       const duration = matchingEndTime - matchingStartTime
 
       computedSpans[name] = {
@@ -140,6 +148,83 @@ export function getAttributes<ScopeT extends ScopeBase>({
   return {}
 }
 
+function getComputedRenderBeaconSpans<ScopeT extends ScopeBase>(
+  recordedItems: SpanAndAnnotation<ScopeT>[],
+  input: ActiveTraceConfig<ScopeT>,
+): TraceRecording<ScopeT>['computedRenderBeaconSpans'] {
+  const renderSpansByBeacon = new Map<
+    string,
+    {
+      firstStart: number
+      lastEnd: number | undefined
+      lastLoadingEnd: number | undefined
+      renderCount: number
+      sumOfDurations: number
+    }
+  >()
+
+  const scopeKeys = Object.keys(input.scope)
+
+  // Group render spans by beacon and compute firstStart and lastEnd
+  for (const entry of recordedItems) {
+    if (entry.span.type !== 'component-render') continue
+    const { name, startTime, duration, scope, renderedOutput } = entry.span
+    // accept any span that either matches scope or doesn't share any of the scope values
+    const scopeMatch = scopeKeys.every(
+      (key) => scope?.[key] === undefined || input.scope[key] === scope[key],
+    )
+    if (!scopeMatch) continue
+    const start = startTime.now
+    const contentEnd =
+      renderedOutput === 'content' ? start + duration : undefined
+    const loadingEnd =
+      renderedOutput === 'loading' ? start + duration : undefined
+
+    const spanTimes = renderSpansByBeacon.get(name)
+
+    if (!spanTimes) {
+      renderSpansByBeacon.set(name, {
+        firstStart: start,
+        lastEnd: contentEnd,
+        lastLoadingEnd: loadingEnd,
+        renderCount: 1,
+        sumOfDurations: duration,
+      })
+    } else {
+      spanTimes.firstStart = Math.min(spanTimes.firstStart, start)
+      spanTimes.lastEnd =
+        contentEnd && spanTimes.lastEnd
+          ? Math.max(spanTimes.lastEnd, contentEnd)
+          : contentEnd ?? spanTimes.lastEnd
+      spanTimes.lastLoadingEnd =
+        loadingEnd && spanTimes.lastLoadingEnd
+          ? Math.max(spanTimes.lastLoadingEnd, loadingEnd)
+          : loadingEnd ?? spanTimes.lastLoadingEnd
+      spanTimes.renderCount += 1
+      spanTimes.sumOfDurations += duration
+    }
+  }
+
+  const computedRenderBeaconSpans: TraceRecording<ScopeT>['computedRenderBeaconSpans'] =
+    {}
+
+  // Calculate duration and startOffset for each beacon
+  for (const [beaconName, spanTimes] of renderSpansByBeacon) {
+    if (!spanTimes.lastEnd) continue
+    computedRenderBeaconSpans[beaconName] = {
+      startOffset: spanTimes.firstStart - input.startTime.now,
+      timeToRendered: spanTimes.lastEnd - spanTimes.firstStart,
+      timeToData: spanTimes.lastLoadingEnd
+        ? spanTimes.lastLoadingEnd - spanTimes.firstStart
+        : 0,
+      renderCount: spanTimes.renderCount,
+      sumOfDurations: spanTimes.sumOfDurations,
+    }
+  }
+
+  return computedRenderBeaconSpans
+}
+
 export function createTraceRecording<ScopeT extends ScopeBase>(
   data: ComputeRecordingData<ScopeT>,
   {
@@ -159,7 +244,10 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
   const computedSpans = getComputedSpans(data)
   const computedValues = getComputedValues(data)
   const spanAttributes = getSpanSummaryAttributes(data)
-  const attributes = getAttributes(data)
+  const computedRenderBeaconSpans = getComputedRenderBeaconSpans(
+    recordedItems,
+    input,
+  )
 
   const anyErrors = recordedItems.some(({ span }) => span.status === 'error')
   const duration =
@@ -180,8 +268,9 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
     // ?: If we have any error entries then should we mark the status as 'error'
     status: wasInterrupted ? 'interrupted' : anyErrors ? 'error' : 'ok',
     computedSpans,
+    computedRenderBeaconSpans,
     computedValues,
-    attributes,
+    attributes: input.attributes ?? {},
     spanAttributes,
     interruptionReason,
     entries: recordedItems,
