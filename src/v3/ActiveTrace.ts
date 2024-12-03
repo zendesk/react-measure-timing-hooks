@@ -11,6 +11,7 @@ import {
   type PerformanceEntryLike,
   createCPUIdleProcessor,
 } from './firstCPUIdle'
+import { getPerformanceEntryHash } from './getPerformanceEntryHash'
 import { getSpanKey } from './getSpanKey'
 import { createTraceRecording } from './recordingComputeUtils'
 import type {
@@ -180,7 +181,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
             if (
               !this.lastRelevant ||
               spanAndAnnotation.annotation.operationRelativeEndTime >
-              (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
             ) {
               this.lastRelevant = spanAndAnnotation
             }
@@ -391,7 +392,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         const cpuIdleTimestamp =
           cpuIdleMatch !== undefined &&
           cpuIdleMatch.entry.span.startTime.epoch +
-          cpuIdleMatch.entry.span.duration
+            cpuIdleMatch.entry.span.duration
 
         // TODO (DECISION): should we also check whether (cpuIdleTimestamp <= this.interactiveDeadline)?
         // it's technically more correct, but on the other hand if we crossed the interactive deadline
@@ -449,12 +450,12 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
       },
 
       onInterrupt: (reason: TraceInterruptionReason) =>
-      // we captured a complete trace, however the interactive data is missing
-      ({
-        transitionToState: 'complete',
-        interruptionReason: reason,
-        lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-      }),
+        // we captured a complete trace, however the interactive data is missing
+        ({
+          transitionToState: 'complete',
+          interruptionReason: reason,
+          lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+        }),
     },
 
     // terminal states:
@@ -527,6 +528,8 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     PerformanceEntry,
     SpanAndAnnotation<ScopeT>
   > = new WeakMap()
+  processedPerformanceEntriesByHash: Map<string, SpanAndAnnotation<ScopeT>> =
+    new Map()
 
   finalState: FinalState<ScopeT> | undefined
 
@@ -582,7 +585,10 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     // re-processing the same span should be safe
     const existingAnnotation =
       span.performanceEntry &&
-      this.processedPerformanceEntries.get(span.performanceEntry)
+      (this.processedPerformanceEntries.get(span.performanceEntry) ||
+        this.processedPerformanceEntriesByHash.get(
+          getPerformanceEntryHash(span.performanceEntry),
+        ))
 
     let spanAndAnnotation: SpanAndAnnotation<ScopeT>
 
@@ -686,11 +692,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
           // only keep items captured until the endOfOperationSpan
           recordedItems: endOfOperationSpan
             ? this.recordedItems.filter(
-              (item) =>
-                item.span.startTime.now + item.span.duration <=
-                endOfOperationSpan.span.startTime.now +
-                endOfOperationSpan.span.duration,
-            )
+                (item) =>
+                  item.span.startTime.now + item.span.duration <=
+                  endOfOperationSpan.span.startTime.now +
+                    endOfOperationSpan.span.duration,
+              )
             : this.recordedItems,
           input: this.input,
         },
