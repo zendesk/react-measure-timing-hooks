@@ -157,7 +157,7 @@ function getComputedRenderBeaconSpans<ScopeT extends ScopeBase>(
     {
       firstStart: number
       lastEnd: number | undefined
-      firstLoadingStart: number | undefined
+      firstLoadingEnd: number | undefined
       firstContentStart: number | undefined
       renderCount: number
       sumOfDurations: number
@@ -187,7 +187,8 @@ function getComputedRenderBeaconSpans<ScopeT extends ScopeBase>(
         lastEnd: contentEnd,
         renderCount: 1,
         sumOfDurations: duration,
-        firstLoadingStart: renderedOutput === 'loading' ? start : undefined,
+        firstLoadingEnd:
+          renderedOutput === 'loading' ? start + duration : undefined,
         firstContentStart: renderedOutput === 'content' ? start : undefined,
       })
     } else {
@@ -205,10 +206,10 @@ function getComputedRenderBeaconSpans<ScopeT extends ScopeBase>(
         spanTimes.firstContentStart = start
       }
       if (
-        spanTimes.firstLoadingStart === undefined &&
+        spanTimes.firstLoadingEnd === undefined &&
         renderedOutput === 'loading'
       ) {
-        spanTimes.firstLoadingStart = start
+        spanTimes.firstLoadingEnd = start + duration
       }
     }
   }
@@ -222,8 +223,8 @@ function getComputedRenderBeaconSpans<ScopeT extends ScopeBase>(
     computedRenderBeaconSpans[beaconName] = {
       startOffset: spanTimes.firstStart - input.startTime.now,
       timeToContent: spanTimes.lastEnd - spanTimes.firstStart,
-      timeToLoading: spanTimes.firstLoadingStart
-        ? spanTimes.firstLoadingStart - spanTimes.firstStart
+      timeToLoading: spanTimes.firstLoadingEnd
+        ? spanTimes.firstLoadingEnd - spanTimes.firstStart
         : 0,
       timeToData: spanTimes.firstContentStart
         ? spanTimes.firstContentStart - spanTimes.firstStart
