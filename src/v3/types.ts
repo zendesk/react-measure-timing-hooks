@@ -107,6 +107,13 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
    * Provide a boolean or a configuration object.
    */
   captureInteractive?: boolean | CaptureInteractiveConfig
+
+  /**
+   * A list of span matchers that will suppress error status propagation to the trace level.
+   * If a span with `status: error` matches any of these matchers,
+   * its error status will not affect the overall trace status.
+   */
+  suppressErrorStatusPropagationOn?: SpanMatch<ScopeT>[]
 }
 
 /**
@@ -124,6 +131,12 @@ export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
   requiredToEnd: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
   debounceOn?: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
   interruptOn?: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
+
+  /**
+   * A list of span matchers that will suppress error status propagation to the trace level.
+   * If a span matches any of these matchers, its error status will not affect the trace status.
+   */
+  suppressErrorStatusPropagationOn?: SpanMatcherFn<ScopeT>[]
 }
 
 /**
@@ -162,14 +175,14 @@ export interface ComputedValueDefinition<
 export interface ComputedSpanDefinitionInput<ScopeT extends ScopeBase> {
   name: string
   startSpan:
-  | SpanMatcherFn<ScopeT>
-  | SpanMatchDefinition<ScopeT>
-  | 'operation-start'
+    | SpanMatcherFn<ScopeT>
+    | SpanMatchDefinition<ScopeT>
+    | 'operation-start'
   endSpan:
-  | SpanMatcherFn<ScopeT>
-  | SpanMatchDefinition<ScopeT>
-  | 'operation-end'
-  | 'interactive'
+    | SpanMatcherFn<ScopeT>
+    | SpanMatchDefinition<ScopeT>
+    | 'operation-end'
+    | 'interactive'
 }
 
 /**

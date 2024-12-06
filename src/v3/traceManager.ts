@@ -51,11 +51,16 @@ export class TraceManager<ScopeT extends ScopeBase> {
       traceDefinition.interruptOn,
     )
 
+    const suppressErrorStatusPropagationOn = convertMatchersToFns<ScopeT>(
+      traceDefinition.suppressErrorStatusPropagationOn,
+    )
+
     const completeTraceDefinition: CompleteTraceDefinition<ScopeT> = {
       ...traceDefinition,
       requiredToEnd,
       debounceOn,
       interruptOn,
+      suppressErrorStatusPropagationOn,
       computedSpanDefinitions,
       computedValueDefinitions,
     }

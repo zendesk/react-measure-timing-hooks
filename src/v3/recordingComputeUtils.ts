@@ -261,7 +261,14 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
     input,
   )
 
-  const anyErrors = recordedItems.some(({ span }) => span.status === 'error')
+  const anyNonSuppressedErrors = recordedItems.some(
+    (spanAndAnnotation) =>
+      spanAndAnnotation.span.status === 'error' &&
+      !definition.suppressErrorStatusPropagationOn?.some((matcher) =>
+        matcher(spanAndAnnotation, input.scope),
+      ),
+  )
+
   const duration =
     lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
   const startTillInteractive =
@@ -278,7 +285,11 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
     completeTillInteractive:
       startTillInteractive && duration ? startTillInteractive - duration : null,
     // ?: If we have any error entries then should we mark the status as 'error'
-    status: wasInterrupted ? 'interrupted' : anyErrors ? 'error' : 'ok',
+    status: wasInterrupted
+      ? 'interrupted'
+      : anyNonSuppressedErrors
+      ? 'error'
+      : 'ok',
     computedSpans,
     computedRenderBeaconSpans,
     computedValues,
