@@ -1,7 +1,7 @@
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
 import type { SpanMatch, SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
+import type { Span, SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type { ArrayWithAtLeastOneElement, MapTuple } from './typeUtils'
 
@@ -44,6 +44,12 @@ export interface TraceManagerConfig<ScopeT extends ScopeBase> {
    * The span types that should be omitted from the trace report.
    */
   spanTypesOmittedFromReport?: SpanType[]
+
+  /**
+   * Strategy for deduplicating performance entries.
+   * If not provided, no deduplication will be performed.
+   */
+  performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>
 }
 
 export interface Tracer<ScopeT extends ScopeBase> {
@@ -137,6 +143,41 @@ export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
    * If a span matches any of these matchers, its error status will not affect the trace status.
    */
   suppressErrorStatusPropagationOn?: SpanMatcherFn<ScopeT>[]
+}
+
+/**
+ * Strategy for deduplicating performance entries
+ */
+export interface SpanDeduplicationStrategy<ScopeT extends ScopeBase> {
+  /**
+   * Returns an existing span annotation if the span should be considered a duplicate
+   */
+  findDuplicate: (
+    span: Span<ScopeT>,
+    recordedItems: SpanAndAnnotation<ScopeT>[],
+  ) => SpanAndAnnotation<ScopeT> | undefined
+
+  /**
+   * Called when a span is recorded to update deduplication state
+   */
+  recordSpan: (
+    span: Span<ScopeT>,
+    spanAndAnnotation: SpanAndAnnotation<ScopeT>,
+  ) => void
+
+  /**
+   * Called when trace recording is complete to clean up any state
+   */
+  reset: () => void
+
+  /**
+   * Selects which span should be used when a duplicate is found.
+   * @returns the span that should be used in the annotation
+   */
+  selectPreferredSpan: (
+    existingSpan: Span<ScopeT>,
+    newSpan: Span<ScopeT>,
+  ) => Span<ScopeT>
 }
 
 /**

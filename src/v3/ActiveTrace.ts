@@ -11,7 +11,6 @@ import {
   type PerformanceEntryLike,
   createCPUIdleProcessor,
 } from './firstCPUIdle'
-import { getPerformanceEntryHash } from './getPerformanceEntryHash'
 import { getSpanKey } from './getSpanKey'
 import { createTraceRecording } from './recordingComputeUtils'
 import type {
@@ -23,6 +22,7 @@ import type { ActiveTraceConfig, Span } from './spanTypes'
 import type {
   CompleteTraceDefinition,
   ScopeBase,
+  SpanDeduplicationStrategy,
   TraceInterruptionReason,
 } from './types'
 import type {
@@ -519,29 +519,29 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
 export class ActiveTrace<ScopeT extends ScopeBase> {
   readonly definition: CompleteTraceDefinition<ScopeT>
   readonly input: ActiveTraceConfig<ScopeT>
+  private readonly deduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>
 
   recordedItems: SpanAndAnnotation<ScopeT>[] = []
   stateMachine: TraceStateMachine<ScopeT>
   occurrenceCounters = new Map<string, number>()
-
   processedPerformanceEntries: WeakMap<
     PerformanceEntry,
     SpanAndAnnotation<ScopeT>
   > = new WeakMap()
-  processedPerformanceEntriesByHash: Map<string, SpanAndAnnotation<ScopeT>> =
-    new Map()
 
   finalState: FinalState<ScopeT> | undefined
 
   constructor(
     definition: CompleteTraceDefinition<ScopeT>,
     input: ActiveTraceConfig<ScopeT>,
+    deduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>,
   ) {
     this.definition = definition
     this.input = {
       ...input,
       startTime: ensureTimestamp(input.startTime),
     }
+    this.deduplicationStrategy = deduplicationStrategy
     this.stateMachine = new TraceStateMachine({
       definition,
       input,
@@ -583,30 +583,21 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     // currently the version of the Span wins,
     // but we could consider creating some customizable logic
     // re-processing the same span should be safe
-    let existingAnnotation =
-      span.performanceEntry &&
-      this.processedPerformanceEntries.get(span.performanceEntry)
-
-    let performanceEntryHash: string | undefined
-    // TODO: ideally this logic lives outside of ActiveTrace
-    // some tools (e.g. Datadog SDK) like to re-create a PerformanceEntry object instead of keeping the original
-    // that's why we need to compute the hash here
-    if (
-      !existingAnnotation &&
-      span.performanceEntry?.entryType === 'resource'
-    ) {
-      // only compute the hash if we need it
-      performanceEntryHash = getPerformanceEntryHash(span.performanceEntry)
-      existingAnnotation =
-        this.processedPerformanceEntriesByHash.get(performanceEntryHash)
-    }
+    const existingAnnotation =
+      (span.performanceEntry &&
+        this.processedPerformanceEntries.get(span.performanceEntry)) ??
+      this.deduplicationStrategy?.findDuplicate(span, this.recordedItems)
 
     let spanAndAnnotation: SpanAndAnnotation<ScopeT>
 
     if (existingAnnotation) {
       spanAndAnnotation = existingAnnotation
-      // update the span in the recording
-      spanAndAnnotation.span = span
+      // update the span in the recording using the strategy's selector
+      spanAndAnnotation.span =
+        this.deduplicationStrategy?.selectPreferredSpan(
+          existingAnnotation.span,
+          span,
+        ) ?? span
     } else {
       const spanId = getSpanKey(span)
       const occurrence = this.occurrenceCounters.get(spanId) ?? 1
@@ -628,17 +619,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
         annotation,
       }
 
-      if (span.performanceEntry) {
-        this.processedPerformanceEntries.set(
-          span.performanceEntry,
-          spanAndAnnotation,
-        )
-        this.processedPerformanceEntriesByHash.set(
-          // hash must have been computed
-          performanceEntryHash!,
-          spanAndAnnotation,
-        )
-      }
+      this.deduplicationStrategy?.recordSpan(span, spanAndAnnotation)
     }
 
     const transition = this.stateMachine.emit(
@@ -723,7 +704,7 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
       this.recordedItems = []
       this.occurrenceCounters.clear()
       this.processedPerformanceEntries = new WeakMap()
-      this.processedPerformanceEntriesByHash.clear()
+      this.deduplicationStrategy?.reset()
     }
   }
 }

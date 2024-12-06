@@ -22,11 +22,18 @@ import type {
 export class TraceManager<ScopeT extends ScopeBase> {
   private readonly reportFn: ReportFn<ScopeT>
   private readonly generateId: () => string
+  private readonly performanceEntryDeduplicationStrategy?: PerformanceEntryDeduplicationStrategy<ScopeT>
   private activeTrace: ActiveTrace<ScopeT> | undefined = undefined
 
-  constructor({ reportFn, generateId }: TraceManagerConfig<ScopeT>) {
+  constructor({
+    reportFn,
+    generateId,
+    performanceEntryDeduplicationStrategy,
+  }: TraceManagerConfig<ScopeT>) {
     this.reportFn = reportFn
     this.generateId = generateId
+    this.performanceEntryDeduplicationStrategy =
+      performanceEntryDeduplicationStrategy
   }
 
   createTracer(traceDefinition: TraceDefinition<ScopeT>): Tracer<ScopeT> {
@@ -105,12 +112,16 @@ export class TraceManager<ScopeT extends ScopeBase> {
       this.reportFn(traceRecording)
     }
 
-    const activeTrace = new ActiveTrace(definition, {
-      ...input,
-      startTime: ensureTimestamp(input.startTime),
-      id,
-      onEnd,
-    })
+    const activeTrace = new ActiveTrace(
+      definition,
+      {
+        ...input,
+        startTime: ensureTimestamp(input.startTime),
+        id,
+        onEnd,
+      },
+      this.performanceEntryDeduplicationStrategy,
+    )
 
     this.activeTrace = activeTrace
 
