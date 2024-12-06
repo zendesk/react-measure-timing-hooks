@@ -583,12 +583,23 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     // currently the version of the Span wins,
     // but we could consider creating some customizable logic
     // re-processing the same span should be safe
-    const existingAnnotation =
+    let existingAnnotation =
       span.performanceEntry &&
-      (this.processedPerformanceEntries.get(span.performanceEntry) ||
-        this.processedPerformanceEntriesByHash.get(
-          getPerformanceEntryHash(span.performanceEntry),
-        ))
+      this.processedPerformanceEntries.get(span.performanceEntry)
+
+    let performanceEntryHash: string | undefined
+    // TODO: ideally this logic lives outside of ActiveTrace
+    // some tools (e.g. Datadog SDK) like to re-create a PerformanceEntry object instead of keeping the original
+    // that's why we need to compute the hash here
+    if (
+      !existingAnnotation &&
+      span.performanceEntry?.entryType === 'resource'
+    ) {
+      // only compute the hash if we need it
+      performanceEntryHash = getPerformanceEntryHash(span.performanceEntry)
+      existingAnnotation =
+        this.processedPerformanceEntriesByHash.get(performanceEntryHash)
+    }
 
     let spanAndAnnotation: SpanAndAnnotation<ScopeT>
 
@@ -622,6 +633,11 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
           span.performanceEntry,
           spanAndAnnotation,
         )
+        this.processedPerformanceEntriesByHash.set(
+          // hash must have been computed
+          performanceEntryHash!,
+          spanAndAnnotation,
+        )
       }
     }
 
@@ -644,11 +660,10 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
     }
 
     const shouldRecord =
-      !existingAnnotation &&
-      (!transition || transition.transitionToState !== 'interrupted')
+      !transition || transition.transitionToState !== 'interrupted'
 
-    // DECISION: if the final state is interrupted, we should not record the entry nor annotate it externally
-    if (shouldRecord) {
+    // if the final state is interrupted, we should not record the entry nor annotate it externally
+    if (shouldRecord && !existingAnnotation) {
       this.recordedItems.push(spanAndAnnotation)
     }
 
@@ -703,6 +718,12 @@ export class ActiveTrace<ScopeT extends ScopeBase> {
         transition,
       )
       this.input.onEnd(traceRecording)
+
+      // memory clean-up in case something retains the ActiveTrace instance
+      this.recordedItems = []
+      this.occurrenceCounters.clear()
+      this.processedPerformanceEntries = new WeakMap()
+      this.processedPerformanceEntriesByHash.clear()
     }
   }
 }
