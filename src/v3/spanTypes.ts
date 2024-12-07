@@ -26,7 +26,7 @@ export type ComponentLifecycleSpanType =
 
 export type SpanType = NativePerformanceEntryType | ComponentLifecycleSpanType
 
-export interface StartTraceConfig<ScopeT extends ScopeBase> {
+export interface StartTraceConfig<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   id?: string
   scope: ScopeT
   startTime?: Partial<Timestamp>
@@ -36,11 +36,11 @@ export interface StartTraceConfig<ScopeT extends ScopeBase> {
   attributes?: Attributes
 }
 
-export type OnEndFn<ScopeT extends ScopeBase> = (
+export type OnEndFn<ScopeT extends Partial<ScopeBase<ScopeT>>> = (
   trace: TraceRecording<ScopeT>,
 ) => void
 
-export interface ActiveTraceConfig<ScopeT extends ScopeBase>
+export interface ActiveTraceConfig<ScopeT extends Partial<ScopeBase<ScopeT>>>
   extends StartTraceConfig<ScopeT> {
   id: string
   startTime: Timestamp
@@ -53,7 +53,7 @@ export interface Attributes {
 }
 export type SpanStatus = 'ok' | 'error'
 
-export interface SpanBase<ScopeT extends ScopeBase> {
+export interface SpanBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   type: SpanType
 
   /**
@@ -93,7 +93,7 @@ export interface SpanBase<ScopeT extends ScopeBase> {
   error?: Error
 }
 
-export interface ComponentRenderSpan<ScopeT extends ScopeBase>
+export interface ComponentRenderSpan<ScopeT extends Partial<ScopeBase<ScopeT>>>
   extends Omit<SpanBase<ScopeT>, 'scope' | 'attributes'>,
     BeaconConfig<ScopeT> {
   type: ComponentLifecycleSpanType
@@ -126,7 +126,7 @@ export type InitiatorType =
   | 'xmlhttprequest'
   | 'other'
 
-export interface ResourceSpan<ScopeT extends ScopeBase>
+export interface ResourceSpan<ScopeT extends Partial<ScopeBase<ScopeT>>>
   extends SpanBase<ScopeT> {
   type: 'resource'
   resourceDetails: {
@@ -136,7 +136,7 @@ export interface ResourceSpan<ScopeT extends ScopeBase>
   }
 }
 
-export interface PerformanceEntrySpan<ScopeT extends ScopeBase>
+export interface PerformanceEntrySpan<ScopeT extends Partial<ScopeBase<ScopeT>>>
   extends SpanBase<ScopeT> {
   type: Exclude<NativePerformanceEntryType, 'resource'>
 }
@@ -144,7 +144,7 @@ export interface PerformanceEntrySpan<ScopeT extends ScopeBase>
 /**
  * All possible trace entries
  */
-export type Span<ScopeT extends ScopeBase> =
+export type Span<ScopeT extends Partial<ScopeBase<ScopeT>>> =
   | PerformanceEntrySpan<ScopeT>
   | ComponentRenderSpan<ScopeT>
   | ResourceSpan<ScopeT>

@@ -24,7 +24,9 @@ export const getBestSupportedEntryTypes = (): NativePerformanceEntryType[] =>
  *          PerformanceObserver, stopping the observation of
  *          performance entries.
  */
-export const observePerformanceWithTraceManager = <ScopeT extends ScopeBase>({
+export const observePerformanceWithTraceManager = <
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+>({
   traceManager,
   entryTypes = getBestSupportedEntryTypes(),
   keep,

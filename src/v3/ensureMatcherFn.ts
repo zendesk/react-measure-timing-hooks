@@ -9,27 +9,29 @@ import type { ArrayWithAtLeastOneElement } from './typeUtils'
 
 export function ensureMatcherFn<
   ScopeT extends ScopeBase,
-  MatcherInputT extends
+  MatcherInputT extends SpanMatcherFn<ScopeT> | SpanMatchDefinition<ScopeT> =
     | SpanMatcherFn<ScopeT>
-    | SpanMatchDefinition<ScopeT>
-    | string,
->(
-  matcherFnOrDefinition: MatcherInputT,
-): MatcherInputT extends string ? MatcherInputT : SpanMatcherFn<ScopeT> {
-  return (
-    typeof matcherFnOrDefinition === 'function' ||
-    typeof matcherFnOrDefinition === 'string'
-      ? matcherFnOrDefinition
-      : fromDefinition(matcherFnOrDefinition)
-  ) as MatcherInputT extends string ? MatcherInputT : SpanMatcherFn<ScopeT>
+    | SpanMatchDefinition<ScopeT>,
+>(matcherFnOrDefinition: MatcherInputT): SpanMatcherFn<ScopeT> {
+  return typeof matcherFnOrDefinition === 'function'
+    ? matcherFnOrDefinition
+    : fromDefinition(matcherFnOrDefinition)
 }
 
-export function convertMatchersToFns<ScopeT extends ScopeBase>(
-  matchers: SpanMatch<ScopeT>[] | undefined,
+function arrayHasAtLeastOneElement<T>(
+  arr: readonly T[],
+): arr is ArrayWithAtLeastOneElement<T> {
+  return arr.length > 0
+}
+
+export function convertMatchersToFns<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+  matchers: readonly SpanMatch<ScopeT>[] | undefined,
 ): ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>> | undefined {
-  return matchers && matchers.length > 0
-    ? (matchers.map((m) => ensureMatcherFn(m)) as ArrayWithAtLeastOneElement<
-        SpanMatcherFn<ScopeT>
-      >)
-    : undefined
+  const mapped: SpanMatcherFn<ScopeT>[] | undefined = matchers?.map((m) =>
+    ensureMatcherFn<ScopeT>(m),
+  )
+  if (mapped && arrayHasAtLeastOneElement(mapped)) {
+    return mapped
+  }
+  return undefined
 }

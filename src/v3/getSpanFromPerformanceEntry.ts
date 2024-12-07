@@ -13,7 +13,9 @@ import { ScopeBase, Timestamp } from './types'
  * Maps Performance Entry to a Span
  * @returns The span.
  */
-export function getSpanFromPerformanceEntry<ScopeT extends ScopeBase>(
+export function getSpanFromPerformanceEntry<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+>(
   inputEntry: PerformanceEntry,
 ): PerformanceEntrySpan<ScopeT> | ResourceSpan<ScopeT> | undefined {
   // react in dev mode generates hundreds of these marks, ignore them

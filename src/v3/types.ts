@@ -12,7 +12,7 @@ export interface Timestamp {
   now: number
 }
 
-export type ScopeBase = Record<string, string | number | boolean>
+export type ScopeBase<ScopeT> = Record<keyof ScopeT, string | number | boolean>
 
 /**
  * for now this is always 'operation', but in the future we could also implement tracing 'process' types
@@ -30,12 +30,14 @@ export type TraceInterruptionReason =
   | 'matched-on-interrupt'
   | 'invalid-state-transition'
 
-export type ReportFn<ScopeT extends ScopeBase> = (
-  trace: TraceRecording<ScopeT>,
+export type ReportFn<AllScopesT extends Partial<ScopeBase<AllScopesT>>> = <
+  ThisTraceScopeKeysT extends keyof AllScopesT,
+>(
+  trace: TraceRecording<Pick<AllScopesT, ThisTraceScopeKeysT>>,
 ) => void
 
-export interface TraceManagerConfig<ScopeT extends ScopeBase> {
-  reportFn: ReportFn<ScopeT>
+export interface TraceManagerConfig<AllScopesT extends ScopeBase<AllScopesT>> {
+  reportFn: ReportFn<Partial<AllScopesT>>
   // NEED CLARIFIATION TODO: what are the embeddedSpanTypes: SpanType[] that would actually goes to configuration of the "convertRecordingToRum" function
   // which would be called inside of reportFn
   generateId: () => string
@@ -49,14 +51,19 @@ export interface TraceManagerConfig<ScopeT extends ScopeBase> {
    * Strategy for deduplicating performance entries.
    * If not provided, no deduplication will be performed.
    */
-  performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>
+  performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<AllScopesT>
 }
 
-export interface Tracer<ScopeT extends ScopeBase> {
+export interface Tracer<
+  AllScopesT extends ScopeBase<AllScopesT>,
+  ThisTraceScopeKeysT extends keyof AllScopesT,
+> {
   /**
    * @returns The ID of the trace.
    */
-  start: (input: StartTraceConfig<ScopeT>) => string
+  start: (
+    input: StartTraceConfig<Pick<AllScopesT, ThisTraceScopeKeysT>>,
+  ) => string
 
   defineComputedSpan: (
     computedSpanDefinition: ComputedSpanDefinitionInput<ScopeT>,
@@ -81,7 +88,10 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
  * The "input" version will be transformed into the standardized version internally,
  * converting all matchers into functions.
  */
-export interface TraceDefinition<ScopeT extends ScopeBase> {
+export interface TraceDefinition<
+  AllScopesT extends ScopeBase<AllScopesT>,
+  ThisTraceScopeKeysT extends keyof AllScopesT,
+> {
   /**
    * The name of the trace.
    */
@@ -89,9 +99,7 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
 
   type?: TraceType
 
-  // TODO: implement this with typechecking
-  // to ensure we cannot start a trace without the required scope keys
-  requiredScopeKeys: (keyof ScopeT)[]
+  scopes: readonly ThisTraceScopeKeysT[]
 
   /**
    * This may include renders spans of components that have to be rendered with all data
@@ -102,9 +110,15 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
    * which parts of the product are "critical" or most important
    */
   // TODO: should we rename `requiredToEnd` to `requiredToComplete` for consistency?
-  requiredToEnd: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
-  debounceOn?: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
-  interruptOn?: ArrayWithAtLeastOneElement<SpanMatch<ScopeT>>
+  requiredToEnd: ArrayWithAtLeastOneElement<
+    SpanMatch<AllScopesT, NoInfer<ThisTraceScopeKeysT>>
+  >
+  debounceOn?: ArrayWithAtLeastOneElement<
+    SpanMatch<AllScopesT, NoInfer<ThisTraceScopeKeysT>>
+  >
+  interruptOn?: ArrayWithAtLeastOneElement<
+    SpanMatch<AllScopesT, NoInfer<ThisTraceScopeKeysT>>
+  >
   debounceDuration?: number
   timeoutDuration?: number
 
@@ -119,50 +133,66 @@ export interface TraceDefinition<ScopeT extends ScopeBase> {
    * If a span with `status: error` matches any of these matchers,
    * its error status will not affect the overall trace status.
    */
-  suppressErrorStatusPropagationOn?: SpanMatch<ScopeT>[]
+  suppressErrorStatusPropagationOn?: readonly SpanMatch<
+    AllScopesT,
+    NoInfer<ThisTraceScopeKeysT>
+  >[]
 }
 
 /**
  * Trace Definition with added fields and converting all matchers into functions.
  * Used internally by the TraceManager.
  */
-export interface CompleteTraceDefinition<ScopeT extends ScopeBase>
-  extends TraceDefinition<ScopeT> {
-  computedSpanDefinitions: readonly ComputedSpanDefinition<ScopeT>[]
+export interface CompleteTraceDefinition<
+  AllScopesT extends ScopeBase<AllScopesT>,
+  ThisTraceScopeKeysT extends keyof AllScopesT,
+> extends TraceDefinition<AllScopesT, ThisTraceScopeKeysT> {
+  computedSpanDefinitions: readonly ComputedSpanDefinition<AllScopesT>[]
   computedValueDefinitions: readonly ComputedValueDefinition<
-    ScopeT,
-    SpanMatcherFn<ScopeT>[]
+    AllScopesT,
+    SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>[]
   >[]
 
-  requiredToEnd: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
-  debounceOn?: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
-  interruptOn?: ArrayWithAtLeastOneElement<SpanMatcherFn<ScopeT>>
+  requiredToEnd: ArrayWithAtLeastOneElement<
+    SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>
+  >
+  debounceOn?: ArrayWithAtLeastOneElement<
+    SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>
+  >
+  interruptOn?: ArrayWithAtLeastOneElement<
+    SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>
+  >
 
   /**
    * A list of span matchers that will suppress error status propagation to the trace level.
    * If a span matches any of these matchers, its error status will not affect the trace status.
    */
-  suppressErrorStatusPropagationOn?: SpanMatcherFn<ScopeT>[]
+  suppressErrorStatusPropagationOn?: readonly SpanMatcherFn<
+    AllScopesT,
+    ThisTraceScopeKeysT
+  >[]
 }
 
 /**
  * Strategy for deduplicating performance entries
  */
-export interface SpanDeduplicationStrategy<ScopeT extends ScopeBase> {
+export interface SpanDeduplicationStrategy<
+  AllScopesT extends Partial<ScopeBase<AllScopesT>>,
+> {
   /**
    * Returns an existing span annotation if the span should be considered a duplicate
    */
   findDuplicate: (
-    span: Span<ScopeT>,
-    recordedItems: SpanAndAnnotation<ScopeT>[],
-  ) => SpanAndAnnotation<ScopeT> | undefined
+    span: Span<AllScopesT>,
+    recordedItems: SpanAndAnnotation<AllScopesT>[],
+  ) => SpanAndAnnotation<AllScopesT> | undefined
 
   /**
    * Called when a span is recorded to update deduplication state
    */
   recordSpan: (
-    span: Span<ScopeT>,
-    spanAndAnnotation: SpanAndAnnotation<ScopeT>,
+    span: Span<AllScopesT>,
+    spanAndAnnotation: SpanAndAnnotation<AllScopesT>,
   ) => void
 
   /**
@@ -175,15 +205,17 @@ export interface SpanDeduplicationStrategy<ScopeT extends ScopeBase> {
    * @returns the span that should be used in the annotation
    */
   selectPreferredSpan: (
-    existingSpan: Span<ScopeT>,
-    newSpan: Span<ScopeT>,
-  ) => Span<ScopeT>
+    existingSpan: Span<AllScopesT>,
+    newSpan: Span<AllScopesT>,
+  ) => Span<AllScopesT>
 }
 
 /**
  * Definition of custom spans
  */
-export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
+export interface ComputedSpanDefinition<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+> {
   name: string
   /**
    * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
@@ -199,7 +231,7 @@ export interface ComputedSpanDefinition<ScopeT extends ScopeBase> {
  * Definition of custom values
  */
 export interface ComputedValueDefinition<
-  ScopeT extends ScopeBase,
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
   MatchersT extends SpanMatcherFn<ScopeT>[],
 > {
   name: string
@@ -213,7 +245,9 @@ export interface ComputedValueDefinition<
 /**
  * Definition of custom spans input
  */
-export interface ComputedSpanDefinitionInput<ScopeT extends ScopeBase> {
+export interface ComputedSpanDefinitionInput<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+> {
   name: string
   startSpan:
     | SpanMatcherFn<ScopeT>
@@ -230,7 +264,7 @@ export interface ComputedSpanDefinitionInput<ScopeT extends ScopeBase> {
  * Definition of custom values input
  */
 export interface ComputedValueDefinitionInput<
-  ScopeT extends ScopeBase,
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
   MatchersT extends (SpanMatcherFn<ScopeT> | SpanMatchDefinition<ScopeT>)[],
 > {
   name: string

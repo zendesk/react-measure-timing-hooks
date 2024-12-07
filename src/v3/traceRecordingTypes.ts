@@ -29,7 +29,7 @@ export interface ComputedRenderSpan {
   sumOfDurations: number
 }
 
-export interface TraceRecordingBase<ScopeT extends ScopeBase> {
+export interface TraceRecordingBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   /**
    * random generated unique value or provided by the user at start
    */
@@ -88,7 +88,7 @@ export interface TraceRecordingBase<ScopeT extends ScopeBase> {
   }
 }
 
-export interface TraceRecording<ScopeT extends ScopeBase>
+export interface TraceRecording<ScopeT extends Partial<ScopeBase<ScopeT>>>
   extends TraceRecordingBase<ScopeT> {
   entries: SpanAndAnnotation<ScopeT>[]
 }

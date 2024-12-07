@@ -40,7 +40,7 @@ export interface SpanAnnotationRecord {
   [operationName: string]: SpanAnnotation
 }
 
-export interface SpanAndAnnotation<ScopeT extends ScopeBase> {
+export interface SpanAndAnnotation<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   span: Span<ScopeT>
   annotation: SpanAnnotation
 }

@@ -4,7 +4,7 @@ import type { Span } from './spanTypes'
 import type { ScopeBase, SpanDeduplicationStrategy } from './types'
 
 export function createDefaultPerformanceEntryDeduplicationStrategy<
-  ScopeT extends ScopeBase,
+  ScopeT extends ScopeBase<ScopeT>,
 >(): SpanDeduplicationStrategy<ScopeT> {
   let processedPerformanceEntries = new WeakMap<
     PerformanceEntry,

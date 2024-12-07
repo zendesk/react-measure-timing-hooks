@@ -10,12 +10,12 @@ import type { ComponentRenderSpan } from './spanTypes'
 import type { TraceManager } from './traceManager'
 import type { ScopeBase, Timestamp } from './types'
 
-type MakeEntryInput<ScopeT extends ScopeBase> = Omit<
+type MakeEntryInput<ScopeT extends Partial<ScopeBase<ScopeT>>> = Omit<
   ComponentRenderSpan<ScopeT>,
   'startTime'
 > & { startTime?: Timestamp }
 
-const makeEntry = <ScopeT extends ScopeBase>(
+const makeEntry = <ScopeT extends Partial<ScopeBase<ScopeT>>>(
   inp: MakeEntryInput<ScopeT>,
 ): ComponentRenderSpan<ScopeT> => ({
   ...inp,
@@ -27,7 +27,7 @@ const makeEntry = <ScopeT extends ScopeBase>(
  * emit component-render-start, component-render, component-unmount entries
  */
 export const generateUseBeacon =
-  <ScopeT extends ScopeBase>(
+  <ScopeT extends Partial<ScopeBase<ScopeT>>>(
     traceManager: TraceManager<ScopeT>,
   ): UseBeacon<ScopeT> =>
   (config: BeaconConfig<GetScopeTFromTraceManager<TraceManager<ScopeT>>>) => {

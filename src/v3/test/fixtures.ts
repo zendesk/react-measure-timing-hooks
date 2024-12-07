@@ -1,9 +1,12 @@
-import type { TraceDefinition } from '../types'
+import type { ScopeBase, TraceDefinition } from '../types'
 
 export interface TicketIdScope {
   ticketId: string
-  [key: string]: string
 }
+export interface UserIdScope {
+  userId: string
+}
+
 const TICKET_DISPOSE_EVENT_NAME = `ticket.dispose`
 const TICKET_NAVIGATED_AWAY_EVENT_NAME = `ticket.navigated-away`
 

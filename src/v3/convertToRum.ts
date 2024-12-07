@@ -16,7 +16,7 @@ export interface EmbeddedEntry {
   }[]
 }
 
-export interface RumTraceRecording<ScopeT extends ScopeBase>
+export interface RumTraceRecording<ScopeT extends Partial<ScopeBase<ScopeT>>>
   extends TraceRecordingBase<ScopeT> {
   scope: ScopeT
 
@@ -37,7 +37,7 @@ export interface RumTraceRecording<ScopeT extends ScopeBase>
   nonEmbeddedSpans: string[]
 }
 
-export function isRenderEntry<ScopeT extends ScopeBase>(
+export function isRenderEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   entry: Span<ScopeT>,
 ): entry is ComponentRenderSpan<ScopeT> {
   return (
@@ -47,7 +47,7 @@ export function isRenderEntry<ScopeT extends ScopeBase>(
   )
 }
 
-function updateEmbeddedEntry<ScopeT extends ScopeBase>(
+function updateEmbeddedEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   embeddedEntry: EmbeddedEntry,
   spanAndAnnotation: SpanAndAnnotation<ScopeT>,
 ): EmbeddedEntry {
@@ -65,7 +65,7 @@ function updateEmbeddedEntry<ScopeT extends ScopeBase>(
   }
 }
 
-function createEmbeddedEntry<ScopeT extends ScopeBase>({
+function createEmbeddedEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>({
   span,
   annotation,
 }: SpanAndAnnotation<ScopeT>): EmbeddedEntry {
@@ -81,14 +81,16 @@ function createEmbeddedEntry<ScopeT extends ScopeBase>({
   }
 }
 
-export const defaultEmbedSpanSelector = <ScopeT extends ScopeBase>(
+export const defaultEmbedSpanSelector = <
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+>(
   spanAndAnnotation: SpanAndAnnotation<ScopeT>,
 ) => {
   const { span } = spanAndAnnotation
   return isRenderEntry(span)
 }
 
-export function convertTraceToRUM<ScopeT extends ScopeBase>(
+export function convertTraceToRUM<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   traceRecording: TraceRecording<ScopeT>,
   embedSpanSelector: SpanMatcherFn<ScopeT> = defaultEmbedSpanSelector,
 ): RumTraceRecording<ScopeT> {

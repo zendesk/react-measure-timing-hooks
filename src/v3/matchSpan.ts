@@ -1,48 +1,73 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { Attributes, SpanStatus, SpanType } from './spanTypes'
-import { ScopeBase } from './types'
+import type {
+  ActiveTraceConfig,
+  Attributes,
+  SpanStatus,
+  SpanType,
+} from './spanTypes'
+import { CompleteTraceDefinition, ScopeBase } from './types'
 
 export interface SpanMatcherTags {
   isIdle?: boolean
 }
 
+export interface Context<
+  AllScopesT extends ScopeBase<AllScopesT>,
+  ThisTraceScopeKeysT extends keyof AllScopesT,
+> {
+  readonly definition: CompleteTraceDefinition<AllScopesT, ThisTraceScopeKeysT>
+  readonly input: Omit<
+    ActiveTraceConfig<Pick<AllScopesT, ThisTraceScopeKeysT>>,
+    'onEnd'
+  >
+}
+
 /**
  * Function type for matching performance entries.
  */
-export type SpanMatcherFn<ScopeT extends ScopeBase> = ((
-  spanAndAnnotation: SpanAndAnnotation<ScopeT>,
-  scope: ScopeT,
+export type SpanMatcherFn<
+  AllScopesT extends ScopeBase<AllScopesT>,
+  ThisTraceScopeKeysT extends keyof AllScopesT,
+> = ((
+  spanAndAnnotation: SpanAndAnnotation<Partial<AllScopesT>>,
+  context: Context<AllScopesT, ThisTraceScopeKeysT>,
 ) => boolean) &
   SpanMatcherTags
 
-type NameMatcher<ScopeT extends ScopeBase> =
+type NameMatcher<ScopeT extends Partial<ScopeBase<ScopeT>>> =
   | string
   | RegExp
   | ((name: string, scope: ScopeT) => boolean)
 
-export interface SpanMatchDefinition<ScopeT extends ScopeBase> {
-  name?: NameMatcher<ScopeT>
-  performanceEntryName?: NameMatcher<ScopeT>
+export interface SpanMatchDefinition<
+  AllScopesT extends ScopeBase<AllScopesT>,
+  ThisTraceScopeKeysT extends keyof AllScopesT,
+> {
+  name?: NameMatcher<Pick<AllScopesT, ThisTraceScopeKeysT>>
+  performanceEntryName?: NameMatcher<Pick<AllScopesT, ThisTraceScopeKeysT>>
   type?: SpanType
   status?: SpanStatus
   attributes?: Attributes
-  scopes?: (keyof ScopeT)[]
+  matchScopes?: readonly ThisTraceScopeKeysT[] | boolean
   // IMPLEMENTATION TODO: take in scope as a second parameter
   occurrence?: number | ((occurrence: number) => boolean)
   isIdle?: boolean
 }
 
-export type SpanMatch<ScopeT extends ScopeBase> =
-  | SpanMatcherFn<ScopeT>
-  | SpanMatchDefinition<ScopeT>
+export type SpanMatch<
+  AllScopesT extends ScopeBase<AllScopesT>,
+  ThisTraceScopeKeysT extends keyof AllScopesT,
+> =
+  | SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>
+  | SpanMatchDefinition<AllScopesT, ThisTraceScopeKeysT>
 
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.
  */
-export function withName<ScopeT extends ScopeBase>(
+export function withName<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   value: NameMatcher<ScopeT>,
 ): SpanMatcherFn<ScopeT> {
-  return ({ span }, scope) => {
+  return ({ span }, { input: { scope } }) => {
     if (typeof value === 'string') return span.name === value
     if (value instanceof RegExp) return value.test(span.name)
     return value(span.name, scope)
@@ -52,10 +77,10 @@ export function withName<ScopeT extends ScopeBase>(
 /**
  * The PerformanceEntry.name of the entry to match. Can be a string, RegExp, or function.
  */
-export function withPerformanceEntryName<ScopeT extends ScopeBase>(
-  value: NameMatcher<ScopeT>,
-): SpanMatcherFn<ScopeT> {
-  return ({ span }, scope) => {
+export function withPerformanceEntryName<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+>(value: NameMatcher<ScopeT>): SpanMatcherFn<ScopeT> {
+  return ({ span }, { input: { scope } }) => {
     const entryName = span.performanceEntry?.name
     if (!entryName) return false
     if (typeof value === 'string') return entryName === value
@@ -64,13 +89,13 @@ export function withPerformanceEntryName<ScopeT extends ScopeBase>(
   }
 }
 
-export function withType<ScopeT extends ScopeBase>(
+export function withType<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   value: SpanType,
 ): SpanMatcherFn<ScopeT> {
   return ({ span }) => span.type === value
 }
 
-export function withStatus<ScopeT extends ScopeBase>(
+export function withStatus<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   value: SpanStatus,
 ): SpanMatcherFn<ScopeT> {
   return ({ span }) => span.status === value
@@ -79,7 +104,7 @@ export function withStatus<ScopeT extends ScopeBase>(
 /**
  * The subset of attributes (metadata) to match against the span.
  */
-export function withAttributes<ScopeT extends ScopeBase>(
+export function withAttributes<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   attrs: Attributes,
 ): SpanMatcherFn<ScopeT> {
   return ({ span }) => {
@@ -93,19 +118,25 @@ export function withAttributes<ScopeT extends ScopeBase>(
 /**
  * A list of scope keys to match against the span.
  */
-export function withMatchingScopes<ScopeT extends ScopeBase>(
-  keys: (keyof ScopeT)[],
+export function withMatchingScopes<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+  keys: (keyof ScopeT)[] | true,
 ): SpanMatcherFn<ScopeT> {
-  return ({ span }, scope) => {
+  return (
+    { span },
+    { input: { scope }, definition: { requiredScopeKeys } },
+  ) => {
     if (!span.scope) return false
-    return keys.every((key) => span.scope![key] === scope[key])
+    const resolvedKeys =
+      typeof keys === 'boolean' && keys ? requiredScopeKeys : keys
+    if (!resolvedKeys) return false
+    return resolvedKeys.every((key) => span.scope![key] === scope[key])
   }
 }
 
 /**
  * The occurrence of the span with the same name within the operation.
  */
-export function withOccurrence<ScopeT extends ScopeBase>(
+export function withOccurrence<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   value: number | ((occurrence: number) => boolean),
 ): SpanMatcherFn<ScopeT> {
   return ({ annotation }) => {
@@ -114,10 +145,9 @@ export function withOccurrence<ScopeT extends ScopeBase>(
   }
 }
 
-export function withComponentRenderCount<ScopeT extends ScopeBase>(
-  name: string,
-  renderCount: number,
-): SpanMatcherFn<ScopeT> {
+export function withComponentRenderCount<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+>(name: string, renderCount: number): SpanMatcherFn<ScopeT> {
   return ({ span }) => {
     if (!('renderCount' in span)) return false
     return span.name === name && span.renderCount === renderCount
@@ -127,7 +157,7 @@ export function withComponentRenderCount<ScopeT extends ScopeBase>(
 /**
  * only applicable for component-lifecycle entries
  */
-export function whenIdle<ScopeT extends ScopeBase>(
+export function whenIdle<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   value = true,
 ): SpanMatcherFn<ScopeT> {
   const matcherFn: SpanMatcherFn<ScopeT> = ({ span }) =>
@@ -141,7 +171,7 @@ export function whenIdle<ScopeT extends ScopeBase>(
 
 // logical combinators:
 // AND
-export function withAllConditions<ScopeT extends ScopeBase>(
+export function withAllConditions<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   ...matchers: SpanMatcherFn<ScopeT>[]
 ): SpanMatcherFn<ScopeT> {
   const tags: SpanMatcherTags = {}
@@ -155,7 +185,7 @@ export function withAllConditions<ScopeT extends ScopeBase>(
 }
 
 // OR
-export function withOneOfConditions<ScopeT extends ScopeBase>(
+export function withOneOfConditions<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   ...matchers: SpanMatcherFn<ScopeT>[]
 ): SpanMatcherFn<ScopeT> {
   const tags: SpanMatcherTags = {}
@@ -168,14 +198,14 @@ export function withOneOfConditions<ScopeT extends ScopeBase>(
   return Object.assign(matcherFn, tags)
 }
 
-export function not<ScopeT extends ScopeBase>(
+export function not<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   matcher: SpanMatcherFn<ScopeT>,
 ): SpanMatcherFn<ScopeT> {
   // since not is a negation, we don't carry over tags
   return (...args) => !matcher(...args)
 }
 
-export function fromDefinition<ScopeT extends ScopeBase>(
+export function fromDefinition<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   definition: SpanMatchDefinition<ScopeT>,
 ): SpanMatcherFn<ScopeT> {
   const matchers: SpanMatcherFn<ScopeT>[] = []

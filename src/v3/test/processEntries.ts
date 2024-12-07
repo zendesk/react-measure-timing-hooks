@@ -1,13 +1,16 @@
-import { ensureTimestamp } from "../ensureTimestamp";
-import { Span, SpanType } from "../spanTypes";
-import { TraceManager } from "../traceManager";
-import { ScopeBase } from "../types";
+import { ensureTimestamp } from '../ensureTimestamp'
+import { Span, SpanType } from '../spanTypes'
+import { TraceManager } from '../traceManager'
+import { ScopeBase } from '../types'
 
-function processEntries<ScopeT extends ScopeBase>(entries: PerformanceEntry[], traceManager: TraceManager<ScopeT>) {
+function processEntries<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+  entries: PerformanceEntry[],
+  traceManager: TraceManager<ScopeT>,
+) {
   entries.forEach((entry, i) => {
     if (i > 0) {
-      const prevEntry = entries[i - 1]!;
-      jest.advanceTimersByTime(entry.startTime - prevEntry.startTime);
+      const prevEntry = entries[i - 1]!
+      jest.advanceTimersByTime(entry.startTime - prevEntry.startTime)
     }
 
     traceManager.processSpan({
@@ -19,8 +22,8 @@ function processEntries<ScopeT extends ScopeBase>(entries: PerformanceEntry[], t
       type: entry.entryType as SpanType,
       performanceEntry: entry,
       scope: {},
-    } as Span<ScopeT>);
-  });
+    } as Span<ScopeT>)
+  })
 }
 
-export default processEntries;
+export default processEntries

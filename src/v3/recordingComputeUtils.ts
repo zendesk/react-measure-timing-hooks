@@ -25,13 +25,13 @@ import type { CompleteTraceDefinition, ScopeBase } from './types'
  *    3. _The total number of iframe apps were initialized while loading the ticket_
  */
 
-interface ComputeRecordingData<ScopeT extends ScopeBase> {
+interface ComputeRecordingData<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   definition: CompleteTraceDefinition<ScopeT>
   recordedItems: SpanAndAnnotation<ScopeT>[]
   input: ActiveTraceConfig<ScopeT>
 }
 
-export function getComputedValues<ScopeT extends ScopeBase>({
+export function getComputedValues<ScopeT extends Partial<ScopeBase<ScopeT>>>({
   definition: traceDefinition,
   recordedItems,
   input,
@@ -42,7 +42,9 @@ export function getComputedValues<ScopeT extends ScopeBase>({
     const { name, matches, computeValueFromMatches } = definition
 
     const matchingRecordedEntries = recordedItems.filter((spanAndAnnotation) =>
-      matches.some((matcher) => matcher(spanAndAnnotation, input.scope)),
+      matches.some((matcher) =>
+        matcher(spanAndAnnotation, { input, definition: traceDefinition }),
+      ),
     )
 
     computedValues[name] = computeValueFromMatches(matchingRecordedEntries)
@@ -57,7 +59,7 @@ const markedComplete = (spanAndAnnotation: SpanAndAnnotation<ScopeBase>) =>
 const markedInteractive = (spanAndAnnotation: SpanAndAnnotation<ScopeBase>) =>
   spanAndAnnotation.annotation.markedInteractive
 
-export function getComputedSpans<ScopeT extends ScopeBase>({
+export function getComputedSpans<ScopeT extends Partial<ScopeBase<ScopeT>>>({
   definition: traceDefinition,
   recordedItems,
   input,
@@ -71,7 +73,10 @@ export function getComputedSpans<ScopeT extends ScopeBase>({
     const matchingStartEntry =
       typeof startSpanMatcher === 'function'
         ? recordedItems.find((spanAndAnnotation) =>
-            startSpanMatcher(spanAndAnnotation, input.scope),
+            startSpanMatcher(spanAndAnnotation, {
+              input,
+              definition: traceDefinition,
+            }),
           )
         : undefined
 
@@ -87,7 +92,7 @@ export function getComputedSpans<ScopeT extends ScopeBase>({
         : endSpan
 
     const matchingEndEntry = recordedItems.findLast((spanAndAnnotation) =>
-      endSpanMatcher(spanAndAnnotation, input.scope),
+      endSpanMatcher(spanAndAnnotation, { input, definition: traceDefinition }),
     )
 
     const matchingEndTime = matchingEndEntry
@@ -117,7 +122,9 @@ export function getComputedSpans<ScopeT extends ScopeBase>({
   return computedSpans
 }
 
-export function getSpanSummaryAttributes<ScopeT extends ScopeBase>({
+export function getSpanSummaryAttributes<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+>({
   definition,
   recordedItems,
   input,
@@ -140,7 +147,7 @@ export function getSpanSummaryAttributes<ScopeT extends ScopeBase>({
 }
 
 // IMPLEMENTATION TODO: implementation of gathering Trace level attributes
-export function getAttributes<ScopeT extends ScopeBase>({
+export function getAttributes<ScopeT extends Partial<ScopeBase<ScopeT>>>({
   definition,
   recordedItems,
   input,
@@ -148,7 +155,9 @@ export function getAttributes<ScopeT extends ScopeBase>({
   return {}
 }
 
-function getComputedRenderBeaconSpans<ScopeT extends ScopeBase>(
+function getComputedRenderBeaconSpans<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+>(
   recordedItems: SpanAndAnnotation<ScopeT>[],
   input: ActiveTraceConfig<ScopeT>,
 ): TraceRecording<ScopeT>['computedRenderBeaconSpans'] {
@@ -237,7 +246,7 @@ function getComputedRenderBeaconSpans<ScopeT extends ScopeBase>(
   return computedRenderBeaconSpans
 }
 
-export function createTraceRecording<ScopeT extends ScopeBase>(
+export function createTraceRecording<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   data: ComputeRecordingData<ScopeT>,
   {
     transitionFromState,
@@ -265,7 +274,7 @@ export function createTraceRecording<ScopeT extends ScopeBase>(
     (spanAndAnnotation) =>
       spanAndAnnotation.span.status === 'error' &&
       !definition.suppressErrorStatusPropagationOn?.some((matcher) =>
-        matcher(spanAndAnnotation, input.scope),
+        matcher(spanAndAnnotation, data),
       ),
   )
 

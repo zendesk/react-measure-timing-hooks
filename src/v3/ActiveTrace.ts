@@ -12,6 +12,7 @@ import {
   createCPUIdleProcessor,
 } from './firstCPUIdle'
 import { getSpanKey } from './getSpanKey'
+import { Context } from './matchSpan'
 import { createTraceRecording } from './recordingComputeUtils'
 import type {
   SpanAndAnnotation,
@@ -31,7 +32,7 @@ import type {
   StateHandlerPayloads,
 } from './typeUtils'
 
-export interface FinalState<ScopeT extends ScopeBase> {
+export interface FinalState<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
   cpuIdleSpanAndAnnotation?: SpanAndAnnotation<ScopeT>
@@ -52,7 +53,8 @@ interface OnEnterInterrupted {
   interruptionReason: TraceInterruptionReason
 }
 
-interface OnEnterComplete<ScopeT extends ScopeBase> extends FinalState<ScopeT> {
+interface OnEnterComplete<ScopeT extends Partial<ScopeBase<ScopeT>>>
+  extends FinalState<ScopeT> {
   transitionToState: 'complete'
 }
 
@@ -66,45 +68,48 @@ interface OnEnterDebouncing {
   transitionFromState: NonTerminalTraceStates
 }
 
-type OnEnterStatePayload<ScopeT extends ScopeBase> =
+type OnEnterStatePayload<ScopeT extends Partial<ScopeBase<ScopeT>>> =
   | OnEnterInterrupted
   | OnEnterComplete<ScopeT>
   | OnEnterDebouncing
   | OnEnterWaitingForInteractive
 
-export type Transition<ScopeT extends ScopeBase> = DistributiveOmit<
-  OnEnterStatePayload<ScopeT>,
-  'transitionFromState'
->
+export type Transition<ScopeT extends Partial<ScopeBase<ScopeT>>> =
+  DistributiveOmit<OnEnterStatePayload<ScopeT>, 'transitionFromState'>
 
-type FinalizeFn<ScopeT extends ScopeBase> = (config: FinalState<ScopeT>) => void
+type FinalizeFn<ScopeT extends Partial<ScopeBase<ScopeT>>> = (
+  config: FinalState<ScopeT>,
+) => void
 
-export type States<ScopeT extends ScopeBase> =
+export type States<ScopeT extends Partial<ScopeBase<ScopeT>>> =
   TraceStateMachine<ScopeT>['states']
 
-interface StateHandlersBase<ScopeT extends ScopeBase> {
+interface StateHandlersBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [handler: string]: (payload: any) => void | undefined | Transition<ScopeT>
 }
 
-type StatesBase<ScopeT extends ScopeBase> = Record<
+type StatesBase<ScopeT extends Partial<ScopeBase<ScopeT>>> = Record<
   TraceStates,
   StateHandlersBase<ScopeT>
 >
 
-type TraceStateMachineSideEffectHandlers<ScopeT extends ScopeBase> =
-  TraceStateMachine<ScopeT>['sideEffectFns']
+type TraceStateMachineSideEffectHandlers<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+> = TraceStateMachine<ScopeT>['sideEffectFns']
 
-type EntryType<ScopeT extends ScopeBase> = PerformanceEntryLike & {
-  entry: SpanAndAnnotation<ScopeT>
+type EntryType<ScopeT extends Partial<ScopeBase<ScopeT>>> =
+  PerformanceEntryLike & {
+    entry: SpanAndAnnotation<ScopeT>
+  }
+
+interface StateMachineContext<ScopeT extends Partial<ScopeBase<ScopeT>>>
+  extends Context<ScopeT> {
+  readonly requiredToEndIndexChecklist: Set<number>
 }
 
-export class TraceStateMachine<ScopeT extends ScopeBase> {
-  readonly context: {
-    readonly definition: CompleteTraceDefinition<ScopeT>
-    readonly input: Omit<ActiveTraceConfig<ScopeT>, 'onEnd'>
-    readonly requiredToEndIndexChecklist: Set<number>
-  }
+export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
+  readonly context: StateMachineContext<ScopeT>
   readonly sideEffectFns: {
     readonly storeFinalizeState: FinalizeFn<ScopeT>
   }
@@ -156,7 +161,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // does span satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const match of this.context.definition.interruptOn) {
-            if (match(spanAndAnnotation, this.context.input.scope)) {
+            if (match(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'matched-on-interrupt',
@@ -173,7 +178,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           }
 
           const matcher = this.context.definition.requiredToEnd[i]!
-          if (matcher(spanAndAnnotation, this.context.input.scope)) {
+          if (matcher(spanAndAnnotation, this.context)) {
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
 
@@ -267,7 +272,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
           for (const matcher of this.context.definition.requiredToEnd) {
             if (
               // TODO: rename matcher in the whole file to 'doesSpanMatch'
-              matcher(idleRegressionCheckSpan, this.context.input.scope) &&
+              matcher(idleRegressionCheckSpan, this.context) &&
               matcher.isIdle
             ) {
               // check if we regressed on "isIdle", and if so, transition to interrupted with reason
@@ -282,7 +287,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
           for (const matcher of this.context.definition.debounceOn) {
-            if (matcher(spanAndAnnotation, this.context.input.scope)) {
+            if (matcher(spanAndAnnotation, this.context)) {
               // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
               if (
                 spanAndAnnotation.annotation.operationRelativeEndTime >
@@ -436,7 +441,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
         if (this.context.definition.interruptOn) {
           for (const matcher of this.context.definition.interruptOn) {
-            if (matcher(spanAndAnnotation, this.context.input.scope)) {
+            if (matcher(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'complete',
                 interruptionReason: 'matched-on-interrupt',
@@ -516,7 +521,7 @@ export class TraceStateMachine<ScopeT extends ScopeBase> {
   }
 }
 
-export class ActiveTrace<ScopeT extends ScopeBase> {
+export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   readonly definition: CompleteTraceDefinition<ScopeT>
   readonly input: ActiveTraceConfig<ScopeT>
   private readonly deduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>

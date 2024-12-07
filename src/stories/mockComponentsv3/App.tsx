@@ -32,24 +32,24 @@ const ticketOperationTracer = traceManager.createTracer({
   requiredToEnd: [
     {
       name: 'TicketView',
-      scopes: ['ticketId'],
+      matchScopes: ['ticketId'],
       type: 'component-render',
       isIdle: true,
     },
   ],
-  requiredScopeKeys: ['ticketId'],
+  scopes: ['ticketId'],
   // debounceDuration: 1_000,
   timeoutDuration: 45_000,
   debounceOn: [
     {
       name: 'TicketView',
-      scopes: ['ticketId'],
+      matchScopes: ['ticketId'],
     },
   ],
   interruptOn: [
     {
       name: 'TicketView',
-      scopes: ['ticketId'],
+      matchScopes: ['ticketId'],
       type: 'component-unmount',
     },
   ],

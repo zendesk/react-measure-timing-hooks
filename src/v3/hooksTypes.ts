@@ -4,7 +4,7 @@ import type { ScopeBase } from './types'
 
 export type RenderedOutput = 'null' | 'loading' | 'content' | 'error'
 
-export interface BeaconConfig<ScopeT extends ScopeBase> {
+export interface BeaconConfig<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   name: string
   scope: ScopeT
   renderedOutput: RenderedOutput
@@ -13,7 +13,7 @@ export interface BeaconConfig<ScopeT extends ScopeBase> {
   error?: Error
 }
 
-export type UseBeacon<ScopeT extends ScopeBase> = (
+export type UseBeacon<ScopeT extends Partial<ScopeBase<ScopeT>>> = (
   beaconConfig: BeaconConfig<ScopeT>,
 ) => void
 

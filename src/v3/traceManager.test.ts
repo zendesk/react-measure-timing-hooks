@@ -5,7 +5,11 @@ import { ensureTimestamp } from './ensureTimestamp'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
 import type { Span, StartTraceConfig } from './spanTypes'
-import { type TicketIdScope, ticketActivationDefinition } from './test/fixtures'
+import {
+  type TicketIdScope,
+  UserIdScope,
+  ticketActivationDefinition,
+} from './test/fixtures'
 import {
   Check,
   getEventsFromTimeline,
@@ -212,25 +216,24 @@ describe('TraceManager', () => {
   })
 
   it('tracks trace with scope ticketId: 4', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    type AllScopesT = TicketIdScope & UserIdScope
+    type AllScopeKeys = keyof AllScopesT
+    const traceManager = new TraceManager<AllScopesT>({
       reportFn,
       generateId,
     })
-    const traceDefinition: TraceDefinition<TicketIdScope> = {
+    const tracer = traceManager.createTracer({
       name: 'ticket.scope-operation',
       type: 'operation',
-      requiredScopeKeys: [],
-      requiredToEnd: [{ name: 'end' }],
-    }
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketIdScope> = {
+      scopes: ['ticketId'],
+      requiredToEnd: [{ name: 'end', matchScopes: true }],
+    })
+    // start trace
+    const traceId = tracer.start({
       scope: {
         ticketId: '4',
       },
-    }
-
-    // start trace
-    const traceId = tracer.start(startConfig)
+    })
     expect(traceId).toBe('trace-id')
 
     // prettier-ignore
@@ -1377,6 +1380,32 @@ describe('TraceManager', () => {
         {
           "attributes": {},
           "completeTillInteractive": 0,
+          "computedRenderBeaconSpans": {
+            "ConversationPane": {
+              "renderCount": 6,
+              "startOffset": 549.6999999880791,
+              "sumOfDurations": 347.5,
+              "timeToContent": 954.7000000178814,
+              "timeToData": 899.6000000089407,
+              "timeToLoading": 67,
+            },
+            "OmniComposer": {
+              "renderCount": 8,
+              "startOffset": 812.5,
+              "sumOfDurations": 346.60000002384186,
+              "timeToContent": 665.8999999910593,
+              "timeToData": 112.5,
+              "timeToLoading": 0,
+            },
+            "OmniLog": {
+              "renderCount": 7,
+              "startOffset": 547.3999999910593,
+              "sumOfDurations": 290.2000000178814,
+              "timeToContent": 953.2000000029802,
+              "timeToData": 901.5,
+              "timeToLoading": 56.099999994039536,
+            },
+          },
           "computedSpans": {},
           "computedValues": {},
           "duration": 1504.4000000059605,
@@ -1440,6 +1469,32 @@ describe('TraceManager', () => {
         {
           "attributes": {},
           "completeTillInteractive": 0,
+          "computedRenderBeaconSpans": {
+            "ConversationPane": {
+              "renderCount": 5,
+              "startOffset": 528.4000000059605,
+              "sumOfDurations": 283.0999999791384,
+              "timeToContent": 761.9999999850988,
+              "timeToData": 723.0999999940395,
+              "timeToLoading": 69.29999999701977,
+            },
+            "OmniComposer": {
+              "renderCount": 8,
+              "startOffset": 733.5,
+              "sumOfDurations": 258.3999999910593,
+              "timeToContent": 541.8000000119209,
+              "timeToData": 61.5,
+              "timeToLoading": 0,
+            },
+            "OmniLog": {
+              "renderCount": 9,
+              "startOffset": 526.3000000119209,
+              "sumOfDurations": 255.90000002086163,
+              "timeToContent": 776.0999999791384,
+              "timeToData": 724.5999999940395,
+              "timeToLoading": 56.6000000089407,
+            },
+          },
           "computedSpans": {},
           "computedValues": {},
           "duration": 1302.3999999910593,

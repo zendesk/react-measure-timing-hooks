@@ -31,20 +31,20 @@ type TupleToObject2<T extends [PropertyKey, any, any]> = Prettify<{
   [K in T[0]]: T extends [K, any, infer V] ? V : never
 }>
 
-export type StateHandlerPayloads<ScopeT extends ScopeBase> = TupleToObject<
-  HandlerToPayloadTuples<ScopeT>
->
+export type StateHandlerPayloads<ScopeT extends Partial<ScopeBase<ScopeT>>> =
+  TupleToObject<HandlerToPayloadTuples<ScopeT>>
 
-export type StateHandlerReturnTypes<ScopeT extends ScopeBase> = TupleToObject2<
-  HandlerToPayloadTuples<ScopeT>
->
+export type StateHandlerReturnTypes<ScopeT extends Partial<ScopeBase<ScopeT>>> =
+  TupleToObject2<HandlerToPayloadTuples<ScopeT>>
 
-export type MergedStateHandlerMethods<ScopeT extends ScopeBase> = {
+export type MergedStateHandlerMethods<
+  ScopeT extends Partial<ScopeBase<ScopeT>>,
+> = {
   [K in keyof StateHandlerPayloads<ScopeT>]: (
     payload: StateHandlerPayloads<ScopeT>[K],
   ) => StateHandlerReturnTypes<ScopeT>[K]
 }
-export type ArrayWithAtLeastOneElement<T> = [T, ...T[]]
+export type ArrayWithAtLeastOneElement<T> = readonly [T, ...T[]]
 export type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
   [Index in keyof KeysTuple]: MapToValue // T[KeysTuple[Index]]
 }
