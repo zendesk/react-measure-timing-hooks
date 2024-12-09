@@ -24,29 +24,53 @@ export interface Span {
   scopes: AllPossibleScopes
 }
 
-type KeysOfPossibleScopes = KeysOfUnion<AllPossibleScopes>
+type KeysOfAllPossibleScopes = KeysOfUnion<AllPossibleScopes>
 
-export interface TraceDefinitionInput {
+// No Infer Diagram: https://excalidraw.com/#room=4345f5a2d159f70f528a,lprwatMKsXuRrF8UUDFtWA
+export interface TraceDefinitionInput<TracerScopeT> {
   name: string
-  scopes: KeysOfPossibleScopes[]
-  requiredToEnd: MatchDefinition[]
+  scopes: TracerScopeT[]
+  requiredToEnd: MatchDefinition<NoInfer<TracerScopeT>>[]
 }
+
+/* 
+function TraceDefinitionInput(TracerScopeT) {
+  return {
+    name: string
+    scopes: Array(TracerScopeT),
+    requiredToEnd: MatchDefinition({...TracerScopeT})
+  }
+}
+*/
 
 export interface StartTraceInput {
   scope: AllPossibleScopes
 }
 
-export interface MatchDefinition {
+export interface MatchDefinition<ParentTracerScopeT> {
   name?: string
-  matchingScopes?: KeysOfPossibleScopes[]
+  matchingScopes?: ParentTracerScopeT[]
 }
+
+// consider generics as a type function generator
+//  it would be:
+// const matchDefinition = (parentTracerScopeT) => {
+//   return {
+//     name: String,
+//     matchingScopes: Array(parentTracerScopeT)
+//   }
+// }
+
+export type MatchFn = (span: Span) => boolean
 
 interface Tracer {
   start: (input: StartTraceInput) => void
 }
 
 export interface TraceManager {
-  createTracer: (definition: TraceDefinitionInput) => Tracer
+  createTracer: <SingleTracerScopeT extends KeysOfAllPossibleScopes>(
+    definition: TraceDefinitionInput<SingleTracerScopeT>,
+  ) => Tracer
 }
 
 export interface BeaconInput {
