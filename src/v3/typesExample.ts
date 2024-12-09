@@ -20,9 +20,14 @@ export type AllPossibleScopes =
   | LotusUserScope
   | LotusCustomFieldScope
 
+// a span can have any combination of scopes
+export type ScopeOnASpan = Prettify<
+  UnionToIntersection<Partial<AllPossibleScopes>>
+>
+
 export interface Span {
   name: string
-  scopes: AllPossibleScopes
+  scope: ScopeOnASpan
 }
 
 type KeysOfAllPossibleScopes = KeysOfUnion<AllPossibleScopes>
@@ -31,18 +36,8 @@ type KeysOfAllPossibleScopes = KeysOfUnion<AllPossibleScopes>
 export interface TraceDefinitionInput<TracerScopeT> {
   name: string
   scopes: TracerScopeT[]
-  requiredToEnd: MatchDefinition<NoInfer<TracerScopeT>>[]
+  requiredToEnd: Matcher<NoInfer<TracerScopeT>>[]
 }
-
-/* 
-function TraceDefinitionInput(TracerScopeT) {
-  return {
-    name: string
-    scopes: Array(TracerScopeT),
-    requiredToEnd: MatchDefinition({...TracerScopeT})
-  }
-}
-*/
 
 export interface StartTraceInput<SingleTracerScopeT> {
   scope: SingleTracerScopeT
@@ -53,22 +48,16 @@ export interface MatchDefinition<ParentTracerScopeT> {
   matchingScopes?: ParentTracerScopeT[]
 }
 
-// consider generics as a type function generator
-//  it would be:
-// const matchDefinition = (parentTracerScopeT) => {
-//   return {
-//     name: String,
-//     matchingScopes: Array(parentTracerScopeT)
-//   }
-// }
-
 export type MatchFn = (span: Span) => boolean
+
+export type Matcher<TracerScopeT> = MatchDefinition<TracerScopeT> | MatchFn
 
 interface Tracer<ThisTracerScopeT> {
   start: (input: StartTraceInput<ThisTracerScopeT>) => void
 }
 
 export interface TraceManager {
+  // a tracer will only have one specific scope
   createTracer: <SingleTracerScopeKeyT extends KeysOfAllPossibleScopes>(
     definition: TraceDefinitionInput<SingleTracerScopeKeyT>,
   ) => Tracer<SelectScopeByKey<SingleTracerScopeKeyT, AllPossibleScopes>>
@@ -92,10 +81,6 @@ type SelectScopeByKey<SelectScopeKeyT extends PropertyKey, ScopesT> = Prettify<
   ScopesT extends { [AnyKey in SelectScopeKeyT]: ScopeValue } ? ScopesT : never
 >
 
-type TicketExample = SelectScopeByKey<'ticketId', AllPossibleScopes>
-
-type PickTicketExample = Prettify<PickFromUnion<AllPossibleScopes, 'ticketId'>>
-
 type Prettify<T> = {
   [K in keyof T]: T[K]
 } & {}
@@ -110,6 +95,18 @@ type PickFromUnion<T, Keys extends KeysOfUnion<T>> = T extends Record<
 // T extends T: while (true) loop.
 // looping only works on a generic
 type KeysOfUnion<T> = T extends T ? keyof T : never
+
+// steps 1a and 1b must be functions, because TS's infer
+type Step1a = (ticketScope: LotusTicketScope) => void
+type Step1b = (userScope: LotusUserScope) => void
+type Step2 = Step1a | Step1b
+type Step3 = Step2 extends (x: infer I) => void ? I : never
+
+type UnionToIntersection<U> = (U extends U ? (x: U) => void : never) extends (
+  x: infer I,
+) => void
+  ? I
+  : never
 
 // type T = AllPossibleScopes
 // type WontWork = T extends T ? keyof T : never

@@ -4,7 +4,7 @@ import { processSpan, traceManager, useBeacon } from './typesExample'
 
 processSpan({
   name: 'some-span',
-  scopes: { ticketId: '123', customFieldId: '123', userId: '123' },
+  scope: { ticketId: '123', customFieldId: '123', userId: '123' },
 })
 
 // valid beacon
@@ -58,6 +58,16 @@ const shouldErrorTrace = traceManager.createTracer({
   name: 'ticket.should_error',
   scopes: ['ticketId', 'customFieldId'],
   requiredToEnd: [{ matchingScopes: ['userId'] }],
+})
+
+// valid definition
+const ticketActivationWithFnTracer = traceManager.createTracer({
+  name: 'ticket.activation',
+  scopes: ['ticketId'],
+  requiredToEnd: [
+    { matchingScopes: ['ticketId'] },
+    (span) => 'ticketId' in span.scope.ticketId === '123',
+  ],
 })
 
 // valid start
