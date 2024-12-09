@@ -1,6 +1,35 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/consistent-type-definitions */
 
-import { processSpan, traceManager, useBeacon } from './typesExample'
+import { processSpan, TraceManager, generateUseBeacon } from './typesExample'
+
+export type LotusTicketScope = {
+  ticketId: string
+}
+
+export type LotusUserScope = {
+  userId: string
+}
+
+export type LotusCustomFieldScope = {
+  customFieldId: string
+}
+
+export type LotusAllPossibleScopes =
+  | LotusTicketScope
+  | LotusUserScope
+  | LotusCustomFieldScope
+
+const traceManager = new TraceManager<LotusAllPossibleScopes>()
+const useBeacon = generateUseBeacon<LotusAllPossibleScopes>()
+
+// invalid because in the matcher functions, we cannot compare objects (due to object equality comparison)
+type InvalidScope = {
+  something: { blah: string }
+}
+
+// invalid:
+const invalidTraceManager = new TraceManager<InvalidScope>()
 
 processSpan({
   name: 'some-span',
@@ -66,7 +95,7 @@ const ticketActivationWithFnTracer = traceManager.createTracer({
   scopes: ['ticketId'],
   requiredToEnd: [
     { matchingScopes: ['ticketId'] },
-    (span) => 'ticketId' in span.scope.ticketId === '123',
+    (span) => span.scope.ticketId === '123',
   ],
 })
 
@@ -83,4 +112,37 @@ ticketActivationTracer.start({
 // invalid start (errors)
 ticketActivationTracer.start({
   scope: { userId: '123' },
+})
+
+// valid
+traceManager.processSpan({
+  name: 'name',
+  scope: {
+    ticketId: '123',
+  },
+})
+
+// valid - multiple scopes simultaneously
+traceManager.processSpan({
+  name: 'name',
+  scope: {
+    ticketId: '123',
+    customFieldId: '123',
+  },
+})
+
+// invalid
+traceManager.processSpan({
+  name: 'name',
+  scope: {
+    bad: '123',
+  },
+})
+
+// invalid
+traceManager.processSpan({
+  name: 'name',
+  scope: {
+    ticketId: 123,
+  },
 })
