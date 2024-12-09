@@ -1,17 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/consistent-type-definitions */
 
 export type ScopeValue = string | number | boolean
 
 export type LotusTicketScope = {
-  ticketId: ScopeValue
+  ticketId: string
 }
 
 export type LotusUserScope = {
-  userId: ScopeValue
+  userId: string
 }
 
 export type LotusCustomFieldScope = {
-  customFieldId: ScopeValue
+  customFieldId: string
 }
 
 export type AllPossibleScopes =
@@ -43,8 +44,8 @@ function TraceDefinitionInput(TracerScopeT) {
 }
 */
 
-export interface StartTraceInput {
-  scope: AllPossibleScopes
+export interface StartTraceInput<SingleTracerScopeT> {
+  scope: SingleTracerScopeT
 }
 
 export interface MatchDefinition<ParentTracerScopeT> {
@@ -63,14 +64,14 @@ export interface MatchDefinition<ParentTracerScopeT> {
 
 export type MatchFn = (span: Span) => boolean
 
-interface Tracer {
-  start: (input: StartTraceInput) => void
+interface Tracer<ThisTracerScopeT> {
+  start: (input: StartTraceInput<ThisTracerScopeT>) => void
 }
 
 export interface TraceManager {
-  createTracer: <SingleTracerScopeT extends KeysOfAllPossibleScopes>(
-    definition: TraceDefinitionInput<SingleTracerScopeT>,
-  ) => Tracer
+  createTracer: <SingleTracerScopeKeyT extends KeysOfAllPossibleScopes>(
+    definition: TraceDefinitionInput<SingleTracerScopeKeyT>,
+  ) => Tracer<SelectScopeByKey<SingleTracerScopeKeyT, AllPossibleScopes>>
 }
 
 export interface BeaconInput {
@@ -87,9 +88,32 @@ export declare const traceManager: TraceManager
 
 // helpers:
 
+type SelectScopeByKey<SelectScopeKeyT extends PropertyKey, ScopesT> = Prettify<
+  ScopesT extends { [AnyKey in SelectScopeKeyT]: ScopeValue } ? ScopesT : never
+>
+
+type TicketExample = SelectScopeByKey<'ticketId', AllPossibleScopes>
+
+type PickTicketExample = Prettify<PickFromUnion<AllPossibleScopes, 'ticketId'>>
+
+type Prettify<T> = {
+  [K in keyof T]: T[K]
+} & {}
+
+type PickFromUnion<T, Keys extends KeysOfUnion<T>> = T extends Record<
+  Keys,
+  unknown
+>
+  ? Pick<T, Keys>
+  : never
+
 // T extends T: while (true) loop.
 // looping only works on a generic
 type KeysOfUnion<T> = T extends T ? keyof T : never
+
+// type T = AllPossibleScopes
+// type WontWork = T extends T ? keyof T : never
+// type WillWork = KeysOfUnion<T>
 
 // javascript it would be:
 // const getKeysOfUnion = (t: any, extending: any, thenStatement: any, elseStatement: any) => {
