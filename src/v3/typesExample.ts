@@ -15,10 +15,10 @@ export interface Span<AllPossibleScopes> {
 type KeysOfAllPossibleScopes<AllPossibleScopes> = KeysOfUnion<AllPossibleScopes>
 
 // No Infer Diagram: https://excalidraw.com/#room=4345f5a2d159f70f528a,lprwatMKsXuRrF8UUDFtWA
-export interface TraceDefinitionInput<TracerScopeT, AllPossibleScopes> {
+export interface TraceDefinitionInput<TracerScopeT, AllPossibleScopesT> {
   name: string
   scopes: TracerScopeT[]
-  requiredToEnd: Matcher<NoInfer<TracerScopeT>, AllPossibleScopes>[]
+  requiredToEnd: Matcher<NoInfer<TracerScopeT>, AllPossibleScopesT>[]
 }
 
 export interface StartTraceInput<SingleTracerScopeT> {
@@ -30,13 +30,13 @@ export interface MatchDefinition<ParentTracerScopeT> {
   matchingScopes?: ParentTracerScopeT[]
 }
 
-export type MatchFn<AllPossibleScopes> = (
-  span: Span<AllPossibleScopes>,
+export type MatchFn<AllPossibleScopesT> = (
+  span: Span<AllPossibleScopesT>,
 ) => boolean
 
-export type Matcher<TracerScopeT, AllPossibleScopes> =
+export type Matcher<TracerScopeT, AllPossibleScopesT> =
   | MatchDefinition<TracerScopeT>
-  | MatchFn<AllPossibleScopes>
+  | MatchFn<AllPossibleScopesT>
 
 interface Tracer<ThisTracerScopeT> {
   start: (input: StartTraceInput<ThisTracerScopeT>) => void
@@ -44,16 +44,16 @@ interface Tracer<ThisTracerScopeT> {
 
 export declare class TraceManager<
   // constraint that every property value of any scope key has to be of ScopeValue type
-  AllPossibleScopes extends { [K in keyof AllPossibleScopes]: ScopeValue },
+  AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
 > {
   // a tracer will only have one specific scope
   createTracer: <
-    SingleTracerScopeKeyT extends KeysOfAllPossibleScopes<AllPossibleScopes>,
+    SingleTracerScopeKeyT extends KeysOfAllPossibleScopes<AllPossibleScopesT>,
   >(
-    definition: TraceDefinitionInput<SingleTracerScopeKeyT, AllPossibleScopes>,
-  ) => Tracer<SelectScopeByKey<SingleTracerScopeKeyT, AllPossibleScopes>>
+    definition: TraceDefinitionInput<SingleTracerScopeKeyT, AllPossibleScopesT>,
+  ) => Tracer<SelectScopeByKey<SingleTracerScopeKeyT, AllPossibleScopesT>>
 
-  processSpan: (span: Span<AllPossibleScopes>) => void
+  processSpan: (span: Span<AllPossibleScopesT>) => void
 }
 
 export interface BeaconInput<AllPossibleScopes> {

@@ -11,26 +11,17 @@ export interface SpanMatcherTags {
   isIdle?: boolean
 }
 
-export interface Context<
-  AllScopesT extends ScopeBase<AllScopesT>,
-  ThisTraceScopeKeysT extends keyof AllScopesT,
-> {
-  readonly definition: CompleteTraceDefinition<AllScopesT, ThisTraceScopeKeysT>
-  readonly input: Omit<
-    ActiveTraceConfig<Pick<AllScopesT, ThisTraceScopeKeysT>>,
-    'onEnd'
-  >
+export interface Context<TracerScopeT, AllPossibleScopesT> {
+  readonly definition: CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
+  readonly input: Omit<ActiveTraceConfig<TracerScopeT>, 'onEnd'>
 }
 
 /**
  * Function type for matching performance entries.
  */
-export type SpanMatcherFn<
-  AllScopesT extends ScopeBase<AllScopesT>,
-  ThisTraceScopeKeysT extends keyof AllScopesT,
-> = ((
-  spanAndAnnotation: SpanAndAnnotation<Partial<AllScopesT>>,
-  context: Context<AllScopesT, ThisTraceScopeKeysT>,
+export type SpanMatcherFn<TracerScopeT, AllPossibleScopesT> = ((
+  spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+  context: Context<TracerScopeT, AllPossibleScopesT>,
 ) => boolean) &
   SpanMatcherTags
 
@@ -54,12 +45,9 @@ export interface SpanMatchDefinition<
   isIdle?: boolean
 }
 
-export type SpanMatch<
-  AllScopesT extends ScopeBase<AllScopesT>,
-  ThisTraceScopeKeysT extends keyof AllScopesT,
-> =
-  | SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>
-  | SpanMatchDefinition<AllScopesT, ThisTraceScopeKeysT>
+export type SpanMatch<TracerScopeT, AllPossibleScopesT> =
+  | SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+  | SpanMatchDefinition<TracerScopeT, AllPossibleScopesT>
 
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.

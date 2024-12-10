@@ -3,7 +3,13 @@ import type { SpanMatch, SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Span, SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
-import type { ArrayWithAtLeastOneElement, MapTuple } from './typeUtils'
+import type {
+  ArrayWithAtLeastOneElement,
+  KeysOfUnion,
+  MapTuple,
+  Prettify,
+  UnionToIntersection,
+} from './typeUtils'
 
 export interface Timestamp {
   // absolute count of ms from epoch
@@ -12,7 +18,15 @@ export interface Timestamp {
   now: number
 }
 
-export type ScopeBase<ScopeT> = Record<keyof ScopeT, string | number | boolean>
+export type ScopeValue = string | number | boolean
+
+// a span can have any combination of scopes
+export type ScopeOnASpan<AllPossibleScopes> = Prettify<
+  UnionToIntersection<Partial<AllPossibleScopes>>
+>
+
+export type KeysOfAllPossibleScopes<AllPossibleScopes> =
+  KeysOfUnion<AllPossibleScopes>
 
 /**
  * for now this is always 'operation', but in the future we could also implement tracing 'process' types
@@ -54,23 +68,21 @@ export interface TraceManagerConfig<AllScopesT extends ScopeBase<AllScopesT>> {
   performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<AllScopesT>
 }
 
-export interface Tracer<
-  AllScopesT extends ScopeBase<AllScopesT>,
-  ThisTraceScopeKeysT extends keyof AllScopesT,
-> {
+export interface Tracer<TracerScopeT, AllPossibleScopesT> {
   /**
    * @returns The ID of the trace.
    */
-  start: (
-    input: StartTraceConfig<Pick<AllScopesT, ThisTraceScopeKeysT>>,
-  ) => string
+  start: (input: StartTraceConfig<TracerScopeT>) => string
 
   defineComputedSpan: (
     computedSpanDefinition: ComputedSpanDefinitionInput<ScopeT>,
   ) => void
 
   defineComputedValue: <
-    MatchersT extends (SpanMatcherFn<ScopeT> | SpanMatchDefinition<ScopeT>)[],
+    MatchersT extends (
+      | SpanMatcherFn<TracerScopeT, ScopeT>
+      | SpanMatchDefinition<TracerScopeT, ScopeT>
+    )[],
   >(
     computedValueDefinition: ComputedValueDefinitionInput<ScopeT, MatchersT>,
   ) => void
@@ -88,10 +100,7 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
  * The "input" version will be transformed into the standardized version internally,
  * converting all matchers into functions.
  */
-export interface TraceDefinition<
-  AllScopesT extends ScopeBase<AllScopesT>,
-  ThisTraceScopeKeysT extends keyof AllScopesT,
-> {
+export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
   /**
    * The name of the trace.
    */
@@ -99,7 +108,7 @@ export interface TraceDefinition<
 
   type?: TraceType
 
-  scopes: readonly ThisTraceScopeKeysT[]
+  scopes: readonly TracerScopeT[]
 
   /**
    * This may include renders spans of components that have to be rendered with all data
@@ -111,13 +120,13 @@ export interface TraceDefinition<
    */
   // TODO: should we rename `requiredToEnd` to `requiredToComplete` for consistency?
   requiredToEnd: ArrayWithAtLeastOneElement<
-    SpanMatch<AllScopesT, NoInfer<ThisTraceScopeKeysT>>
+    SpanMatch<NoInfer<TracerScopeT>, AllPossibleScopesT>
   >
   debounceOn?: ArrayWithAtLeastOneElement<
-    SpanMatch<AllScopesT, NoInfer<ThisTraceScopeKeysT>>
+    SpanMatch<NoInfer<TracerScopeT>, AllPossibleScopesT>
   >
   interruptOn?: ArrayWithAtLeastOneElement<
-    SpanMatch<AllScopesT, NoInfer<ThisTraceScopeKeysT>>
+    SpanMatch<NoInfer<TracerScopeT>, AllPossibleScopesT>
   >
   debounceDuration?: number
   timeoutDuration?: number
@@ -134,8 +143,8 @@ export interface TraceDefinition<
    * its error status will not affect the overall trace status.
    */
   suppressErrorStatusPropagationOn?: readonly SpanMatch<
-    AllScopesT,
-    NoInfer<ThisTraceScopeKeysT>
+    NoInfer<TracerScopeT>,
+    AllPossibleScopesT
   >[]
 }
 
@@ -143,24 +152,22 @@ export interface TraceDefinition<
  * Trace Definition with added fields and converting all matchers into functions.
  * Used internally by the TraceManager.
  */
-export interface CompleteTraceDefinition<
-  AllScopesT extends ScopeBase<AllScopesT>,
-  ThisTraceScopeKeysT extends keyof AllScopesT,
-> extends TraceDefinition<AllScopesT, ThisTraceScopeKeysT> {
-  computedSpanDefinitions: readonly ComputedSpanDefinition<AllScopesT>[]
+export interface CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
+  extends TraceDefinition<TracerScopeT, AllPossibleScopesT> {
+  computedSpanDefinitions: readonly ComputedSpanDefinition<AllPossibleScopesT>[]
   computedValueDefinitions: readonly ComputedValueDefinition<
-    AllScopesT,
-    SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>[]
+    AllPossibleScopesT,
+    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[]
   >[]
 
   requiredToEnd: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>
+    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
   >
   debounceOn?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>
+    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
   >
   interruptOn?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<AllScopesT, ThisTraceScopeKeysT>
+    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
   >
 
   /**
@@ -168,8 +175,8 @@ export interface CompleteTraceDefinition<
    * If a span matches any of these matchers, its error status will not affect the trace status.
    */
   suppressErrorStatusPropagationOn?: readonly SpanMatcherFn<
-    AllScopesT,
-    ThisTraceScopeKeysT
+    TracerScopeT,
+    AllPossibleScopesT
   >[]
 }
 
@@ -273,3 +280,10 @@ export interface ComputedValueDefinitionInput<
     ...matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>[]>
   ) => number | string | boolean
 }
+
+export type SelectScopeByKey<
+  SelectScopeKeyT extends PropertyKey,
+  ScopesT,
+> = Prettify<
+  ScopesT extends { [AnyKey in SelectScopeKeyT]: ScopeValue } ? ScopesT : never
+>

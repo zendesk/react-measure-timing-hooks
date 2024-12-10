@@ -40,11 +40,11 @@ export type OnEndFn<ScopeT extends Partial<ScopeBase<ScopeT>>> = (
   trace: TraceRecording<ScopeT>,
 ) => void
 
-export interface ActiveTraceConfig<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends StartTraceConfig<ScopeT> {
+export interface ActiveTraceConfig<TracerScopeT>
+  extends StartTraceConfig<TracerScopeT> {
   id: string
   startTime: Timestamp
-  onEnd: OnEndFn<ScopeT>
+  onEnd: OnEndFn<TracerScopeT>
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style

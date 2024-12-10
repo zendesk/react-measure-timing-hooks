@@ -521,25 +521,25 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   }
 }
 
-export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
-  readonly definition: CompleteTraceDefinition<ScopeT>
-  readonly input: ActiveTraceConfig<ScopeT>
-  private readonly deduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>
+export class ActiveTrace<TracerScopeT, AllPossibleScopesT> {
+  readonly definition: CompleteTraceDefinition<TracerScopeT>
+  readonly input: ActiveTraceConfig<TracerScopeT>
+  private readonly deduplicationStrategy?: SpanDeduplicationStrategy<TracerScopeT>
 
-  recordedItems: SpanAndAnnotation<ScopeT>[] = []
-  stateMachine: TraceStateMachine<ScopeT>
+  recordedItems: SpanAndAnnotation<TracerScopeT>[] = []
+  stateMachine: TraceStateMachine<TracerScopeT>
   occurrenceCounters = new Map<string, number>()
   processedPerformanceEntries: WeakMap<
     PerformanceEntry,
-    SpanAndAnnotation<ScopeT>
+    SpanAndAnnotation<TracerScopeT>
   > = new WeakMap()
 
-  finalState: FinalState<ScopeT> | undefined
+  finalState: FinalState<TracerScopeT> | undefined
 
   constructor(
-    definition: CompleteTraceDefinition<ScopeT>,
-    input: ActiveTraceConfig<ScopeT>,
-    deduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>,
+    definition: CompleteTraceDefinition<TracerScopeT>,
+    input: ActiveTraceConfig<TracerScopeT>,
+    deduplicationStrategy?: SpanDeduplicationStrategy<TracerScopeT>,
   ) {
     this.definition = definition
     this.input = {
@@ -556,7 +556,7 @@ export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
     })
   }
 
-  storeFinalizeState = (config: FinalState<ScopeT>) => {
+  storeFinalizeState = (config: FinalState<TracerScopeT>) => {
     this.finalState = config
   }
 
@@ -571,7 +571,7 @@ export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
     })
   }
 
-  processSpan(span: Span<ScopeT>): SpanAnnotationRecord | undefined {
+  processSpan(span: Span<TracerScopeT>): SpanAnnotationRecord | undefined {
     const spanEndTime = span.startTime.now + span.duration
     // check if valid for this trace:
     if (spanEndTime < this.input.startTime.now) {
@@ -593,7 +593,7 @@ export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
         this.processedPerformanceEntries.get(span.performanceEntry)) ??
       this.deduplicationStrategy?.findDuplicate(span, this.recordedItems)
 
-    let spanAndAnnotation: SpanAndAnnotation<ScopeT>
+    let spanAndAnnotation: SpanAndAnnotation<TracerScopeT>
 
     if (existingAnnotation) {
       spanAndAnnotation = existingAnnotation
@@ -674,8 +674,8 @@ export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
     transition,
     lastRelevantSpanAndAnnotation,
   }: {
-    transition: OnEnterStatePayload<ScopeT>
-    lastRelevantSpanAndAnnotation: SpanAndAnnotation<ScopeT> | undefined
+    transition: OnEnterStatePayload<TracerScopeT>
+    lastRelevantSpanAndAnnotation: SpanAndAnnotation<TracerScopeT> | undefined
   }) {
     if (
       transition.transitionToState === 'interrupted' ||

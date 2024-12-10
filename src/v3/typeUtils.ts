@@ -10,6 +10,23 @@ export type Prettify<T> = {
   [K in keyof T]: T[K]
 } & {}
 
+export type PickFromUnion<T, Keys extends KeysOfUnion<T>> = T extends Record<
+  Keys,
+  unknown
+>
+  ? Pick<T, Keys>
+  : never
+
+// T extends T: while (true) loop.
+// looping only works on a generic
+export type KeysOfUnion<T> = T extends T ? keyof T : never
+
+export type UnionToIntersection<U> = (
+  U extends U ? (x: U) => void : never
+) extends (x: infer I) => void
+  ? I
+  : never
+
 type HandlerToPayloadTuples<
   ScopeT extends ScopeBase,
   State extends TraceStates = TraceStates,
