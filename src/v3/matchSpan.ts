@@ -1,11 +1,12 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type {
-  ActiveTraceConfig,
+  ActiveTraceContext,
   Attributes,
   SpanStatus,
   SpanType,
 } from './spanTypes'
-import { CompleteTraceDefinition, ScopeBase } from './types'
+import type { CompleteTraceDefinition } from './types'
+import type { KeysOfUnion } from './typeUtils'
 
 export interface SpanMatcherTags {
   isIdle?: boolean
@@ -13,7 +14,7 @@ export interface SpanMatcherTags {
 
 export interface Context<TracerScopeT, AllPossibleScopesT> {
   readonly definition: CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
-  readonly input: Omit<ActiveTraceConfig<TracerScopeT>, 'onEnd'>
+  readonly input: ActiveTraceContext<TracerScopeT>
 }
 
 /**
@@ -25,21 +26,18 @@ export type SpanMatcherFn<TracerScopeT, AllPossibleScopesT> = ((
 ) => boolean) &
   SpanMatcherTags
 
-type NameMatcher<ScopeT extends Partial<ScopeBase<ScopeT>>> =
+type NameMatcher<AllPossibleScopesT> =
   | string
   | RegExp
-  | ((name: string, scope: ScopeT) => boolean)
+  | ((name: string, scope: AllPossibleScopesT) => boolean)
 
-export interface SpanMatchDefinition<
-  AllScopesT extends ScopeBase<AllScopesT>,
-  ThisTraceScopeKeysT extends keyof AllScopesT,
-> {
-  name?: NameMatcher<Pick<AllScopesT, ThisTraceScopeKeysT>>
-  performanceEntryName?: NameMatcher<Pick<AllScopesT, ThisTraceScopeKeysT>>
+export interface SpanMatchDefinition<TracerScopeT, AllPossibleScopesT> {
+  name?: NameMatcher<AllPossibleScopesT>
+  performanceEntryName?: NameMatcher<AllPossibleScopesT>
   type?: SpanType
   status?: SpanStatus
   attributes?: Attributes
-  matchScopes?: readonly ThisTraceScopeKeysT[] | boolean
+  matchScopes?: readonly KeysOfUnion<TracerScopeT>[] | boolean
   // IMPLEMENTATION TODO: take in scope as a second parameter
   occurrence?: number | ((occurrence: number) => boolean)
   isIdle?: boolean
@@ -52,9 +50,12 @@ export type SpanMatch<TracerScopeT, AllPossibleScopesT> =
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.
  */
-export function withName<ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  value: NameMatcher<ScopeT>,
-): SpanMatcherFn<ScopeT> {
+export function withName<
+  TracerScopeT extends AllPossibleScopesT,
+  AllPossibleScopesT,
+>(
+  value: NameMatcher<AllPossibleScopesT>,
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   return ({ span }, { input: { scope } }) => {
     if (typeof value === 'string') return span.name === value
     if (value instanceof RegExp) return value.test(span.name)
@@ -66,8 +67,11 @@ export function withName<ScopeT extends Partial<ScopeBase<ScopeT>>>(
  * The PerformanceEntry.name of the entry to match. Can be a string, RegExp, or function.
  */
 export function withPerformanceEntryName<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
->(value: NameMatcher<ScopeT>): SpanMatcherFn<ScopeT> {
+  TracerScopeT extends AllPossibleScopesT,
+  AllPossibleScopesT,
+>(
+  value: NameMatcher<AllPossibleScopesT>,
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   return ({ span }, { input: { scope } }) => {
     const entryName = span.performanceEntry?.name
     if (!entryName) return false
@@ -77,24 +81,24 @@ export function withPerformanceEntryName<
   }
 }
 
-export function withType<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+export function withType<TracerScopeT, AllPossibleScopesT>(
   value: SpanType,
-): SpanMatcherFn<ScopeT> {
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   return ({ span }) => span.type === value
 }
 
-export function withStatus<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+export function withStatus<TracerScopeT, AllPossibleScopesT>(
   value: SpanStatus,
-): SpanMatcherFn<ScopeT> {
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   return ({ span }) => span.status === value
 }
 
 /**
  * The subset of attributes (metadata) to match against the span.
  */
-export function withAttributes<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+export function withAttributes<TracerScopeT, AllPossibleScopesT>(
   attrs: Attributes,
-): SpanMatcherFn<ScopeT> {
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   return ({ span }) => {
     if (!span.attributes) return false
     return Object.entries(attrs).every(
@@ -106,36 +110,36 @@ export function withAttributes<ScopeT extends Partial<ScopeBase<ScopeT>>>(
 /**
  * A list of scope keys to match against the span.
  */
-export function withMatchingScopes<ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  keys: (keyof ScopeT)[] | true,
-): SpanMatcherFn<ScopeT> {
-  return (
-    { span },
-    { input: { scope }, definition: { requiredScopeKeys } },
-  ) => {
+export function withMatchingScopes<TracerScopeT, AllPossibleScopesT>(
+  keys: readonly KeysOfUnion<TracerScopeT>[] | true,
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
+  return ({ span }, { input: { scope }, definition: { scopes } }) => {
     if (!span.scope) return false
-    const resolvedKeys =
-      typeof keys === 'boolean' && keys ? requiredScopeKeys : keys
+    const resolvedKeys = typeof keys === 'boolean' && keys ? scopes : keys
     if (!resolvedKeys) return false
-    return resolvedKeys.every((key) => span.scope![key] === scope[key])
+    return resolvedKeys.every(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      (key) => key in span.scope! && (span.scope as any)[key] === scope[key],
+    )
   }
 }
 
 /**
  * The occurrence of the span with the same name within the operation.
  */
-export function withOccurrence<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+export function withOccurrence<TracerScopeT, AllPossibleScopesT>(
   value: number | ((occurrence: number) => boolean),
-): SpanMatcherFn<ScopeT> {
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   return ({ annotation }) => {
     if (typeof value === 'number') return annotation.occurrence === value
     return value(annotation.occurrence)
   }
 }
 
-export function withComponentRenderCount<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
->(name: string, renderCount: number): SpanMatcherFn<ScopeT> {
+export function withComponentRenderCount<TracerScopeT, AllPossibleScopesT>(
+  name: string,
+  renderCount: number,
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   return ({ span }) => {
     if (!('renderCount' in span)) return false
     return span.name === name && span.renderCount === renderCount
@@ -145,11 +149,12 @@ export function withComponentRenderCount<
 /**
  * only applicable for component-lifecycle entries
  */
-export function whenIdle<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+export function whenIdle<TracerScopeT, AllPossibleScopesT>(
   value = true,
-): SpanMatcherFn<ScopeT> {
-  const matcherFn: SpanMatcherFn<ScopeT> = ({ span }) =>
-    'isIdle' in span ? span.isIdle === value : false
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
+  const matcherFn: SpanMatcherFn<TracerScopeT, AllPossibleScopesT> = ({
+    span,
+  }) => ('isIdle' in span ? span.isIdle === value : false)
   return Object.assign(
     matcherFn,
     // add a tag to the function if set to true
@@ -159,52 +164,59 @@ export function whenIdle<ScopeT extends Partial<ScopeBase<ScopeT>>>(
 
 // logical combinators:
 // AND
-export function withAllConditions<ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  ...matchers: SpanMatcherFn<ScopeT>[]
-): SpanMatcherFn<ScopeT> {
+export function withAllConditions<TracerScopeT, AllPossibleScopesT>(
+  ...matchers: SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[]
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
   }
-  const matcherFn: SpanMatcherFn<ScopeT> = (...args) =>
-    matchers.every((matcher) => matcher(...args))
+  const matcherFn: SpanMatcherFn<TracerScopeT, AllPossibleScopesT> = (
+    ...args
+  ) => matchers.every((matcher) => matcher(...args))
   return Object.assign(matcherFn, tags)
 }
 
 // OR
-export function withOneOfConditions<ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  ...matchers: SpanMatcherFn<ScopeT>[]
-): SpanMatcherFn<ScopeT> {
+export function withOneOfConditions<TracerScopeT, AllPossibleScopesT>(
+  ...matchers: SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[]
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
   }
-  const matcherFn: SpanMatcherFn<ScopeT> = (...args) =>
-    matchers.some((matcher) => matcher(...args))
+  const matcherFn: SpanMatcherFn<TracerScopeT, AllPossibleScopesT> = (
+    ...args
+  ) => matchers.some((matcher) => matcher(...args))
   return Object.assign(matcherFn, tags)
 }
 
-export function not<ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  matcher: SpanMatcherFn<ScopeT>,
-): SpanMatcherFn<ScopeT> {
+export function not<TracerScopeT, AllPossibleScopesT>(
+  matcher: SpanMatcherFn<TracerScopeT, AllPossibleScopesT>,
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   // since not is a negation, we don't carry over tags
   return (...args) => !matcher(...args)
 }
 
-export function fromDefinition<ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  definition: SpanMatchDefinition<ScopeT>,
-): SpanMatcherFn<ScopeT> {
-  const matchers: SpanMatcherFn<ScopeT>[] = []
-  if (definition.name) matchers.push(withName(definition.name))
+export function fromDefinition<
+  TracerScopeT extends AllPossibleScopesT,
+  AllPossibleScopesT,
+>(
+  definition: SpanMatchDefinition<TracerScopeT, AllPossibleScopesT>,
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
+  const matchers: SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[] = []
+  if (definition.name)
+    matchers.push(withName<TracerScopeT, AllPossibleScopesT>(definition.name))
   if (definition.performanceEntryName)
     matchers.push(withPerformanceEntryName(definition.performanceEntryName))
   if (definition.type) matchers.push(withType(definition.type))
   if (definition.status) matchers.push(withStatus(definition.status))
   if (definition.attributes)
     matchers.push(withAttributes(definition.attributes))
-  if (definition.scopes) matchers.push(withMatchingScopes(definition.scopes))
+  if (definition.matchScopes)
+    matchers.push(withMatchingScopes(definition.matchScopes))
   if (definition.occurrence)
     matchers.push(withOccurrence(definition.occurrence))
   if (definition.isIdle) matchers.push(whenIdle(definition.isIdle))

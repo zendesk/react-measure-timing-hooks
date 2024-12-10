@@ -3,7 +3,7 @@ import { Span, SpanType } from '../spanTypes'
 import { TraceManager } from '../traceManager'
 import { ScopeBase } from '../types'
 
-function processEntries<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+function processEntries<ScopeT>(
   entries: PerformanceEntry[],
   traceManager: TraceManager<ScopeT>,
 ) {

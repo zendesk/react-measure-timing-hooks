@@ -8,16 +8,18 @@ import type {
 } from './hooksTypes'
 import type { ComponentRenderSpan } from './spanTypes'
 import type { TraceManager } from './traceManager'
-import type { ScopeBase, Timestamp } from './types'
+import type { ScopeValue, Timestamp } from './types'
 
-type MakeEntryInput<ScopeT extends Partial<ScopeBase<ScopeT>>> = Omit<
-  ComponentRenderSpan<ScopeT>,
+type MakeEntryInput<AllPossibleScopesT> = Omit<
+  ComponentRenderSpan<AllPossibleScopesT>,
   'startTime'
-> & { startTime?: Timestamp }
+> & {
+  startTime?: Timestamp
+}
 
-const makeEntry = <ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  inp: MakeEntryInput<ScopeT>,
-): ComponentRenderSpan<ScopeT> => ({
+const makeEntry = <AllPossibleScopesT>(
+  inp: MakeEntryInput<AllPossibleScopesT>,
+): ComponentRenderSpan<AllPossibleScopesT> => ({
   ...inp,
   startTime: ensureTimestamp(inp.startTime),
 })
@@ -27,10 +29,14 @@ const makeEntry = <ScopeT extends Partial<ScopeBase<ScopeT>>>(
  * emit component-render-start, component-render, component-unmount entries
  */
 export const generateUseBeacon =
-  <ScopeT extends Partial<ScopeBase<ScopeT>>>(
-    traceManager: TraceManager<ScopeT>,
-  ): UseBeacon<ScopeT> =>
-  (config: BeaconConfig<GetScopeTFromTraceManager<TraceManager<ScopeT>>>) => {
+  <AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue }>(
+    traceManager: TraceManager<AllPossibleScopesT>,
+  ): UseBeacon<AllPossibleScopesT> =>
+  (
+    config: BeaconConfig<
+      GetScopeTFromTraceManager<TraceManager<AllPossibleScopesT>>
+    >,
+  ) => {
     const renderCountRef = useRef(0)
     renderCountRef.current += 1
 
@@ -46,15 +52,16 @@ export const generateUseBeacon =
       config.isIdle ??
       (renderedOutput === 'content' || renderedOutput === 'error')
 
-    const renderStartTaskEntry: ComponentRenderSpan<ScopeT> = makeEntry({
-      ...config,
-      type: 'component-render-start',
-      duration: 0,
-      attributes,
-      status,
-      renderCount: renderCountRef.current,
-      isIdle,
-    })
+    const renderStartTaskEntry: ComponentRenderSpan<AllPossibleScopesT> =
+      makeEntry({
+        ...config,
+        type: 'component-render-start',
+        duration: 0,
+        attributes,
+        status,
+        renderCount: renderCountRef.current,
+        isIdle,
+      })
 
     traceManager.processSpan(renderStartTaskEntry)
 

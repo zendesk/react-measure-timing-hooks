@@ -1,22 +1,24 @@
 import { getPerformanceEntryHash } from './getPerformanceEntryHash'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
-import type { ScopeBase, SpanDeduplicationStrategy } from './types'
+import type { SpanDeduplicationStrategy } from './types'
 
 export function createDefaultPerformanceEntryDeduplicationStrategy<
-  ScopeT extends ScopeBase<ScopeT>,
->(): SpanDeduplicationStrategy<ScopeT> {
+  AllPossibleScopesT,
+>(): SpanDeduplicationStrategy<AllPossibleScopesT> {
   let processedPerformanceEntries = new WeakMap<
     PerformanceEntry,
-    SpanAndAnnotation<ScopeT>
+    SpanAndAnnotation<AllPossibleScopesT>
   >()
   const processedPerformanceEntriesByHash = new Map<
     string,
-    SpanAndAnnotation<ScopeT>
+    SpanAndAnnotation<AllPossibleScopesT>
   >()
 
   return {
-    findDuplicate(span: Span<ScopeT>): SpanAndAnnotation<ScopeT> | undefined {
+    findDuplicate(
+      span: Span<AllPossibleScopesT>,
+    ): SpanAndAnnotation<AllPossibleScopesT> | undefined {
       if (!span.performanceEntry) {
         return undefined
       }
@@ -35,8 +37,8 @@ export function createDefaultPerformanceEntryDeduplicationStrategy<
     },
 
     recordSpan(
-      span: Span<ScopeT>,
-      spanAndAnnotation: SpanAndAnnotation<ScopeT>,
+      span: Span<AllPossibleScopesT>,
+      spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
     ): void {
       if (!span.performanceEntry) {
         return
@@ -56,9 +58,9 @@ export function createDefaultPerformanceEntryDeduplicationStrategy<
     },
 
     selectPreferredSpan(
-      existingSpan: Span<ScopeT>,
-      newSpan: Span<ScopeT>,
-    ): Span<ScopeT> {
+      existingSpan: Span<AllPossibleScopesT>,
+      newSpan: Span<AllPossibleScopesT>,
+    ): Span<AllPossibleScopesT> {
       // Default behavior: use the new span
       return newSpan
     },

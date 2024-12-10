@@ -3,7 +3,7 @@ import type { FinalState } from './ActiveTrace'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
-import type { CompleteTraceDefinition, ScopeBase } from './types'
+import type { CompleteTraceDefinition, PossibleScopeObject } from './types'
 
 /**
  * ### Deriving SLIs and other metrics from a trace
@@ -25,18 +25,24 @@ import type { CompleteTraceDefinition, ScopeBase } from './types'
  *    3. _The total number of iframe apps were initialized while loading the ticket_
  */
 
-interface ComputeRecordingData<ScopeT extends Partial<ScopeBase<ScopeT>>> {
-  definition: CompleteTraceDefinition<ScopeT>
-  recordedItems: SpanAndAnnotation<ScopeT>[]
-  input: ActiveTraceConfig<ScopeT>
+interface ComputeRecordingData<TracerScopeT, AllPossibleScopesT> {
+  definition: CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
+  recordedItems: SpanAndAnnotation<AllPossibleScopesT>[]
+  input: ActiveTraceConfig<TracerScopeT, AllPossibleScopesT>
 }
 
-export function getComputedValues<ScopeT extends Partial<ScopeBase<ScopeT>>>({
+export function getComputedValues<TracerScopeT, AllPossibleScopesT>({
   definition: traceDefinition,
   recordedItems,
   input,
-}: ComputeRecordingData<ScopeT>): TraceRecording<ScopeT>['computedValues'] {
-  const computedValues: TraceRecording<ScopeT>['computedValues'] = {}
+}: ComputeRecordingData<TracerScopeT, AllPossibleScopesT>): TraceRecording<
+  TracerScopeT,
+  AllPossibleScopesT
+>['computedValues'] {
+  const computedValues: TraceRecording<
+    TracerScopeT,
+    AllPossibleScopesT
+  >['computedValues'] = {}
 
   for (const definition of traceDefinition.computedValueDefinitions) {
     const { name, matches, computeValueFromMatches } = definition
@@ -53,19 +59,27 @@ export function getComputedValues<ScopeT extends Partial<ScopeBase<ScopeT>>>({
   return computedValues
 }
 
-const markedComplete = (spanAndAnnotation: SpanAndAnnotation<ScopeBase>) =>
-  spanAndAnnotation.annotation.markedComplete
+const markedComplete = <AllPossibleScopesT>(
+  spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+) => spanAndAnnotation.annotation.markedComplete
 
-const markedInteractive = (spanAndAnnotation: SpanAndAnnotation<ScopeBase>) =>
-  spanAndAnnotation.annotation.markedInteractive
+const markedInteractive = <AllPossibleScopesT>(
+  spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+) => spanAndAnnotation.annotation.markedInteractive
 
-export function getComputedSpans<ScopeT extends Partial<ScopeBase<ScopeT>>>({
+export function getComputedSpans<TracerScopeT, AllPossibleScopesT>({
   definition: traceDefinition,
   recordedItems,
   input,
-}: ComputeRecordingData<ScopeT>): TraceRecording<ScopeT>['computedSpans'] {
+}: ComputeRecordingData<TracerScopeT, AllPossibleScopesT>): TraceRecording<
+  TracerScopeT,
+  AllPossibleScopesT
+>['computedSpans'] {
   // loop through the computed span definitions, check for entries that match in recorded items, then calculate the startOffset and duration
-  const computedSpans: TraceRecording<ScopeT>['computedSpans'] = {}
+  const computedSpans: TraceRecording<
+    TracerScopeT,
+    AllPossibleScopesT
+  >['computedSpans'] = {}
 
   for (const definition of traceDefinition.computedSpanDefinitions) {
     const { startSpan: startSpanMatcher, endSpan, name } = definition
@@ -122,15 +136,19 @@ export function getComputedSpans<ScopeT extends Partial<ScopeBase<ScopeT>>>({
   return computedSpans
 }
 
-export function getSpanSummaryAttributes<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
->({
+export function getSpanSummaryAttributes<TracerScopeT, AllPossibleScopesT>({
   definition,
   recordedItems,
   input,
-}: ComputeRecordingData<ScopeT>): TraceRecording<ScopeT>['spanAttributes'] {
+}: ComputeRecordingData<TracerScopeT, AllPossibleScopesT>): TraceRecording<
+  TracerScopeT,
+  AllPossibleScopesT
+>['spanAttributes'] {
   // loop through recorded items, create a entry based on the name
-  const spanAttributes: TraceRecording<ScopeT>['spanAttributes'] = {}
+  const spanAttributes: TraceRecording<
+    TracerScopeT,
+    AllPossibleScopesT
+  >['spanAttributes'] = {}
 
   for (const { span } of recordedItems) {
     const { attributes, name } = span
@@ -147,20 +165,27 @@ export function getSpanSummaryAttributes<
 }
 
 // IMPLEMENTATION TODO: implementation of gathering Trace level attributes
-export function getAttributes<ScopeT extends Partial<ScopeBase<ScopeT>>>({
+export function getAttributes<TracerScopeT, AllPossibleScopesT>({
   definition,
   recordedItems,
   input,
-}: ComputeRecordingData<ScopeT>): TraceRecording<ScopeT>['attributes'] {
+}: ComputeRecordingData<TracerScopeT, AllPossibleScopesT>): TraceRecording<
+  TracerScopeT,
+  AllPossibleScopesT
+>['attributes'] {
   return {}
 }
 
 function getComputedRenderBeaconSpans<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
+  TracerScopeT extends object,
+  AllPossibleScopesT,
 >(
-  recordedItems: SpanAndAnnotation<ScopeT>[],
-  input: ActiveTraceConfig<ScopeT>,
-): TraceRecording<ScopeT>['computedRenderBeaconSpans'] {
+  recordedItems: SpanAndAnnotation<AllPossibleScopesT>[],
+  input: ActiveTraceConfig<TracerScopeT, AllPossibleScopesT>,
+): TraceRecording<
+  TracerScopeT,
+  AllPossibleScopesT
+>['computedRenderBeaconSpans'] {
   const renderSpansByBeacon = new Map<
     string,
     {
@@ -181,7 +206,10 @@ function getComputedRenderBeaconSpans<
     const { name, startTime, duration, scope, renderedOutput } = entry.span
     // accept any span that either matches scope or doesn't share any of the scope values
     const scopeMatch = scopeKeys.every(
-      (key) => scope?.[key] === undefined || input.scope[key] === scope[key],
+      (key) =>
+        (scope as PossibleScopeObject | undefined)?.[key] === undefined ||
+        (input.scope as PossibleScopeObject)[key] ===
+          (scope as PossibleScopeObject)[key],
     )
     if (!scopeMatch) continue
     const start = startTime.now
@@ -223,8 +251,10 @@ function getComputedRenderBeaconSpans<
     }
   }
 
-  const computedRenderBeaconSpans: TraceRecording<ScopeT>['computedRenderBeaconSpans'] =
-    {}
+  const computedRenderBeaconSpans: TraceRecording<
+    TracerScopeT,
+    AllPossibleScopesT
+  >['computedRenderBeaconSpans'] = {}
 
   // Calculate duration and startOffset for each beacon
   for (const [beaconName, spanTimes] of renderSpansByBeacon) {
@@ -246,15 +276,18 @@ function getComputedRenderBeaconSpans<
   return computedRenderBeaconSpans
 }
 
-export function createTraceRecording<ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  data: ComputeRecordingData<ScopeT>,
+export function createTraceRecording<
+  TracerScopeT extends object,
+  AllPossibleScopesT,
+>(
+  data: ComputeRecordingData<TracerScopeT, AllPossibleScopesT>,
   {
     transitionFromState,
     interruptionReason,
     cpuIdleSpanAndAnnotation,
     lastRequiredSpanAndAnnotation,
-  }: FinalState<ScopeT>,
-): TraceRecording<ScopeT> {
+  }: FinalState<AllPossibleScopesT>,
+): TraceRecording<TracerScopeT, AllPossibleScopesT> {
   const { definition, recordedItems, input } = data
   const { id, scope } = input
   const { name } = definition

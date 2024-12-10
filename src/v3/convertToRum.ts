@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 import { getSpanKey } from './getSpanKey'
-import type { SpanMatcherFn } from './matchSpan'
+import type { Context, SpanMatcherFn } from './matchSpan'
 import { SpanAndAnnotation } from './spanAnnotationTypes'
 import { ComponentRenderSpan, Span } from './spanTypes'
 import { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
-import { ScopeBase } from './types'
 
 export interface EmbeddedEntry {
   count: number
@@ -16,9 +15,9 @@ export interface EmbeddedEntry {
   }[]
 }
 
-export interface RumTraceRecording<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends TraceRecordingBase<ScopeT> {
-  scope: ScopeT
+export interface RumTraceRecording<TracerScopeT>
+  extends TraceRecordingBase<TracerScopeT> {
+  scope: TracerScopeT
 
   // spans that don't exist as separate spans in the DB
   // useful for things like renders, which can repeat tens of times
@@ -37,7 +36,7 @@ export interface RumTraceRecording<ScopeT extends Partial<ScopeBase<ScopeT>>>
   nonEmbeddedSpans: string[]
 }
 
-export function isRenderEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+export function isRenderEntry<ScopeT>(
   entry: Span<ScopeT>,
 ): entry is ComponentRenderSpan<ScopeT> {
   return (
@@ -47,7 +46,7 @@ export function isRenderEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   )
 }
 
-function updateEmbeddedEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>(
+function updateEmbeddedEntry<ScopeT>(
   embeddedEntry: EmbeddedEntry,
   spanAndAnnotation: SpanAndAnnotation<ScopeT>,
 ): EmbeddedEntry {
@@ -65,7 +64,7 @@ function updateEmbeddedEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>(
   }
 }
 
-function createEmbeddedEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>({
+function createEmbeddedEntry<ScopeT>({
   span,
   annotation,
 }: SpanAndAnnotation<ScopeT>): EmbeddedEntry {
@@ -81,28 +80,27 @@ function createEmbeddedEntry<ScopeT extends Partial<ScopeBase<ScopeT>>>({
   }
 }
 
-export const defaultEmbedSpanSelector = <
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
->(
+export const defaultEmbedSpanSelector = <ScopeT>(
   spanAndAnnotation: SpanAndAnnotation<ScopeT>,
 ) => {
   const { span } = spanAndAnnotation
   return isRenderEntry(span)
 }
 
-export function convertTraceToRUM<ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  traceRecording: TraceRecording<ScopeT>,
-  embedSpanSelector: SpanMatcherFn<ScopeT> = defaultEmbedSpanSelector,
-): RumTraceRecording<ScopeT> {
+export function convertTraceToRUM<TracerScopeT, AllPossibleScopesT>(
+  traceRecording: TraceRecording<TracerScopeT, AllPossibleScopesT>,
+  context: Context<TracerScopeT, AllPossibleScopesT>,
+  embedSpanSelector: SpanMatcherFn<
+    TracerScopeT,
+    AllPossibleScopesT
+  > = defaultEmbedSpanSelector,
+): RumTraceRecording<TracerScopeT> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording
-  const embeddedEntries: SpanAndAnnotation<ScopeT>[] = []
+  const embeddedEntries: SpanAndAnnotation<AllPossibleScopesT>[] = []
   const nonEmbeddedSpans = new Set<string>()
 
   for (const spanAndAnnotation of entries) {
-    const isEmbedded = embedSpanSelector(
-      spanAndAnnotation,
-      traceRecording.scope,
-    )
+    const isEmbedded = embedSpanSelector(spanAndAnnotation, context)
     if (isEmbedded) {
       embeddedEntries.push(spanAndAnnotation)
     } else {

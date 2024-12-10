@@ -19,14 +19,12 @@ export interface Timestamp {
 }
 
 export type ScopeValue = string | number | boolean
+export type PossibleScopeObject = Record<string, ScopeValue>
 
 // a span can have any combination of scopes
-export type ScopeOnASpan<AllPossibleScopes> = Prettify<
-  UnionToIntersection<Partial<AllPossibleScopes>>
+export type ScopeOnASpan<AllPossibleScopesT> = Prettify<
+  UnionToIntersection<Partial<AllPossibleScopesT>>
 >
-
-export type KeysOfAllPossibleScopes<AllPossibleScopes> =
-  KeysOfUnion<AllPossibleScopes>
 
 /**
  * for now this is always 'operation', but in the future we could also implement tracing 'process' types
@@ -44,14 +42,12 @@ export type TraceInterruptionReason =
   | 'matched-on-interrupt'
   | 'invalid-state-transition'
 
-export type ReportFn<AllScopesT extends Partial<ScopeBase<AllScopesT>>> = <
-  ThisTraceScopeKeysT extends keyof AllScopesT,
->(
-  trace: TraceRecording<Pick<AllScopesT, ThisTraceScopeKeysT>>,
+export type ReportFn<TracerScopeT, AllPossibleScopesT> = (
+  trace: TraceRecording<TracerScopeT, AllPossibleScopesT>,
 ) => void
 
-export interface TraceManagerConfig<AllScopesT extends ScopeBase<AllScopesT>> {
-  reportFn: ReportFn<Partial<AllScopesT>>
+export interface TraceManagerConfig<TracerScopeT, AllPossibleScopesT> {
+  reportFn: ReportFn<TracerScopeT, AllPossibleScopesT>
   // NEED CLARIFIATION TODO: what are the embeddedSpanTypes: SpanType[] that would actually goes to configuration of the "convertRecordingToRum" function
   // which would be called inside of reportFn
   generateId: () => string
@@ -65,7 +61,7 @@ export interface TraceManagerConfig<AllScopesT extends ScopeBase<AllScopesT>> {
    * Strategy for deduplicating performance entries.
    * If not provided, no deduplication will be performed.
    */
-  performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<AllScopesT>
+  performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
 }
 
 export interface Tracer<TracerScopeT, AllPossibleScopesT> {
@@ -75,16 +71,23 @@ export interface Tracer<TracerScopeT, AllPossibleScopesT> {
   start: (input: StartTraceConfig<TracerScopeT>) => string
 
   defineComputedSpan: (
-    computedSpanDefinition: ComputedSpanDefinitionInput<ScopeT>,
+    computedSpanDefinition: ComputedSpanDefinitionInput<
+      TracerScopeT,
+      AllPossibleScopesT
+    >,
   ) => void
 
   defineComputedValue: <
     MatchersT extends (
-      | SpanMatcherFn<TracerScopeT, ScopeT>
-      | SpanMatchDefinition<TracerScopeT, ScopeT>
+      | SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+      | SpanMatchDefinition<TracerScopeT, AllPossibleScopesT>
     )[],
   >(
-    computedValueDefinition: ComputedValueDefinitionInput<ScopeT, MatchersT>,
+    computedValueDefinition: ComputedValueDefinitionInput<
+      TracerScopeT,
+      AllPossibleScopesT,
+      MatchersT
+    >,
   ) => void
 }
 
@@ -108,7 +111,7 @@ export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
 
   type?: TraceType
 
-  scopes: readonly TracerScopeT[]
+  scopes: readonly KeysOfUnion<TracerScopeT>[]
 
   /**
    * This may include renders spans of components that have to be rendered with all data
@@ -154,8 +157,12 @@ export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
  */
 export interface CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
   extends TraceDefinition<TracerScopeT, AllPossibleScopesT> {
-  computedSpanDefinitions: readonly ComputedSpanDefinition<AllPossibleScopesT>[]
+  computedSpanDefinitions: readonly ComputedSpanDefinition<
+    TracerScopeT,
+    AllPossibleScopesT
+  >[]
   computedValueDefinitions: readonly ComputedValueDefinition<
+    TracerScopeT,
     AllPossibleScopesT,
     SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[]
   >[]
@@ -183,23 +190,21 @@ export interface CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
 /**
  * Strategy for deduplicating performance entries
  */
-export interface SpanDeduplicationStrategy<
-  AllScopesT extends Partial<ScopeBase<AllScopesT>>,
-> {
+export interface SpanDeduplicationStrategy<AllPossibleScopesT> {
   /**
    * Returns an existing span annotation if the span should be considered a duplicate
    */
   findDuplicate: (
-    span: Span<AllScopesT>,
-    recordedItems: SpanAndAnnotation<AllScopesT>[],
-  ) => SpanAndAnnotation<AllScopesT> | undefined
+    span: Span<AllPossibleScopesT>,
+    recordedItems: SpanAndAnnotation<AllPossibleScopesT>[],
+  ) => SpanAndAnnotation<AllPossibleScopesT> | undefined
 
   /**
    * Called when a span is recorded to update deduplication state
    */
   recordSpan: (
-    span: Span<AllScopesT>,
-    spanAndAnnotation: SpanAndAnnotation<AllScopesT>,
+    span: Span<AllPossibleScopesT>,
+    spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
   ) => void
 
   /**
@@ -212,57 +217,53 @@ export interface SpanDeduplicationStrategy<
    * @returns the span that should be used in the annotation
    */
   selectPreferredSpan: (
-    existingSpan: Span<AllScopesT>,
-    newSpan: Span<AllScopesT>,
-  ) => Span<AllScopesT>
+    existingSpan: Span<AllPossibleScopesT>,
+    newSpan: Span<AllPossibleScopesT>,
+  ) => Span<AllPossibleScopesT>
 }
 
 /**
  * Definition of custom spans
  */
-export interface ComputedSpanDefinition<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
-> {
+export interface ComputedSpanDefinition<TracerScopeT, AllPossibleScopesT> {
   name: string
   /**
    * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
    */
-  startSpan: SpanMatcherFn<ScopeT> | 'operation-start'
+  startSpan: SpanMatcherFn<TracerScopeT, AllPossibleScopesT> | 'operation-start'
   /**
    * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
    */
-  endSpan: SpanMatcherFn<ScopeT> | 'operation-end' | 'interactive'
+  endSpan:
+    | SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+    | 'operation-end'
+    | 'interactive'
 }
 
 /**
  * Definition of custom values
  */
 export interface ComputedValueDefinition<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
-  MatchersT extends SpanMatcherFn<ScopeT>[],
+  TracerScopeT,
+  AllPossibleScopesT,
+  MatchersT extends SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[],
 > {
   name: string
   matches: [...MatchersT]
   computeValueFromMatches: (
     // as many matches as match of type Span<ScopeT>
-    ...matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>[]>
+    ...matches: MapTuple<MatchersT, SpanAndAnnotation<AllPossibleScopesT>[]>
   ) => number | string | boolean
 }
 
 /**
  * Definition of custom spans input
  */
-export interface ComputedSpanDefinitionInput<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
-> {
+export interface ComputedSpanDefinitionInput<TracerScopeT, AllPossibleScopesT> {
   name: string
-  startSpan:
-    | SpanMatcherFn<ScopeT>
-    | SpanMatchDefinition<ScopeT>
-    | 'operation-start'
+  startSpan: SpanMatch<TracerScopeT, AllPossibleScopesT> | 'operation-start'
   endSpan:
-    | SpanMatcherFn<ScopeT>
-    | SpanMatchDefinition<ScopeT>
+    | SpanMatch<TracerScopeT, AllPossibleScopesT>
     | 'operation-end'
     | 'interactive'
 }
@@ -271,13 +272,14 @@ export interface ComputedSpanDefinitionInput<
  * Definition of custom values input
  */
 export interface ComputedValueDefinitionInput<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
-  MatchersT extends (SpanMatcherFn<ScopeT> | SpanMatchDefinition<ScopeT>)[],
+  TracerScopeT,
+  AllPossibleScopesT,
+  MatchersT extends SpanMatch<TracerScopeT, AllPossibleScopesT>[],
 > {
   name: string
   matches: [...MatchersT]
   computeValueFromMatches: (
-    ...matches: MapTuple<MatchersT, SpanAndAnnotation<ScopeT>[]>
+    ...matches: MapTuple<MatchersT, SpanAndAnnotation<AllPossibleScopesT>[]>
   ) => number | string | boolean
 }
 

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 import type { NonTerminalTraceStates } from './ActiveTrace'
 import type { Span } from './spanTypes'
-import type { ScopeBase } from './types'
 
 export interface SpanAnnotation {
   /**
@@ -40,7 +39,7 @@ export interface SpanAnnotationRecord {
   [operationName: string]: SpanAnnotation
 }
 
-export interface SpanAndAnnotation<ScopeT extends Partial<ScopeBase<ScopeT>>> {
-  span: Span<ScopeT>
+export interface SpanAndAnnotation<AllPossibleScopesT> {
+  span: Span<AllPossibleScopesT>
   annotation: SpanAnnotation
 }

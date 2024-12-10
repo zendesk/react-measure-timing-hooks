@@ -2,7 +2,6 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes } from './spanTypes'
 import type {
-  ScopeBase,
   Timestamp,
   TraceInterruptionReason,
   TraceStatus,
@@ -29,7 +28,7 @@ export interface ComputedRenderSpan {
   sumOfDurations: number
 }
 
-export interface TraceRecordingBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
+export interface TraceRecordingBase<TracerScopeT> {
   /**
    * random generated unique value or provided by the user at start
    */
@@ -41,7 +40,7 @@ export interface TraceRecordingBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   name: string
 
   startTime: Timestamp
-  scope: ScopeT
+  scope: TracerScopeT
 
   type: TraceType
 
@@ -88,7 +87,7 @@ export interface TraceRecordingBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   }
 }
 
-export interface TraceRecording<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends TraceRecordingBase<ScopeT> {
-  entries: SpanAndAnnotation<ScopeT>[]
+export interface TraceRecording<TracerScopeT, AllPossibleScopesT>
+  extends TraceRecordingBase<TracerScopeT> {
+  entries: SpanAndAnnotation<AllPossibleScopesT>[]
 }

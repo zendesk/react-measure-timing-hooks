@@ -1,21 +1,19 @@
 import type { Attributes } from './spanTypes'
 import type { TraceManager } from './traceManager'
-import type { ScopeBase } from './types'
+import type { ScopeOnASpan } from './types'
 
 export type RenderedOutput = 'null' | 'loading' | 'content' | 'error'
 
-export interface BeaconConfig<ScopeT extends Partial<ScopeBase<ScopeT>>> {
+export interface BeaconConfig<AllPossibleScopesT> {
   name: string
-  scope: ScopeT
+  scope: ScopeOnASpan<AllPossibleScopesT>
   renderedOutput: RenderedOutput
   isIdle?: boolean
   attributes?: Attributes
   error?: Error
 }
 
-export type UseBeacon<ScopeT extends Partial<ScopeBase<ScopeT>>> = (
-  beaconConfig: BeaconConfig<ScopeT>,
-) => void
+export type UseBeacon<ScopeT> = (beaconConfig: BeaconConfig<ScopeT>) => void
 
 export type GetScopeTFromTraceManager<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

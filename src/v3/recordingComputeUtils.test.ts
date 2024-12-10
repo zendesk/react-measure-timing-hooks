@@ -6,7 +6,9 @@ import {
 } from './recordingComputeUtils'
 import type { SpanAndAnnotation, SpanAnnotation } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
-import type { CompleteTraceDefinition, ScopeBase, Timestamp } from './types'
+import type { CompleteTraceDefinition, Timestamp } from './types'
+
+type ScopeBase = Record<string, unknown>
 
 describe('recordingComputeUtils', () => {
   const EPOCH_START = 1_000
@@ -70,9 +72,9 @@ describe('recordingComputeUtils', () => {
   const onEnd = jest.fn()
 
   describe('error status propagation', () => {
-    const baseDefinition: CompleteTraceDefinition<ScopeBase> = {
+    const baseDefinition: CompleteTraceDefinition<ScopeBase, ScopeBase> = {
       name: 'test-trace',
-      requiredScopeKeys: [],
+      scopes: [],
       requiredToEnd: [() => true],
       computedSpanDefinitions: [],
       computedValueDefinitions: [],
@@ -192,9 +194,9 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedSpans', () => {
-    const baseDefinition: CompleteTraceDefinition<ScopeBase> = {
+    const baseDefinition: CompleteTraceDefinition<ScopeBase, ScopeBase> = {
       name: 'test-trace',
-      requiredScopeKeys: [],
+      scopes: [],
       requiredToEnd: [() => true],
       computedSpanDefinitions: [
         {
@@ -229,7 +231,7 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle operation-start and operation-end special matchers', () => {
-      const definition: CompleteTraceDefinition<ScopeBase> = {
+      const definition: CompleteTraceDefinition<ScopeBase, ScopeBase> = {
         ...baseDefinition,
         computedSpanDefinitions: [
           {
@@ -259,9 +261,9 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedValues', () => {
-    const baseDefinition: CompleteTraceDefinition<ScopeBase> = {
+    const baseDefinition: CompleteTraceDefinition<ScopeBase, ScopeBase> = {
       name: 'test-trace',
-      requiredScopeKeys: [],
+      scopes: [],
       requiredToEnd: [() => true],
       computedSpanDefinitions: [],
       computedValueDefinitions: [
@@ -293,7 +295,7 @@ describe('recordingComputeUtils', () => {
       const result = getSpanSummaryAttributes({
         definition: {
           name: 'test-trace',
-          requiredScopeKeys: [],
+          scopes: [],
           requiredToEnd: [() => true],
           computedSpanDefinitions: [],
           computedValueDefinitions: [],
@@ -324,7 +326,7 @@ describe('recordingComputeUtils', () => {
         {
           definition: {
             name: 'test-trace',
-            requiredScopeKeys: [],
+            scopes: [],
             requiredToEnd: [() => true],
             computedSpanDefinitions: [],
             computedValueDefinitions: [],
