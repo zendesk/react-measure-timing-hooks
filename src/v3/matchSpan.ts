@@ -111,7 +111,7 @@ export function withAttributes<TracerScopeT, AllPossibleScopesT>(
  * A list of scope keys to match against the span.
  */
 export function withMatchingScopes<TracerScopeT, AllPossibleScopesT>(
-  keys: readonly KeysOfUnion<TracerScopeT>[] | true,
+  keys: readonly KeysOfUnion<TracerScopeT>[] | true = true,
 ): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   return ({ span }, { input: { scope }, definition: { scopes } }) => {
     if (!span.scope) return false
@@ -207,18 +207,29 @@ export function fromDefinition<
   definition: SpanMatchDefinition<TracerScopeT, AllPossibleScopesT>,
 ): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
   const matchers: SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[] = []
-  if (definition.name)
+  if (definition.name) {
     matchers.push(withName<TracerScopeT, AllPossibleScopesT>(definition.name))
-  if (definition.performanceEntryName)
+  }
+  if (definition.performanceEntryName) {
     matchers.push(withPerformanceEntryName(definition.performanceEntryName))
-  if (definition.type) matchers.push(withType(definition.type))
-  if (definition.status) matchers.push(withStatus(definition.status))
-  if (definition.attributes)
+  }
+  if (definition.type) {
+    matchers.push(withType(definition.type))
+  }
+  if (definition.status) {
+    matchers.push(withStatus(definition.status))
+  }
+  if (definition.attributes) {
     matchers.push(withAttributes(definition.attributes))
-  if (definition.matchScopes)
+  }
+  if (definition.matchScopes) {
     matchers.push(withMatchingScopes(definition.matchScopes))
-  if (definition.occurrence)
+  }
+  if (definition.occurrence) {
     matchers.push(withOccurrence(definition.occurrence))
-  if (definition.isIdle) matchers.push(whenIdle(definition.isIdle))
+  }
+  if (definition.isIdle) {
+    matchers.push(whenIdle(definition.isIdle))
+  }
   return withAllConditions(...matchers)
 }
