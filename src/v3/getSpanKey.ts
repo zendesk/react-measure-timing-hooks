@@ -1,6 +1,5 @@
 import type { Span } from './spanTypes'
-import type { ScopeBase } from './types'
 
-export const getSpanKey = <ScopeT extends Partial<ScopeBase<ScopeT>>>(
-  span: Span<ScopeT>,
+export const getSpanKey = <AllPossibleScopesT>(
+  span: Span<AllPossibleScopesT>,
 ) => `${span.type}|${span.name}`

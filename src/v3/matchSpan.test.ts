@@ -1,14 +1,16 @@
 import * as matchSpan from './matchSpan'
 import type { SpanAnnotation } from './spanAnnotationTypes'
 import type { ComponentRenderSpan, SpanBase } from './spanTypes'
-import type { ScopeBase } from './types'
 
 // Mock data for TraceEntryBase
-interface TestScopeT extends ScopeBase {
+interface TicketScope {
   ticketId: string
 }
+interface UserScope {
+  userId: string
+}
 
-const mockScope: TestScopeT = {
+const mockScope: TicketScope = {
   ticketId: '123',
 }
 
@@ -26,7 +28,7 @@ const mockEntryBase = {
   },
   duration: 100,
   status: 'ok',
-} as const satisfies SpanBase<TestScopeT>
+} as const satisfies SpanBase<TicketScope>
 
 const mockPerformanceEntry = {
   ...mockEntryBase,
@@ -38,10 +40,10 @@ const mockPerformanceEntry = {
     toJSON: () => ({}),
     detail: () => ({}),
   },
-} as const satisfies SpanBase<TestScopeT>
+} as const satisfies SpanBase<TicketScope>
 
 // Mock data for ComponentRenderTraceEntry
-const mockComponentEntry: ComponentRenderSpan<TestScopeT> = {
+const mockComponentEntry: ComponentRenderSpan<TicketScope> = {
   ...mockEntryBase,
   type: 'component-render',
   errorInfo: undefined,
@@ -70,7 +72,7 @@ const mockContext = {
   definition: {
     name: 'test',
     type: 'operation',
-    requiredScopeKeys: ['ticketId'],
+    scopes: ['ticketId'] as never,
     requiredToEnd: [() => true],
     computedSpanDefinitions: [],
     computedValueDefinitions: [],
@@ -254,7 +256,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('scopeKeys', () => {
     it('should return true when scope does match', () => {
-      const matcher = matchSpan.withAllConditions(
+      const matcher = matchSpan.withAllConditions<TicketScope, TicketScope>(
         matchSpan.withName('testEntry'),
         matchSpan.withMatchingScopes(['ticketId']),
       )
@@ -270,7 +272,10 @@ describe('doesEntryMatchDefinition', () => {
         ticketId: '123',
         userId: '123',
       }
-      const matcher = matchSpan.withAllConditions(
+      const matcher = matchSpan.withAllConditions<
+        TicketScope | UserScope,
+        TicketScope | UserScope
+      >(
         matchSpan.withName('testEntry'),
         matchSpan.withMatchingScopes(['ticketId', 'userId']),
       )
@@ -316,7 +321,7 @@ describe('doesEntryMatchDefinition', () => {
 
   describe('combination of conditions', () => {
     it('should return true when all conditions match', () => {
-      const matcher = matchSpan.withAllConditions(
+      const matcher = matchSpan.withAllConditions<TicketScope, TicketScope>(
         matchSpan.withName('testEntry'),
         matchSpan.withPerformanceEntryName('testEntry'),
         matchSpan.withAttributes({ attr1: 'value1' }),
@@ -332,7 +337,7 @@ describe('doesEntryMatchDefinition', () => {
     })
 
     it('should return false when all conditions match but name', () => {
-      const matcher = matchSpan.withAllConditions(
+      const matcher = matchSpan.withAllConditions<TicketScope, TicketScope>(
         matchSpan.withName('testEntries'), // does not match
         matchSpan.withPerformanceEntryName('testEntry'),
         matchSpan.withAttributes({ attr1: 'value1' }),

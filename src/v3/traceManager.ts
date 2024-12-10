@@ -10,49 +10,56 @@ import type {
   ComputedSpanDefinition,
   ComputedValueDefinition,
   ReportFn,
-  ScopeBase,
+  ScopeValue,
+  SpanDeduplicationStrategy,
   TraceDefinition,
   TraceManagerConfig,
   Tracer,
-  SpanDeduplicationStrategy,
 } from './types'
 
 /**
  * Class representing the centralized trace performance manager.
  */
-export class TraceManager<AllScopesT extends ScopeBase<AllScopesT>> {
-  private readonly reportFn: ReportFn<Partial<AllScopesT>>
+export class TraceManager<
+  AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
+> {
+  private readonly reportFn: ReportFn<AllPossibleScopesT, AllPossibleScopesT>
   private readonly generateId: () => string
   private readonly performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<
-    Partial<AllScopesT>
+    Partial<AllPossibleScopesT>
   >
-  private activeTrace: ActiveTrace<Partial<AllScopesT>> | undefined = undefined
+  private activeTrace:
+    | ActiveTrace<AllPossibleScopesT, AllPossibleScopesT>
+    | undefined = undefined
 
   constructor({
     reportFn,
     generateId,
     performanceEntryDeduplicationStrategy,
-  }: TraceManagerConfig<AllScopesT>) {
+  }: TraceManagerConfig<AllPossibleScopesT, AllPossibleScopesT>) {
     this.reportFn = reportFn
     this.generateId = generateId
     this.performanceEntryDeduplicationStrategy =
       performanceEntryDeduplicationStrategy
   }
 
-  createTracer<ThisTraceScopeKeysT extends keyof AllScopesT>(
-    traceDefinition: TraceDefinition<AllScopesT, ThisTraceScopeKeysT>,
-  ): Tracer<Pick<AllScopesT, ThisTraceScopeKeysT>> {
-    type ThisTraceScope = Pick<AllScopesT, ThisTraceScopeKeysT>
-
-    const computedSpanDefinitions: ComputedSpanDefinition<ThisTraceScope>[] = []
+  createTracer<TracerScopeT extends AllPossibleScopesT>(
+    traceDefinition: TraceDefinition<TracerScopeT, AllPossibleScopesT>,
+  ): Tracer<TracerScopeT, AllPossibleScopesT> {
+    const computedSpanDefinitions: ComputedSpanDefinition<
+      TracerScopeT,
+      AllPossibleScopesT
+    >[] = []
     const computedValueDefinitions: ComputedValueDefinition<
-      ThisTraceScope,
-      SpanMatcherFn<ThisTraceScope>[]
+      TracerScopeT,
+      AllPossibleScopesT,
+      SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[]
     >[] = []
 
-    const requiredToEnd = convertMatchersToFns<ThisTraceScope>(
-      traceDefinition.requiredToEnd,
-    )
+    const requiredToEnd = convertMatchersToFns<
+      TracerScopeT,
+      AllPossibleScopesT
+    >(traceDefinition.requiredToEnd)
 
     if (!requiredToEnd) {
       throw new Error(
@@ -60,19 +67,22 @@ export class TraceManager<AllScopesT extends ScopeBase<AllScopesT>> {
       )
     }
 
-    const debounceOn = convertMatchersToFns<ThisTraceScope>(
+    const debounceOn = convertMatchersToFns<TracerScopeT, AllPossibleScopesT>(
       traceDefinition.debounceOn,
     )
-    const interruptOn = convertMatchersToFns<ThisTraceScope>(
+    const interruptOn = convertMatchersToFns<TracerScopeT, AllPossibleScopesT>(
       traceDefinition.interruptOn,
     )
 
-    const suppressErrorStatusPropagationOn =
-      convertMatchersToFns<ThisTraceScope>(
-        traceDefinition.suppressErrorStatusPropagationOn,
-      )
+    const suppressErrorStatusPropagationOn = convertMatchersToFns<
+      TracerScopeT,
+      AllPossibleScopesT
+    >(traceDefinition.suppressErrorStatusPropagationOn)
 
-    const completeTraceDefinition: CompleteTraceDefinition<ThisTraceScope> = {
+    const completeTraceDefinition: CompleteTraceDefinition<
+      TracerScopeT,
+      AllPossibleScopesT
+    > = {
       ...traceDefinition,
       requiredToEnd,
       debounceOn,
@@ -100,19 +110,21 @@ export class TraceManager<AllScopesT extends ScopeBase<AllScopesT>> {
         computedValueDefinitions.push({
           ...definition,
           matches: definition.matches.map((m) => ensureMatcherFn(m)),
-        } as ComputedValueDefinition<ThisTraceScope, SpanMatcherFn<ThisTraceScope>[]>)
+        } as ComputedValueDefinition<TracerScopeT, AllPossibleScopesT, SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[]>)
       },
       start: (input) => this.startTrace(completeTraceDefinition, input),
     }
   }
 
-  processSpan(span: Span<AllScopesT>): SpanAnnotationRecord | undefined {
+  processSpan(
+    span: Span<AllPossibleScopesT>,
+  ): SpanAnnotationRecord | undefined {
     return this.activeTrace?.processSpan(span)
   }
 
-  private startTrace<ThisTraceScopeKeysT extends keyof AllScopesT>(
-    definition: CompleteTraceDefinition<Pick<AllScopesT, ThisTraceScopeKeysT>>,
-    input: StartTraceConfig<Pick<AllScopesT, ThisTraceScopeKeysT>>,
+  private startTrace<TracerScopeT extends AllPossibleScopesT>(
+    definition: CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>,
+    input: StartTraceConfig<TracerScopeT>,
   ): string {
     if (this.activeTrace) {
       this.activeTrace.interrupt('another-trace-started')
@@ -122,7 +134,7 @@ export class TraceManager<AllScopesT extends ScopeBase<AllScopesT>> {
     const id = input.id ?? this.generateId()
 
     const onEnd = (
-      traceRecording: TraceRecording<Pick<AllScopesT, ThisTraceScopeKeysT>>,
+      traceRecording: TraceRecording<TracerScopeT, AllPossibleScopesT>,
     ) => {
       if (id === this.activeTrace?.input.id) {
         this.activeTrace = undefined
@@ -141,7 +153,10 @@ export class TraceManager<AllScopesT extends ScopeBase<AllScopesT>> {
       this.performanceEntryDeduplicationStrategy,
     )
 
-    this.activeTrace = activeTrace
+    this.activeTrace = activeTrace as unknown as ActiveTrace<
+      AllPossibleScopesT,
+      AllPossibleScopesT
+    >
 
     return id
   }

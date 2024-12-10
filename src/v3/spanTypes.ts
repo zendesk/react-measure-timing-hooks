@@ -1,7 +1,7 @@
 import type { ErrorInfo } from 'react'
 import type { BeaconConfig } from './hooksTypes'
 import type { TraceRecording } from './traceRecordingTypes'
-import type { ScopeBase, Timestamp } from './types'
+import type { ScopeOnASpan, Timestamp } from './types'
 
 export type NativePerformanceEntryType =
   | 'element'
@@ -26,9 +26,9 @@ export type ComponentLifecycleSpanType =
 
 export type SpanType = NativePerformanceEntryType | ComponentLifecycleSpanType
 
-export interface StartTraceConfig<ScopeT extends Partial<ScopeBase<ScopeT>>> {
+export interface StartTraceConfig<TracerScopeT> {
   id?: string
-  scope: ScopeT
+  scope: TracerScopeT
   startTime?: Partial<Timestamp>
   /**
    * any attributes that are relevant to the entire trace
@@ -36,15 +36,19 @@ export interface StartTraceConfig<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   attributes?: Attributes
 }
 
-export type OnEndFn<ScopeT extends Partial<ScopeBase<ScopeT>>> = (
-  trace: TraceRecording<ScopeT>,
+export type OnEndFn<TracerScopeT, AllPossibleScopesT> = (
+  trace: TraceRecording<TracerScopeT, AllPossibleScopesT>,
 ) => void
 
-export interface ActiveTraceConfig<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends StartTraceConfig<ScopeT> {
+export interface ActiveTraceContext<TracerScopeT>
+  extends StartTraceConfig<TracerScopeT> {
   id: string
   startTime: Timestamp
-  onEnd: OnEndFn<ScopeT>
+}
+
+export interface ActiveTraceConfig<TracerScopeT, AllPossibleScopesT>
+  extends ActiveTraceContext<TracerScopeT> {
+  onEnd: OnEndFn<TracerScopeT, AllPossibleScopesT>
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
@@ -53,7 +57,7 @@ export interface Attributes {
 }
 export type SpanStatus = 'ok' | 'error'
 
-export interface SpanBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
+export interface SpanBase<AllPossibleScopesT> {
   type: SpanType
 
   /**
@@ -66,7 +70,7 @@ export interface SpanBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
 
   // non performance entries, scope would be coming from outside like ticket id or user id
   // performance entries, there is no scope OR scope is in performance detail
-  scope?: ScopeT
+  scope?: ScopeOnASpan<AllPossibleScopesT>
 
   attributes: Attributes
 
@@ -93,9 +97,9 @@ export interface SpanBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   error?: Error
 }
 
-export interface ComponentRenderSpan<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends Omit<SpanBase<ScopeT>, 'scope' | 'attributes'>,
-    BeaconConfig<ScopeT> {
+export interface ComponentRenderSpan<AllPossibleScopesT>
+  extends Omit<SpanBase<AllPossibleScopesT>, 'scope' | 'attributes'>,
+    BeaconConfig<AllPossibleScopesT> {
   type: ComponentLifecycleSpanType
   isIdle: boolean
   errorInfo?: ErrorInfo
@@ -126,8 +130,8 @@ export type InitiatorType =
   | 'xmlhttprequest'
   | 'other'
 
-export interface ResourceSpan<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends SpanBase<ScopeT> {
+export interface ResourceSpan<AllPossibleScopesT>
+  extends SpanBase<AllPossibleScopesT> {
   type: 'resource'
   resourceDetails: {
     initiatorType: InitiatorType
@@ -136,15 +140,15 @@ export interface ResourceSpan<ScopeT extends Partial<ScopeBase<ScopeT>>>
   }
 }
 
-export interface PerformanceEntrySpan<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends SpanBase<ScopeT> {
+export interface PerformanceEntrySpan<AllPossibleScopesT>
+  extends SpanBase<AllPossibleScopesT> {
   type: Exclude<NativePerformanceEntryType, 'resource'>
 }
 
 /**
  * All possible trace entries
  */
-export type Span<ScopeT extends Partial<ScopeBase<ScopeT>>> =
-  | PerformanceEntrySpan<ScopeT>
-  | ComponentRenderSpan<ScopeT>
-  | ResourceSpan<ScopeT>
+export type Span<AllPossibleScopesT> =
+  | PerformanceEntrySpan<AllPossibleScopesT>
+  | ComponentRenderSpan<AllPossibleScopesT>
+  | ResourceSpan<AllPossibleScopesT>

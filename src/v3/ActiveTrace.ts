@@ -22,7 +22,6 @@ import type {
 import type { ActiveTraceConfig, Span } from './spanTypes'
 import type {
   CompleteTraceDefinition,
-  ScopeBase,
   SpanDeduplicationStrategy,
   TraceInterruptionReason,
 } from './types'
@@ -32,11 +31,11 @@ import type {
   StateHandlerPayloads,
 } from './typeUtils'
 
-export interface FinalState<ScopeT extends Partial<ScopeBase<ScopeT>>> {
+export interface FinalState<AllPossibleScopesT> {
   transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
-  cpuIdleSpanAndAnnotation?: SpanAndAnnotation<ScopeT>
-  lastRequiredSpanAndAnnotation?: SpanAndAnnotation<ScopeT>
+  cpuIdleSpanAndAnnotation?: SpanAndAnnotation<AllPossibleScopesT>
+  lastRequiredSpanAndAnnotation?: SpanAndAnnotation<AllPossibleScopesT>
 }
 
 type InitialTraceState = 'recording'
@@ -53,8 +52,8 @@ interface OnEnterInterrupted {
   interruptionReason: TraceInterruptionReason
 }
 
-interface OnEnterComplete<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends FinalState<ScopeT> {
+interface OnEnterComplete<AllPossibleScopesT>
+  extends FinalState<AllPossibleScopesT> {
   transitionToState: 'complete'
 }
 
@@ -68,58 +67,60 @@ interface OnEnterDebouncing {
   transitionFromState: NonTerminalTraceStates
 }
 
-type OnEnterStatePayload<ScopeT extends Partial<ScopeBase<ScopeT>>> =
+type OnEnterStatePayload<AllPossibleScopesT> =
   | OnEnterInterrupted
-  | OnEnterComplete<ScopeT>
+  | OnEnterComplete<AllPossibleScopesT>
   | OnEnterDebouncing
   | OnEnterWaitingForInteractive
 
-export type Transition<ScopeT extends Partial<ScopeBase<ScopeT>>> =
-  DistributiveOmit<OnEnterStatePayload<ScopeT>, 'transitionFromState'>
-
-type FinalizeFn<ScopeT extends Partial<ScopeBase<ScopeT>>> = (
-  config: FinalState<ScopeT>,
-) => void
-
-export type States<ScopeT extends Partial<ScopeBase<ScopeT>>> =
-  TraceStateMachine<ScopeT>['states']
-
-interface StateHandlersBase<ScopeT extends Partial<ScopeBase<ScopeT>>> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [handler: string]: (payload: any) => void | undefined | Transition<ScopeT>
-}
-
-type StatesBase<ScopeT extends Partial<ScopeBase<ScopeT>>> = Record<
-  TraceStates,
-  StateHandlersBase<ScopeT>
+export type Transition<AllPossibleScopesT> = DistributiveOmit<
+  OnEnterStatePayload<AllPossibleScopesT>,
+  'transitionFromState'
 >
 
-type TraceStateMachineSideEffectHandlers<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
-> = TraceStateMachine<ScopeT>['sideEffectFns']
+type FinalizeFn<ScopeT> = (config: FinalState<ScopeT>) => void
 
-type EntryType<ScopeT extends Partial<ScopeBase<ScopeT>>> =
-  PerformanceEntryLike & {
-    entry: SpanAndAnnotation<ScopeT>
-  }
+export type States<TracerScopeT, AllPossibleScopesT> = TraceStateMachine<
+  TracerScopeT,
+  AllPossibleScopesT
+>['states']
 
-interface StateMachineContext<ScopeT extends Partial<ScopeBase<ScopeT>>>
-  extends Context<ScopeT> {
+interface StateHandlersBase<AllPossibleScopesT> {
+  [handler: string]: (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    payload: any,
+  ) => void | undefined | Transition<AllPossibleScopesT>
+}
+
+type StatesBase<AllPossibleScopesT> = Record<
+  TraceStates,
+  StateHandlersBase<AllPossibleScopesT>
+>
+
+type TraceStateMachineSideEffectHandlers<TracerScopeT, AllPossibleScopesT> =
+  TraceStateMachine<TracerScopeT, AllPossibleScopesT>['sideEffectFns']
+
+type EntryType<AllPossibleScopesT> = PerformanceEntryLike & {
+  entry: SpanAndAnnotation<AllPossibleScopesT>
+}
+
+interface StateMachineContext<TracerScopeT, AllPossibleScopesT>
+  extends Context<TracerScopeT, AllPossibleScopesT> {
   readonly requiredToEndIndexChecklist: Set<number>
 }
 
-export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
-  readonly context: StateMachineContext<ScopeT>
+export class TraceStateMachine<TracerScopeT, AllPossibleScopesT> {
+  readonly context: StateMachineContext<TracerScopeT, AllPossibleScopesT>
   readonly sideEffectFns: {
-    readonly storeFinalizeState: FinalizeFn<ScopeT>
+    readonly storeFinalizeState: FinalizeFn<TracerScopeT>
   }
   currentState: TraceStates = 'recording'
   /** the span that ended at the furthest point in time */
-  lastRelevant: SpanAndAnnotation<ScopeT> | undefined
+  lastRelevant: SpanAndAnnotation<AllPossibleScopesT> | undefined
   /** it is set once the LRS value is established */
-  lastRequiredSpan: SpanAndAnnotation<ScopeT> | undefined
+  lastRequiredSpan: SpanAndAnnotation<AllPossibleScopesT> | undefined
   cpuIdleLongTaskProcessor:
-    | CPUIdleLongTaskProcessor<EntryType<ScopeT>>
+    | CPUIdleLongTaskProcessor<EntryType<AllPossibleScopesT>>
     | undefined
   debounceDeadline: number = Number.POSITIVE_INFINITY
   interactiveDeadline: number = Number.POSITIVE_INFINITY
@@ -132,7 +133,7 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
    *
    * if we have long tasks before FMP, we want to use them as a potential grouping post FMP.
    */
-  debouncingSpanBuffer: SpanAndAnnotation<ScopeT>[] = []
+  debouncingSpanBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
 
   readonly states = {
     recording: {
@@ -142,7 +143,9 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
           (this.context.definition.timeoutDuration ?? DEFAULT_TIMEOUT_DURATION)
       },
 
-      onProcessSpan: (spanAndAnnotation: SpanAndAnnotation<ScopeT>) => {
+      onProcessSpan: (
+        spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+      ) => {
         const spanEndTimeEpoch =
           spanAndAnnotation.span.startTime.epoch +
           spanAndAnnotation.span.duration
@@ -234,7 +237,9 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
         return undefined
       },
 
-      onProcessSpan: (spanAndAnnotation: SpanAndAnnotation<ScopeT>) => {
+      onProcessSpan: (
+        spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+      ) => {
         const spanEndTimeEpoch =
           spanAndAnnotation.span.startTime.epoch +
           spanAndAnnotation.span.duration
@@ -350,7 +355,7 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
           interruptMillisecondsAfterLastRequiredSpan
 
         this.cpuIdleLongTaskProcessor = createCPUIdleProcessor<
-          EntryType<ScopeT>
+          EntryType<AllPossibleScopesT>
         >(
           {
             entryType: this.lastRequiredSpan.span.type,
@@ -377,7 +382,7 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
             'onProcessSpan',
             span,
             // below cast is necessary due to circular type reference
-          ) as Transition<ScopeT> | undefined
+          ) as Transition<AllPossibleScopesT> | undefined
           if (transition) {
             return transition
           }
@@ -386,7 +391,9 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
         return undefined
       },
 
-      onProcessSpan: (spanAndAnnotation: SpanAndAnnotation<ScopeT>) => {
+      onProcessSpan: (
+        spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+      ) => {
         const cpuIdleMatch = this.cpuIdleLongTaskProcessor?.({
           entryType: spanAndAnnotation.span.type,
           startTime: spanAndAnnotation.span.startTime.now,
@@ -471,20 +478,23 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
     },
 
     complete: {
-      onEnterState: (_payload: OnEnterComplete<ScopeT>) => {
+      onEnterState: (_payload: OnEnterComplete<AllPossibleScopesT>) => {
         // terminal state, but we reuse the payload for generating the report in ActiveTrace
       },
     },
-  } satisfies StatesBase<ScopeT>
+  } satisfies StatesBase<AllPossibleScopesT>
 
   constructor({
     definition,
     input,
     sideEffectFns,
   }: {
-    definition: CompleteTraceDefinition<ScopeT>
-    input: ActiveTraceConfig<ScopeT>
-    sideEffectFns: TraceStateMachineSideEffectHandlers<ScopeT>
+    definition: CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
+    input: ActiveTraceConfig<TracerScopeT, AllPossibleScopesT>
+    sideEffectFns: TraceStateMachineSideEffectHandlers<
+      TracerScopeT,
+      AllPossibleScopesT
+    >
   }) {
     this.context = {
       definition,
@@ -500,18 +510,23 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   /**
    * @returns the last OnEnterState event if a transition was made
    */
-  emit<EventName extends keyof StateHandlerPayloads<ScopeT>>(
+  emit<
+    EventName extends keyof StateHandlerPayloads<
+      TracerScopeT,
+      AllPossibleScopesT
+    >,
+  >(
     event: EventName,
-    payload: StateHandlerPayloads<ScopeT>[EventName],
-  ): OnEnterStatePayload<ScopeT> | undefined {
+    payload: StateHandlerPayloads<TracerScopeT, AllPossibleScopesT>[EventName],
+  ): OnEnterStatePayload<AllPossibleScopesT> | undefined {
     const currentStateHandlers = this.states[this.currentState] as Partial<
-      MergedStateHandlerMethods<ScopeT>
+      MergedStateHandlerMethods<TracerScopeT, AllPossibleScopesT>
     >
     const transitionPayload = currentStateHandlers[event]?.(payload)
     if (transitionPayload) {
       const transitionFromState = this.currentState as NonTerminalTraceStates
       this.currentState = transitionPayload.transitionToState
-      const onEnterStateEvent: OnEnterStatePayload<ScopeT> = {
+      const onEnterStateEvent: OnEnterStatePayload<AllPossibleScopesT> = {
         transitionFromState,
         ...transitionPayload,
       }
@@ -521,25 +536,25 @@ export class TraceStateMachine<ScopeT extends Partial<ScopeBase<ScopeT>>> {
   }
 }
 
-export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
-  readonly definition: CompleteTraceDefinition<ScopeT>
-  readonly input: ActiveTraceConfig<ScopeT>
-  private readonly deduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>
+export class ActiveTrace<TracerScopeT extends object, AllPossibleScopesT> {
+  readonly definition: CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
+  readonly input: ActiveTraceConfig<TracerScopeT, AllPossibleScopesT>
+  private readonly deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
 
-  recordedItems: SpanAndAnnotation<ScopeT>[] = []
-  stateMachine: TraceStateMachine<ScopeT>
+  recordedItems: SpanAndAnnotation<AllPossibleScopesT>[] = []
+  stateMachine: TraceStateMachine<TracerScopeT, AllPossibleScopesT>
   occurrenceCounters = new Map<string, number>()
   processedPerformanceEntries: WeakMap<
     PerformanceEntry,
-    SpanAndAnnotation<ScopeT>
+    SpanAndAnnotation<AllPossibleScopesT>
   > = new WeakMap()
 
-  finalState: FinalState<ScopeT> | undefined
+  finalState: FinalState<TracerScopeT> | undefined
 
   constructor(
-    definition: CompleteTraceDefinition<ScopeT>,
-    input: ActiveTraceConfig<ScopeT>,
-    deduplicationStrategy?: SpanDeduplicationStrategy<ScopeT>,
+    definition: CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>,
+    input: ActiveTraceConfig<TracerScopeT, AllPossibleScopesT>,
+    deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>,
   ) {
     this.definition = definition
     this.input = {
@@ -556,7 +571,7 @@ export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
     })
   }
 
-  storeFinalizeState = (config: FinalState<ScopeT>) => {
+  storeFinalizeState = (config: FinalState<TracerScopeT>) => {
     this.finalState = config
   }
 
@@ -571,7 +586,9 @@ export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
     })
   }
 
-  processSpan(span: Span<ScopeT>): SpanAnnotationRecord | undefined {
+  processSpan(
+    span: Span<AllPossibleScopesT>,
+  ): SpanAnnotationRecord | undefined {
     const spanEndTime = span.startTime.now + span.duration
     // check if valid for this trace:
     if (spanEndTime < this.input.startTime.now) {
@@ -593,7 +610,7 @@ export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
         this.processedPerformanceEntries.get(span.performanceEntry)) ??
       this.deduplicationStrategy?.findDuplicate(span, this.recordedItems)
 
-    let spanAndAnnotation: SpanAndAnnotation<ScopeT>
+    let spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>
 
     if (existingAnnotation) {
       spanAndAnnotation = existingAnnotation
@@ -674,8 +691,10 @@ export class ActiveTrace<ScopeT extends Partial<ScopeBase<ScopeT>>> {
     transition,
     lastRelevantSpanAndAnnotation,
   }: {
-    transition: OnEnterStatePayload<ScopeT>
-    lastRelevantSpanAndAnnotation: SpanAndAnnotation<ScopeT> | undefined
+    transition: OnEnterStatePayload<AllPossibleScopesT>
+    lastRelevantSpanAndAnnotation:
+      | SpanAndAnnotation<AllPossibleScopesT>
+      | undefined
   }) {
     if (
       transition.transitionToState === 'interrupted' ||

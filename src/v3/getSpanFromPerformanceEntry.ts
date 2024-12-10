@@ -7,17 +7,18 @@ import {
   PerformanceEntrySpan,
   ResourceSpan,
 } from './spanTypes'
-import { ScopeBase, Timestamp } from './types'
+import { Timestamp } from './types'
 
 /**
  * Maps Performance Entry to a Span
  * @returns The span.
  */
-export function getSpanFromPerformanceEntry<
-  ScopeT extends Partial<ScopeBase<ScopeT>>,
->(
+export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
   inputEntry: PerformanceEntry,
-): PerformanceEntrySpan<ScopeT> | ResourceSpan<ScopeT> | undefined {
+):
+  | PerformanceEntrySpan<AllPossibleScopesT>
+  | ResourceSpan<AllPossibleScopesT>
+  | undefined {
   // react in dev mode generates hundreds of these marks, ignore them
   if (inputEntry.entryType === 'mark' && inputEntry.name.startsWith('--')) {
     return undefined
@@ -71,7 +72,7 @@ export function getSpanFromPerformanceEntry<
     now: inputEntry.startTime,
   }
 
-  const traceEntry: PerformanceEntrySpan<ScopeT> = {
+  const traceEntry: PerformanceEntrySpan<AllPossibleScopesT> = {
     type,
     name,
     startTime: ensureTimestamp(timestamp),
