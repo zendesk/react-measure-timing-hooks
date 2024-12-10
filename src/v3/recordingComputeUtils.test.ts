@@ -8,7 +8,7 @@ import type { SpanAndAnnotation, SpanAnnotation } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
 import type { CompleteTraceDefinition, Timestamp } from './types'
 
-type ScopeBase = Record<string, unknown>
+type AnyScope = Record<string, unknown>
 
 describe('recordingComputeUtils', () => {
   const EPOCH_START = 1_000
@@ -18,7 +18,7 @@ describe('recordingComputeUtils', () => {
   })
 
   const createAnnotation = (
-    span: Span<ScopeBase>,
+    span: Span<AnyScope>,
     traceStartTime: Timestamp,
     partial: Partial<SpanAnnotation> = {},
   ): SpanAnnotation => ({
@@ -31,7 +31,7 @@ describe('recordingComputeUtils', () => {
     ...partial,
   })
 
-  const createMockSpan = <TSpan extends Span<ScopeBase>>(
+  const createMockSpan = <TSpan extends Span<AnyScope>>(
     startTimeNow: number,
     partial: Partial<TSpan>,
   ): TSpan =>
@@ -57,11 +57,11 @@ describe('recordingComputeUtils', () => {
           ...partial,
         }) as TSpan
 
-  const createMockSpanAndAnnotation = <TSpan extends Span<ScopeBase>>(
+  const createMockSpanAndAnnotation = <TSpan extends Span<AnyScope>>(
     startTimeNow: number,
     spanPartial: Partial<TSpan> = {},
     annotationPartial: Partial<SpanAnnotation> = {},
-  ): SpanAndAnnotation<ScopeBase> => {
+  ): SpanAndAnnotation<AnyScope> => {
     const span = createMockSpan<TSpan>(startTimeNow, spanPartial)
     return {
       span,
@@ -72,7 +72,7 @@ describe('recordingComputeUtils', () => {
   const onEnd = jest.fn()
 
   describe('error status propagation', () => {
-    const baseDefinition: CompleteTraceDefinition<ScopeBase, ScopeBase> = {
+    const baseDefinition: CompleteTraceDefinition<AnyScope, AnyScope> = {
       name: 'test-trace',
       scopes: [],
       requiredToEnd: [() => true],
@@ -194,7 +194,7 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedSpans', () => {
-    const baseDefinition: CompleteTraceDefinition<ScopeBase, ScopeBase> = {
+    const baseDefinition: CompleteTraceDefinition<AnyScope, AnyScope> = {
       name: 'test-trace',
       scopes: [],
       requiredToEnd: [() => true],
@@ -231,7 +231,7 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle operation-start and operation-end special matchers', () => {
-      const definition: CompleteTraceDefinition<ScopeBase, ScopeBase> = {
+      const definition: CompleteTraceDefinition<AnyScope, AnyScope> = {
         ...baseDefinition,
         computedSpanDefinitions: [
           {
@@ -261,7 +261,7 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedValues', () => {
-    const baseDefinition: CompleteTraceDefinition<ScopeBase, ScopeBase> = {
+    const baseDefinition: CompleteTraceDefinition<AnyScope, AnyScope> = {
       name: 'test-trace',
       scopes: [],
       requiredToEnd: [() => true],

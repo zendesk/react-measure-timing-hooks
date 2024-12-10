@@ -1,4 +1,4 @@
-import type { ScopeBase, TraceDefinition } from '../types'
+import type { TraceDefinition } from '../types'
 
 export interface TicketIdScope {
   ticketId: string
@@ -7,10 +7,15 @@ export interface UserIdScope {
   userId: string
 }
 
+export type FixtureAllPossibleScopes = TicketIdScope | UserIdScope
+
 const TICKET_DISPOSE_EVENT_NAME = `ticket.dispose`
 const TICKET_NAVIGATED_AWAY_EVENT_NAME = `ticket.navigated-away`
 
-export const ticketActivationDefinition: TraceDefinition<TicketIdScope> = {
+export const ticketActivationDefinition: TraceDefinition<
+  TicketIdScope,
+  FixtureAllPossibleScopes
+> = {
   name: 'ticket.activation',
   type: 'operation',
   requiredScopeKeys: ['ticketId'],
@@ -20,30 +25,36 @@ export const ticketActivationDefinition: TraceDefinition<TicketIdScope> = {
     {
       type: 'component-render',
       name: 'OmniLog',
-      scopes: ['ticketId'],
+      matchScopes: ['ticketId'],
       isIdle: true,
     },
   ],
   interruptOn: [
-    { type: 'mark', name: TICKET_DISPOSE_EVENT_NAME, scopes: ['ticketId'] },
+    {
+      type: 'mark',
+      name: TICKET_DISPOSE_EVENT_NAME,
+      matchScopes: ['ticketId'],
+    },
     {
       type: 'mark',
       name: TICKET_NAVIGATED_AWAY_EVENT_NAME,
-      scopes: ['ticketId'],
+      matchScopes: ['ticketId'],
     },
   ],
   debounceOn: [
     // debounce on anything that has matching ticketId scope:
-    { scopes: ['ticketId'] },
+    { matchScopes: ['ticketId'] },
     // TODO: { type: 'measure', name: (name, scope) => `ticket/${scope.ticketId}/open` },
     // metric from ember: ticket_workspace.module.js
-    ({ span }, scope) =>
-      span.type === 'measure' && span.name === `ticket/${scope.ticketId}/open`,
+    ({ span }) =>
+      span.type === 'measure' &&
+      span.name === `ticket/${span.scope?.ticketId}/open`,
     // debounce on element timing sentinels:
-    ({ span }, scope) =>
+    ({ span }) =>
       span.type === 'element' &&
-      span.name === `ticket_workspace/${scope.ticketId}`,
-    ({ span }, scope) =>
-      span.type === 'element' && span.name === `omnilog/${scope.ticketId}`,
+      span.name === `ticket_workspace/${span.scope?.ticketId}`,
+    ({ span }) =>
+      span.type === 'element' &&
+      span.name === `omnilog/${span.scope?.ticketId}`,
   ],
 }

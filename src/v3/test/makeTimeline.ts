@@ -1,4 +1,14 @@
-export interface ComponentRenderStub {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ensureTimestamp } from '../ensureTimestamp'
+import type {
+  ComponentRenderSpan,
+  PerformanceEntrySpan,
+  Span,
+  SpanType,
+} from '../spanTypes'
+
+export interface ComponentRenderStub
+  extends Partial<Omit<ComponentRenderSpan<any>, 'startTime' | 'duration'>> {
   // TODO: double check what this is
   entryType: 'component-render'
   duration: number
@@ -13,7 +23,8 @@ export interface LongTaskStub {
   name?: string
 }
 
-export interface MarkStub {
+export interface MarkStub
+  extends Partial<Omit<PerformanceEntrySpan<any>, 'startTime' | 'duration'>> {
   entryType: 'mark'
   name: string
   startTime?: number
@@ -29,17 +40,25 @@ export interface IdleStub {
   duration: number
 }
 
-export type Stub = ComponentRenderStub | LongTaskStub | MarkStub | FmpStub | IdleStub
+export type Stub =
+  | ComponentRenderStub
+  | LongTaskStub
+  | MarkStub
+  | FmpStub
+  | IdleStub
 
 export const Render = (
   name: string,
   duration: number,
-  options: { start?: number, isIdle?: boolean } = {},
+  options: { startTime?: number } & Partial<
+    Omit<ComponentRenderSpan<any>, 'startTime' | 'duration'>
+  > = {},
 ): ComponentRenderStub => ({
   entryType: 'component-render',
-  duration,
-  startTime: options.start,
   name,
+  duration,
+  startTime: options.startTime,
+  ...options,
 })
 
 export const LongTask = (
@@ -108,11 +127,11 @@ export function makeEntries(events: Stub[]): {
   return { entries, fmpTime }
 }
 
-export function getEventsFromTimeline(
+export function getSpansFromTimeline<AllPossibleScopesT>(
   _: TemplateStringsArray,
   ...exprs: (Stub | number)[]
-): { entries: PerformanceEntry[]; fmpTime: number | null } {
-  const entries: PerformanceEntry[] = []
+): { spans: Span<AllPossibleScopesT>[]; fmpTime: number | null } {
+  const spans: Span<AllPossibleScopesT>[] = []
   let fmpTime: number | null = null
 
   const stubs = exprs.filter((expr) => typeof expr !== 'number')
@@ -143,15 +162,35 @@ export function getEventsFromTimeline(
     if (stub.entryType === 'fmp') {
       fmpTime = currentTime
     }
-    entries.push({
+    spans.push({
+      type: stub.entryType as SpanType,
       duration: 0,
       name: `${stub.entryType}`,
       ...stub,
-      startTime: currentTime,
-    } as PerformanceEntry)
+      startTime: {
+        now: 'startTime' in stub ? stub.startTime ?? currentTime : currentTime,
+        epoch:
+          'startTime' in stub ? stub.startTime ?? currentTime : currentTime,
+      },
+      isIdle: 'name' in stub ? stub.name?.includes('idle') : undefined,
+      renderedOutput:
+        'name' in stub
+          ? stub.name?.includes('idle')
+            ? 'content'
+            : 'loading'
+          : undefined,
+      performanceEntry: {
+        duration: 0,
+        name: `${stub.entryType}`,
+        ...stub,
+        startTime:
+          'startTime' in stub ? stub.startTime ?? currentTime : currentTime,
+        toJSON: () => {},
+      },
+    } as Span<AllPossibleScopesT>)
   }
 
-  return { entries, fmpTime }
+  return { spans, fmpTime }
 }
 
 // example usage
