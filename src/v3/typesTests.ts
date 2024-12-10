@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/consistent-type-definitions */
 
-import { processSpan, TraceManager, generateUseBeacon } from './typesExample'
+import { generateUseBeacon, processSpan, TraceManager } from './typesExample'
 
 export type LotusTicketScope = {
   ticketId: string

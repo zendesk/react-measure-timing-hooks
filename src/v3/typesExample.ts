@@ -15,10 +15,13 @@ export interface Span<AllPossibleScopes> {
 type KeysOfAllPossibleScopes<AllPossibleScopes> = KeysOfUnion<AllPossibleScopes>
 
 // No Infer Diagram: https://excalidraw.com/#room=4345f5a2d159f70f528a,lprwatMKsXuRrF8UUDFtWA
-export interface TraceDefinitionInput<TracerScopeT, AllPossibleScopesT> {
+export interface TraceDefinitionInput<
+  SingleTracerScopeKeyT,
+  AllPossibleScopesT,
+> {
   name: string
-  scopes: TracerScopeT[]
-  requiredToEnd: Matcher<NoInfer<TracerScopeT>, AllPossibleScopesT>[]
+  scopes: SingleTracerScopeKeyT[]
+  requiredToEnd: Matcher<NoInfer<SingleTracerScopeKeyT>, AllPossibleScopesT>[]
 }
 
 export interface StartTraceInput<SingleTracerScopeT> {
