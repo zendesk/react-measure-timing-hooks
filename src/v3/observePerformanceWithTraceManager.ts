@@ -1,7 +1,7 @@
 import { getSpanFromPerformanceEntry } from './getSpanFromPerformanceEntry'
 import type { NativePerformanceEntryType } from './spanTypes'
 import type { TraceManager } from './traceManager'
-import type { ScopeValue } from './types'
+import type { DeriveScopeFromPerformanceEntryFn, ScopeValue } from './types'
 
 export const getBestSupportedEntryTypes = (): NativePerformanceEntryType[] =>
   (PerformanceObserver.supportedEntryTypes.includes('long-animation-frame')
@@ -24,14 +24,17 @@ export const getBestSupportedEntryTypes = (): NativePerformanceEntryType[] =>
  *          PerformanceObserver, stopping the observation of
  *          performance entries.
  */
+
 export const observePerformanceWithTraceManager = <
   AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
 >({
   traceManager,
+  deriveScopeFromPerformanceEntry,
   entryTypes = getBestSupportedEntryTypes(),
   keep,
 }: {
   traceManager: TraceManager<AllPossibleScopesT>
+  deriveScopeFromPerformanceEntry?: DeriveScopeFromPerformanceEntryFn<AllPossibleScopesT>
   entryTypes?: NativePerformanceEntryType[]
   keep?: (entry: PerformanceEntry) => boolean
 }) => {
@@ -40,7 +43,10 @@ export const observePerformanceWithTraceManager = <
       if (keep !== undefined && !keep(entry)) {
         return
       }
-      const traceEntry = getSpanFromPerformanceEntry<AllPossibleScopesT>(entry)
+      const traceEntry = getSpanFromPerformanceEntry<AllPossibleScopesT>(
+        entry,
+        deriveScopeFromPerformanceEntry,
+      )
       if (traceEntry !== undefined) {
         traceManager.processSpan(traceEntry)
       }

@@ -289,3 +289,7 @@ export type SelectScopeByKey<
 > = Prettify<
   ScopesT extends { [AnyKey in SelectScopeKeyT]: ScopeValue } ? ScopesT : never
 >
+
+export type DeriveScopeFromPerformanceEntryFn<AllPossibleScopesT> = (
+  entry: PerformanceEntry,
+) => ScopeOnASpan<AllPossibleScopesT> | undefined

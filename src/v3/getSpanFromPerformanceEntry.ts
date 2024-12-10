@@ -7,7 +7,7 @@ import {
   PerformanceEntrySpan,
   ResourceSpan,
 } from './spanTypes'
-import { Timestamp } from './types'
+import { DeriveScopeFromPerformanceEntryFn, Timestamp } from './types'
 
 /**
  * Maps Performance Entry to a Span
@@ -15,6 +15,7 @@ import { Timestamp } from './types'
  */
 export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
   inputEntry: PerformanceEntry,
+  deriveScopeFromPerformanceEntry?: DeriveScopeFromPerformanceEntryFn<AllPossibleScopesT>,
 ):
   | PerformanceEntrySpan<AllPossibleScopesT>
   | ResourceSpan<AllPossibleScopesT>
@@ -32,6 +33,7 @@ export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
       : {}
 
   const type = inputEntry.entryType as NativePerformanceEntryType
+  const scope = deriveScopeFromPerformanceEntry?.(inputEntry)
   let { name } = inputEntry
 
   if (type === 'resource' || type === 'navigation') {
@@ -55,6 +57,7 @@ export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
           query,
           hash,
         },
+        scope,
       }
     }
   } else if (type !== 'mark' && type !== 'measure') {
@@ -80,6 +83,7 @@ export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
     duration: inputEntry.duration,
     // status,
     performanceEntry: inputEntry,
+    scope,
   }
 
   return traceEntry
