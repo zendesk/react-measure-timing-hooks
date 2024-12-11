@@ -78,21 +78,17 @@ describe('TraceManager', () => {
 
   it('tracks trace with minimal requirements', () => {
     const traceManager = new TraceManager<TicketScope>({ reportFn, generateId })
-    const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+    const tracer = traceManager.createTracer({
       name: 'ticket.basic-operation',
       type: 'operation',
       scopes: [],
       requiredToEnd: [{ name: 'end' }],
-    }
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketScope> = {
+    })
+    const traceId = tracer.start({
       scope: {
         ticketId: '1',
       },
-    }
-
-    // start trace
-    const traceId = tracer.start(startConfig)
+    })
     expect(traceId).toBe('trace-id')
 
     // prettier-ignore
@@ -123,18 +119,17 @@ describe('TraceManager', () => {
 
   it('correctly calculates a computed span', () => {
     const traceManager = new TraceManager<TicketScope>({ reportFn, generateId })
-    const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+    const tracer = traceManager.createTracer({
       name: 'ticket.computed-span-operation',
       type: 'operation',
       scopes: [],
       requiredToEnd: [{ name: 'end' }],
-    }
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketScope> = {
+    })
+    const traceId = tracer.start({
       scope: {
         ticketId: '1',
       },
-    }
+    })
 
     const computedSpanName = 'render-1-to-3'
     // Define a computed span
@@ -145,7 +140,6 @@ describe('TraceManager', () => {
     })
 
     // Start trace
-    const traceId = tracer.start(startConfig)
     expect(traceId).toBe('trace-id')
 
     // prettier-ignore
@@ -178,18 +172,17 @@ describe('TraceManager', () => {
 
   it('correctly calculates a computed value', () => {
     const traceManager = new TraceManager<TicketScope>({ reportFn, generateId })
-    const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+    const tracer = traceManager.createTracer({
       name: 'ticket.computed-value-operation',
       type: 'operation',
       scopes: [],
       requiredToEnd: [{ name: 'end' }],
-    }
-    const tracer = traceManager.createTracer(traceDefinition)
-    const startConfig: StartTraceConfig<TicketScope> = {
+    })
+    const traceId = tracer.start({
       scope: {
         ticketId: '1',
       },
-    }
+    })
 
     // Define a computed value
     tracer.defineComputedValue({
@@ -199,7 +192,6 @@ describe('TraceManager', () => {
     })
 
     // Start trace
-    const traceId = tracer.start(startConfig)
     expect(traceId).toBe('trace-id')
 
     // prettier-ignore
@@ -233,11 +225,7 @@ describe('TraceManager', () => {
 
   it('when matchScopes is true for two scopes: tracks trace with scope ticketId: 4 and scope userId: 3', () => {
     type AllScopesT = TicketIdScope & UserIdScope
-    type AllScopeKeys = keyof AllScopesT
-    const traceManager = new TraceManager<AllScopesT>({
-      reportFn,
-      generateId,
-    })
+    const traceManager = new TraceManager<AllScopesT>({ reportFn, generateId })
     const tracer = traceManager.createTracer({
       name: 'ticket.scope-operation',
       type: 'operation',
@@ -245,12 +233,10 @@ describe('TraceManager', () => {
       timeoutDuration: 5_000,
       requiredToEnd: [{ name: 'end', matchScopes: true }],
     })
-
     const scope = {
       ticketId: '4',
       userId: '3',
     }
-    // start trace
     const traceId = tracer.start({
       scope,
     })
@@ -288,23 +274,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
-      }
-
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketScope> = {
+      })
+      const traceId = tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      // start trace
-      const traceId = tracer.start(startConfig)
+      })
       expect(traceId).toBe('trace-id')
 
       // prettier-ignore
@@ -337,23 +318,19 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.debounce-operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [matchSpan.withName('end')],
         debounceOn: [matchSpan.withName((n: string) => n.endsWith('debounce'))],
         debounceDuration: 300,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      // start trace
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -389,22 +366,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.interrupt-on-basic-operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [matchSpan.withName('end')],
         interruptOn: [matchSpan.withName('interrupt')],
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      // start trace
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -438,22 +411,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.interrupt-itself-operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketScope> = {
+      })
+      const traceId = tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      // start trace
-      const traceId = tracer.start(startConfig)
+      })
       expect(traceId).toBe('trace-id')
 
       // prettier-ignore
@@ -464,7 +433,11 @@ describe('TraceManager', () => {
       processSpans(spans, traceManager)
 
       // Start another operation to interrupt the first one
-      const newTraceId = tracer.start(startConfig)
+      const newTraceId = tracer.start({
+        scope: {
+          ticketId: '1',
+        },
+      })
       expect(newTraceId).toBe('trace-id')
       expect(reportFn).toHaveBeenCalled()
 
@@ -494,23 +467,19 @@ describe('TraceManager', () => {
           reportFn,
           generateId,
         })
-        const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+        const tracer = traceManager.createTracer({
           name: 'ticket.timeout-operation',
           type: 'operation',
           scopes: ['ticketId'],
           requiredToEnd: [{ name: 'timed-out-render' }],
           timeoutDuration: 500,
-        }
-        const tracer = traceManager.createTracer(traceDefinition)
-        const startConfig: StartTraceConfig<TicketScope> = {
+        })
+        const traceId = tracer.start({
           startTime: { now: 0, epoch: 0 },
           scope: {
             ticketId: '1',
           },
-        }
-
-        // start trace
-        const traceId = tracer.start(startConfig)
+        })
         expect(traceId).toBe('trace-id')
 
         // prettier-ignore
@@ -550,23 +519,19 @@ describe('TraceManager', () => {
           generateId,
         })
         const CUSTOM_TIMEOUT_DURATION = 500
-        const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+        const tracer = traceManager.createTracer({
           name: 'ticket.timeout-operation',
           type: 'operation',
           scopes: [],
           requiredToEnd: [{ name: 'timed-out-render' }],
           timeoutDuration: CUSTOM_TIMEOUT_DURATION,
-        }
-        const tracer = traceManager.createTracer(traceDefinition)
-        const startConfig: StartTraceConfig<TicketScope> = {
+        })
+        const traceId = tracer.start({
           startTime: { now: 0, epoch: 0 },
           scope: {
             ticketId: '1',
           },
-        }
-
-        // start trace
-        const traceId = tracer.start(startConfig)
+        })
         expect(traceId).toBe('trace-id')
 
         // prettier-ignore
@@ -602,24 +567,20 @@ describe('TraceManager', () => {
           generateId,
         })
         const CUSTOM_TIMEOUT_DURATION = 500
-        const traceDefinition: TraceDefinition<TicketScope, TicketScope> = {
+        const tracer = traceManager.createTracer({
           name: 'ticket.timeout-operation',
           type: 'operation',
           scopes: [],
           requiredToEnd: [{ name: 'end' }],
           debounceOn: [{ name: 'debounce' }],
           timeoutDuration: CUSTOM_TIMEOUT_DURATION,
-        }
-        const tracer = traceManager.createTracer(traceDefinition)
-        const startConfig: StartTraceConfig<TicketScope> = {
+        })
+        const traceId = tracer.start({
           startTime: { now: 0, epoch: 0 },
           scope: {
             ticketId: '1',
           },
-        }
-
-        // start trace
-        const traceId = tracer.start(startConfig)
+        })
         expect(traceId).toBe('trace-id')
 
         // prettier-ignore
@@ -658,20 +619,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -705,7 +664,7 @@ describe('TraceManager', () => {
         generateId,
       })
       const interactiveTimeout = 5_000
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
@@ -714,15 +673,12 @@ describe('TraceManager', () => {
           ...cpuIdleProcessorOptions,
           timeout: interactiveTimeout,
         },
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -755,23 +711,19 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.interrupt-during-long-task-operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [matchSpan.withName('end')],
         interruptOn: [matchSpan.withName('interrupt')],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      // start trace
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -805,7 +757,7 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.debounce-then-interrupted-operation',
         type: 'operation',
         scopes: [],
@@ -813,16 +765,12 @@ describe('TraceManager', () => {
         debounceOn: [{ name: 'debounce' }],
         captureInteractive: cpuIdleProcessorOptions,
         debounceDuration: 300,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      // start trace
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -856,7 +804,7 @@ describe('TraceManager', () => {
         generateId,
       })
       const CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT = 300
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.debounce-then-interrupted-operation',
         type: 'operation',
         scopes: [],
@@ -867,14 +815,12 @@ describe('TraceManager', () => {
           timeout: CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT,
         },
         debounceDuration: 100,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
-        scope: {},
-      }
-
-      // start trace
-      tracer.start(startConfig)
+      })
+      tracer.start({
+        scope: {
+          ticketId: '1',
+        },
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -912,7 +858,7 @@ describe('TraceManager', () => {
       const getQuietWindowDuration = jest
         .fn()
         .mockReturnValue(CUSTOM_QUIET_WINDOW_DURATION)
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
@@ -922,15 +868,12 @@ describe('TraceManager', () => {
           timeout: 100,
           getQuietWindowDuration,
         },
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -966,10 +909,9 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      // const CUSTOM_QUIET_WINDOW_DURATION = 2_000 // 2 seconds
       const TRACE_DURATION = 1_000
 
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
@@ -979,15 +921,12 @@ describe('TraceManager', () => {
           timeout: 1_000,
           getQuietWindowDuration: createQuietWindowDurationCalculator(),
         },
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1021,21 +960,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1070,19 +1006,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
-        scope: {},
-      }
-
-      tracer.start(startConfig)
+      })
+      tracer.start({
+        scope: {
+          ticketId: '1',
+        },
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1117,21 +1052,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1168,21 +1100,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1220,21 +1149,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1269,21 +1195,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1324,21 +1247,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1375,21 +1295,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1428,21 +1345,18 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-      const traceDefinition: TraceDefinition<TicketIdScope, TicketIdScope> = {
+      const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
         requiredToEnd: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
-      }
-      const tracer = traceManager.createTracer(traceDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      })
+      tracer.start({
         scope: {
           ticketId: '1',
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -1482,19 +1396,14 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-
       const fixtureEntries = shouldCompleteAndHaveInteractiveTime
-
       const scope = fixtureEntries.find((entry) => 'scope' in entry.span)!.span
         .scope!
-
       const tracer = traceManager.createTracer(ticketActivationDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      tracer.start({
         scope,
         startTime: fixtureEntries[0]!.span.startTime,
-      }
-
-      tracer.start(startConfig)
+      })
 
       for (const entry of fixtureEntries) {
         traceManager.processSpan(entry.span)
@@ -1568,13 +1477,11 @@ describe('TraceManager', () => {
         reportFn,
         generateId,
       })
-
       const fixtureEntries = shouldNotEndWithInteractiveTimeout
-
       const scope = fixtureEntries.find((entry) => 'scope' in entry.span)!.span
         .scope!
       const tracer = traceManager.createTracer(ticketActivationDefinition)
-      const startConfig: StartTraceConfig<TicketIdScope> = {
+      tracer.start({
         scope,
         startTime: {
           ...fixtureEntries[0]!.span.startTime,
@@ -1582,9 +1489,7 @@ describe('TraceManager', () => {
             fixtureEntries[0]!.span.startTime.now -
             fixtureEntries[0]!.annotation.operationRelativeStartTime,
         },
-      }
-
-      tracer.start(startConfig)
+      })
 
       for (const entry of fixtureEntries) {
         traceManager.processSpan(entry.span)
