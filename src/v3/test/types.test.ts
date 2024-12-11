@@ -183,7 +183,7 @@ describe.skip('type tests', () => {
     })
   })
 
-  it('does not allow to include bad scopes', () => {
+  it('does not allow to include invalid scope value', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.scope-operation',
       type: 'operation',
@@ -191,10 +191,25 @@ describe.skip('type tests', () => {
       timeoutDuration: 5_000,
       requiredToEnd: [{ name: 'end', matchScopes: true }],
     })
-    // start trace
     const traceId = tracer.start({
       scope: {
-        ticketId: '4',
+        // @ts-expect-error number should not be assignable to string
+        ticketId: 4,
+      },
+    })
+  })
+
+  it('does not allow to include invalid scope key', () => {
+    const tracer = traceManager.createTracer({
+      name: 'ticket.scope-operation',
+      type: 'operation',
+      scopes: ['ticketId'],
+      timeoutDuration: 5_000,
+      requiredToEnd: [{ name: 'end', matchScopes: true }],
+    })
+    const traceId = tracer.start({
+      scope: {
+        // @ts-expect-error invalid scope key
         userId: '3',
       },
     })

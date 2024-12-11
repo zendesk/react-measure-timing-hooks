@@ -11,11 +11,13 @@ import type {
   ComputedValueDefinition,
   ReportFn,
   ScopeValue,
+  SelectScopeByKey,
   SpanDeduplicationStrategy,
   TraceDefinition,
   TraceManagerConfig,
   Tracer,
 } from './types'
+import type { KeysOfUnion } from './typeUtils'
 
 /**
  * Class representing the centralized trace performance manager.
@@ -36,16 +38,21 @@ export class TraceManager<
     reportFn,
     generateId,
     performanceEntryDeduplicationStrategy,
-  }: TraceManagerConfig<AllPossibleScopesT, AllPossibleScopesT>) {
+  }: TraceManagerConfig<AllPossibleScopesT>) {
     this.reportFn = reportFn
     this.generateId = generateId
     this.performanceEntryDeduplicationStrategy =
       performanceEntryDeduplicationStrategy
   }
 
-  createTracer<TracerScopeT extends AllPossibleScopesT>(
-    traceDefinition: TraceDefinition<TracerScopeT, AllPossibleScopesT>,
-  ): Tracer<TracerScopeT, AllPossibleScopesT> {
+  createTracer<const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>>(
+    traceDefinition: TraceDefinition<TracerScopeKeysT, AllPossibleScopesT>,
+  ): Tracer<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+    AllPossibleScopesT
+  > {
+    type TracerScopeT = SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+
     const computedSpanDefinitions: ComputedSpanDefinition<
       TracerScopeT,
       AllPossibleScopesT
@@ -80,7 +87,7 @@ export class TraceManager<
     >(traceDefinition.suppressErrorStatusPropagationOn)
 
     const completeTraceDefinition: CompleteTraceDefinition<
-      TracerScopeT,
+      TracerScopeKeysT,
       AllPossibleScopesT
     > = {
       ...traceDefinition,
@@ -122,10 +129,16 @@ export class TraceManager<
     return this.activeTrace?.processSpan(span)
   }
 
-  private startTrace<TracerScopeT extends AllPossibleScopesT>(
-    definition: CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>,
-    input: StartTraceConfig<TracerScopeT>,
+  private startTrace<
+    const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  >(
+    definition: CompleteTraceDefinition<TracerScopeKeysT, AllPossibleScopesT>,
+    input: StartTraceConfig<
+      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+    >,
   ): string {
+    type TracerScopeT = SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+
     if (this.activeTrace) {
       this.activeTrace.interrupt('another-trace-started')
       this.activeTrace = undefined
@@ -142,7 +155,7 @@ export class TraceManager<
       this.reportFn(traceRecording)
     }
 
-    const activeTrace = new ActiveTrace(
+    const activeTrace = new ActiveTrace<TracerScopeT, AllPossibleScopesT>(
       definition,
       {
         ...input,

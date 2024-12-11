@@ -46,14 +46,14 @@ export type ReportFn<TracerScopeT, AllPossibleScopesT> = (
   trace: TraceRecording<TracerScopeT, AllPossibleScopesT>,
 ) => void
 
-export interface TraceManagerConfig<TracerScopeT, AllPossibleScopesT> {
-  reportFn: ReportFn<TracerScopeT, AllPossibleScopesT>
-  // NEED CLARIFIATION TODO: what are the embeddedSpanTypes: SpanType[] that would actually goes to configuration of the "convertRecordingToRum" function
-  // which would be called inside of reportFn
+export interface TraceManagerConfig<AllPossibleScopesT> {
+  reportFn: ReportFn<AllPossibleScopesT, AllPossibleScopesT>
+
   generateId: () => string
 
   /**
    * The span types that should be omitted from the trace report.
+   * TODO implement
    */
   spanTypesOmittedFromReport?: SpanType[]
 
@@ -103,7 +103,10 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
  * The "input" version will be transformed into the standardized version internally,
  * converting all matchers into functions.
  */
-export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
+export interface TraceDefinition<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> {
   /**
    * The name of the trace.
    */
@@ -111,7 +114,7 @@ export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
 
   type?: TraceType
 
-  scopes: readonly KeysOfUnion<TracerScopeT>[]
+  scopes: readonly TracerScopeKeysT[]
 
   /**
    * This may include renders spans of components that have to be rendered with all data
@@ -123,13 +126,22 @@ export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
    */
   // TODO: should we rename `requiredToEnd` to `requiredToComplete` for consistency?
   requiredToEnd: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeT>, AllPossibleScopesT>
+    SpanMatch<
+      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+      AllPossibleScopesT
+    >
   >
   debounceOn?: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeT>, AllPossibleScopesT>
+    SpanMatch<
+      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+      AllPossibleScopesT
+    >
   >
   interruptOn?: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeT>, AllPossibleScopesT>
+    SpanMatch<
+      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+      AllPossibleScopesT
+    >
   >
   debounceDuration?: number
   timeoutDuration?: number
@@ -146,7 +158,7 @@ export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
    * its error status will not affect the overall trace status.
    */
   suppressErrorStatusPropagationOn?: readonly SpanMatch<
-    NoInfer<TracerScopeT>,
+    SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
     AllPossibleScopesT
   >[]
 }
@@ -155,26 +167,40 @@ export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
  * Trace Definition with added fields and converting all matchers into functions.
  * Used internally by the TraceManager.
  */
-export interface CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
-  extends TraceDefinition<TracerScopeT, AllPossibleScopesT> {
+export interface CompleteTraceDefinition<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> extends TraceDefinition<TracerScopeKeysT, AllPossibleScopesT> {
   computedSpanDefinitions: readonly ComputedSpanDefinition<
-    TracerScopeT,
+    SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
     AllPossibleScopesT
   >[]
   computedValueDefinitions: readonly ComputedValueDefinition<
-    TracerScopeT,
+    SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
     AllPossibleScopesT,
-    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[]
+    SpanMatcherFn<
+      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+      AllPossibleScopesT
+    >[]
   >[]
 
   requiredToEnd: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+    SpanMatcherFn<
+      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+      AllPossibleScopesT
+    >
   >
   debounceOn?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+    SpanMatcherFn<
+      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+      AllPossibleScopesT
+    >
   >
   interruptOn?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+    SpanMatcherFn<
+      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+      AllPossibleScopesT
+    >
   >
 
   /**
@@ -182,7 +208,7 @@ export interface CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
    * If a span matches any of these matchers, its error status will not affect the trace status.
    */
   suppressErrorStatusPropagationOn?: readonly SpanMatcherFn<
-    TracerScopeT,
+    SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
     AllPossibleScopesT
   >[]
 }
@@ -284,7 +310,7 @@ export interface ComputedValueDefinitionInput<
 }
 
 export type SelectScopeByKey<
-  SelectScopeKeyT extends PropertyKey,
+  SelectScopeKeyT extends keyof ScopesT,
   ScopesT,
 > = Prettify<
   ScopesT extends { [AnyKey in SelectScopeKeyT]: ScopeValue } ? ScopesT : never
