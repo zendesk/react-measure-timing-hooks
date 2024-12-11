@@ -1,9 +1,12 @@
 import { Span } from '../spanTypes'
 import { TraceManager } from '../traceManager'
+import { ScopeValue } from '../types'
 
-function processSpans<ScopeT>(
-  spans: Span<ScopeT>[],
-  traceManager: TraceManager<ScopeT>,
+function processSpans<
+  AllPossibleScopeT extends { [K in keyof AllPossibleScopeT]: ScopeValue },
+>(
+  spans: Span<AllPossibleScopeT>[],
+  traceManager: TraceManager<AllPossibleScopeT>,
 ) {
   spans.forEach((span, i) => {
     traceManager.processSpan(span)

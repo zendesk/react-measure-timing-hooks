@@ -18,7 +18,7 @@ export const ticketActivationDefinition: TraceDefinition<
 > = {
   name: 'ticket.activation',
   type: 'operation',
-  requiredScopeKeys: ['ticketId'],
+  scopes: ['ticketId'],
   timeoutDuration: 60_000,
   captureInteractive: true,
   requiredToEnd: [

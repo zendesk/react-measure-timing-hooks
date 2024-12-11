@@ -4,12 +4,12 @@ import { DEFAULT_TIMEOUT_DURATION } from './constants'
 import { ensureTimestamp } from './ensureTimestamp'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
-import type { Span, StartTraceConfig } from './spanTypes'
+import type { Span } from './spanTypes'
 import {
   type TicketIdScope,
   ticketActivationDefinition,
   UserIdScope,
-} from './test/fixtures'
+} from './test/fixtures/ticket.activation'
 import {
   Check,
   getSpansFromTimeline,
@@ -17,12 +17,11 @@ import {
   Render,
 } from './test/makeTimeline'
 import processSpans from './test/processSpans'
-import { shouldCompleteAndHaveInteractiveTime } from './test/shouldCompleteAndHaveInteractiveTime'
-import { shouldNotEndWithInteractiveTimeout } from './test/shouldNotEndWithInteractiveTimeout'
-// import { shouldNotEndWithInterruption } from './test/shouldNotEndWithInterruption'
+import { shouldCompleteAndHaveInteractiveTime } from './test/fixtures/shouldCompleteAndHaveInteractiveTime'
+import { shouldNotEndWithInteractiveTimeout } from './test/fixtures/shouldNotEndWithInteractiveTimeout'
+// import { shouldNotEndWithInterruption } from './test/fixtures/shouldNotEndWithInterruption'
 import { TraceManager } from './traceManager'
-import type { ReportFn, TraceDefinition } from './types'
-import { Ticket } from '../stories/mockComponentsv3/mockTickets'
+import type { ReportFn } from './types'
 
 function processCheckSpan(
   traceManager: TraceManager<TicketIdScope>,
@@ -1397,8 +1396,12 @@ describe('TraceManager', () => {
         generateId,
       })
       const fixtureEntries = shouldCompleteAndHaveInteractiveTime
-      const scope = fixtureEntries.find((entry) => 'scope' in entry.span)!.span
-        .scope!
+
+      const scopeEntry = fixtureEntries.find((entry) => 'scope' in entry.span)!
+      const scope = {
+        ticketId: scopeEntry.span.scope!.ticketId!,
+      }
+
       const tracer = traceManager.createTracer(ticketActivationDefinition)
       tracer.start({
         scope,
@@ -1478,8 +1481,10 @@ describe('TraceManager', () => {
         generateId,
       })
       const fixtureEntries = shouldNotEndWithInteractiveTimeout
-      const scope = fixtureEntries.find((entry) => 'scope' in entry.span)!.span
-        .scope!
+      const scopeEntry = fixtureEntries.find((entry) => 'scope' in entry.span)!
+      const scope = {
+        ticketId: scopeEntry.span.scope!.ticketId!,
+      }
       const tracer = traceManager.createTracer(ticketActivationDefinition)
       tracer.start({
         scope,
