@@ -1,4 +1,4 @@
-import type { TraceDefinition } from '../types'
+import type { TraceDefinition } from '../../types'
 
 export interface TicketIdScope {
   ticketId: string
