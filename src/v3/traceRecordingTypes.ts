@@ -2,11 +2,13 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes } from './spanTypes'
 import type {
+  SelectScopeByKey,
   Timestamp,
   TraceInterruptionReason,
   TraceStatus,
   TraceType,
 } from './types'
+import type { KeysOfUnion } from './typeUtils'
 
 export interface ComputedSpan {
   // time relative to beginning of the trace
@@ -87,7 +89,11 @@ export interface TraceRecordingBase<TracerScopeT> {
   }
 }
 
-export interface TraceRecording<TracerScopeT, AllPossibleScopesT>
-  extends TraceRecordingBase<TracerScopeT> {
+export interface TraceRecording<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> extends TraceRecordingBase<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  > {
   entries: SpanAndAnnotation<AllPossibleScopesT>[]
 }

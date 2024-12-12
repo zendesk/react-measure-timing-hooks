@@ -1,7 +1,8 @@
 import type { ErrorInfo } from 'react'
 import type { BeaconConfig } from './hooksTypes'
 import type { TraceRecording } from './traceRecordingTypes'
-import type { ScopeOnASpan, Timestamp } from './types'
+import type { ScopeOnASpan, SelectScopeByKey, Timestamp } from './types'
+import type { KeysOfUnion } from './typeUtils'
 
 export type NativePerformanceEntryType =
   | 'element'
@@ -36,9 +37,10 @@ export interface StartTraceConfig<TracerScopeT> {
   attributes?: Attributes
 }
 
-export type OnEndFn<TracerScopeT, AllPossibleScopesT> = (
-  trace: TraceRecording<TracerScopeT, AllPossibleScopesT>,
-) => void
+export type OnEndFn<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> = (trace: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>) => void
 
 export interface ActiveTraceContext<TracerScopeT>
   extends StartTraceConfig<TracerScopeT> {
@@ -46,9 +48,13 @@ export interface ActiveTraceContext<TracerScopeT>
   startTime: Timestamp
 }
 
-export interface ActiveTraceConfig<TracerScopeT, AllPossibleScopesT>
-  extends ActiveTraceContext<TracerScopeT> {
-  onEnd: OnEndFn<TracerScopeT, AllPossibleScopesT>
+export interface ActiveTraceConfig<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> extends ActiveTraceContext<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  > {
+  onEnd: OnEndFn<TracerScopeKeysT, AllPossibleScopesT>
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style

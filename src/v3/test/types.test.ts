@@ -1,5 +1,6 @@
 /* eslint-disable jest/expect-expect */
 import { generateUseBeacon } from '../hooks'
+import * as match from '../matchSpan'
 import { TraceManager } from '../traceManager'
 
 interface ExampleTicketScope {
@@ -19,11 +20,36 @@ type ExampleAllPossibleScopes =
   | ExampleUserScope
   | ExampleCustomFieldScope
 
+const mockSpanWithoutScope = {
+  name: 'some-span',
+  duration: 0,
+  type: 'mark',
+  attributes: {},
+  startTime: { now: 0, epoch: 0 },
+} as const
+
 // eslint-disable-next-line jest/no-disabled-tests
 describe.skip('type tests', () => {
   const traceManager = new TraceManager<ExampleAllPossibleScopes>({
     generateId: () => 'id',
-    reportFn: () => {},
+    reportFn: (trace) => {
+      if ('ticketId' in trace.scope) {
+        // valid
+        expect(trace.scope.ticketId).toBeDefined()
+        // @ts-expect-error invalid scope
+        expect(trace.scope.userId).toBeDefined()
+      }
+      if ('userId' in trace.scope) {
+        // valid
+        expect(trace.scope.userId).toBeDefined()
+        // @ts-expect-error invalid scope
+        expect(trace.scope.ticketId).toBeDefined()
+      }
+      // valid
+      if ('customFieldId' in trace.scope) {
+        expect(trace.scope.customFieldId).toBeDefined()
+      }
+    },
   })
   const useBeacon = generateUseBeacon<ExampleAllPossibleScopes>(traceManager)
 
@@ -67,6 +93,21 @@ describe.skip('type tests', () => {
       name: 'ticket.activation',
       scopes: ['ticketId'],
       requiredToEnd: [{ matchScopes: ['ticketId'] }],
+    })
+
+    const ticketActivationTracer2 = traceManager.createTracer({
+      name: 'ticket.activation',
+      scopes: ['ticketId'],
+      requiredToEnd: [
+        // match.withAllConditions(
+        //   match.withName((name, scopes) => name === `${scopes.ticketId}.end`),
+        //   // match.withName('end'),
+        //   // match.withMatchingScopes(['ticketId']),
+        // ),
+        // match.withName((name, scopes) => name === `${scopes.ticketId}.end`),
+        // match.withName('customFieldId'),
+        match.withMatchingScopes(['customFieldId']),
+      ],
     })
 
     // valid definition
@@ -134,14 +175,6 @@ describe.skip('type tests', () => {
       // @ts-expect-error invalid scope
       scope: { userId: '123' },
     })
-
-    const mockSpanWithoutScope = {
-      name: 'some-span',
-      duration: 0,
-      type: 'mark',
-      attributes: {},
-      startTime: { now: 0, epoch: 0 },
-    } as const
 
     // valid - excess scope
     traceManager.processSpan({

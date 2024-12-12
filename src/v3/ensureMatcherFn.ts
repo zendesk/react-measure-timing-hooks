@@ -1,19 +1,21 @@
 import { type SpanMatch, type SpanMatcherFn, fromDefinition } from './matchSpan'
-import type { ArrayWithAtLeastOneElement } from './typeUtils'
+import type { ArrayWithAtLeastOneElement, KeysOfUnion } from './typeUtils'
 
 export function ensureMatcherFn<
-  TracerScopeT extends AllPossibleScopesT,
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  MatcherInputT extends SpanMatch<TracerScopeT, AllPossibleScopesT> = SpanMatch<
-    TracerScopeT,
+  MatcherInputT extends SpanMatch<
+    TracerScopeKeysT,
     AllPossibleScopesT
-  >,
+  > = SpanMatch<TracerScopeKeysT, AllPossibleScopesT>,
 >(
   matcherFnOrDefinition: MatcherInputT,
-): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT> {
   return typeof matcherFnOrDefinition === 'function'
     ? matcherFnOrDefinition
-    : fromDefinition<TracerScopeT, AllPossibleScopesT>(matcherFnOrDefinition)
+    : fromDefinition<TracerScopeKeysT, AllPossibleScopesT>(
+        matcherFnOrDefinition,
+      )
 }
 
 function arrayHasAtLeastOneElement<T>(
@@ -23,15 +25,22 @@ function arrayHasAtLeastOneElement<T>(
 }
 
 export function convertMatchersToFns<
-  TracerScopeT extends AllPossibleScopesT,
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
 >(
-  matchers: readonly SpanMatch<TracerScopeT, AllPossibleScopesT>[] | undefined,
+  matchers:
+    | readonly SpanMatch<TracerScopeKeysT, AllPossibleScopesT>[]
+    | undefined,
 ):
-  | ArrayWithAtLeastOneElement<SpanMatcherFn<TracerScopeT, AllPossibleScopesT>>
+  | ArrayWithAtLeastOneElement<
+      SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
+    >
   | undefined {
-  const mapped: SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[] | undefined =
-    matchers?.map((m) => ensureMatcherFn<TracerScopeT, AllPossibleScopesT>(m))
+  const mapped:
+    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>[]
+    | undefined = matchers?.map((m) =>
+    ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT>(m),
+  )
   if (mapped && arrayHasAtLeastOneElement(mapped)) {
     return mapped
   }

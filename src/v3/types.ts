@@ -42,12 +42,25 @@ export type TraceInterruptionReason =
   | 'matched-on-interrupt'
   | 'invalid-state-transition'
 
-export type ReportFn<TracerScopeT, AllPossibleScopesT> = (
-  trace: TraceRecording<TracerScopeT, AllPossibleScopesT>,
-) => void
+export type SingleTraceReportFn<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> = (trace: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>) => void
+
+export type ReportFn<
+  ForEachPossibleScopeT,
+  AllPossibleScopesT extends ForEachPossibleScopeT = ForEachPossibleScopeT,
+> = UnionToIntersection<
+  ForEachPossibleScopeT extends ForEachPossibleScopeT
+    ? SingleTraceReportFn<
+        KeysOfUnion<ForEachPossibleScopeT> & KeysOfUnion<AllPossibleScopesT>,
+        AllPossibleScopesT
+      >
+    : never
+>
 
 export interface TraceManagerConfig<AllPossibleScopesT> {
-  reportFn: ReportFn<AllPossibleScopesT, AllPossibleScopesT>
+  reportFn: ReportFn<AllPossibleScopesT>
 
   generateId: () => string
 
@@ -61,30 +74,39 @@ export interface TraceManagerConfig<AllPossibleScopesT> {
    * Strategy for deduplicating performance entries.
    * If not provided, no deduplication will be performed.
    */
-  performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
+  performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<
+    Partial<AllPossibleScopesT>
+  >
 }
 
-export interface Tracer<TracerScopeT, AllPossibleScopesT> {
+export interface Tracer<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> {
   /**
    * @returns The ID of the trace.
    */
-  start: (input: StartTraceConfig<TracerScopeT>) => string
+  start: (
+    input: StartTraceConfig<
+      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+    >,
+  ) => string
 
   defineComputedSpan: (
     computedSpanDefinition: ComputedSpanDefinitionInput<
-      TracerScopeT,
+      TracerScopeKeysT,
       AllPossibleScopesT
     >,
   ) => void
 
   defineComputedValue: <
     MatchersT extends (
-      | SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
-      | SpanMatchDefinition<TracerScopeT, AllPossibleScopesT>
+      | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
+      | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
     )[],
   >(
     computedValueDefinition: ComputedValueDefinitionInput<
-      TracerScopeT,
+      TracerScopeKeysT,
       AllPossibleScopesT,
       MatchersT
     >,
@@ -126,22 +148,13 @@ export interface TraceDefinition<
    */
   // TODO: should we rename `requiredToEnd` to `requiredToComplete` for consistency?
   requiredToEnd: ArrayWithAtLeastOneElement<
-    SpanMatch<
-      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
-      AllPossibleScopesT
-    >
+    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >
   debounceOn?: ArrayWithAtLeastOneElement<
-    SpanMatch<
-      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
-      AllPossibleScopesT
-    >
+    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >
   interruptOn?: ArrayWithAtLeastOneElement<
-    SpanMatch<
-      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
-      AllPossibleScopesT
-    >
+    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >
   debounceDuration?: number
   timeoutDuration?: number
@@ -158,7 +171,7 @@ export interface TraceDefinition<
    * its error status will not affect the overall trace status.
    */
   suppressErrorStatusPropagationOn?: readonly SpanMatch<
-    SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+    NoInfer<TracerScopeKeysT>,
     AllPossibleScopesT
   >[]
 }
@@ -172,35 +185,23 @@ export interface CompleteTraceDefinition<
   AllPossibleScopesT,
 > extends TraceDefinition<TracerScopeKeysT, AllPossibleScopesT> {
   computedSpanDefinitions: readonly ComputedSpanDefinition<
-    SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+    NoInfer<TracerScopeKeysT>,
     AllPossibleScopesT
   >[]
   computedValueDefinitions: readonly ComputedValueDefinition<
-    SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+    NoInfer<TracerScopeKeysT>,
     AllPossibleScopesT,
-    SpanMatcherFn<
-      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
-      AllPossibleScopesT
-    >[]
+    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>[]
   >[]
 
   requiredToEnd: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<
-      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
-      AllPossibleScopesT
-    >
+    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >
   debounceOn?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<
-      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
-      AllPossibleScopesT
-    >
+    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >
   interruptOn?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<
-      SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
-      AllPossibleScopesT
-    >
+    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >
 
   /**
@@ -208,7 +209,7 @@ export interface CompleteTraceDefinition<
    * If a span matches any of these matchers, its error status will not affect the trace status.
    */
   suppressErrorStatusPropagationOn?: readonly SpanMatcherFn<
-    SelectScopeByKey<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>,
+    NoInfer<TracerScopeKeysT>,
     AllPossibleScopesT
   >[]
 }
@@ -251,17 +252,22 @@ export interface SpanDeduplicationStrategy<AllPossibleScopesT> {
 /**
  * Definition of custom spans
  */
-export interface ComputedSpanDefinition<TracerScopeT, AllPossibleScopesT> {
+export interface ComputedSpanDefinition<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> {
   name: string
   /**
    * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
    */
-  startSpan: SpanMatcherFn<TracerScopeT, AllPossibleScopesT> | 'operation-start'
+  startSpan:
+    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
+    | 'operation-start'
   /**
    * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
    */
   endSpan:
-    | SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
     | 'operation-end'
     | 'interactive'
 }
@@ -270,9 +276,12 @@ export interface ComputedSpanDefinition<TracerScopeT, AllPossibleScopesT> {
  * Definition of custom values
  */
 export interface ComputedValueDefinition<
-  TracerScopeT,
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  MatchersT extends SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[],
+  MatchersT extends SpanMatcherFn<
+    TracerScopeKeysT,
+    AllPossibleScopesT
+  >[] = SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>[],
 > {
   name: string
   matches: [...MatchersT]
@@ -285,11 +294,14 @@ export interface ComputedValueDefinition<
 /**
  * Definition of custom spans input
  */
-export interface ComputedSpanDefinitionInput<TracerScopeT, AllPossibleScopesT> {
+export interface ComputedSpanDefinitionInput<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> {
   name: string
-  startSpan: SpanMatch<TracerScopeT, AllPossibleScopesT> | 'operation-start'
+  startSpan: SpanMatch<TracerScopeKeysT, AllPossibleScopesT> | 'operation-start'
   endSpan:
-    | SpanMatch<TracerScopeT, AllPossibleScopesT>
+    | SpanMatch<TracerScopeKeysT, AllPossibleScopesT>
     | 'operation-end'
     | 'interactive'
 }
@@ -298,9 +310,9 @@ export interface ComputedSpanDefinitionInput<TracerScopeT, AllPossibleScopesT> {
  * Definition of custom values input
  */
 export interface ComputedValueDefinitionInput<
-  TracerScopeT,
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  MatchersT extends SpanMatch<TracerScopeT, AllPossibleScopesT>[],
+  MatchersT extends SpanMatch<TracerScopeKeysT, AllPossibleScopesT>[],
 > {
   name: string
   matches: [...MatchersT]
