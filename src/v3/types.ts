@@ -321,6 +321,18 @@ export interface ComputedValueDefinitionInput<
   ) => number | string | boolean
 }
 
+// export type SelectScopeByKey<
+//   SelectScopeKeyT extends keyof ScopesT,
+//   ScopesT,
+// > = Prettify<
+//   ScopesT extends (
+//     SelectScopeKeyT extends SelectScopeKeyT
+//       ? { [AnyKey in SelectScopeKeyT]: ScopeValue }
+//       : never
+//   )
+//     ? ScopesT
+//     : never
+// >
 export type SelectScopeByKey<
   SelectScopeKeyT extends keyof ScopesT,
   ScopesT,

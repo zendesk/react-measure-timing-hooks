@@ -28,14 +28,15 @@ export interface Context<
 /**
  * Function type for matching performance entries.
  */
-export type SpanMatcherFn<
+export interface SpanMatcherFn<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> = ((
-  spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
-  context: Context<TracerScopeKeysT, AllPossibleScopesT>,
-) => boolean) &
-  SpanMatcherTags
+> extends SpanMatcherTags {
+  (
+    spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+    context: Context<TracerScopeKeysT, AllPossibleScopesT>,
+  ): boolean
+}
 
 type NameMatcher<TracerScopeT> =
   | string
@@ -132,11 +133,14 @@ export function withAttributes<
  * A list of scope keys to match against the span.
  */
 export function withMatchingScopes<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
+  const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  const AllPossibleScopesT,
 >(
-  keys: NoInfer<readonly TracerScopeKeysT[]> | true = true,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT> {
+  keys: readonly NoInfer<TracerScopeKeysT>[] | true = true,
+): SpanMatcherFn<
+  TracerScopeKeysT & KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT
+> {
   return ({ span }, { input: { scope }, definition: { scopes } }) => {
     if (!span.scope) return false
     const spanScope = span.scope as AllPossibleScopesT & object

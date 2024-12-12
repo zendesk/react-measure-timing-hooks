@@ -11,14 +11,46 @@ interface ExampleUserScope {
   userId: string
 }
 
+interface ExampleTicketEventScope {
+  ticketId: string
+  eventId: string
+}
+
 interface ExampleCustomFieldScope {
   customFieldId: string
+}
+
+interface ExampleScopeWithMultipleKeys {
+  customId: string
+  customOtherId: string
+}
+
+interface TicketFieldScope {
+  ticketId: string
+  ticketFieldType: 'dropdown'
+}
+interface TicketAppScope {
+  ticketId: string
+  appId: string
 }
 
 type ExampleAllPossibleScopes =
   | ExampleTicketScope
   | ExampleUserScope
   | ExampleCustomFieldScope
+  | ExampleScopeWithMultipleKeys
+  | ExampleTicketEventScope
+
+// TODO:
+// // Helper type to ensure we get a tuple instead of an array type
+// type ToTuple<T extends any[]> = [...T];
+
+// // Main type that transforms union of objects to union of tuples of keys
+// type ObjectKeysToTuple<T> = T extends object
+//   ? ToTuple<keyof T extends infer K ? K extends PropertyKey ? [K] : never : never>
+//   : never;
+
+// type X = ObjectKeysToTuple<ExampleAllPossibleScopes> // ["ticketId"] | ["userId"] | ["customFieldId"] | ["customId", "customOtherId"] | ["ticketId", "eventId"]
 
 const mockSpanWithoutScope = {
   name: 'some-span',
@@ -92,21 +124,24 @@ describe.skip('type tests', () => {
     const ticketActivationTracer = traceManager.createTracer({
       name: 'ticket.activation',
       scopes: ['ticketId'],
+      // scope: 'global',
       requiredToEnd: [{ matchScopes: ['ticketId'] }],
     })
 
     const ticketActivationTracer2 = traceManager.createTracer({
       name: 'ticket.activation',
-      scopes: ['ticketId'],
+      scopes: ['customId', 'customOtherId'],
       requiredToEnd: [
-        // match.withAllConditions(
-        //   match.withName((name, scopes) => name === `${scopes.ticketId}.end`),
-        //   // match.withName('end'),
-        //   // match.withMatchingScopes(['ticketId']),
-        // ),
-        // match.withName((name, scopes) => name === `${scopes.ticketId}.end`),
-        // match.withName('customFieldId'),
-        match.withMatchingScopes(['customFieldId']),
+        match.withAllConditions(
+          match.withName((name, scopes) => name === `${scopes.customId}.end`),
+          match.withName('end'),
+          match.withMatchingScopes(['customId']),
+        ),
+        match.withName((name, scopes) => name === `${scopes.customId}.end`),
+        match.withName('customFieldId'),
+        match.withMatchingScopes(['customId']),
+        // @ts-expect-error invalid scope
+        match.withMatchingScopes(['sticketId']),
       ],
     })
 
@@ -228,6 +263,56 @@ describe.skip('type tests', () => {
       scope: {
         // @ts-expect-error number should not be assignable to string
         ticketId: 4,
+      },
+    })
+  })
+
+  it('mixed scopes', () => {
+    const tracer = traceManager.createTracer({
+      name: 'ticket.scope-operation',
+      type: 'operation',
+      scopes: ['ticketId', 'customFieldId'],
+      timeoutDuration: 5_000,
+      requiredToEnd: [{ name: 'end', matchScopes: true }],
+    })
+    const traceId = tracer.start({
+      scope: {
+        customFieldId: '3',
+        ticketId: '4',
+      },
+    })
+  })
+
+  it('redaction example', () => {
+    const tracer = traceManager.createTracer({
+      name: 'ticket.event.redacted',
+      type: 'operation',
+      scopes: ['ticketId', 'eventId'],
+      timeoutDuration: 5_000,
+      requiredToEnd: [{ name: 'OmniLogEvent', matchScopes: true }],
+      debounceOn: [{ name: 'OmniLog', matchScopes: ['ticketId'] }],
+    })
+    const traceId = tracer.start({
+      scope: {
+        ticketId: '4',
+        eventId: '3',
+      },
+    })
+  })
+
+  it('redaction invalid example', () => {
+    const tracer = traceManager.createTracer({
+      name: 'ticket.event.redacted',
+      type: 'operation',
+      // @ts-expect-error enforce a complete set of keys of a given scope
+      scopes: ['eventId'],
+      timeoutDuration: 5_000,
+      requiredToEnd: [{ name: 'OmniLogEvent', matchScopes: true }],
+    })
+    const traceId = tracer.start({
+      scope: {
+        ticketId: '4',
+        eventId: '3',
       },
     })
   })

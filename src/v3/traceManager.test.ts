@@ -5,6 +5,8 @@ import { ensureTimestamp } from './ensureTimestamp'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
 import type { Span } from './spanTypes'
+import { shouldCompleteAndHaveInteractiveTime } from './test/fixtures/shouldCompleteAndHaveInteractiveTime'
+import { shouldNotEndWithInteractiveTimeout } from './test/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
   type TicketIdScope,
   ticketActivationDefinition,
@@ -17,8 +19,6 @@ import {
   Render,
 } from './test/makeTimeline'
 import processSpans from './test/processSpans'
-import { shouldCompleteAndHaveInteractiveTime } from './test/fixtures/shouldCompleteAndHaveInteractiveTime'
-import { shouldNotEndWithInteractiveTimeout } from './test/fixtures/shouldNotEndWithInteractiveTimeout'
 // import { shouldNotEndWithInterruption } from './test/fixtures/shouldNotEndWithInterruption'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
