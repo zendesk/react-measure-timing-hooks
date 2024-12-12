@@ -1,4 +1,5 @@
 import { type SpanMatch, type SpanMatcherFn, fromDefinition } from './matchSpan'
+import type { LabelMatchingFnsRecord, LabelMatchingInputRecord } from './types'
 import type { ArrayWithAtLeastOneElement, KeysOfUnion } from './typeUtils'
 
 export function ensureMatcherFn<
@@ -48,22 +49,22 @@ export function convertMatchersToFns<
 }
 
 export function convertLabelMatchersToFns<
-  TracerScopeT extends AllPossibleScopesT,
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
 >(
-  definitionLabelMatchers: Record<
-    string,
-    SpanMatch<TracerScopeT, AllPossibleScopesT>
+  definitionLabelMatchers: LabelMatchingInputRecord<
+    TracerScopeKeysT,
+    AllPossibleScopesT
   >,
-): Record<string, SpanMatcherFn<TracerScopeT, AllPossibleScopesT>> {
-  return Object.keys(definitionLabelMatchers).reduce<
-    Record<string, SpanMatcherFn<TracerScopeT, AllPossibleScopesT>>
-  >((acc, key) => {
-    if (!definitionLabelMatchers?.[key]) return acc
-    const matchFn = convertMatchersToFns([definitionLabelMatchers[key]])
-    if (matchFn) {
-      acc[key] = matchFn[0]
-    }
-    return acc
-  }, {})
+): LabelMatchingFnsRecord<TracerScopeKeysT, AllPossibleScopesT> {
+  const matchers: LabelMatchingFnsRecord<TracerScopeKeysT, AllPossibleScopesT> =
+    {}
+  for (const key in definitionLabelMatchers) {
+    // eslint-disable-next-line no-continue
+    if (!definitionLabelMatchers?.[key]) continue
+    matchers[key] = ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT>(
+      definitionLabelMatchers[key],
+    )
+  }
+  return matchers
 }

@@ -34,9 +34,9 @@ export interface SpanAnnotation {
    */
   markedInteractive?: boolean
   /**
-   * Optional labels for the span based on label definitions from the Tracer.
+   * Labels for the span based on label definitions from the Tracer. Empty if the span didn't match any of the label match definitions.
    */
-  labels?: string[]
+  labels: string[]
 }
 
 export interface SpanAnnotationRecord {

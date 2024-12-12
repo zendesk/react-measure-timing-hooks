@@ -658,23 +658,19 @@ export class ActiveTrace<
         occurrence,
         recordedInState: this.stateMachine
           .currentState as NonTerminalTraceStates,
+        labels: [],
       }
-
-      const labels = this.getSpanLabels({
-        span,
-        annotation,
-      })
 
       spanAndAnnotation = {
         span,
-        annotation: {
-          ...annotation,
-          labels,
-        },
+        annotation,
       }
 
       this.deduplicationStrategy?.recordSpan(span, spanAndAnnotation)
     }
+
+    // make sure the labels are up-to-date
+    spanAndAnnotation.annotation.labels = this.getSpanLabels(spanAndAnnotation)
 
     const transition = this.stateMachine.emit(
       'onProcessSpan',

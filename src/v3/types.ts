@@ -120,6 +120,16 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
   timeout?: number
 }
 
+export type LabelMatchingInputRecord<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> = Record<string, SpanMatch<TracerScopeKeysT, AllPossibleScopesT>>
+
+export type LabelMatchingFnsRecord<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> = Record<string, SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>>
+
 /**
  * Definition of a trace that includes conditions on when to end, debounce, and interrupt.
  * The "input" version will be transformed into the standardized version internally,
@@ -139,9 +149,9 @@ export interface TraceDefinition<
   scopes: readonly TracerScopeKeysT[]
 
   // TODO: typing this so that the labels are inferred?
-  labelMatching?: Record<
-    string,
-    SpanMatch<NoInfer<TracerScopeT>, AllPossibleScopesT>
+  labelMatching?: LabelMatchingInputRecord<
+    NoInfer<TracerScopeKeysT>,
+    AllPossibleScopesT
   >
 
   /**
@@ -200,9 +210,9 @@ export interface CompleteTraceDefinition<
     SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>[]
   >[]
 
-  labelMatching?: Record<
-    string,
-    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+  labelMatching?: LabelMatchingFnsRecord<
+    NoInfer<TracerScopeKeysT>,
+    AllPossibleScopesT
   >
 
   requiredToEnd: ArrayWithAtLeastOneElement<
