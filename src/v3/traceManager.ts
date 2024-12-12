@@ -1,5 +1,9 @@
 import { ActiveTrace } from './ActiveTrace'
-import { convertMatchersToFns, ensureMatcherFn } from './ensureMatcherFn'
+import {
+  convertLabelMatchersToFns,
+  convertMatchersToFns,
+  ensureMatcherFn,
+} from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
@@ -70,6 +74,10 @@ export class TraceManager<
       )
     }
 
+    const labelMatching = traceDefinition.labelMatching
+      ? convertLabelMatchersToFns(traceDefinition.labelMatching)
+      : undefined
+
     const debounceOn = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT
@@ -95,6 +103,7 @@ export class TraceManager<
       suppressErrorStatusPropagationOn,
       computedSpanDefinitions,
       computedValueDefinitions,
+      labelMatching,
     }
 
     return {

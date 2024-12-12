@@ -660,9 +660,17 @@ export class ActiveTrace<
           .currentState as NonTerminalTraceStates,
       }
 
-      spanAndAnnotation = {
+      const labels = this.getSpanLabels({
         span,
         annotation,
+      })
+
+      spanAndAnnotation = {
+        span,
+        annotation: {
+          ...annotation,
+          labels,
+        },
       }
 
       this.deduplicationStrategy?.recordSpan(span, spanAndAnnotation)
@@ -709,6 +717,22 @@ export class ActiveTrace<
     }
 
     return undefined
+  }
+
+  private getSpanLabels(span: SpanAndAnnotation<AllPossibleScopesT>): string[] {
+    const labels: string[] = []
+    const context = { definition: this.definition, input: this.input }
+    if (!this.definition.labelMatching) return labels
+
+    Object.entries(this.definition.labelMatching).forEach(
+      ([label, matcher]) => {
+        if (matcher(span, context)) {
+          labels.push(label)
+        }
+      },
+    )
+
+    return labels
   }
 
   private prepareAndEmitRecording({

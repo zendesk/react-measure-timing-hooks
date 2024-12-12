@@ -57,6 +57,7 @@ export interface SpanMatchDefinition<
   // IMPLEMENTATION TODO: take in scope as a second parameter
   occurrence?: number | ((occurrence: number) => boolean)
   isIdle?: boolean
+  label?: string
 }
 
 export type SpanMatch<
@@ -80,6 +81,12 @@ export function withName<
     if (value instanceof RegExp) return value.test(span.name)
     return value(span.name, scope)
   }
+}
+
+export function withLabel<TracerScopeT, AllPossibleScopesT>(
+  value: string,
+): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
+  return ({ annotation }) => annotation.labels?.includes(value) ?? false
 }
 
 /**
@@ -277,5 +284,10 @@ export function fromDefinition<
   if (definition.isIdle) {
     matchers.push(whenIdle(definition.isIdle))
   }
+
+  if (definition.label) {
+    matchers.push(withLabel(definition.label))
+  }
+
   return withAllConditions(...matchers)
 }

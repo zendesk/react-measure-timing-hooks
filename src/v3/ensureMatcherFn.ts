@@ -46,3 +46,24 @@ export function convertMatchersToFns<
   }
   return undefined
 }
+
+export function convertLabelMatchersToFns<
+  TracerScopeT extends AllPossibleScopesT,
+  AllPossibleScopesT,
+>(
+  definitionLabelMatchers: Record<
+    string,
+    SpanMatch<TracerScopeT, AllPossibleScopesT>
+  >,
+): Record<string, SpanMatcherFn<TracerScopeT, AllPossibleScopesT>> {
+  return Object.keys(definitionLabelMatchers).reduce<
+    Record<string, SpanMatcherFn<TracerScopeT, AllPossibleScopesT>>
+  >((acc, key) => {
+    if (!definitionLabelMatchers?.[key]) return acc
+    const matchFn = convertMatchersToFns([definitionLabelMatchers[key]])
+    if (matchFn) {
+      acc[key] = matchFn[0]
+    }
+    return acc
+  }, {})
+}
