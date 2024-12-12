@@ -4,6 +4,8 @@ import type { Context, SpanMatcherFn } from './matchSpan'
 import { SpanAndAnnotation } from './spanAnnotationTypes'
 import { ComponentRenderSpan, Span } from './spanTypes'
 import { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
+import type { SelectScopeByKey } from './types'
+import type { KeysOfUnion } from './typeUtils'
 
 export interface EmbeddedEntry {
   count: number
@@ -87,14 +89,17 @@ export const defaultEmbedSpanSelector = <ScopeT>(
   return isRenderEntry(span)
 }
 
-export function convertTraceToRUM<TracerScopeT, AllPossibleScopesT>(
-  traceRecording: TraceRecording<TracerScopeT, AllPossibleScopesT>,
-  context: Context<TracerScopeT, AllPossibleScopesT>,
+export function convertTraceToRUM<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+>(
+  traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
+  context: Context<TracerScopeKeysT, AllPossibleScopesT>,
   embedSpanSelector: SpanMatcherFn<
-    TracerScopeT,
+    TracerScopeKeysT,
     AllPossibleScopesT
   > = defaultEmbedSpanSelector,
-): RumTraceRecording<TracerScopeT> {
+): RumTraceRecording<SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording
   const embeddedEntries: SpanAndAnnotation<AllPossibleScopesT>[] = []
   const nonEmbeddedSpans = new Set<string>()

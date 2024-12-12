@@ -13,7 +13,7 @@ const TICKET_DISPOSE_EVENT_NAME = `ticket.dispose`
 const TICKET_NAVIGATED_AWAY_EVENT_NAME = `ticket.navigated-away`
 
 export const ticketActivationDefinition: TraceDefinition<
-  TicketIdScope,
+  'ticketId',
   FixtureAllPossibleScopes
 > = {
   name: 'ticket.activation',

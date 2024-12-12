@@ -38,7 +38,7 @@ export interface SpanMatcherFn<
   ): boolean
 }
 
-type NameMatcher<TracerScopeT> =
+export type NameMatcher<TracerScopeT> =
   | string
   | RegExp
   | ((name: string, scope: TracerScopeT) => boolean)
@@ -83,9 +83,10 @@ export function withName<
   }
 }
 
-export function withLabel<TracerScopeT, AllPossibleScopesT>(
-  value: string,
-): SpanMatcherFn<TracerScopeT, AllPossibleScopesT> {
+export function withLabel<
+  const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  const AllPossibleScopesT,
+>(value: string): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT> {
   return ({ annotation }) => annotation.labels?.includes(value) ?? false
 }
 

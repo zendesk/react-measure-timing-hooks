@@ -56,6 +56,14 @@ export type * from './v3/hooksTypes'
 // eslint-disable-next-line import/first, import/newline-after-import
 import * as match from './v3/matchSpan'
 export { match }
+export type {
+  Context,
+  NameMatcher,
+  SpanMatch,
+  SpanMatchDefinition,
+  SpanMatcherFn,
+  SpanMatcherTags,
+} from './v3/matchSpan'
 export * from './v3/observePerformanceWithTraceManager'
 export * from './v3/recordingComputeUtils'
 export type * from './v3/spanAnnotationTypes'
@@ -63,3 +71,4 @@ export type * from './v3/spanTypes'
 export * from './v3/traceManager'
 export type * from './v3/traceRecordingTypes'
 export type * from './v3/types'
+export type * from './v3/typeUtils'
