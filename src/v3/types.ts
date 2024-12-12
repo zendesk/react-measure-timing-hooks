@@ -113,6 +113,12 @@ export interface TraceDefinition<TracerScopeT, AllPossibleScopesT> {
 
   scopes: readonly KeysOfUnion<TracerScopeT>[]
 
+  // TODO: typing this so that the labels are inferred?
+  labelMatching?: Record<
+    string,
+    SpanMatch<NoInfer<TracerScopeT>, AllPossibleScopesT>
+  >
+
   /**
    * This may include renders spans of components that have to be rendered with all data
    * to consider the operation as visually complete
@@ -166,6 +172,11 @@ export interface CompleteTraceDefinition<TracerScopeT, AllPossibleScopesT>
     AllPossibleScopesT,
     SpanMatcherFn<TracerScopeT, AllPossibleScopesT>[]
   >[]
+
+  labelMatching?: Record<
+    string,
+    SpanMatcherFn<TracerScopeT, AllPossibleScopesT>
+  >
 
   requiredToEnd: ArrayWithAtLeastOneElement<
     SpanMatcherFn<TracerScopeT, AllPossibleScopesT>

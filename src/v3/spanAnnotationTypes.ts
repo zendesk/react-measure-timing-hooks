@@ -33,6 +33,10 @@ export interface SpanAnnotation {
    * If true, this is the span that marked the operation as interactive.
    */
   markedInteractive?: boolean
+  /**
+   * Optional labels for the span based on label definitions from the Tracer.
+   */
+  labels?: string[]
 }
 
 export interface SpanAnnotationRecord {
