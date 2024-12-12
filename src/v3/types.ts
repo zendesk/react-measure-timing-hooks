@@ -1,5 +1,10 @@
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
-import type { SpanMatch, SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
+import type {
+  Context,
+  SpanMatch,
+  SpanMatchDefinition,
+  SpanMatcherFn,
+} from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Span, SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
@@ -45,7 +50,10 @@ export type TraceInterruptionReason =
 export type SingleTraceReportFn<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> = (trace: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>) => void
+> = (
+  trace: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
+  context: Context<TracerScopeKeysT, AllPossibleScopesT>,
+) => void
 
 export type ReportFn<
   ForEachPossibleScopeT,
