@@ -65,19 +65,29 @@ export const generateUseBeacon =
 
     traceManager.processSpan(renderStartTaskEntry)
 
+    // React's concurrent rendering might pause and discard a render,
+    // which would mean that an effect scheduled for that render does not execute because the render itself was not committed to the DOM.
+    // we want to store the first time that the render was scheduled as the start time of rendering
+    const renderStartRef = useRef<Timestamp | undefined>()
+    if (!renderStartRef.current) {
+      renderStartRef.current = renderStartTaskEntry.startTime
+    }
+
     // Beacon effect for tracking 'component-render'. This will fire after every render as it does not have any dependencies:
     useEffect(() => {
       traceManager.processSpan(
         makeEntry({
           ...config,
+          startTime: renderStartRef.current!,
           type: 'component-render',
-          duration: performance.now() - renderStartTaskEntry.startTime.now,
+          duration: performance.now() - renderStartRef.current!.now,
           status,
           attributes,
           renderCount: renderCountRef.current,
           isIdle,
         }),
       )
+      renderStartRef.current = undefined
     })
 
     // Beacon effect for tracking 'component-unmount' entries
