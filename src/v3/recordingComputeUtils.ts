@@ -54,15 +54,21 @@ export function getComputedValues<
   for (const definition of traceDefinition.computedValueDefinitions) {
     const { name, matches, computeValueFromMatches } = definition
 
-    const matchingRecordedEntries = recordedItems.filter((spanAndAnnotation) =>
-      matches.some((matcher) =>
-        matcher(spanAndAnnotation, { input, definition: traceDefinition }),
-      ),
-    )
+    // Initialize arrays to hold matches for each matcher
+    const matchingEntriesByMatcher: SpanAndAnnotation<AllPossibleScopesT>[][] =
+      Array.from({ length: matches.length }, () => [])
 
-    computedValues[name] = computeValueFromMatches(matchingRecordedEntries)
+    // Single pass through recordedItems
+    for (const item of recordedItems) {
+      matches.forEach((matcher, index) => {
+        if (matcher(item, { input, definition: traceDefinition })) {
+          matchingEntriesByMatcher[index]!.push(item)
+        }
+      })
+    }
+
+    computedValues[name] = computeValueFromMatches(...matchingEntriesByMatcher)
   }
-
   return computedValues
 }
 
@@ -177,21 +183,6 @@ export function getSpanSummaryAttributes<
   return spanAttributes
 }
 
-// IMPLEMENTATION TODO: implementation of gathering Trace level attributes
-export function getAttributes<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
->({
-  definition,
-  recordedItems,
-  input,
-}: ComputeRecordingData<TracerScopeKeysT, AllPossibleScopesT>): TraceRecording<
-  TracerScopeKeysT,
-  AllPossibleScopesT
->['attributes'] {
-  return {}
-}
-
 function getComputedRenderBeaconSpans<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
@@ -218,7 +209,14 @@ function getComputedRenderBeaconSpans<
 
   // Group render spans by beacon and compute firstStart and lastEnd
   for (const entry of recordedItems) {
-    if (entry.span.type !== 'component-render') continue
+    if (
+      entry.span.type !== 'component-render' &&
+      entry.span.type !== 'component-render-start'
+    ) {
+      // need to look at component-render-start too, because react might discard some renders as optimization
+      // ratio of component-render-start to component-render isn't always 1:1
+      continue
+    }
     const { name, startTime, duration, scope, renderedOutput } = entry.span
     // accept any span that either matches scope or doesn't share any of the scope values
     const scopeMatch = scopeKeys.every(
@@ -238,11 +236,13 @@ function getComputedRenderBeaconSpans<
       renderSpansByBeacon.set(name, {
         firstStart: start,
         lastEnd: contentEnd,
-        renderCount: 1,
+        renderCount: entry.span.type === 'component-render' ? 1 : 0,
         sumOfDurations: duration,
-        firstLoadingEnd:
-          renderedOutput === 'loading' ? start + duration : undefined,
         firstContentStart: renderedOutput === 'content' ? start : undefined,
+        firstLoadingEnd:
+          entry.span.type === 'component-render' && renderedOutput === 'loading'
+            ? start + duration
+            : undefined,
       })
     } else {
       spanTimes.firstStart = Math.min(spanTimes.firstStart, start)
@@ -250,7 +250,9 @@ function getComputedRenderBeaconSpans<
         contentEnd && spanTimes.lastEnd
           ? Math.max(spanTimes.lastEnd, contentEnd)
           : contentEnd ?? spanTimes.lastEnd
-      spanTimes.renderCount += 1
+      if (entry.span.type === 'component-render') {
+        spanTimes.renderCount += 1
+      }
       spanTimes.sumOfDurations += duration
       if (
         spanTimes.firstContentStart === undefined &&
@@ -260,6 +262,7 @@ function getComputedRenderBeaconSpans<
       }
       if (
         spanTimes.firstLoadingEnd === undefined &&
+        entry.span.type === 'component-render' &&
         renderedOutput === 'loading'
       ) {
         spanTimes.firstLoadingEnd = start + duration
