@@ -7,9 +7,10 @@ import {
 import { ensureTimestamp } from './ensureTimestamp'
 import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
-import type { Span, StartTraceConfig } from './spanTypes'
+import type { ActiveTraceInput, Span, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
+  type TraceContext,
   CompleteTraceDefinition,
   ComputedSpanDefinition,
   ComputedValueDefinition,
@@ -157,6 +158,18 @@ export class TraceManager<
 
     const id = input.id ?? this.generateId()
 
+    const activeTraceContext: TraceContext<
+      TracerScopeKeysT,
+      AllPossibleScopesT
+    > = {
+      definition,
+      input: {
+        ...input,
+        startTime: ensureTimestamp(input.startTime),
+        id,
+      },
+    }
+
     const onEnd = (
       traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
     ) => {
@@ -169,17 +182,12 @@ export class TraceManager<
           TracerScopeKeysT,
           AllPossibleScopesT
         >
-      )(traceRecording)
+      )(traceRecording, activeTraceContext)
     }
 
     const activeTrace = new ActiveTrace<TracerScopeKeysT, AllPossibleScopesT>(
       definition,
-      {
-        ...input,
-        startTime: ensureTimestamp(input.startTime),
-        id,
-        onEnd,
-      },
+      { ...activeTraceContext.input, onEnd },
       this.performanceEntryDeduplicationStrategy,
     )
 

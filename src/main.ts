@@ -57,7 +57,6 @@ export type * from './v3/hooksTypes'
 import * as match from './v3/matchSpan'
 export { match }
 export type {
-  Context,
   NameMatcher,
   SpanMatch,
   SpanMatchDefinition,

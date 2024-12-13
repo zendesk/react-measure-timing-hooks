@@ -1,28 +1,10 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type {
-  ActiveTraceContext,
-  Attributes,
-  SpanStatus,
-  SpanType,
-} from './spanTypes'
-import type { CompleteTraceDefinition, SelectScopeByKey } from './types'
+import type { Attributes, SpanStatus, SpanType } from './spanTypes'
+import type { SelectScopeByKey, TraceContext } from './types'
 import type { KeysOfUnion } from './typeUtils'
 
 export interface SpanMatcherTags {
   isIdle?: boolean
-}
-
-export interface Context<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-> {
-  readonly definition: CompleteTraceDefinition<
-    TracerScopeKeysT,
-    AllPossibleScopesT
-  >
-  readonly input: ActiveTraceContext<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
-  >
 }
 
 /**
@@ -34,7 +16,7 @@ export interface SpanMatcherFn<
 > extends SpanMatcherTags {
   (
     spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
-    context: Context<TracerScopeKeysT, AllPossibleScopesT>,
+    context: TraceContext<TracerScopeKeysT, AllPossibleScopesT>,
   ): boolean
 }
 

@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 import { getSpanKey } from './getSpanKey'
-import type { Context, SpanMatcherFn } from './matchSpan'
+import type { SpanMatcherFn } from './matchSpan'
 import { SpanAndAnnotation } from './spanAnnotationTypes'
 import { ComponentRenderSpan, Span } from './spanTypes'
 import { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
-import type { SelectScopeByKey } from './types'
+import type { SelectScopeByKey, TraceContext } from './types'
 import type { KeysOfUnion } from './typeUtils'
 
 export interface EmbeddedEntry {
@@ -94,7 +94,7 @@ export function convertTraceToRUM<
   AllPossibleScopesT,
 >(
   traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-  context: Context<TracerScopeKeysT, AllPossibleScopesT>,
+  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT>,
   embedSpanSelector: SpanMatcherFn<
     TracerScopeKeysT,
     AllPossibleScopesT

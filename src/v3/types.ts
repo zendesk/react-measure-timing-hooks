@@ -1,12 +1,13 @@
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
-import type {
-  Context,
-  SpanMatch,
-  SpanMatchDefinition,
-  SpanMatcherFn,
-} from './matchSpan'
+import type { SpanMatch, SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { Span, SpanStatus, SpanType, StartTraceConfig } from './spanTypes'
+import type {
+  ActiveTraceInput,
+  Span,
+  SpanStatus,
+  SpanType,
+  StartTraceConfig,
+} from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   ArrayWithAtLeastOneElement,
@@ -52,7 +53,7 @@ export type SingleTraceReportFn<
   AllPossibleScopesT,
 > = (
   trace: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-  context: Context<TracerScopeKeysT, AllPossibleScopesT>,
+  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT>,
 ) => void
 
 export type ReportFn<
@@ -372,3 +373,16 @@ export type SelectScopeByKey<
 export type DeriveScopeFromPerformanceEntryFn<AllPossibleScopesT> = (
   entry: PerformanceEntry,
 ) => ScopeOnASpan<AllPossibleScopesT> | undefined
+
+export interface TraceContext<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+> {
+  readonly definition: CompleteTraceDefinition<
+    TracerScopeKeysT,
+    AllPossibleScopesT
+  >
+  readonly input: ActiveTraceInput<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  >
+}

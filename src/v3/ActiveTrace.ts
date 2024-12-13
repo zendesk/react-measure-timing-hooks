@@ -12,7 +12,6 @@ import {
   createCPUIdleProcessor,
 } from './firstCPUIdle'
 import { getSpanKey } from './getSpanKey'
-import { Context } from './matchSpan'
 import { createTraceRecording } from './recordingComputeUtils'
 import type {
   SpanAndAnnotation,
@@ -26,6 +25,7 @@ import type {
   SpanDeduplicationStrategy,
   TraceInterruptionReason,
 } from './types'
+import { TraceContext } from './types'
 import type {
   DistributiveOmit,
   KeysOfUnion,
@@ -111,7 +111,7 @@ type EntryType<AllPossibleScopesT> = PerformanceEntryLike & {
 interface StateMachineContext<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> extends Context<TracerScopeKeysT, AllPossibleScopesT> {
+> extends TraceContext<TracerScopeKeysT, AllPossibleScopesT> {
   readonly requiredToEndIndexChecklist: Set<number>
 }
 
@@ -766,7 +766,7 @@ export class ActiveTrace<
         },
         transition,
       )
-      this.input.onEnd(traceRecording)
+      this.input.onEnd(traceRecording, this)
 
       // memory clean-up in case something retains the ActiveTrace instance
       this.recordedItems = []
