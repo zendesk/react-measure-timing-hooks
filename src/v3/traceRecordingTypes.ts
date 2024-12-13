@@ -19,15 +19,15 @@ export interface ComputedSpan {
 export interface ComputedRenderSpan {
   /** time relative to beginning of the trace */
   startOffset: number
-  /** time from startOffset to the first moment we are able to start rendering the data */
-  timeToData: number
   /** time from startOffset to the first loading state rendered */
-  timeToLoading: number
-  /** time from startOffset to fully displaying the content */
-  timeToContent: number
+  firstRenderTillLoading: number
+  /** time from startOffset to the first moment we are able to start rendering the data */
+  firstRenderTillData: number
+  /** time from startOffset to first displaying the complete content */
+  firstRenderTillContent: number
   renderCount: number
   /** the sum of all render durations */
-  sumOfDurations: number
+  sumOfRenderDurations: number
 }
 
 export interface TraceRecordingBase<TracerScopeT> {

@@ -197,7 +197,7 @@ function getComputedRenderBeaconSpans<
     string,
     {
       firstStart: number
-      lastEnd: number | undefined
+      firstContentfulRenderEnd: number | undefined
       firstLoadingEnd: number | undefined
       firstContentStart: number | undefined
       renderCount: number
@@ -227,15 +227,19 @@ function getComputedRenderBeaconSpans<
     )
     if (!scopeMatch) continue
     const start = startTime.now
-    const contentEnd =
-      renderedOutput === 'content' ? start + duration : undefined
+    const contentfulRenderEnd =
+      entry.span.type === 'component-render' && renderedOutput === 'content'
+        ? start + duration
+        : undefined
 
     const spanTimes = renderSpansByBeacon.get(name)
+
+    // TODO: make sure that sumOfRenderDurations takes into account that mismatch between render-start and full render - might be discarded and re-render - should extend the first render duration from the first render start to the first end
 
     if (!spanTimes) {
       renderSpansByBeacon.set(name, {
         firstStart: start,
-        lastEnd: contentEnd,
+        firstContentfulRenderEnd: contentfulRenderEnd,
         renderCount: entry.span.type === 'component-render' ? 1 : 0,
         sumOfDurations: duration,
         firstContentStart: renderedOutput === 'content' ? start : undefined,
@@ -246,10 +250,10 @@ function getComputedRenderBeaconSpans<
       })
     } else {
       spanTimes.firstStart = Math.min(spanTimes.firstStart, start)
-      spanTimes.lastEnd =
-        contentEnd && spanTimes.lastEnd
-          ? Math.max(spanTimes.lastEnd, contentEnd)
-          : contentEnd ?? spanTimes.lastEnd
+      spanTimes.firstContentfulRenderEnd =
+        contentfulRenderEnd && spanTimes.firstContentfulRenderEnd
+          ? Math.min(spanTimes.firstContentfulRenderEnd, contentfulRenderEnd)
+          : contentfulRenderEnd ?? spanTimes.firstContentfulRenderEnd
       if (entry.span.type === 'component-render') {
         spanTimes.renderCount += 1
       }
@@ -277,18 +281,19 @@ function getComputedRenderBeaconSpans<
 
   // Calculate duration and startOffset for each beacon
   for (const [beaconName, spanTimes] of renderSpansByBeacon) {
-    if (!spanTimes.lastEnd) continue
+    if (!spanTimes.firstContentfulRenderEnd) continue
     computedRenderBeaconSpans[beaconName] = {
       startOffset: spanTimes.firstStart - input.startTime.now,
-      timeToContent: spanTimes.lastEnd - spanTimes.firstStart,
-      timeToLoading: spanTimes.firstLoadingEnd
+      firstRenderTillContent:
+        spanTimes.firstContentfulRenderEnd - spanTimes.firstStart,
+      firstRenderTillLoading: spanTimes.firstLoadingEnd
         ? spanTimes.firstLoadingEnd - spanTimes.firstStart
         : 0,
-      timeToData: spanTimes.firstContentStart
+      firstRenderTillData: spanTimes.firstContentStart
         ? spanTimes.firstContentStart - spanTimes.firstStart
         : 0,
       renderCount: spanTimes.renderCount,
-      sumOfDurations: spanTimes.sumOfDurations,
+      sumOfRenderDurations: spanTimes.sumOfDurations,
     }
   }
 

@@ -112,28 +112,33 @@ export function convertTraceToRUM<
       nonEmbeddedSpans.add(getSpanKey(spanAndAnnotation.span))
     }
   }
-  const embeddedSpans: {
-    [typeAndName: string]: EmbeddedEntry
-  } = {}
+  const embeddedSpans = new Map<string, EmbeddedEntry>()
 
   for (const spanAndAnnotation of embeddedEntries) {
     const { span } = spanAndAnnotation
     const typeAndName = getSpanKey(span)
-    const existingEmbeddedEntry = embeddedSpans[typeAndName]
+    const existingEmbeddedEntry = embeddedSpans.get(typeAndName)
 
     if (existingEmbeddedEntry) {
-      embeddedSpans[typeAndName] = updateEmbeddedEntry(
-        existingEmbeddedEntry,
-        spanAndAnnotation,
+      embeddedSpans.set(
+        typeAndName,
+        updateEmbeddedEntry(existingEmbeddedEntry, spanAndAnnotation),
       )
     } else {
-      embeddedSpans[typeAndName] = createEmbeddedEntry(spanAndAnnotation)
+      embeddedSpans.set(typeAndName, createEmbeddedEntry(spanAndAnnotation))
+    }
+  }
+
+  // Filter out entries with zero duration
+  for (const [key, value] of embeddedSpans) {
+    if (value.totalDuration === 0) {
+      embeddedSpans.delete(key)
     }
   }
 
   return {
     ...otherTraceRecordingAttributes,
-    embeddedSpans,
+    embeddedSpans: Object.fromEntries(embeddedSpans),
     nonEmbeddedSpans: [...nonEmbeddedSpans],
   }
 }
