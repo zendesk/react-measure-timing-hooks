@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 /* eslint-disable max-classes-per-file */
 import {
+  DEADLINE_BUFFER,
   DEFAULT_DEBOUNCE_DURATION,
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
   DEFAULT_TIMEOUT_DURATION,
@@ -115,6 +116,8 @@ interface StateMachineContext<
   readonly requiredToEndIndexChecklist: Set<number>
 }
 
+type DeadlineType = 'global' | 'debounce' | 'interactive'
+
 export class TraceStateMachine<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
@@ -133,9 +136,59 @@ export class TraceStateMachine<
   cpuIdleLongTaskProcessor:
     | CPUIdleLongTaskProcessor<EntryType<AllPossibleScopesT>>
     | undefined
-  debounceDeadline: number = Number.POSITIVE_INFINITY
-  interactiveDeadline: number = Number.POSITIVE_INFINITY
-  timeoutDeadline: number = Number.POSITIVE_INFINITY
+  #debounceDeadline: number = Number.POSITIVE_INFINITY
+  #interactiveDeadline: number = Number.POSITIVE_INFINITY
+  #timeoutDeadline: number = Number.POSITIVE_INFINITY
+
+  nextDeadlineRef: ReturnType<typeof setTimeout> | undefined
+
+  setDeadline(deadlineType: 'debounce' | 'interactive', deadline: number) {
+    console.log('** settingn deadline', deadlineType, deadline)
+    if (deadlineType === 'debounce') {
+      this.#debounceDeadline = deadline
+    } else if (deadlineType === 'interactive') {
+      this.#interactiveDeadline = deadline
+    }
+
+    // which type of deadline is the closest and what kind is it?
+    const closestDeadline =
+      deadline > this.#timeoutDeadline ? 'global' : deadlineType
+
+    const rightNowEpoch = Date.now()
+    const timeToDeadlinePlusBuffer = deadline - rightNowEpoch + DEADLINE_BUFFER
+
+    if (this.nextDeadlineRef) {
+      clearTimeout(this.nextDeadlineRef)
+    }
+
+    this.nextDeadlineRef = setTimeout(() => {
+      console.log('** emitting deadline', closestDeadline)
+      this.emit('onDeadline', closestDeadline)
+    }, Math.max(timeToDeadlinePlusBuffer, 0))
+  }
+
+  setGlobalDeadline(deadline: number) {
+    console.log('** setting global deadline', deadline)
+    this.#timeoutDeadline = deadline
+
+    const rightNowEpoch = Date.now()
+    const timeToDeadlinePlusBuffer = deadline - rightNowEpoch + DEADLINE_BUFFER
+
+    if (!this.nextDeadlineRef) {
+      // this should never happen
+      this.nextDeadlineRef = setTimeout(() => {
+        this.emit('onDeadline', 'global')
+      }, Math.max(timeToDeadlinePlusBuffer, 0))
+    }
+  }
+
+  clearDeadline() {
+    console.log('** clearing all deadlines')
+    if (this.nextDeadlineRef) {
+      clearTimeout(this.nextDeadlineRef)
+      this.nextDeadlineRef = undefined
+    }
+  }
 
   /**
    * while debouncing, we need to buffer any spans that come in so they can be re-processed
@@ -149,9 +202,11 @@ export class TraceStateMachine<
   readonly states = {
     recording: {
       onEnterState: () => {
-        this.timeoutDeadline =
+        this.setGlobalDeadline(
           this.context.input.startTime.epoch +
-          (this.context.definition.timeoutDuration ?? DEFAULT_TIMEOUT_DURATION)
+            (this.context.definition.timeoutDuration ??
+              DEFAULT_TIMEOUT_DURATION),
+        )
       },
 
       onProcessSpan: (
@@ -161,7 +216,7 @@ export class TraceStateMachine<
           spanAndAnnotation.span.startTime.epoch +
           spanAndAnnotation.span.duration
 
-        if (spanEndTimeEpoch > this.timeoutDeadline) {
+        if (spanEndTimeEpoch > this.#timeoutDeadline) {
           // we consider this interrupted, because of the clamping of the total duration of the operation
           // as potential other events could have happened and prolonged the operation
           // we can be a little picky, because we expect to record many operations
@@ -217,6 +272,17 @@ export class TraceStateMachine<
         transitionToState: 'interrupted',
         interruptionReason: reason,
       }),
+
+      onDeadline: (deadlineType: DeadlineType) => {
+        if (deadlineType === 'global') {
+          return {
+            transitionToState: 'interrupted',
+            interruptionReason: 'timeout',
+          }
+        }
+        // other cases should never happen
+        return undefined
+      },
     },
 
     // we enter the debouncing state once all requiredToEnd entries have been seen
@@ -239,12 +305,30 @@ export class TraceStateMachine<
           return { transitionToState: 'waiting-for-interactive' }
         }
         // set the first debounce deadline
-        this.debounceDeadline =
+        this.setDeadline(
+          'debounce',
           this.lastRelevant.span.startTime.epoch +
-          this.lastRelevant.span.duration +
-          (this.context.definition.debounceDuration ??
-            DEFAULT_DEBOUNCE_DURATION)
+            this.lastRelevant.span.duration +
+            (this.context.definition.debounceDuration ??
+              DEFAULT_DEBOUNCE_DURATION),
+        )
 
+        return undefined
+      },
+
+      onDeadline: (deadlineType: DeadlineType) => {
+        if (deadlineType === 'global') {
+          return {
+            transitionToState: 'interrupted',
+            interruptionReason: 'timeout',
+          }
+        }
+        if (deadlineType === 'debounce') {
+          return {
+            transitionToState: 'waiting-for-interactive',
+          }
+        }
+        // other cases should never happen
         return undefined
       },
 
@@ -254,7 +338,7 @@ export class TraceStateMachine<
         const spanEndTimeEpoch =
           spanAndAnnotation.span.startTime.epoch +
           spanAndAnnotation.span.duration
-        if (spanEndTimeEpoch > this.timeoutDeadline) {
+        if (spanEndTimeEpoch > this.#timeoutDeadline) {
           // we consider this interrupted, because of the clamping of the total duration of the operation
           // as potential other events could have happened and prolonged the operation
           // we can be a little picky, because we expect to record many operations
@@ -267,7 +351,7 @@ export class TraceStateMachine<
 
         this.debouncingSpanBuffer.push(spanAndAnnotation)
 
-        if (spanEndTimeEpoch > this.debounceDeadline) {
+        if (spanEndTimeEpoch > this.#debounceDeadline) {
           // done debouncing
           return { transitionToState: 'waiting-for-interactive' }
         }
@@ -313,11 +397,13 @@ export class TraceStateMachine<
 
                 // update the debounce timer relative from the time of the span end
                 // (not from the time of processing of the event, because it may be asynchronous)
-                this.debounceDeadline =
+                this.setDeadline(
+                  'debounce',
                   this.lastRelevant.span.startTime.epoch +
-                  this.lastRelevant.span.duration +
-                  (this.context.definition.debounceDuration ??
-                    DEFAULT_DEBOUNCE_DURATION)
+                    this.lastRelevant.span.duration +
+                    (this.context.definition.debounceDuration ??
+                      DEFAULT_DEBOUNCE_DURATION),
+                )
               }
 
               return undefined
@@ -361,9 +447,11 @@ export class TraceStateMachine<
         const lastRequiredSpanEndTimeEpoch =
           this.lastRequiredSpan.span.startTime.epoch +
           this.lastRequiredSpan.span.duration
-        this.interactiveDeadline =
+        this.setDeadline(
+          'interactive',
           lastRequiredSpanEndTimeEpoch +
-          interruptMillisecondsAfterLastRequiredSpan
+            interruptMillisecondsAfterLastRequiredSpan,
+        )
 
         this.cpuIdleLongTaskProcessor = createCPUIdleProcessor<
           EntryType<AllPossibleScopesT>
@@ -402,15 +490,56 @@ export class TraceStateMachine<
         return undefined
       },
 
+      onDeadline: (deadlineType: DeadlineType) => {
+        if (deadlineType === 'global') {
+          return {
+            transitionToState: 'complete',
+            interruptionReason: 'timeout',
+            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+          }
+        }
+        if (deadlineType === 'interactive') {
+          const cpuIdleMatch =
+            this.cpuIdleLongTaskProcessor?.checkIfPassedQuietWindow(
+              performance.now(),
+            )
+
+          const cpuIdleTimestamp =
+            cpuIdleMatch !== undefined &&
+            cpuIdleMatch.entry.span.startTime.epoch +
+              cpuIdleMatch.entry.span.duration
+
+          if (cpuIdleTimestamp && cpuIdleTimestamp <= this.#timeoutDeadline) {
+            // if we match the interactive criteria, transition to complete
+            // reference https://docs.google.com/document/d/1GGiI9-7KeY3TPqS3YT271upUVimo-XiL5mwWorDUD4c/edit
+            return {
+              transitionToState: 'complete',
+              lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+              cpuIdleSpanAndAnnotation: cpuIdleMatch?.entry,
+            }
+          }
+          // we consider this complete, because we have a complete trace
+          // it's just missing the bonus data from when the browser became "interactive"
+          return {
+            transitionToState: 'complete',
+            interruptionReason: 'timeout',
+            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+          }
+        }
+        // other cases should never happen
+        return undefined
+      },
+
       onProcessSpan: (
         spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
       ) => {
-        const cpuIdleMatch = this.cpuIdleLongTaskProcessor?.({
-          entryType: spanAndAnnotation.span.type,
-          startTime: spanAndAnnotation.span.startTime.now,
-          duration: spanAndAnnotation.span.duration,
-          entry: spanAndAnnotation,
-        })
+        const cpuIdleMatch =
+          this.cpuIdleLongTaskProcessor?.processPerformanceEntry({
+            entryType: spanAndAnnotation.span.type,
+            startTime: spanAndAnnotation.span.startTime.now,
+            duration: spanAndAnnotation.span.duration,
+            entry: spanAndAnnotation,
+          })
 
         const cpuIdleTimestamp =
           cpuIdleMatch !== undefined &&
@@ -422,7 +551,7 @@ export class TraceStateMachine<
         // and at the same time found out the real CpuIdle, it's probably fine to keep it
         // as long as we don't cross the 'timeoutDeadline' it's probably ok.
 
-        if (cpuIdleTimestamp && cpuIdleTimestamp <= this.timeoutDeadline) {
+        if (cpuIdleTimestamp && cpuIdleTimestamp <= this.#timeoutDeadline) {
           // if we match the interactive criteria, transition to complete
           // reference https://docs.google.com/document/d/1GGiI9-7KeY3TPqS3YT271upUVimo-XiL5mwWorDUD4c/edit
           return {
@@ -435,7 +564,7 @@ export class TraceStateMachine<
         const spanEndTimeEpoch =
           spanAndAnnotation.span.startTime.epoch +
           spanAndAnnotation.span.duration
-        if (spanEndTimeEpoch > this.timeoutDeadline) {
+        if (spanEndTimeEpoch > this.#timeoutDeadline) {
           // we consider this complete, because we have a complete trace
           // it's just missing the bonus data from when the browser became "interactive"
           return {
@@ -445,7 +574,7 @@ export class TraceStateMachine<
           }
         }
 
-        if (spanEndTimeEpoch > this.interactiveDeadline) {
+        if (spanEndTimeEpoch > this.#interactiveDeadline) {
           // we consider this complete, because we have a complete trace
           // it's just missing the bonus data from when the browser became "interactive"
           return {
@@ -484,12 +613,14 @@ export class TraceStateMachine<
     // terminal states:
     interrupted: {
       onEnterState: (_payload: OnEnterInterrupted) => {
+        this.clearDeadline()
         // terminal state, but we reuse the payload for generating the report in ActiveTrace
       },
     },
 
     complete: {
       onEnterState: (_payload: OnEnterComplete<AllPossibleScopesT>) => {
+        this.clearDeadline()
         // terminal state, but we reuse the payload for generating the report in ActiveTrace
       },
     },
@@ -699,6 +830,7 @@ export class ActiveTrace<
     }
 
     if (transition) {
+      console.log('** transition', transition)
       this.prepareAndEmitRecording({
         transition,
         lastRelevantSpanAndAnnotation: spanAndAnnotation,
@@ -767,6 +899,7 @@ export class ActiveTrace<
         transition,
       )
       this.input.onEnd(traceRecording, this)
+      console.log('** recording', traceRecording, this)
 
       // memory clean-up in case something retains the ActiveTrace instance
       this.recordedItems = []

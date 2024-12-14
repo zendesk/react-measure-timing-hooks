@@ -8,10 +8,21 @@ export interface PerformanceEntryLike {
   duration: number
 }
 
-export type CPUIdleLongTaskProcessor<T extends number | PerformanceEntryLike> =
-  (
-    entry: T extends PerformanceEntryLike ? T : PerformanceEntryLike,
+export type CPUIdleLongTaskProcessorFn<
+  T extends number | PerformanceEntryLike,
+> = (
+  entry: T extends PerformanceEntryLike ? T : PerformanceEntryLike,
+) => T | undefined
+
+export interface CPUIdleLongTaskProcessor<
+  T extends number | PerformanceEntryLike,
+> {
+  processPerformanceEntry: CPUIdleLongTaskProcessorFn<T>
+  checkIfPassedQuietWindow: (
+    time: number,
+    quietWindowDuration?: number,
   ) => T | undefined
+}
 
 export interface CPUIdleProcessorOptions {
   getQuietWindowDuration?: (currentEndTime: number, fmp: number) => number
@@ -43,11 +54,26 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
 
   const returnType = typeof fmpOrEntry === 'number' ? 'number' : 'object'
 
+  function checkIfPassedQuietWindow(
+    time: number,
+    quietWindowDuration = getQuietWindowDuration?.(time, fmp) ??
+      DEFAULT_QUIET_WINDOW_DURATION,
+  ) {
+    if (time - possibleFirstCPUIdleTimestamp > quietWindowDuration) {
+      // Return the first CPU idle timestamp if in a quiet window
+      return (
+        returnType === 'object'
+          ? possibleFirstCPUIdleEntry
+          : possibleFirstCPUIdleTimestamp
+      ) as T
+    }
+
+    return undefined
+  }
+
   // TODO: if a longtask straddles the FMP, then we should push the first CPU idle timestamp to the end of it
   // TODO: potentially assume that FMP point is as if inside of a heavy cluster already
-  return function processPerformanceEntry(
-    entry: PerformanceEntryLike,
-  ): T | undefined {
+  function processPerformanceEntry(entry: PerformanceEntryLike): T | undefined {
     const entryEndTime = entry.startTime + entry.duration
     const isEntryLongTask = isLongTask(entry)
     const quietWindowDuration =
@@ -57,16 +83,12 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
     // If this is the first long task
     if (endTimeStampOfLastLongTask === null) {
       // Check if a quiet window has passed since the last long task
-      if (
-        entry.startTime - possibleFirstCPUIdleTimestamp >
-        quietWindowDuration
-      ) {
-        // Return the first CPU idle timestamp if in a quiet window
-        return (
-          returnType === 'object'
-            ? possibleFirstCPUIdleEntry
-            : possibleFirstCPUIdleTimestamp
-        ) as T
+      const possibleEntry = checkIfPassedQuietWindow(
+        entry.startTime,
+        quietWindowDuration,
+      )
+      if (possibleEntry) {
+        return possibleEntry
       }
       if (isEntryLongTask) {
         // Update the end timestamp of the last long task and initialize the cluster
@@ -119,15 +141,12 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
 
       // If no new long tasks have occurred in the last quietWindowDuration
       // then we found our First CPU Idle
-      if (
-        entry.startTime - possibleFirstCPUIdleTimestamp >
-        quietWindowDuration
-      ) {
-        return (
-          returnType === 'object'
-            ? possibleFirstCPUIdleEntry
-            : possibleFirstCPUIdleTimestamp
-        ) as T
+      const possibleEntry = checkIfPassedQuietWindow(
+        entry.startTime,
+        quietWindowDuration,
+      )
+      if (possibleEntry) {
+        return possibleEntry
       }
 
       if (isEntryLongTask) {
@@ -141,5 +160,10 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
     }
 
     return undefined
+  }
+
+  return {
+    processPerformanceEntry,
+    checkIfPassedQuietWindow,
   }
 }

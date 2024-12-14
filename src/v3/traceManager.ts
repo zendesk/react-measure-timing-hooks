@@ -10,7 +10,6 @@ import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { ActiveTraceInput, Span, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
-  type TraceContext,
   CompleteTraceDefinition,
   ComputedSpanDefinition,
   ComputedValueDefinition,
@@ -19,6 +18,7 @@ import type {
   SelectScopeByKey,
   SingleTraceReportFn,
   SpanDeduplicationStrategy,
+  TraceContext,
   TraceDefinition,
   TraceManagerConfig,
   Tracer,
@@ -151,6 +151,7 @@ export class TraceManager<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
     >,
   ): string {
+    console.log('---> Starting Trace!', definition.name, input.scope)
     if (this.activeTrace) {
       this.activeTrace.interrupt('another-trace-started')
       this.activeTrace = undefined
