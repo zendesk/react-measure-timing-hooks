@@ -12,16 +12,27 @@ export type CPUIdleLongTaskProcessorFn<
   T extends number | PerformanceEntryLike,
 > = (
   entry: T extends PerformanceEntryLike ? T : PerformanceEntryLike,
-) => T | undefined
+) => checkIfQuietWindowPassedResult<T>
+
+export type checkIfQuietWindowPassedResult<
+  T extends number | PerformanceEntryLike,
+> =
+  | {
+      firstCpuIdle: T
+    }
+  | {
+      /** time from timeOrigin when we can check next if we've passed quiet window yet or not */
+      nextCheck: number
+    }
 
 export interface CPUIdleLongTaskProcessor<
   T extends number | PerformanceEntryLike,
 > {
   processPerformanceEntry: CPUIdleLongTaskProcessorFn<T>
-  checkIfPassedQuietWindow: (
+  checkIfQuietWindowPassed: (
     time: number,
     quietWindowDuration?: number,
-  ) => T | undefined
+  ) => checkIfQuietWindowPassedResult<T>
 }
 
 export interface CPUIdleProcessorOptions {
@@ -54,42 +65,47 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
 
   const returnType = typeof fmpOrEntry === 'number' ? 'number' : 'object'
 
-  function checkIfPassedQuietWindow(
+  function checkIfQuietWindowPassed(
     time: number,
     quietWindowDuration = getQuietWindowDuration?.(time, fmp) ??
       DEFAULT_QUIET_WINDOW_DURATION,
-  ) {
+  ): checkIfQuietWindowPassedResult<T> {
     if (time - possibleFirstCPUIdleTimestamp > quietWindowDuration) {
       // Return the first CPU idle timestamp if in a quiet window
-      return (
-        returnType === 'object'
+      return {
+        firstCpuIdle: (returnType === 'object'
           ? possibleFirstCPUIdleEntry
-          : possibleFirstCPUIdleTimestamp
-      ) as T
+          : possibleFirstCPUIdleTimestamp) as T,
+      }
     }
 
-    return undefined
+    return { nextCheck: time + quietWindowDuration }
   }
 
   // TODO: if a longtask straddles the FMP, then we should push the first CPU idle timestamp to the end of it
   // TODO: potentially assume that FMP point is as if inside of a heavy cluster already
-  function processPerformanceEntry(entry: PerformanceEntryLike): T | undefined {
+  function processPerformanceEntry(
+    entry: PerformanceEntryLike,
+  ): checkIfQuietWindowPassedResult<T> {
     const entryEndTime = entry.startTime + entry.duration
     const isEntryLongTask = isLongTask(entry)
     const quietWindowDuration =
       getQuietWindowDuration?.(entryEndTime, fmp) ??
       DEFAULT_QUIET_WINDOW_DURATION
 
-    // If this is the first long task
+    const quietWindowCheck = checkIfQuietWindowPassed(
+      // is not processing a long task, we can assume current clock time is the end time
+      isEntryLongTask ? entry.startTime : entryEndTime,
+      quietWindowDuration,
+    )
+
     if (endTimeStampOfLastLongTask === null) {
-      // Check if a quiet window has passed since the last long task
-      const possibleEntry = checkIfPassedQuietWindow(
-        entry.startTime,
-        quietWindowDuration,
-      )
-      if (possibleEntry) {
-        return possibleEntry
+      // Check if a quiet window has passed without seeing any long tasks
+      if ('firstCpuIdle' in quietWindowCheck) {
+        return quietWindowCheck
       }
+
+      // If this is the first long task
       if (isEntryLongTask) {
         // Update the end timestamp of the last long task and initialize the cluster
         endTimeStampOfLastLongTask = entryEndTime
@@ -108,7 +124,7 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
           longTaskClusterDurationTotal = entry.duration
         }
       }
-      return undefined
+      return quietWindowCheck
     }
 
     // Calculate time since the last long task
@@ -141,12 +157,8 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
 
       // If no new long tasks have occurred in the last quietWindowDuration
       // then we found our First CPU Idle
-      const possibleEntry = checkIfPassedQuietWindow(
-        entry.startTime,
-        quietWindowDuration,
-      )
-      if (possibleEntry) {
-        return possibleEntry
+      if ('firstCpuIdle' in quietWindowCheck) {
+        return quietWindowCheck
       }
 
       if (isEntryLongTask) {
@@ -159,11 +171,11 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
       }
     }
 
-    return undefined
+    return quietWindowCheck
   }
 
   return {
     processPerformanceEntry,
-    checkIfPassedQuietWindow,
+    checkIfQuietWindowPassed,
   }
 }

@@ -13,7 +13,7 @@ function getFirstCPUIdleEntry({
   let firstCPUIdle
 
   for (const entry of entries) {
-    const result = processor(entry)
+    const result = processor.processPerformanceEntry(entry)
     if (result !== undefined) {
       firstCPUIdle = result
     }

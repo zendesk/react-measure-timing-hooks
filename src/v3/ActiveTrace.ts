@@ -116,7 +116,7 @@ interface StateMachineContext<
   readonly requiredToEndIndexChecklist: Set<number>
 }
 
-type DeadlineType = 'global' | 'debounce' | 'interactive'
+type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
 
 export class TraceStateMachine<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
@@ -149,33 +149,39 @@ export class TraceStateMachine<
   nextDeadlineRef: ReturnType<typeof setTimeout> | undefined
 
   // TODO: add another deadline type for nextQuietWindow to make checking for result even faster
-  setDeadline(deadlineType: 'debounce' | 'interactive', deadline: number) {
-    console.log('** setting deadline', deadlineType, deadline)
+  setDeadline(
+    deadlineType: Exclude<DeadlineType, 'global'>,
+    deadlineEpoch: number,
+  ) {
     if (deadlineType === 'debounce') {
-      this.#debounceDeadline = deadline
+      this.#debounceDeadline = deadlineEpoch
     } else if (deadlineType === 'interactive') {
-      this.#interactiveDeadline = deadline
+      this.#interactiveDeadline = deadlineEpoch
     }
 
     // which type of deadline is the closest and what kind is it?
     const closestDeadline =
-      deadline > this.#timeoutDeadline ? 'global' : deadlineType
+      deadlineEpoch > this.#timeoutDeadline
+        ? 'global'
+        : deadlineType === 'next-quiet-window' &&
+          deadlineEpoch > this.#interactiveDeadline
+        ? 'interactive'
+        : deadlineType
 
     const rightNowEpoch = Date.now()
-    const timeToDeadlinePlusBuffer = deadline - rightNowEpoch + DEADLINE_BUFFER
+    const timeToDeadlinePlusBuffer =
+      deadlineEpoch - rightNowEpoch + DEADLINE_BUFFER
 
     if (this.nextDeadlineRef) {
       clearTimeout(this.nextDeadlineRef)
     }
 
     this.nextDeadlineRef = setTimeout(() => {
-      console.log('** emitting deadline', closestDeadline)
       this.emit('onDeadline', closestDeadline)
     }, Math.max(timeToDeadlinePlusBuffer, 0))
   }
 
   setGlobalDeadline(deadline: number) {
-    console.log('** setting global deadline', deadline)
     this.#timeoutDeadline = deadline
 
     const rightNowEpoch = Date.now()
@@ -509,14 +515,20 @@ export class TraceStateMachine<
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
           }
         }
-        if (deadlineType === 'interactive') {
-          const cpuIdleMatch =
-            this.cpuIdleLongTaskProcessor?.checkIfPassedQuietWindow(
+        if (
+          deadlineType === 'interactive' ||
+          deadlineType === 'next-quiet-window'
+        ) {
+          const quietWindowCheck =
+            this.cpuIdleLongTaskProcessor!.checkIfQuietWindowPassed(
               performance.now(),
             )
 
+          const cpuIdleMatch =
+            'firstCpuIdle' in quietWindowCheck && quietWindowCheck.firstCpuIdle
+
           const cpuIdleTimestamp =
-            cpuIdleMatch !== undefined &&
+            cpuIdleMatch &&
             cpuIdleMatch.entry.span.startTime.epoch +
               cpuIdleMatch.entry.span.duration
 
@@ -526,15 +538,23 @@ export class TraceStateMachine<
             return {
               transitionToState: 'complete',
               lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-              cpuIdleSpanAndAnnotation: cpuIdleMatch?.entry,
+              cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
             }
           }
-          // we consider this complete, because we have a complete trace
-          // it's just missing the bonus data from when the browser became "interactive"
-          return {
-            transitionToState: 'complete',
-            interruptionReason: 'timeout',
-            lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+          if (deadlineType === 'interactive') {
+            // we consider this complete, because we have a complete trace
+            // it's just missing the bonus data from when the browser became "interactive"
+            return {
+              transitionToState: 'complete',
+              interruptionReason: 'timeout',
+              lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            }
+          }
+
+          if ('nextCheck' in quietWindowCheck) {
+            // check in the next quiet window
+            const nextCheckIn = quietWindowCheck.nextCheck - performance.now()
+            this.setDeadline('next-quiet-window', Date.now() + nextCheckIn)
           }
         }
         // other cases should never happen
@@ -546,16 +566,19 @@ export class TraceStateMachine<
       ) => {
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
-        const cpuIdleMatch =
-          this.cpuIdleLongTaskProcessor?.processPerformanceEntry({
+        const quietWindowCheck =
+          this.cpuIdleLongTaskProcessor!.processPerformanceEntry({
             entryType: spanAndAnnotation.span.type,
             startTime: spanAndAnnotation.span.startTime.now,
             duration: spanAndAnnotation.span.duration,
             entry: spanAndAnnotation,
           })
 
+        const cpuIdleMatch =
+          'firstCpuIdle' in quietWindowCheck && quietWindowCheck.firstCpuIdle
+
         const cpuIdleTimestamp =
-          cpuIdleMatch !== undefined &&
+          cpuIdleMatch &&
           cpuIdleMatch.entry.span.startTime.epoch +
             cpuIdleMatch.entry.span.duration
 
@@ -609,6 +632,12 @@ export class TraceStateMachine<
               }
             }
           }
+        }
+
+        if ('nextCheck' in quietWindowCheck) {
+          // check in the next quiet window
+          const nextCheckIn = quietWindowCheck.nextCheck - performance.now()
+          this.setDeadline('next-quiet-window', Date.now() + nextCheckIn)
         }
 
         return undefined
@@ -911,7 +940,6 @@ export class ActiveTrace<
         transition,
       )
       this.input.onEnd(traceRecording, this)
-      console.log('** recording', traceRecording, this)
 
       // memory clean-up in case something retains the ActiveTrace instance
       this.recordedItems.clear()
