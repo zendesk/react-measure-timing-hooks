@@ -127,6 +127,12 @@ export class TraceStateMachine<
     readonly storeFinalizeState: FinalizeFn<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
     >
+    readonly addSpanToRecording: (
+      spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+    ) => void
+    readonly prepareAndEmitRecording: (
+      options: PrepareAndEmitRecordingOptions<AllPossibleScopesT>,
+    ) => void
   }
   currentState: TraceStates = 'recording'
   /** the span that ended at the furthest point in time */
@@ -142,8 +148,9 @@ export class TraceStateMachine<
 
   nextDeadlineRef: ReturnType<typeof setTimeout> | undefined
 
+  // TODO: add another deadline type for nextQuietWindow to make checking for result even faster
   setDeadline(deadlineType: 'debounce' | 'interactive', deadline: number) {
-    console.log('** settingn deadline', deadlineType, deadline)
+    console.log('** setting deadline', deadlineType, deadline)
     if (deadlineType === 'debounce') {
       this.#debounceDeadline = deadline
     } else if (deadlineType === 'interactive') {
@@ -183,7 +190,6 @@ export class TraceStateMachine<
   }
 
   clearDeadline() {
-    console.log('** clearing all deadlines')
     if (this.nextDeadlineRef) {
       clearTimeout(this.nextDeadlineRef)
       this.nextDeadlineRef = undefined
@@ -261,6 +267,8 @@ export class TraceStateMachine<
             }
           }
         }
+
+        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         if (this.context.requiredToEndIndexChecklist.size === 0) {
           return { transitionToState: 'debouncing' }
@@ -353,6 +361,7 @@ export class TraceStateMachine<
 
         if (spanEndTimeEpoch > this.#debounceDeadline) {
           // done debouncing
+          this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
           return { transitionToState: 'waiting-for-interactive' }
         }
 
@@ -383,6 +392,8 @@ export class TraceStateMachine<
             }
           }
         }
+
+        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
@@ -533,6 +544,8 @@ export class TraceStateMachine<
       onProcessSpan: (
         spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
       ) => {
+        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
+
         const cpuIdleMatch =
           this.cpuIdleLongTaskProcessor?.processPerformanceEntry({
             entryType: spanAndAnnotation.span.type,
@@ -612,16 +625,39 @@ export class TraceStateMachine<
 
     // terminal states:
     interrupted: {
-      onEnterState: (_payload: OnEnterInterrupted) => {
+      onEnterState: (transition: OnEnterInterrupted) => {
+        // terminal state
         this.clearDeadline()
-        // terminal state, but we reuse the payload for generating the report in ActiveTrace
+        this.sideEffectFns.prepareAndEmitRecording({
+          transition,
+          lastRelevantSpanAndAnnotation: undefined,
+        })
       },
     },
 
     complete: {
-      onEnterState: (_payload: OnEnterComplete<AllPossibleScopesT>) => {
+      onEnterState: (transition: OnEnterComplete<AllPossibleScopesT>) => {
+        // terminal state
+
         this.clearDeadline()
-        // terminal state, but we reuse the payload for generating the report in ActiveTrace
+
+        const { lastRequiredSpanAndAnnotation, cpuIdleSpanAndAnnotation } =
+          transition
+
+        // Tag the span annotations:
+        if (lastRequiredSpanAndAnnotation) {
+          // mutate the annotation to mark the span as complete
+          lastRequiredSpanAndAnnotation.annotation.markedComplete = true
+        }
+        if (cpuIdleSpanAndAnnotation) {
+          // mutate the annotation to mark the span as interactive
+          cpuIdleSpanAndAnnotation.annotation.markedInteractive = true
+        }
+
+        this.sideEffectFns.prepareAndEmitRecording({
+          transition,
+          lastRelevantSpanAndAnnotation: this.lastRelevant,
+        })
       },
     },
   } satisfies StatesBase<AllPossibleScopesT>
@@ -681,6 +717,13 @@ export class TraceStateMachine<
   }
 }
 
+interface PrepareAndEmitRecordingOptions<AllPossibleScopesT> {
+  transition: OnEnterStatePayload<AllPossibleScopesT>
+  lastRelevantSpanAndAnnotation:
+    | SpanAndAnnotation<AllPossibleScopesT>
+    | undefined
+}
+
 export class ActiveTrace<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
@@ -692,7 +735,7 @@ export class ActiveTrace<
   readonly input: ActiveTraceConfig<TracerScopeKeysT, AllPossibleScopesT>
   private readonly deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
 
-  recordedItems: SpanAndAnnotation<AllPossibleScopesT>[] = []
+  recordedItems: Set<SpanAndAnnotation<AllPossibleScopesT>> = new Set()
   stateMachine: TraceStateMachine<TracerScopeKeysT, AllPossibleScopesT>
   occurrenceCounters = new Map<string, number>()
   processedPerformanceEntries: WeakMap<
@@ -720,6 +763,12 @@ export class ActiveTrace<
       input,
       sideEffectFns: {
         storeFinalizeState: this.storeFinalizeState,
+        addSpanToRecording: (spanAndAnnotation) => {
+          if (!this.recordedItems.has(spanAndAnnotation)) {
+            this.recordedItems.add(spanAndAnnotation)
+          }
+        },
+        prepareAndEmitRecording: this.prepareAndEmitRecording.bind(this),
       },
     })
   }
@@ -732,13 +781,7 @@ export class ActiveTrace<
 
   // this is public API only and should not be called internally
   interrupt(reason: TraceInterruptionReason) {
-    const transition = this.stateMachine.emit('onInterrupt', reason)
-    if (!transition) return
-
-    this.prepareAndEmitRecording({
-      transition,
-      lastRelevantSpanAndAnnotation: undefined,
-    })
+    this.stateMachine.emit('onInterrupt', reason)
   }
 
   processSpan(
@@ -808,34 +851,8 @@ export class ActiveTrace<
       spanAndAnnotation,
     )
 
-    // Tag the span annotations:
-    if (transition?.transitionToState === 'complete') {
-      if (transition.lastRequiredSpanAndAnnotation) {
-        // mutate the annotation to mark the span as complete
-        transition.lastRequiredSpanAndAnnotation.annotation.markedComplete =
-          true
-      }
-      if (transition.cpuIdleSpanAndAnnotation) {
-        // mutate the annotation to mark the span as interactive
-        transition.cpuIdleSpanAndAnnotation.annotation.markedInteractive = true
-      }
-    }
-
     const shouldRecord =
       !transition || transition.transitionToState !== 'interrupted'
-
-    // if the final state is interrupted, we should not record the entry nor annotate it externally
-    if (shouldRecord && !existingAnnotation) {
-      this.recordedItems.push(spanAndAnnotation)
-    }
-
-    if (transition) {
-      console.log('** transition', transition)
-      this.prepareAndEmitRecording({
-        transition,
-        lastRelevantSpanAndAnnotation: spanAndAnnotation,
-      })
-    }
 
     if (shouldRecord) {
       // the return value is used for reporting the annotation externally (e.g. to the RUM agent)
@@ -866,12 +883,7 @@ export class ActiveTrace<
   private prepareAndEmitRecording({
     transition,
     lastRelevantSpanAndAnnotation,
-  }: {
-    transition: OnEnterStatePayload<AllPossibleScopesT>
-    lastRelevantSpanAndAnnotation:
-      | SpanAndAnnotation<AllPossibleScopesT>
-      | undefined
-  }) {
+  }: PrepareAndEmitRecordingOptions<AllPossibleScopesT>) {
     if (
       transition.transitionToState === 'interrupted' ||
       transition.transitionToState === 'complete'
@@ -887,13 +899,13 @@ export class ActiveTrace<
           definition: this.definition,
           // only keep items captured until the endOfOperationSpan
           recordedItems: endOfOperationSpan
-            ? this.recordedItems.filter(
+            ? [...this.recordedItems].filter(
                 (item) =>
                   item.span.startTime.now + item.span.duration <=
                   endOfOperationSpan.span.startTime.now +
                     endOfOperationSpan.span.duration,
               )
-            : this.recordedItems,
+            : [...this.recordedItems],
           input: this.input,
         },
         transition,
@@ -902,7 +914,7 @@ export class ActiveTrace<
       console.log('** recording', traceRecording, this)
 
       // memory clean-up in case something retains the ActiveTrace instance
-      this.recordedItems = []
+      this.recordedItems.clear()
       this.occurrenceCounters.clear()
       this.processedPerformanceEntries = new WeakMap()
       this.deduplicationStrategy?.reset()

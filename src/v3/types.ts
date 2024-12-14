@@ -253,7 +253,7 @@ export interface SpanDeduplicationStrategy<AllPossibleScopesT> {
    */
   findDuplicate: (
     span: Span<AllPossibleScopesT>,
-    recordedItems: SpanAndAnnotation<AllPossibleScopesT>[],
+    recordedItems: Set<SpanAndAnnotation<AllPossibleScopesT>>,
   ) => SpanAndAnnotation<AllPossibleScopesT> | undefined
 
   /**
