@@ -148,7 +148,6 @@ export class TraceStateMachine<
 
   nextDeadlineRef: ReturnType<typeof setTimeout> | undefined
 
-  // TODO: add another deadline type for nextQuietWindow to make checking for result even faster
   setDeadline(
     deadlineType: Exclude<DeadlineType, 'global'>,
     deadlineEpoch: number,
@@ -386,7 +385,7 @@ export class TraceStateMachine<
         if (idleRegressionCheckSpan) {
           for (const matcher of this.context.definition.requiredToEnd) {
             if (
-              // TODO: rename matcher in the whole file to 'doesSpanMatch'
+              // v3 TODO: rename matcher in the whole file to 'doesSpanMatch' -> Cynthia
               matcher(idleRegressionCheckSpan, this.context) &&
               matcher.isIdle
             ) {
@@ -482,8 +481,7 @@ export class TraceStateMachine<
           typeof interactiveConfig === 'object' ? interactiveConfig : {},
         )
 
-        // sort the buffer before processing
-        // DECISION TODO: do we want to sort by end time or start time?
+        // DECISION: sort the buffer before processing. sorted by end time (spans that end first should be processed first)
         this.debouncingSpanBuffer.sort(
           (a, b) =>
             a.span.startTime.now +
@@ -581,11 +579,6 @@ export class TraceStateMachine<
           cpuIdleMatch &&
           cpuIdleMatch.entry.span.startTime.epoch +
             cpuIdleMatch.entry.span.duration
-
-        // TODO (DECISION): should we also check whether (cpuIdleTimestamp <= this.interactiveDeadline)?
-        // it's technically more correct, but on the other hand if we crossed the interactive deadline
-        // and at the same time found out the real CpuIdle, it's probably fine to keep it
-        // as long as we don't cross the 'timeoutDeadline' it's probably ok.
 
         if (cpuIdleTimestamp && cpuIdleTimestamp <= this.#timeoutDeadline) {
           // if we match the interactive criteria, transition to complete

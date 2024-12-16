@@ -54,7 +54,8 @@ export interface TraceRecordingBase<TracerScopeT> {
   interruptionReason?: TraceInterruptionReason
   duration: number | null
 
-  // TODO: should we call this durationTillInteractive for consistency?
+  // v3 TODO: wrap the `startTillInteractive`, `completeTillInteractive`, and `firstMeaningfulPaint` (whatever its named lol) into `computedDurations` object.
+  // TODO: if we do this rename, we might need to rename computedSpans -> computedCustomSpans
   startTillInteractive: number | null
   completeTillInteractive: number | null
 
@@ -75,17 +76,6 @@ export interface TraceRecordingBase<TracerScopeT> {
 
   computedValues: {
     [valueName: string]: number | string | boolean
-  }
-
-  // TODO: should this get moved to convertToRum?
-  /**
-   * Merged attributes of the spans with the same type and name.
-   * If attributes changed, most recent ones overwrite older ones.
-   */
-  spanAttributes: {
-    [typeAndName: string]: {
-      [attributeName: string]: unknown
-    }
   }
 }
 

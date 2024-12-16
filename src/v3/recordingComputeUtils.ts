@@ -1,9 +1,13 @@
 /* eslint-disable no-continue */
 import type { FinalState } from './ActiveTrace'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { ActiveTraceConfig } from './spanTypes'
+import type { ActiveTraceConfig, ActiveTraceInput } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
-import type { CompleteTraceDefinition, PossibleScopeObject } from './types'
+import type {
+  PossibleScopeObject,
+  SelectScopeByKey,
+  TraceContext,
+} from './types'
 import type { KeysOfUnion } from './typeUtils'
 
 /**
@@ -26,13 +30,11 @@ import type { KeysOfUnion } from './typeUtils'
  *    3. _The total number of iframe apps were initialized while loading the ticket_
  */
 
-interface ComputeRecordingData<
+export interface ComputeRecordingData<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> {
-  definition: CompleteTraceDefinition<TracerScopeKeysT, AllPossibleScopesT>
+> extends TraceContext<TracerScopeKeysT, AllPossibleScopesT> {
   recordedItems: SpanAndAnnotation<AllPossibleScopesT>[]
-  input: ActiveTraceConfig<TracerScopeKeysT, AllPossibleScopesT>
 }
 
 export function getComputedValues<
@@ -152,43 +154,14 @@ export function getComputedSpans<
   return computedSpans
 }
 
-export function getSpanSummaryAttributes<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
->({
-  definition,
-  recordedItems,
-  input,
-}: ComputeRecordingData<TracerScopeKeysT, AllPossibleScopesT>): TraceRecording<
-  TracerScopeKeysT,
-  AllPossibleScopesT
->['spanAttributes'] {
-  // loop through recorded items, create a entry based on the name
-  const spanAttributes: TraceRecording<
-    TracerScopeKeysT,
-    AllPossibleScopesT
-  >['spanAttributes'] = {}
-
-  for (const { span } of recordedItems) {
-    const { attributes, name } = span
-    const existingAttributes = spanAttributes[name] ?? {}
-    if (attributes && Object.keys(attributes).length > 0) {
-      spanAttributes[name] = {
-        ...existingAttributes,
-        ...attributes,
-      }
-    }
-  }
-
-  return spanAttributes
-}
-
 function getComputedRenderBeaconSpans<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
 >(
   recordedItems: SpanAndAnnotation<AllPossibleScopesT>[],
-  input: ActiveTraceConfig<TracerScopeKeysT, AllPossibleScopesT>,
+  input: ActiveTraceInput<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  >,
 ): TraceRecording<
   TracerScopeKeysT,
   AllPossibleScopesT
@@ -234,7 +207,7 @@ function getComputedRenderBeaconSpans<
 
     const spanTimes = renderSpansByBeacon.get(name)
 
-    // TODO: make sure that sumOfRenderDurations takes into account that mismatch between render-start and full render - might be discarded and re-render - should extend the first render duration from the first render start to the first end
+    // v3 TODO: make sure that sumOfRenderDurations takes into account that mismatch between render-start and full render - might be discarded and re-render - should extend the first render duration from the first render start to the first end
 
     if (!spanTimes) {
       renderSpansByBeacon.set(name, {
@@ -315,17 +288,14 @@ export function createTraceRecording<
   const { definition, recordedItems, input } = data
   const { id, scope } = input
   const { name } = definition
-  // TODO: let's get this information from up top (in FinalState)
+  // CODE CLEAN UP TODO: let's get this information (wasInterrupted) from up top (in FinalState)
   const wasInterrupted =
     interruptionReason && transitionFromState !== 'waiting-for-interactive'
-  // TODO: maybe we don't compute spans and values when interrupted
-  const computedSpans = getComputedSpans(data)
-  const computedValues = getComputedValues(data)
-  const spanAttributes = getSpanSummaryAttributes(data)
-  const computedRenderBeaconSpans = getComputedRenderBeaconSpans(
-    recordedItems,
-    input,
-  )
+  const computedSpans = !wasInterrupted ? getComputedSpans(data) : {}
+  const computedValues = !wasInterrupted ? getComputedValues(data) : {}
+  const computedRenderBeaconSpans = !wasInterrupted
+    ? getComputedRenderBeaconSpans(recordedItems, input)
+    : {}
 
   const anyNonSuppressedErrors = recordedItems.some(
     (spanAndAnnotation) =>
@@ -360,7 +330,6 @@ export function createTraceRecording<
     computedRenderBeaconSpans,
     computedValues,
     attributes: input.attributes ?? {},
-    spanAttributes,
     interruptionReason,
     entries: recordedItems,
   }

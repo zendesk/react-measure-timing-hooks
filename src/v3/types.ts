@@ -74,10 +74,9 @@ export interface TraceManagerConfig<AllPossibleScopesT> {
   generateId: () => string
 
   /**
-   * The span types that should be omitted from the trace report.
-   * TODO implement
+   * IMPLEMENTATION TODO: The span types that should be omitted from the trace report. Or maybe a more general way to filter spans?
    */
-  spanTypesOmittedFromReport?: SpanType[]
+  // spanTypesOmittedFromReport?: SpanType[]
 
   /**
    * Strategy for deduplicating performance entries.
@@ -157,7 +156,7 @@ export interface TraceDefinition<
 
   scopes: readonly TracerScopeKeysT[]
 
-  // TODO: typing this so that the labels are inferred?
+  // TypeScript TODO: typing this so that the span labels are inferred?
   labelMatching?: LabelMatchingInputRecord<
     NoInfer<TracerScopeKeysT>,
     AllPossibleScopesT
@@ -171,7 +170,7 @@ export interface TraceDefinition<
    * we're giving the power to the engineer to manually define
    * which parts of the product are "critical" or most important
    */
-  // TODO: should we rename `requiredToEnd` to `requiredToComplete` for consistency?
+  // v3 TODO: should we rename `requiredToEnd` to `requiredToComplete` for consistency?
   requiredToEnd: ArrayWithAtLeastOneElement<
     SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >

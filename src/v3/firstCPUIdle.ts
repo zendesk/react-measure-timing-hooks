@@ -56,10 +56,13 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
     typeof fmpOrEntry === 'number'
       ? fmpOrEntry
       : fmpOrEntry.startTime + fmpOrEntry.duration
+
   let possibleFirstCPUIdleTimestamp = fmp
   let possibleFirstCPUIdleEntry: PerformanceEntryLike | null =
     typeof fmpOrEntry === 'number' ? null : fmpOrEntry
   let longTaskClusterDurationTotal = 0 // Total duration of the current long task cluster
+
+  // TODO: potentially assume that FMP point is as if inside of a heavy cluster already, this could be done by setting this value to fmp
   let endTimeStampOfLastLongTask: number | null = null // End timestamp of the last long task
   let lastLongTask: PerformanceEntryLike | null = null
 
@@ -82,8 +85,6 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
     return { nextCheck: time + quietWindowDuration }
   }
 
-  // TODO: if a longtask straddles the FMP, then we should push the first CPU idle timestamp to the end of it
-  // TODO: potentially assume that FMP point is as if inside of a heavy cluster already
   function processPerformanceEntry(
     entry: PerformanceEntryLike,
   ): checkIfQuietWindowPassedResult<T> {

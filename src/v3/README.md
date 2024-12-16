@@ -30,3 +30,18 @@ if the timeouts are too long, we can start interrupting other traces, due to the
 
 how broad should be the rules for debouncing?
 problem of accidentally extending the duration of the trace due to user's interaction
+
+isIdle is inferred from renderContent
+// TODO: should isIdle also be true when renderedOutput === 'null'?
+// I'm leaning towards no, but it could be either:
+// either it doesn't make sense to render anything
+// or we don't have the necessary data to render yet
+
+## Edges Cases
+
+// Document TODO for DECISION: should we also check whether (cpuIdleTimestamp <= this.interactiveDeadline)?
+// it's technically more correct, but on the other hand if we crossed the interactive deadline
+// and at the same time found out the real CpuIdle, it's probably fine to keep it
+// as long as we don't cross the 'timeoutDeadline' it's probably ok.
+
+![edge case](./docs/edge-case.png)

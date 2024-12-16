@@ -17,6 +17,12 @@ export interface EmbeddedEntry {
   }[]
 }
 
+export interface SpanSummaryAttributes {
+  [typeAndName: string]: {
+    [attributeName: string]: unknown
+  }
+}
+
 export interface RumTraceRecording<TracerScopeT>
   extends TraceRecordingBase<TracerScopeT> {
   scope: TracerScopeT
@@ -36,6 +42,12 @@ export interface RumTraceRecording<TracerScopeT>
   // 'error|Something went wrong'
   // 'measure|ticket.fetch'
   nonEmbeddedSpans: string[]
+
+  /**
+   * Merged attributes of the spans with the same type and name.
+   * If attributes changed, most recent ones overwrite older ones.
+   */
+  spanAttributes: SpanSummaryAttributes
 }
 
 export function isRenderEntry<ScopeT>(
@@ -89,6 +101,26 @@ export const defaultEmbedSpanSelector = <ScopeT>(
   return isRenderEntry(span)
 }
 
+export function getSpanSummaryAttributes<AllPossibleScopesT>(
+  recordedItems: SpanAndAnnotation<AllPossibleScopesT>[],
+): SpanSummaryAttributes {
+  // loop through recorded items, create a entry based on the name
+  const spanAttributes: SpanSummaryAttributes = {}
+
+  for (const { span } of recordedItems) {
+    const { attributes, name } = span
+    const existingAttributes = spanAttributes[name] ?? {}
+    if (attributes && Object.keys(attributes).length > 0) {
+      spanAttributes[name] = {
+        ...existingAttributes,
+        ...attributes,
+      }
+    }
+  }
+
+  return spanAttributes
+}
+
 export function convertTraceToRUM<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
@@ -103,6 +135,7 @@ export function convertTraceToRUM<
   const { entries, ...otherTraceRecordingAttributes } = traceRecording
   const embeddedEntries: SpanAndAnnotation<AllPossibleScopesT>[] = []
   const nonEmbeddedSpans = new Set<string>()
+  const spanAttributes = getSpanSummaryAttributes(traceRecording.entries)
 
   for (const spanAndAnnotation of entries) {
     const isEmbedded = embedSpanSelector(spanAndAnnotation, context)
@@ -140,5 +173,6 @@ export function convertTraceToRUM<
     ...otherTraceRecordingAttributes,
     embeddedSpans: Object.fromEntries(embeddedSpans),
     nonEmbeddedSpans: [...nonEmbeddedSpans],
+    spanAttributes,
   }
 }

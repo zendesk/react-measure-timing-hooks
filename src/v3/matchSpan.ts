@@ -29,14 +29,12 @@ export interface SpanMatchDefinition<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
 > {
-  // TODO name matcher should be specific to the scope
   name?: NameMatcher<AllPossibleScopesT>
   performanceEntryName?: NameMatcher<AllPossibleScopesT>
   type?: SpanType
   status?: SpanStatus
   attributes?: Attributes
   matchScopes?: readonly TracerScopeKeysT[] | boolean
-  // IMPLEMENTATION TODO: take in scope as a second parameter
   occurrence?: number | ((occurrence: number) => boolean)
   isIdle?: boolean
   label?: string
