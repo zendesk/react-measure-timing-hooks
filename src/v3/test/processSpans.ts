@@ -2,7 +2,7 @@ import { Span } from '../spanTypes'
 import { TraceManager } from '../traceManager'
 import { ScopeValue } from '../types'
 
-function processSpans<
+export function processSpans<
   AllPossibleScopeT extends { [K in keyof AllPossibleScopeT]: ScopeValue },
 >(
   spans: Span<AllPossibleScopeT>[],
@@ -12,5 +12,3 @@ function processSpans<
     traceManager.processSpan(span)
   })
 }
-
-export default processSpans

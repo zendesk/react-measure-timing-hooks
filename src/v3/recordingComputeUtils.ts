@@ -1,7 +1,7 @@
 /* eslint-disable no-continue */
 import type { FinalState } from './ActiveTrace'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { ActiveTraceConfig, ActiveTraceInput } from './spanTypes'
+import type { ActiveTraceInput } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   PossibleScopeObject,

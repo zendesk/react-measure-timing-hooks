@@ -5,7 +5,6 @@ import type {
   ActiveTraceInput,
   Span,
   SpanStatus,
-  SpanType,
   StartTraceConfig,
 } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'

@@ -8,8 +8,7 @@ import type {
 
 export interface ComponentRenderStub
   extends Partial<Omit<ComponentRenderSpan<any>, 'startTime' | 'duration'>> {
-  // TODO: double check what this is
-  entryType: 'component-render'
+  entryType: 'component-render' | 'component-render-start'
   duration: number
   startTime?: number
   name: string
@@ -57,6 +56,10 @@ export const Render = (
   name,
   duration,
   startTime: options.startTime,
+  isIdle:
+    (options.renderedOutput === 'content' ||
+      options.renderedOutput === 'error') ??
+    options.isIdle,
   ...options,
 })
 
@@ -171,9 +174,16 @@ export function getSpansFromTimeline<AllPossibleScopesT>(
         epoch:
           'startTime' in stub ? stub.startTime ?? currentTime : currentTime,
       },
-      isIdle: 'name' in stub ? stub.name?.includes('idle') : undefined,
+      isIdle:
+        'isIdle' in stub
+          ? stub.isIdle
+          : 'name' in stub
+          ? stub.name?.includes('idle')
+          : undefined,
       renderedOutput:
-        'name' in stub
+        'renderedOutput' in stub
+          ? stub.renderedOutput
+          : 'name' in stub
           ? stub.name?.includes('idle')
             ? 'content'
             : 'loading'
