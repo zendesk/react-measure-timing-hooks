@@ -1,10 +1,14 @@
-export type Messages = Array<{
+export type Messages = {
   message: string
   humanReadableTimestamp: string
   author: string
   authorType: 'agent' | 'customer'
-}>
-export type Ticket = { id: number; subject: string; messages: Messages }
+}[]
+export interface Ticket {
+  id: number
+  subject: string
+  messages: Messages
+}
 
 export const mockTickets: Ticket[] = [
   {

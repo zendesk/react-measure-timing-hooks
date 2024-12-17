@@ -6,6 +6,7 @@ const meta: Meta<typeof App> = {
   component: App,
 }
 
+// eslint-disable-next-line import/no-default-export
 export default meta
 type Story = StoryObj<typeof App>
 

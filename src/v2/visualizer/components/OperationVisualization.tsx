@@ -228,6 +228,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ state, setState }) => {
   )
 
   return (
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     <LegendDemo title="">
       <GardenGrid.Row justifyContent="center">
         <GardenGrid.Col sm={13}>
@@ -555,4 +556,5 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   )
 }
 
+// eslint-disable-next-line import/no-default-export
 export default OperationVisualization

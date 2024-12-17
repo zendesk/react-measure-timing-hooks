@@ -1,16 +1,18 @@
-import './test/asciiTimelineSerializer'
-import { DEFAULT_CAPTURE_INTERACTIVE_TIME } from '../main'
-import { DEFAULT_TIMEOUT_DURATION } from './constants'
+import './testUtility/asciiTimelineSerializer'
+import {
+  DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
+  DEFAULT_TIMEOUT_DURATION,
+} from './constants'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
-import { type TicketIdScope } from './test/fixtures/ticket.activation'
+import { type TicketIdScope } from './testUtility/fixtures/ticket.activation'
 import {
   Check,
   getSpansFromTimeline,
   LongTask,
   Render,
-} from './test/makeTimeline'
-import { processSpans } from './test/processSpans'
+} from './testUtility/makeTimeline'
+import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
 
@@ -70,8 +72,8 @@ describe('TraceManager with Capture Interactivity', () => {
     // prettier-ignore
     const { spans } = getSpansFromTimeline<TicketIdScope>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(50)}------<===5s===>---------${Check}
-      Time:   ${0}                      ${2_000}                ${2_001}                                ${2_001 + DEFAULT_CAPTURE_INTERACTIVE_TIME}
-      `
+      Time:   ${0}                      ${2_000}                ${2_001}                                ${2_001 + DEFAULT_INTERACTIVE_TIMEOUT_DURATION}
+    `
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 

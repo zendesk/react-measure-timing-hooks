@@ -1,14 +1,14 @@
-import './test/asciiTimelineSerializer'
+import './testUtility/asciiTimelineSerializer'
 import * as matchSpan from './matchSpan'
-import { shouldCompleteAndHaveInteractiveTime } from './test/fixtures/shouldCompleteAndHaveInteractiveTime'
-import { shouldNotEndWithInteractiveTimeout } from './test/fixtures/shouldNotEndWithInteractiveTimeout'
+import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
+import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
   type TicketIdScope,
   ticketActivationDefinition,
   UserIdScope,
-} from './test/fixtures/ticket.activation'
-import { Check, getSpansFromTimeline, Render } from './test/makeTimeline'
-import { processSpans } from './test/processSpans'
+} from './testUtility/fixtures/ticket.activation'
+import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
+import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
 

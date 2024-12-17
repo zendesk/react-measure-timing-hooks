@@ -29,6 +29,7 @@ export const App: React.FC = () => {
 
   const handleTicketClick = (id: number) => {
     const onTracked = (operation: Operation) =>
+      // eslint-disable-next-line no-console
       void console.log(
         `Ticket ${id}: ${operation.state}`,
         operation,

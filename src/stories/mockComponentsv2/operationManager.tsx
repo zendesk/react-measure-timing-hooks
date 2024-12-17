@@ -11,6 +11,7 @@ export const operationManager = new OperationManager({
   // },
   preprocessEvent(event) {
     const processedEvent = defaultEventProcessor(event)
+    // eslint-disable-next-line no-console
     console.log('event', processedEvent)
     return processedEvent
   },

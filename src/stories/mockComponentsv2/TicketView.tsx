@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import React, { useEffect } from 'react'
 import styled from 'styled-components'
 import { Timeline } from '@zendeskgarden/react-accordions'
@@ -7,7 +8,7 @@ import { Well } from '@zendeskgarden/react-notifications'
 import { DEFAULT_THEME, PALETTE } from '@zendeskgarden/react-theming'
 import { Paragraph, Span, XXL } from '@zendeskgarden/react-typography'
 import { ReactComponent as UserIcon } from '@zendeskgarden/svg-icons/src/16/user-solo-stroke.svg'
-import { VISIBLE_STATE } from '../../main'
+import { VISIBLE_STATE } from '../../v2/constants'
 import { TimingComponent } from '../../v2/element'
 import {
   useCaptureRenderBeaconTask,
@@ -45,8 +46,8 @@ export const TicketView: React.FC<TicketViewProps> = ({
       track: [
         { match: { attributes: { ticketId } } },
         {
-          //debounce on any event that has the same ticket id
-          match: { attributes: { ticketId, visibleState: 'complete' } }, //required to end the operation, ticket fully loaded!
+          // debounce on any event that has the same ticket id
+          match: { attributes: { ticketId, visibleState: 'complete' } }, // required to end the operation, ticket fully loaded!
           requiredToEnd: true,
         },
       ],

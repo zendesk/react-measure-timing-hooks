@@ -1,4 +1,5 @@
 import React from 'react'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { Cell, Row } from '@zendeskgarden/react-tables'
 
 interface TicketProps {

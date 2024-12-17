@@ -18,7 +18,6 @@ import { ReactComponent as ClearIcon } from '@zendeskgarden/svg-icons/src/26/arr
 import { ReactComponent as ProductIcon } from '@zendeskgarden/svg-icons/src/26/garden.svg'
 import { ReactComponent as HomeIcon } from '@zendeskgarden/svg-icons/src/26/home-fill.svg'
 import { ReactComponent as ZendeskIcon } from '@zendeskgarden/svg-icons/src/26/zendesk.svg'
-import { observePerformanceWithTraceManager } from '../../v3/observePerformanceWithTraceManager'
 // CYN: NEED UPDATE
 import { mockTickets } from './mockTickets'
 import { TicketList } from './TicketList'

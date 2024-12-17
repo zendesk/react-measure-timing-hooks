@@ -16,8 +16,8 @@ import {
 import type {
   ActionWithStateMetadata,
   ReportArguments,
-  TimingSpan,
   StageDescription,
+  TimingSpan,
 } from './types'
 import { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
 

@@ -1,7 +1,7 @@
 /* eslint-disable jest/expect-expect */
-import { generateUseBeacon } from '../hooks'
-import * as match from '../matchSpan'
-import { TraceManager } from '../traceManager'
+import { generateUseBeacon } from './hooks'
+import * as match from './matchSpan'
+import { TraceManager } from './traceManager'
 
 interface ExampleTicketScope {
   ticketId: string

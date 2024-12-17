@@ -18,4 +18,5 @@ const asciiTimelineSerializer = {
 
 expect.addSnapshotSerializer(asciiTimelineSerializer)
 
+// eslint-disable-next-line import/no-default-export
 export default asciiTimelineSerializer

@@ -1,5 +1,5 @@
-import { getCommonUrlForTracing } from '../main'
 import { ensureTimestamp } from './ensureTimestamp'
+import { getCommonUrlForTracing } from './getCommonUrlForTracing'
 import {
   Attributes,
   InitiatorType,

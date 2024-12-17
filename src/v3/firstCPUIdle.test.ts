@@ -1,6 +1,12 @@
-import './test/asciiTimelineSerializer'
+import './testUtility/asciiTimelineSerializer'
 import { createCPUIdleProcessor } from './firstCPUIdle'
-import { Check, FMP, Idle, LongTask, makeEntries } from './test/makeTimeline'
+import {
+  Check,
+  FMP,
+  Idle,
+  LongTask,
+  makeEntries,
+} from './testUtility/makeTimeline'
 
 function getFirstCPUIdleEntry({
   fmpTime,

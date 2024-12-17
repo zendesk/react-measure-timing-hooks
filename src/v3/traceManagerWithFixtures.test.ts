@@ -1,10 +1,10 @@
-import './test/asciiTimelineSerializer'
-import { shouldCompleteAndHaveInteractiveTime } from './test/fixtures/shouldCompleteAndHaveInteractiveTime'
-import { shouldNotEndWithInteractiveTimeout } from './test/fixtures/shouldNotEndWithInteractiveTimeout'
+import './testUtility/asciiTimelineSerializer'
+import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
+import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
   type TicketIdScope,
   ticketActivationDefinition,
-} from './test/fixtures/ticket.activation'
+} from './testUtility/fixtures/ticket.activation'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
 

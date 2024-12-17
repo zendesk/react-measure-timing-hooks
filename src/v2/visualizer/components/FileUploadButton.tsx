@@ -46,4 +46,5 @@ const FileUploadButton = ({ name, id, onChange }: FileUploadButtonProps) => (
   </>
 )
 
+// eslint-disable-next-line import/no-default-export
 export default FileUploadButton

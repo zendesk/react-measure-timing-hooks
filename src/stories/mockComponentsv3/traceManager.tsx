@@ -9,8 +9,10 @@ export interface TicketIdScope {
 
 export const traceManager = new TraceManager<TicketIdScope>({
   reportFn: (trace) => {
+    // eslint-disable-next-line no-console
     console.log('# on End', trace, trace.entries, trace.duration)
   },
+  // eslint-disable-next-line no-magic-numbers
   generateId: () => Math.random().toString(36).slice(2),
 })
 
