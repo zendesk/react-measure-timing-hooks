@@ -7,7 +7,7 @@ import {
 import { ensureTimestamp } from './ensureTimestamp'
 import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
-import type { ActiveTraceInput, Span, StartTraceConfig } from './spanTypes'
+import type { Span, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
@@ -64,14 +64,14 @@ export class TraceManager<
       SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>[]
     >[] = []
 
-    const requiredToEnd = convertMatchersToFns<
+    const requiredSpans = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT
     >(traceDefinition.requiredSpans)
 
-    if (!requiredToEnd) {
+    if (!requiredSpans) {
       throw new Error(
-        'requiredToEnd must be defined, as a trace will never end otherwise',
+        'requiredSpans must be defined, as a trace will never end otherwise',
       )
     }
 
@@ -98,7 +98,7 @@ export class TraceManager<
       AllPossibleScopesT
     > = {
       ...traceDefinition,
-      requiredSpans: requiredToEnd,
+      requiredSpans,
       debounceOn,
       interruptOn,
       suppressErrorStatusPropagationOn,

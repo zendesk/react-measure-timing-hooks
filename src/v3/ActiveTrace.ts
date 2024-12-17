@@ -114,7 +114,7 @@ interface StateMachineContext<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
 > extends TraceContext<TracerScopeKeysT, AllPossibleScopesT> {
-  readonly requiredToEndIndexChecklist: Set<number>
+  readonly requiredSpansIndexChecklist: Set<number>
 }
 
 type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
@@ -253,7 +253,7 @@ export class TraceStateMachine<
         }
 
         for (let i = 0; i < this.context.definition.requiredSpans.length; i++) {
-          if (!this.context.requiredToEndIndexChecklist.has(i)) {
+          if (!this.context.requiredSpansIndexChecklist.has(i)) {
             // we previously checked off this index
             // eslint-disable-next-line no-continue
             continue
@@ -261,8 +261,8 @@ export class TraceStateMachine<
 
           const doesSpanMatch = this.context.definition.requiredSpans[i]!
           if (doesSpanMatch(spanAndAnnotation, this.context)) {
-            // remove the index of this definition from the list of requiredToEnd
-            this.context.requiredToEndIndexChecklist.delete(i)
+            // remove the index of this definition from the list of requiredSpans
+            this.context.requiredSpansIndexChecklist.delete(i)
 
             // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
             if (
@@ -277,7 +277,7 @@ export class TraceStateMachine<
 
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
-        if (this.context.requiredToEndIndexChecklist.size === 0) {
+        if (this.context.requiredSpansIndexChecklist.size === 0) {
           return { transitionToState: 'debouncing' }
         }
         return undefined
@@ -300,7 +300,7 @@ export class TraceStateMachine<
       },
     },
 
-    // we enter the debouncing state once all requiredToEnd entries have been seen
+    // we enter the debouncing state once all requiredSpans entries have been seen
     // it is necessary due to the nature of React rendering,
     // as even once we reach the visually complete state of a component,
     // the component might continue to re-render
@@ -378,7 +378,7 @@ export class TraceStateMachine<
 
         const { span } = spanAndAnnotation
 
-        // even though we satisfied all the requiredToEnd conditions in the recording state,
+        // even though we satisfied all the requiredSpans conditions in the recording state,
         // if we see a previously required render span that was requested to be idle, but is no longer idle,
         // our trace is deemed invalid and should be interrupted
         const isSpanNonIdleRender = 'isIdle' in span && !span.isIdle
@@ -713,7 +713,7 @@ export class TraceStateMachine<
     this.context = {
       definition,
       input,
-      requiredToEndIndexChecklist: new Set(
+      requiredSpansIndexChecklist: new Set(
         definition.requiredSpans.map((_, i) => i),
       ),
     }

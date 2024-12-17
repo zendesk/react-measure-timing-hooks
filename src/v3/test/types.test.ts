@@ -172,7 +172,7 @@ describe.skip('type tests', () => {
       ],
     })
 
-    // invalid definition. userId given in requiredToEnd isn't one of the scopes the tracer says it can have
+    // invalid definition. userId given in requiredSpans isn't one of the scopes the tracer says it can have
     const shouldErrorTrace = traceManager.createTracer({
       name: 'ticket.should_error',
       scopes: ['ticketId', 'customFieldId'],

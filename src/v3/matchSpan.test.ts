@@ -73,7 +73,7 @@ const mockContext = {
     name: 'test',
     type: 'operation',
     scopes: ['ticketId'] as never,
-    requiredToEnd: [() => true],
+    requiredSpans: [() => true],
     computedSpanDefinitions: [],
     computedValueDefinitions: [],
   },
