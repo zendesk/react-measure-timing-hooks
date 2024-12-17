@@ -82,7 +82,7 @@ const mockContext = {
 
 // TESTING TODO: ask chatgpt to add 'or' and 'not' tests
 
-describe('doesEntryMatchDefinition', () => {
+describe('matchSpan', () => {
   describe('name', () => {
     it('should return true for a matching entry based on name', () => {
       const matcher = matchSpan.withName<keyof TicketScope, TicketScope>(

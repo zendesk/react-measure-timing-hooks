@@ -48,6 +48,9 @@ export interface RumTraceRecording<TracerScopeT>
    * If attributes changed, most recent ones overwrite older ones.
    */
   spanAttributes: SpanSummaryAttributes
+
+  // allow for additional attributes to be added by the consumer
+  [key: string]: unknown
 }
 
 export function isRenderEntry<ScopeT>(
