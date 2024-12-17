@@ -229,7 +229,9 @@ function getComputedRenderBeaconSpans<
 
       if (entry.span.type === 'component-render') {
         spanTimes.renderCount += 1
-        // If there was a pending render start, include the time from that start to this render
+        // React's concurrent rendering might pause and discard a render,
+        // which would mean that an effect scheduled for that render does not execute because the render itself was not committed to the DOM.
+        // we want to extend the the render span backwards, to first time that rendering was scheduled as the start time of rendering
         if (spanTimes.lastRenderStartTime !== undefined) {
           spanTimes.sumOfDurations +=
             start + duration - spanTimes.lastRenderStartTime
