@@ -346,7 +346,7 @@ export interface ComputedValueDefinitionInput<
   matches: [...MatchersT]
   computeValueFromMatches: (
     ...matches: MapTuple<MatchersT, SpanAndAnnotation<AllPossibleScopesT>[]>
-  ) => number | string | boolean
+  ) => number | string | boolean | undefined
 }
 
 // export type SelectScopeByKey<
