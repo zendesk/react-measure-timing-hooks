@@ -9,6 +9,7 @@ import type {
   TraceContext,
 } from './types'
 import type { KeysOfUnion } from './typeUtils'
+import { findLast } from './utils'
 
 /**
  * ### Deriving SLIs and other metrics from a trace
@@ -123,8 +124,13 @@ export function getComputedSpans<
         ? markedInteractive
         : endSpan
 
-    const matchingEndEntry = recordedItems.findLast((spanAndAnnotation) =>
-      endSpanMatcher(spanAndAnnotation, { input, definition: traceDefinition }),
+    const matchingEndEntry = findLast(
+      recordedItems,
+      (spanAndAnnotation) =>
+        endSpanMatcher(spanAndAnnotation, {
+          input,
+          definition: traceDefinition,
+        })!,
     )
 
     const matchingEndTime = matchingEndEntry
