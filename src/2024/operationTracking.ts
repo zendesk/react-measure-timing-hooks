@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 
 import { type Subscription, Observable, share } from 'rxjs'
-import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
 import { getCommonUrlForTracing } from '../v2/getCommonUrlForTracing'
+import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
 import type {
   Operation,
   OperationSpanMetadata,
@@ -124,30 +124,30 @@ const getPerformanceEntryObservable = <Type extends PerformanceEntryType>(
     (Type extends 'element'
       ? PerformanceElementTiming
       : Type extends 'event'
-        ? PerformanceEventTiming
-        : Type extends 'first-input'
-          ? PerformanceEventTiming
-          : Type extends 'largest-contentful-paint'
-            ? LargestContentfulPaint
-            : Type extends 'layout-shift'
-              ? LayoutShift
-              : Type extends 'longtask'
-                ? PerformanceLongTaskTiming
-                : Type extends 'mark'
-                  ? PerformanceMark
-                  : Type extends 'measure'
-                    ? PerformanceMeasure
-                    : Type extends 'navigation'
-                      ? PerformanceNavigationTiming
-                      : Type extends 'paint'
-                        ? PerformancePaintTiming
-                        : Type extends 'resource'
-                          ? PerformanceResourceTiming
-                          : Type extends 'taskattribution'
-                            ? TaskAttributionTiming
-                            : Type extends 'visibility-state'
-                              ? VisibilityStateEntry
-                              : never)[]
+      ? PerformanceEventTiming
+      : Type extends 'first-input'
+      ? PerformanceEventTiming
+      : Type extends 'largest-contentful-paint'
+      ? LargestContentfulPaint
+      : Type extends 'layout-shift'
+      ? LayoutShift
+      : Type extends 'longtask'
+      ? PerformanceLongTaskTiming
+      : Type extends 'mark'
+      ? PerformanceMark
+      : Type extends 'measure'
+      ? PerformanceMeasure
+      : Type extends 'navigation'
+      ? PerformanceNavigationTiming
+      : Type extends 'paint'
+      ? PerformancePaintTiming
+      : Type extends 'resource'
+      ? PerformanceResourceTiming
+      : Type extends 'taskattribution'
+      ? TaskAttributionTiming
+      : Type extends 'visibility-state'
+      ? VisibilityStateEntry
+      : never)[]
   >((subscriber) => {
     const observer = new PerformanceObserver((list) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any

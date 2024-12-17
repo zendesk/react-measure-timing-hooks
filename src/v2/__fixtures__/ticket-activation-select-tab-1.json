@@ -3214,9 +3214,7 @@
         "commonName": "graphql/support_remote/query/AgentGraphMostUsedMacrosQuery",
         "graphql": {
           "apolloClientName": "support_remote",
-          "operations": [
-            "query/AgentGraphMostUsedMacrosQuery"
-          ]
+          "operations": ["query/AgentGraphMostUsedMacrosQuery"]
         },
         "feature": "Ticket/Footer",
         "occurrenceMultiplier": 1,
@@ -3294,9 +3292,7 @@
         "commonName": "graphql/support_remote/query/SkillTypes",
         "graphql": {
           "apolloClientName": "support_remote",
-          "operations": [
-            "query/SkillTypes"
-          ]
+          "operations": ["query/SkillTypes"]
         },
         "feature": "Ticket/TicketPropertiesSidebar/SkillsContainer",
         "occurrenceMultiplier": 1,
@@ -3629,9 +3625,7 @@
         "commonName": "graphql/support_remote/query/user",
         "graphql": {
           "apolloClientName": "support_remote",
-          "operations": [
-            "query/user"
-          ]
+          "operations": ["query/user"]
         },
         "feature": "Ticket/Footer",
         "occurrenceMultiplier": 1,
@@ -4487,9 +4481,7 @@
         "commonName": "graphql/support_remote/query/ticket",
         "graphql": {
           "apolloClientName": "support_remote",
-          "operations": [
-            "query/ticket"
-          ]
+          "operations": ["query/ticket"]
         },
         "feature": "lotus-react",
         "occurrenceMultiplier": 1,
@@ -4685,9 +4677,7 @@
         "commonName": "graphql/platform-data-graph-gateway/query/ticketPolicyMetrics",
         "graphql": {
           "apolloClientName": "platform-data-graph-gateway",
-          "operations": [
-            "query/ticketPolicyMetrics"
-          ]
+          "operations": ["query/ticketPolicyMetrics"]
         },
         "occurrenceMultiplier": 1,
         "httpProtocol": "h2",
@@ -4764,9 +4754,7 @@
         "commonName": "graphql/support_remote/query/BFFConvoLogQuery",
         "graphql": {
           "apolloClientName": "support_remote",
-          "operations": [
-            "query/BFFConvoLogQuery"
-          ]
+          "operations": ["query/BFFConvoLogQuery"]
         },
         "feature": "lotus-react",
         "occurrenceMultiplier": 1,
@@ -6102,9 +6090,7 @@
         "commonName": "graphql/platform-data-graph-gateway/query/AgentGraphChatAttachmentSettings",
         "graphql": {
           "apolloClientName": "platform-data-graph-gateway",
-          "operations": [
-            "query/AgentGraphChatAttachmentSettings"
-          ]
+          "operations": ["query/AgentGraphChatAttachmentSettings"]
         },
         "occurrenceMultiplier": 1,
         "httpProtocol": "h2",
@@ -6253,9 +6239,7 @@
         "commonName": "graphql/support_remote/query/ticketForm",
         "graphql": {
           "apolloClientName": "support_remote",
-          "operations": [
-            "query/ticketForm"
-          ]
+          "operations": ["query/ticketForm"]
         },
         "feature": "lotus-react",
         "occurrenceMultiplier": 1,
@@ -7046,9 +7030,7 @@
         "commonName": "graphql/platform-data-graph-gateway/query/Lotus__IntelligenceSettings",
         "graphql": {
           "apolloClientName": "platform-data-graph-gateway",
-          "operations": [
-            "query/Lotus__IntelligenceSettings"
-          ]
+          "operations": ["query/Lotus__IntelligenceSettings"]
         },
         "occurrenceMultiplier": 1,
         "httpProtocol": "h2",
@@ -7958,9 +7940,7 @@
         "commonName": "graphql/platform-data-graph-gateway/query/AgentGraphChatComposerShortcuts",
         "graphql": {
           "apolloClientName": "platform-data-graph-gateway",
-          "operations": [
-            "query/AgentGraphChatComposerShortcuts"
-          ]
+          "operations": ["query/AgentGraphChatComposerShortcuts"]
         },
         "occurrenceMultiplier": 1,
         "httpProtocol": "h2",
@@ -8058,9 +8038,7 @@
         "commonName": "graphql/platform-data-graph-gateway/query/Lotus__Brands",
         "graphql": {
           "apolloClientName": "platform-data-graph-gateway",
-          "operations": [
-            "query/Lotus__Brands"
-          ]
+          "operations": ["query/Lotus__Brands"]
         },
         "occurrenceMultiplier": 1,
         "httpProtocol": "h2",
