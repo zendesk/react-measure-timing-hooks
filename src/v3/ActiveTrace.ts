@@ -259,8 +259,8 @@ export class TraceStateMachine<
             continue
           }
 
-          const matcher = this.context.definition.requiredSpans[i]!
-          if (matcher(spanAndAnnotation, this.context)) {
+          const doesSpanMatch = this.context.definition.requiredSpans[i]!
+          if (doesSpanMatch(spanAndAnnotation, this.context)) {
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
 
@@ -389,11 +389,10 @@ export class TraceStateMachine<
           span: { ...span, isIdle: true },
         }
         if (idleRegressionCheckSpan) {
-          for (const matcher of this.context.definition.requiredSpans) {
+          for (const doesSpanMatch of this.context.definition.requiredSpans) {
             if (
-              // v3 TODO: rename matcher in the whole file to 'doesSpanMatch' -> Cynthia
-              matcher(idleRegressionCheckSpan, this.context) &&
-              matcher.isIdle
+              doesSpanMatch(idleRegressionCheckSpan, this.context) &&
+              doesSpanMatch.isIdle
             ) {
               // check if we regressed on "isIdle", and if so, transition to interrupted with reason
               return {
@@ -408,8 +407,8 @@ export class TraceStateMachine<
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
-          for (const matcher of this.context.definition.debounceOn) {
-            if (matcher(spanAndAnnotation, this.context)) {
+          for (const doesSpanMatch of this.context.definition.debounceOn) {
+            if (doesSpanMatch(spanAndAnnotation, this.context)) {
               // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
               if (
                 spanAndAnnotation.annotation.operationRelativeEndTime >
@@ -629,8 +628,8 @@ export class TraceStateMachine<
         // if the entry matches any of the interruptOn criteria,
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
         if (this.context.definition.interruptOn) {
-          for (const matcher of this.context.definition.interruptOn) {
-            if (matcher(spanAndAnnotation, this.context)) {
+          for (const doesSpanMatch of this.context.definition.interruptOn) {
+            if (doesSpanMatch(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'complete',
                 interruptionReason: 'matched-on-interrupt',
@@ -907,8 +906,8 @@ export class ActiveTrace<
     if (!this.definition.labelMatching) return labels
 
     Object.entries(this.definition.labelMatching).forEach(
-      ([label, matcher]) => {
-        if (matcher(span, context)) {
+      ([label, doesSpanMatch]) => {
+        if (doesSpanMatch(span, context)) {
           labels.push(label)
         }
       },

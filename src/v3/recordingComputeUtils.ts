@@ -56,14 +56,14 @@ export function getComputedValues<
   for (const definition of traceDefinition.computedValueDefinitions) {
     const { name, matches, computeValueFromMatches } = definition
 
-    // Initialize arrays to hold matches for each matcher
+    // Initialize arrays to hold matches for each doesSpanMatch matcher
     const matchingEntriesByMatcher: SpanAndAnnotation<AllPossibleScopesT>[][] =
       Array.from({ length: matches.length }, () => [])
 
     // Single pass through recordedItems
     for (const item of recordedItems) {
-      matches.forEach((matcher, index) => {
-        if (matcher(item, { input, definition: traceDefinition })) {
+      matches.forEach((doesSpanMatch, index) => {
+        if (doesSpanMatch(item, { input, definition: traceDefinition })) {
           matchingEntriesByMatcher[index]!.push(item)
         }
       })
@@ -153,7 +153,6 @@ export function getComputedSpans<
 
   return computedSpans
 }
-
 function getComputedRenderBeaconSpans<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
@@ -175,6 +174,7 @@ function getComputedRenderBeaconSpans<
       firstContentStart: number | undefined
       renderCount: number
       sumOfDurations: number
+      lastRenderStartTime: number | undefined // Track the last render start time
     }
   >()
 
@@ -186,12 +186,10 @@ function getComputedRenderBeaconSpans<
       entry.span.type !== 'component-render' &&
       entry.span.type !== 'component-render-start'
     ) {
-      // need to look at component-render-start too, because react might discard some renders as optimization
-      // ratio of component-render-start to component-render isn't always 1:1
       continue
     }
     const { name, startTime, duration, scope, renderedOutput } = entry.span
-    // accept any span that either matches scope or doesn't share any of the scope values
+
     const scopeMatch = scopeKeys.every(
       (key) =>
         (scope as PossibleScopeObject | undefined)?.[key] === undefined ||
@@ -199,6 +197,7 @@ function getComputedRenderBeaconSpans<
           (scope as PossibleScopeObject)[key],
     )
     if (!scopeMatch) continue
+
     const start = startTime.now
     const contentfulRenderEnd =
       entry.span.type === 'component-render' && renderedOutput === 'content'
@@ -206,8 +205,6 @@ function getComputedRenderBeaconSpans<
         : undefined
 
     const spanTimes = renderSpansByBeacon.get(name)
-
-    // v3 TODO: make sure that sumOfRenderDurations takes into account that mismatch between render-start and full render - might be discarded and re-render - should extend the first render duration from the first render start to the first end
 
     if (!spanTimes) {
       renderSpansByBeacon.set(name, {
@@ -220,6 +217,8 @@ function getComputedRenderBeaconSpans<
           entry.span.type === 'component-render' && renderedOutput === 'loading'
             ? start + duration
             : undefined,
+        lastRenderStartTime:
+          entry.span.type === 'component-render-start' ? start : undefined,
       })
     } else {
       spanTimes.firstStart = Math.min(spanTimes.firstStart, start)
@@ -227,10 +226,21 @@ function getComputedRenderBeaconSpans<
         contentfulRenderEnd && spanTimes.firstContentfulRenderEnd
           ? Math.min(spanTimes.firstContentfulRenderEnd, contentfulRenderEnd)
           : contentfulRenderEnd ?? spanTimes.firstContentfulRenderEnd
+
       if (entry.span.type === 'component-render') {
         spanTimes.renderCount += 1
+        // If there was a pending render start, include the time from that start to this render
+        if (spanTimes.lastRenderStartTime !== undefined) {
+          spanTimes.sumOfDurations +=
+            start + duration - spanTimes.lastRenderStartTime
+          spanTimes.lastRenderStartTime = undefined
+        } else {
+          spanTimes.sumOfDurations += duration
+        }
+      } else if (entry.span.type === 'component-render-start') {
+        spanTimes.lastRenderStartTime = start
       }
-      spanTimes.sumOfDurations += duration
+
       if (
         spanTimes.firstContentStart === undefined &&
         renderedOutput === 'content'
@@ -301,8 +311,8 @@ export function createTraceRecording<
   const anyNonSuppressedErrors = recordedItems.some(
     (spanAndAnnotation) =>
       spanAndAnnotation.span.status === 'error' &&
-      !definition.suppressErrorStatusPropagationOn?.some((matcher) =>
-        matcher(spanAndAnnotation, data),
+      !definition.suppressErrorStatusPropagationOn?.some((doesSpanMatch) =>
+        doesSpanMatch(spanAndAnnotation, data),
       ),
   )
 
