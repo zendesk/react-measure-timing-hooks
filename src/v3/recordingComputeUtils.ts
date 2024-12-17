@@ -57,7 +57,7 @@ export function getComputedValues<
   for (const definition of traceDefinition.computedValueDefinitions) {
     const { name, matches, computeValueFromMatches } = definition
 
-    // Initialize arrays to hold matches for each doesSpanMatch matcher
+    // Initialize arrays to hold matches for each matcher
     const matchingEntriesByMatcher: SpanAndAnnotation<AllPossibleScopesT>[][] =
       Array.from({ length: matches.length }, () => [])
 
@@ -70,7 +70,10 @@ export function getComputedValues<
       })
     }
 
-    computedValues[name] = computeValueFromMatches(...matchingEntriesByMatcher)
+    const value = computeValueFromMatches(...matchingEntriesByMatcher)
+    if (value !== undefined) {
+      computedValues[name] = value
+    }
   }
   return computedValues
 }

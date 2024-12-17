@@ -312,10 +312,11 @@ export interface ComputedValueDefinition<
 > {
   name: string
   matches: [...MatchersT]
+  /** if returns undefined, will not report the computed value */
   computeValueFromMatches: (
     // as many matches as match of type Span<ScopeT>
     ...matches: MapTuple<MatchersT, SpanAndAnnotation<AllPossibleScopesT>[]>
-  ) => number | string | boolean
+  ) => number | string | boolean | undefined
 }
 
 /**
