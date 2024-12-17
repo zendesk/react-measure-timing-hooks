@@ -7370,7 +7370,7 @@ export const shouldCompleteAndHaveInteractiveTime: SpanAndAnnotation<TicketIdSco
         operationRelativeEndTime: 1_462.299_999_997_019_8,
         occurrence: 10,
         recordedInState: 'waiting-for-interactive',
-        markedInteractive: true,
+        markedPageInteractive: true,
       },
     },
     {

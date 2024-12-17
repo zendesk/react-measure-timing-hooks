@@ -1,8 +1,8 @@
+import { getSpanSummaryAttributes } from './convertToRum'
 import {
   createTraceRecording,
   getComputedSpans,
   getComputedValues,
-  getSpanSummaryAttributes,
 } from './recordingComputeUtils'
 import type { SpanAndAnnotation, SpanAnnotation } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
@@ -28,6 +28,7 @@ describe('recordingComputeUtils', () => {
       span.startTime.now + span.duration - traceStartTime.now,
     occurrence: 1,
     recordedInState: 'recording',
+    labels: [],
     ...partial,
   })
 
@@ -72,10 +73,10 @@ describe('recordingComputeUtils', () => {
   const onEnd = jest.fn()
 
   describe('error status propagation', () => {
-    const baseDefinition: CompleteTraceDefinition<AnyScope, AnyScope> = {
+    const baseDefinition: CompleteTraceDefinition<never, AnyScope> = {
       name: 'test-trace',
       scopes: [],
-      requiredToEnd: [() => true],
+      requiredSpans: [() => true],
       computedSpanDefinitions: [],
       computedValueDefinitions: [],
     }
@@ -95,13 +96,15 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            onEnd,
           },
         },
         { transitionFromState: 'recording' },
       )
 
       expect(recording.status).toBe('error')
+      expect(recording.additionalDurations.startTillInteractive).toBeNull()
+      expect(recording.additionalDurations.completeTillInteractive).toBeNull()
+      expect(recording.additionalDurations.startTillRequirementsMet).toBeNull()
     })
 
     it('should not mark trace as error if all error spans are suppressed', () => {
@@ -124,13 +127,13 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            onEnd,
           },
         },
         { transitionFromState: 'recording' },
       )
 
       expect(recording.status).toBe('ok')
+      expect(recording.additionalDurations.startTillInteractive).toBeNull()
     })
 
     it('should mark trace as error if any error span is not suppressed', () => {
@@ -157,13 +160,13 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            onEnd,
           },
         },
         { transitionFromState: 'recording' },
       )
 
       expect(recording.status).toBe('error')
+      expect(recording.additionalDurations.startTillInteractive).toBeNull()
     })
 
     it('should prioritize interrupted status over error status', () => {
@@ -180,7 +183,6 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            onEnd,
           },
         },
         {
@@ -190,14 +192,15 @@ describe('recordingComputeUtils', () => {
       )
 
       expect(recording.status).toBe('interrupted')
+      expect(recording.additionalDurations.startTillInteractive).toBeNull()
     })
   })
 
   describe('getComputedSpans', () => {
-    const baseDefinition: CompleteTraceDefinition<AnyScope, AnyScope> = {
+    const baseDefinition: CompleteTraceDefinition<never, AnyScope> = {
       name: 'test-trace',
       scopes: [],
-      requiredToEnd: [() => true],
+      requiredSpans: [() => true],
       computedSpanDefinitions: [
         {
           name: 'test-computed-span',
@@ -221,7 +224,7 @@ describe('recordingComputeUtils', () => {
             duration: 50,
           }),
         ],
-        input: { id: 'test', startTime: createTimestamp(0), scope: {}, onEnd },
+        input: { id: 'test', startTime: createTimestamp(0), scope: {} },
       })
 
       expect(result['test-computed-span']).toEqual({
@@ -231,7 +234,7 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle operation-start and operation-end special matchers', () => {
-      const definition: CompleteTraceDefinition<AnyScope, AnyScope> = {
+      const definition: CompleteTraceDefinition<never, AnyScope> = {
         ...baseDefinition,
         computedSpanDefinitions: [
           {
@@ -253,7 +256,12 @@ describe('recordingComputeUtils', () => {
           createMockSpanAndAnnotation(100, { name: 'start-span' }),
           markedCompleteSpan,
         ],
-        input: { id: 'test', startTime: createTimestamp(0), scope: {}, onEnd },
+        input: {
+          id: 'test',
+          startTime: createTimestamp(0),
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          scope: {} as never,
+        },
       })
 
       expect(result['operation-span']).toBeDefined()
@@ -261,10 +269,10 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedValues', () => {
-    const baseDefinition: CompleteTraceDefinition<AnyScope, AnyScope> = {
+    const baseDefinition: CompleteTraceDefinition<string, AnyScope> = {
       name: 'test-trace',
       scopes: [],
-      requiredToEnd: [() => true],
+      requiredSpans: [() => true],
       computedSpanDefinitions: [],
       computedValueDefinitions: [
         {
@@ -283,7 +291,12 @@ describe('recordingComputeUtils', () => {
           createMockSpanAndAnnotation(200, { status: 'error' }),
           createMockSpanAndAnnotation(300, { status: 'ok' }),
         ],
-        input: { id: 'test', startTime: createTimestamp(0), scope: {}, onEnd },
+        input: {
+          id: 'test',
+          startTime: createTimestamp(0),
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          scope: {} as never,
+        },
       })
 
       expect(result['error-count']).toBe(2)
@@ -292,26 +305,16 @@ describe('recordingComputeUtils', () => {
 
   describe('getSpanSummaryAttributes', () => {
     it('should merge attributes from spans with the same name', () => {
-      const result = getSpanSummaryAttributes({
-        definition: {
-          name: 'test-trace',
-          scopes: [],
-          requiredToEnd: [() => true],
-          computedSpanDefinitions: [],
-          computedValueDefinitions: [],
-        },
-        recordedItems: [
-          createMockSpanAndAnnotation(100, {
-            name: 'test-span',
-            attributes: { first: true },
-          }),
-          createMockSpanAndAnnotation(200, {
-            name: 'test-span',
-            attributes: { second: true },
-          }),
-        ],
-        input: { id: 'test', startTime: createTimestamp(0), scope: {}, onEnd },
-      })
+      const result = getSpanSummaryAttributes([
+        createMockSpanAndAnnotation(100, {
+          name: 'test-span',
+          attributes: { first: true },
+        }),
+        createMockSpanAndAnnotation(200, {
+          name: 'test-span',
+          attributes: { second: true },
+        }),
+      ])
 
       expect(result['test-span']).toEqual({
         first: true,
@@ -327,7 +330,7 @@ describe('recordingComputeUtils', () => {
           definition: {
             name: 'test-trace',
             scopes: [],
-            requiredToEnd: [() => true],
+            requiredSpans: [() => true],
             computedSpanDefinitions: [],
             computedValueDefinitions: [],
           },
@@ -359,7 +362,6 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            onEnd,
           },
         },
         { transitionFromState: 'recording' },
@@ -367,11 +369,11 @@ describe('recordingComputeUtils', () => {
 
       expect(recording.computedRenderBeaconSpans['test-component']).toEqual({
         startOffset: 100,
-        timeToContent: 150,
-        timeToLoading: 50,
-        timeToData: 100,
+        firstRenderTillContent: 150,
+        firstRenderTillLoading: 50,
+        firstRenderTillData: 100,
         renderCount: 2,
-        sumOfDurations: 100,
+        sumOfRenderDurations: 100,
       })
     })
   })

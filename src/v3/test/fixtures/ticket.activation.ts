@@ -21,7 +21,7 @@ export const ticketActivationDefinition: TraceDefinition<
   scopes: ['ticketId'],
   timeoutDuration: 60_000,
   captureInteractive: true,
-  requiredToEnd: [
+  requiredSpans: [
     {
       type: 'component-render',
       name: 'OmniLog',

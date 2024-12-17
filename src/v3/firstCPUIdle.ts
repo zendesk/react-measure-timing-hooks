@@ -12,9 +12,9 @@ export type CPUIdleLongTaskProcessorFn<
   T extends number | PerformanceEntryLike,
 > = (
   entry: T extends PerformanceEntryLike ? T : PerformanceEntryLike,
-) => checkIfQuietWindowPassedResult<T>
+) => CheckIfQuietWindowPassedResult<T>
 
-export type checkIfQuietWindowPassedResult<
+export type CheckIfQuietWindowPassedResult<
   T extends number | PerformanceEntryLike,
 > =
   | {
@@ -32,7 +32,7 @@ export interface CPUIdleLongTaskProcessor<
   checkIfQuietWindowPassed: (
     time: number,
     quietWindowDuration?: number,
-  ) => checkIfQuietWindowPassedResult<T>
+  ) => CheckIfQuietWindowPassedResult<T>
 }
 
 export interface CPUIdleProcessorOptions {
@@ -72,7 +72,7 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
     time: number,
     quietWindowDuration = getQuietWindowDuration?.(time, fmp) ??
       DEFAULT_QUIET_WINDOW_DURATION,
-  ): checkIfQuietWindowPassedResult<T> {
+  ): CheckIfQuietWindowPassedResult<T> {
     if (time - possibleFirstCPUIdleTimestamp > quietWindowDuration) {
       // Return the first CPU idle timestamp if in a quiet window
       return {
@@ -87,7 +87,7 @@ export function createCPUIdleProcessor<T extends number | PerformanceEntryLike>(
 
   function processPerformanceEntry(
     entry: PerformanceEntryLike,
-  ): checkIfQuietWindowPassedResult<T> {
+  ): CheckIfQuietWindowPassedResult<T> {
     const entryEndTime = entry.startTime + entry.duration
     const isEntryLongTask = isLongTask(entry)
     const quietWindowDuration =

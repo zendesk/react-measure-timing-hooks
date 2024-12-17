@@ -38,6 +38,7 @@ export interface FinalState<TracerScopeT> {
   transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
   cpuIdleSpanAndAnnotation?: SpanAndAnnotation<TracerScopeT>
+  completeSpanAndAnnotation?: SpanAndAnnotation<TracerScopeT>
   lastRequiredSpanAndAnnotation?: SpanAndAnnotation<TracerScopeT>
 }
 
@@ -137,8 +138,9 @@ export class TraceStateMachine<
   currentState: TraceStates = 'recording'
   /** the span that ended at the furthest point in time */
   lastRelevant: SpanAndAnnotation<AllPossibleScopesT> | undefined
-  /** it is set once the LRS value is established */
   lastRequiredSpan: SpanAndAnnotation<AllPossibleScopesT> | undefined
+  /** it is set once the LRS value is established */
+  completeSpan: SpanAndAnnotation<AllPossibleScopesT> | undefined
   cpuIdleLongTaskProcessor:
     | CPUIdleLongTaskProcessor<EntryType<AllPossibleScopesT>>
     | undefined
@@ -250,14 +252,14 @@ export class TraceStateMachine<
           }
         }
 
-        for (let i = 0; i < this.context.definition.requiredToEnd.length; i++) {
+        for (let i = 0; i < this.context.definition.requiredSpans.length; i++) {
           if (!this.context.requiredToEndIndexChecklist.has(i)) {
             // we previously checked off this index
             // eslint-disable-next-line no-continue
             continue
           }
 
-          const matcher = this.context.definition.requiredToEnd[i]!
+          const matcher = this.context.definition.requiredSpans[i]!
           if (matcher(spanAndAnnotation, this.context)) {
             // remove the index of this definition from the list of requiredToEnd
             this.context.requiredToEndIndexChecklist.delete(i)
@@ -314,6 +316,10 @@ export class TraceStateMachine<
             interruptionReason: 'invalid-state-transition',
           }
         }
+
+        this.lastRequiredSpan = this.lastRelevant
+        this.lastRequiredSpan.annotation.markedRequirementsMet = true
+
         if (!this.context.definition.debounceOn) {
           return { transitionToState: 'waiting-for-interactive' }
         }
@@ -383,7 +389,7 @@ export class TraceStateMachine<
           span: { ...span, isIdle: true },
         }
         if (idleRegressionCheckSpan) {
-          for (const matcher of this.context.definition.requiredToEnd) {
+          for (const matcher of this.context.definition.requiredSpans) {
             if (
               // v3 TODO: rename matcher in the whole file to 'doesSpanMatch' -> Cynthia
               matcher(idleRegressionCheckSpan, this.context) &&
@@ -445,12 +451,13 @@ export class TraceStateMachine<
           }
         }
 
-        this.lastRequiredSpan = this.lastRelevant
+        this.completeSpan = this.lastRelevant
         const interactiveConfig = this.context.definition.captureInteractive
         if (!interactiveConfig) {
           // nothing to do in this state, move to 'complete'
           return {
             transitionToState: 'complete',
+            completeSpanAndAnnotation: this.completeSpan,
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
           }
         }
@@ -461,8 +468,8 @@ export class TraceStateMachine<
           DEFAULT_INTERACTIVE_TIMEOUT_DURATION
 
         const lastRequiredSpanEndTimeEpoch =
-          this.lastRequiredSpan.span.startTime.epoch +
-          this.lastRequiredSpan.span.duration
+          this.completeSpan.span.startTime.epoch +
+          this.completeSpan.span.duration
         this.setDeadline(
           'interactive',
           lastRequiredSpanEndTimeEpoch +
@@ -473,10 +480,10 @@ export class TraceStateMachine<
           EntryType<AllPossibleScopesT>
         >(
           {
-            entryType: this.lastRequiredSpan.span.type,
-            startTime: this.lastRequiredSpan.span.startTime.now,
-            duration: this.lastRequiredSpan.span.duration,
-            entry: this.lastRequiredSpan,
+            entryType: this.completeSpan.span.type,
+            startTime: this.completeSpan.span.startTime.now,
+            duration: this.completeSpan.span.duration,
+            entry: this.completeSpan,
           },
           typeof interactiveConfig === 'object' ? interactiveConfig : {},
         )
@@ -510,6 +517,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'complete',
             interruptionReason: 'timeout',
+            completeSpanAndAnnotation: this.completeSpan,
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
           }
         }
@@ -536,6 +544,7 @@ export class TraceStateMachine<
             return {
               transitionToState: 'complete',
               lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+              completeSpanAndAnnotation: this.completeSpan,
               cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
             }
           }
@@ -543,9 +552,10 @@ export class TraceStateMachine<
             // we consider this complete, because we have a complete trace
             // it's just missing the bonus data from when the browser became "interactive"
             return {
-              transitionToState: 'complete',
               interruptionReason: 'timeout',
+              transitionToState: 'complete',
               lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+              completeSpanAndAnnotation: this.completeSpan,
             }
           }
 
@@ -586,6 +596,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'complete',
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            completeSpanAndAnnotation: this.completeSpan,
             cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
           }
         }
@@ -600,6 +611,7 @@ export class TraceStateMachine<
             transitionToState: 'complete',
             interruptionReason: 'timeout',
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            completeSpanAndAnnotation: this.completeSpan,
           }
         }
 
@@ -610,6 +622,7 @@ export class TraceStateMachine<
             transitionToState: 'complete',
             interruptionReason: 'waiting-for-interactive-timeout',
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            completeSpanAndAnnotation: this.completeSpan,
           }
         }
 
@@ -622,6 +635,7 @@ export class TraceStateMachine<
                 transitionToState: 'complete',
                 interruptionReason: 'matched-on-interrupt',
                 lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+                completeSpanAndAnnotation: this.completeSpan,
               }
             }
           }
@@ -642,6 +656,7 @@ export class TraceStateMachine<
           transitionToState: 'complete',
           interruptionReason: reason,
           lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+          completeSpanAndAnnotation: this.completeSpan,
         }),
     },
 
@@ -663,17 +678,17 @@ export class TraceStateMachine<
 
         this.clearDeadline()
 
-        const { lastRequiredSpanAndAnnotation, cpuIdleSpanAndAnnotation } =
+        const { completeSpanAndAnnotation, cpuIdleSpanAndAnnotation } =
           transition
 
         // Tag the span annotations:
-        if (lastRequiredSpanAndAnnotation) {
+        if (completeSpanAndAnnotation) {
           // mutate the annotation to mark the span as complete
-          lastRequiredSpanAndAnnotation.annotation.markedComplete = true
+          completeSpanAndAnnotation.annotation.markedComplete = true
         }
         if (cpuIdleSpanAndAnnotation) {
           // mutate the annotation to mark the span as interactive
-          cpuIdleSpanAndAnnotation.annotation.markedInteractive = true
+          cpuIdleSpanAndAnnotation.annotation.markedPageInteractive = true
         }
 
         this.sideEffectFns.prepareAndEmitRecording({
@@ -700,7 +715,7 @@ export class TraceStateMachine<
       definition,
       input,
       requiredToEndIndexChecklist: new Set(
-        definition.requiredToEnd.map((_, i) => i),
+        definition.requiredSpans.map((_, i) => i),
       ),
     }
     this.sideEffectFns = sideEffectFns
@@ -913,7 +928,7 @@ export class ActiveTrace<
       const endOfOperationSpan =
         (transition.transitionToState === 'complete' &&
           (transition.cpuIdleSpanAndAnnotation ??
-            transition.lastRequiredSpanAndAnnotation)) ||
+            transition.completeSpanAndAnnotation)) ||
         lastRelevantSpanAndAnnotation
 
       const traceRecording = createTraceRecording(

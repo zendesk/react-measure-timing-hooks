@@ -54,10 +54,11 @@ export interface TraceRecordingBase<TracerScopeT> {
   interruptionReason?: TraceInterruptionReason
   duration: number | null
 
-  // v3 TODO: wrap the `startTillInteractive`, `completeTillInteractive`, and `firstMeaningfulPaint` (whatever its named lol) into `computedDurations` object.
-  // TODO: if we do this rename, we might need to rename computedSpans -> computedCustomSpans
-  startTillInteractive: number | null
-  completeTillInteractive: number | null
+  additionalDurations: {
+    startTillRequirementsMet: number | null
+    startTillInteractive: number | null
+    completeTillInteractive: number | null
+  }
 
   // feature flags, etc.
   attributes: Attributes

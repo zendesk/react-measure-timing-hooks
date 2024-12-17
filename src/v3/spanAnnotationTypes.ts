@@ -26,13 +26,20 @@ export interface SpanAnnotation {
    */
   recordedInState: NonTerminalTraceStates
   /**
-   * If true, this is the last required span in the operation.
+   * If true, this is the first required span after having met all the required span criteria of the operation.
+   * e.g. if the operation requires 3 spans, this will be true for that 3rd span.
+   */
+  markedRequirementsMet?: boolean
+  /**
+   * After all the required span criteria are met, and we completed debouncing.
+   * If true, this is the last span of the operation (before page interactive capturing).
+   * This span is used to calculate the duration of the entire trace.
    */
   markedComplete?: boolean
   /**
-   * If true, this is the span that marked the operation as interactive.
+   * If true, this is the span was used to calculate the point at which the page became interactive.
    */
-  markedInteractive?: boolean
+  markedPageInteractive?: boolean
   /**
    * Labels for the span based on label definitions from the Tracer. Empty if the span didn't match any of the label match definitions.
    */

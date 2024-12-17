@@ -80,7 +80,7 @@ const markedComplete = <AllPossibleScopesT>(
 
 const markedInteractive = <AllPossibleScopesT>(
   spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
-) => spanAndAnnotation.annotation.markedInteractive
+) => spanAndAnnotation.annotation.markedPageInteractive
 
 export function getComputedSpans<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
@@ -282,6 +282,7 @@ export function createTraceRecording<
     transitionFromState,
     interruptionReason,
     cpuIdleSpanAndAnnotation,
+    completeSpanAndAnnotation,
     lastRequiredSpanAndAnnotation,
   }: FinalState<AllPossibleScopesT>,
 ): TraceRecording<TracerScopeKeysT, AllPossibleScopesT> {
@@ -306,9 +307,11 @@ export function createTraceRecording<
   )
 
   const duration =
-    lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
+    completeSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
   const startTillInteractive =
     cpuIdleSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
+  const startTillRequirementsMet =
+    lastRequiredSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
   return {
     id,
     name,
@@ -316,10 +319,15 @@ export function createTraceRecording<
     scope,
     type: 'operation',
     duration,
-    startTillInteractive,
-    // last entry until the tti?
-    completeTillInteractive:
-      startTillInteractive && duration ? startTillInteractive - duration : null,
+    additionalDurations: {
+      startTillRequirementsMet,
+      startTillInteractive,
+      // last entry until the tti?
+      completeTillInteractive:
+        startTillInteractive && duration
+          ? startTillInteractive - duration
+          : null,
+    },
     // ?: If we have any error entries then should we mark the status as 'error'
     status: wasInterrupted
       ? 'interrupted'

@@ -67,7 +67,7 @@ export class TraceManager<
     const requiredToEnd = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT
-    >(traceDefinition.requiredToEnd)
+    >(traceDefinition.requiredSpans)
 
     if (!requiredToEnd) {
       throw new Error(
@@ -98,7 +98,7 @@ export class TraceManager<
       AllPossibleScopesT
     > = {
       ...traceDefinition,
-      requiredToEnd,
+      requiredSpans: requiredToEnd,
       debounceOn,
       interruptOn,
       suppressErrorStatusPropagationOn,
@@ -151,7 +151,6 @@ export class TraceManager<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
     >,
   ): string {
-    console.log('---> Starting Trace!', definition.name, input.scope)
     if (this.activeTrace) {
       this.activeTrace.interrupt('another-trace-started')
       this.activeTrace = undefined

@@ -29,7 +29,7 @@ const ticketOperationTracer = traceManager.createTracer({
   name: `ticket-activation`,
   type: 'operation',
   // requiredScopeKeys: TicketIdScope,
-  requiredToEnd: [
+  requiredSpans: [
     {
       name: 'TicketView',
       matchScopes: ['ticketId'],

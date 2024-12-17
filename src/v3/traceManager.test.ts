@@ -81,7 +81,7 @@ describe('TraceManager', () => {
       name: 'ticket.basic-operation',
       type: 'operation',
       scopes: [],
-      requiredToEnd: [{ name: 'end' }],
+      requiredSpans: [{ name: 'end' }],
     })
     const traceId = tracer.start({
       scope: {
@@ -122,7 +122,7 @@ describe('TraceManager', () => {
       name: 'ticket.computed-span-operation',
       type: 'operation',
       scopes: [],
-      requiredToEnd: [{ name: 'end' }],
+      requiredSpans: [{ name: 'end' }],
     })
     const traceId = tracer.start({
       scope: {
@@ -175,7 +175,7 @@ describe('TraceManager', () => {
       name: 'ticket.computed-value-operation',
       type: 'operation',
       scopes: [],
-      requiredToEnd: [{ name: 'end' }],
+      requiredSpans: [{ name: 'end' }],
     })
     const traceId = tracer.start({
       scope: {
@@ -230,7 +230,7 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: ['ticketId'],
       timeoutDuration: 5_000,
-      requiredToEnd: [{ name: 'end', matchScopes: true }],
+      requiredSpans: [{ name: 'end', matchScopes: true }],
     })
     const scope = {
       ticketId: '4',
@@ -277,7 +277,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
       })
       const traceId = tracer.start({
@@ -321,7 +321,7 @@ describe('TraceManager', () => {
         name: 'ticket.debounce-operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [matchSpan.withName('end')],
+        requiredSpans: [matchSpan.withName('end')],
         debounceOn: [matchSpan.withName((n: string) => n.endsWith('debounce'))],
         debounceDuration: 300,
       })
@@ -369,7 +369,7 @@ describe('TraceManager', () => {
         name: 'ticket.interrupt-on-basic-operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [matchSpan.withName('end')],
+        requiredSpans: [matchSpan.withName('end')],
         interruptOn: [matchSpan.withName('interrupt')],
       })
       tracer.start({
@@ -414,7 +414,7 @@ describe('TraceManager', () => {
         name: 'ticket.interrupt-itself-operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
       })
       const traceId = tracer.start({
@@ -470,7 +470,7 @@ describe('TraceManager', () => {
           name: 'ticket.timeout-operation',
           type: 'operation',
           scopes: ['ticketId'],
-          requiredToEnd: [{ name: 'timed-out-render' }],
+          requiredSpans: [{ name: 'timed-out-render' }],
           timeoutDuration: 500,
         })
         const traceId = tracer.start({
@@ -522,7 +522,7 @@ describe('TraceManager', () => {
           name: 'ticket.timeout-operation',
           type: 'operation',
           scopes: [],
-          requiredToEnd: [{ name: 'timed-out-render' }],
+          requiredSpans: [{ name: 'timed-out-render' }],
           timeoutDuration: CUSTOM_TIMEOUT_DURATION,
         })
         const traceId = tracer.start({
@@ -570,7 +570,7 @@ describe('TraceManager', () => {
           name: 'ticket.timeout-operation',
           type: 'operation',
           scopes: [],
-          requiredToEnd: [{ name: 'end' }],
+          requiredSpans: [{ name: 'end' }],
           debounceOn: [{ name: 'debounce' }],
           timeoutDuration: CUSTOM_TIMEOUT_DURATION,
         })
@@ -622,7 +622,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -652,7 +652,7 @@ describe('TraceManager', () => {
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
-      expect(report.startTillInteractive).toBe(2_000)
+      expect(report.additionalDurations.startTillInteractive).toBe(2_000)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -667,7 +667,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: {
           ...cpuIdleProcessorOptions,
           timeout: interactiveTimeout,
@@ -701,7 +701,7 @@ describe('TraceManager', () => {
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(2_000)
       expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
-      expect(report.startTillInteractive).toBeNull()
+      expect(report.additionalDurations.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
     })
 
@@ -714,7 +714,7 @@ describe('TraceManager', () => {
         name: 'ticket.interrupt-during-long-task-operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [matchSpan.withName('end')],
+        requiredSpans: [matchSpan.withName('end')],
         interruptOn: [matchSpan.withName('interrupt')],
         captureInteractive: cpuIdleProcessorOptions,
       })
@@ -746,7 +746,7 @@ describe('TraceManager', () => {
       `)
       expect(report.name).toBe('ticket.interrupt-during-long-task-operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBeNull()
+      expect(report.additionalDurations.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('matched-on-interrupt')
     })
@@ -760,7 +760,7 @@ describe('TraceManager', () => {
         name: 'ticket.debounce-then-interrupted-operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
         captureInteractive: cpuIdleProcessorOptions,
         debounceDuration: 300,
@@ -794,7 +794,7 @@ describe('TraceManager', () => {
       expect(report.status).toBe('interrupted')
       expect(report.duration).toBeNull()
       expect(report.interruptionReason).toBe('timeout')
-      expect(report.startTillInteractive).toBeNull()
+      expect(report.additionalDurations.startTillInteractive).toBeNull()
     })
 
     it('completes the trace when debouncing is done AND is waiting for capture interactive to finish', () => {
@@ -807,7 +807,7 @@ describe('TraceManager', () => {
         name: 'ticket.debounce-then-interrupted-operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
         captureInteractive: {
           ...cpuIdleProcessorOptions,
@@ -842,7 +842,7 @@ describe('TraceManager', () => {
       `)
       expect(report.name).toBe('ticket.debounce-then-interrupted-operation')
       expect(report.duration).toBe(44_500)
-      expect(report.startTillInteractive).toBeNull()
+      expect(report.additionalDurations.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('timeout')
     })
@@ -861,7 +861,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: {
           ...cpuIdleProcessorOptions,
           timeout: 100,
@@ -896,7 +896,7 @@ describe('TraceManager', () => {
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(TRACE_DURATION)
-      expect(report.startTillInteractive).toBeNull()
+      expect(report.additionalDurations.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
       expect(getQuietWindowDuration).toHaveBeenCalled()
@@ -914,7 +914,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: {
           ...cpuIdleProcessorOptions,
           timeout: 1_000,
@@ -949,7 +949,7 @@ describe('TraceManager', () => {
       `)
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(TRACE_DURATION)
-      expect(report.startTillInteractive).toBeNull()
+      expect(report.additionalDurations.startTillInteractive).toBeNull()
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBe('waiting-for-interactive-timeout')
     })
@@ -963,7 +963,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -995,7 +995,7 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBe(200)
+      expect(report.additionalDurations.startTillInteractive).toBe(200)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1009,7 +1009,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -1041,7 +1041,7 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBe(200)
+      expect(report.additionalDurations.startTillInteractive).toBe(200)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1055,7 +1055,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -1087,9 +1087,9 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBe(700)
+      expect(report.additionalDurations.startTillInteractive).toBe(700)
       // TESTING TODO: are we testing enough of first idle time?
-      expect(report.completeTillInteractive).toBe(500)
+      expect(report.additionalDurations.completeTillInteractive).toBe(500)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1103,7 +1103,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -1138,7 +1138,9 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBe(expectedResult)
+      expect(report.additionalDurations.startTillInteractive).toBe(
+        expectedResult,
+      )
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1152,7 +1154,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -1184,7 +1186,7 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBe(200)
+      expect(report.additionalDurations.startTillInteractive).toBe(200)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1198,7 +1200,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -1236,7 +1238,9 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBe(expectedResult)
+      expect(report.additionalDurations.startTillInteractive).toBe(
+        expectedResult,
+      )
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1250,7 +1254,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -1283,8 +1287,7 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      // TESTING TODO: Hmm. shouldnt this be undefined?
-      // expect(report.startTillInteractive).toBeUndefined()
+      expect(report.additionalDurations.startTillInteractive).toBe(5_400)
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1298,7 +1301,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -1334,7 +1337,9 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBe(expectedResult)
+      expect(report.additionalDurations.startTillInteractive).toBe(
+        expectedResult,
+      )
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1348,7 +1353,7 @@ describe('TraceManager', () => {
         name: 'ticket.operation',
         type: 'operation',
         scopes: [],
-        requiredToEnd: [{ name: 'end' }],
+        requiredSpans: [{ name: 'end' }],
         captureInteractive: cpuIdleProcessorOptions,
       })
       tracer.start({
@@ -1383,7 +1388,9 @@ describe('TraceManager', () => {
 
       expect(report.name).toBe('ticket.operation')
       expect(report.duration).toBe(200)
-      expect(report.startTillInteractive).toBe(expectedResult)
+      expect(report.additionalDurations.startTillInteractive).toBe(
+        expectedResult,
+      )
       expect(report.status).toBe('ok')
       expect(report.interruptionReason).toBeUndefined()
     })
@@ -1417,39 +1424,42 @@ describe('TraceManager', () => {
       expect(reportFn).toHaveBeenCalled()
       const {
         entries,
-        spanAttributes,
         ...report
       }: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
         reportFn.mock.calls[0][0]
 
       expect(report).toMatchInlineSnapshot(`
         {
+          "additionalDurations": {
+            "completeTillInteractive": 0,
+            "startTillInteractive": 1504.4000000059605,
+            "startTillRequirementsMet": 1500.5999999940395,
+          },
           "attributes": {},
-          "completeTillInteractive": 0,
           "computedRenderBeaconSpans": {
             "ConversationPane": {
+              "firstRenderTillContent": 1021.7000000178814,
+              "firstRenderTillData": 911.5,
+              "firstRenderTillLoading": 134,
               "renderCount": 6,
-              "startOffset": 549.6999999880791,
-              "sumOfDurations": 347.5,
-              "timeToContent": 954.7000000178814,
-              "timeToData": 899.6000000089407,
-              "timeToLoading": 67,
+              "startOffset": 482.69999998807907,
+              "sumOfRenderDurations": 347.5,
             },
             "OmniComposer": {
+              "firstRenderTillContent": 343.80000001192093,
+              "firstRenderTillData": 127.80000001192093,
+              "firstRenderTillLoading": 0,
               "renderCount": 8,
-              "startOffset": 812.5,
-              "sumOfDurations": 346.60000002384186,
-              "timeToContent": 665.8999999910593,
-              "timeToData": 112.5,
-              "timeToLoading": 0,
+              "startOffset": 689.1999999880791,
+              "sumOfRenderDurations": 346.60000002384186,
             },
             "OmniLog": {
+              "firstRenderTillContent": 1009.2999999970198,
+              "firstRenderTillData": 905.8999999910593,
+              "firstRenderTillLoading": 112.19999998807907,
               "renderCount": 7,
-              "startOffset": 547.3999999910593,
-              "sumOfDurations": 290.2000000178814,
-              "timeToContent": 953.2000000029802,
-              "timeToData": 901.5,
-              "timeToLoading": 56.099999994039536,
+              "startOffset": 491.29999999701977,
+              "sumOfRenderDurations": 290.2000000178814,
             },
           },
           "computedSpans": {},
@@ -1461,7 +1471,6 @@ describe('TraceManager', () => {
           "scope": {
             "ticketId": "74",
           },
-          "startTillInteractive": 1504.4000000059605,
           "startTime": {
             "epoch": 1732230167488.4,
             "now": 298438.60000000894,
@@ -1472,7 +1481,9 @@ describe('TraceManager', () => {
       `)
       expect(report.duration).toBeCloseTo(1_504.4)
       expect(report.interruptionReason).toBeUndefined()
-      expect(report.startTillInteractive).toBeCloseTo(1_504.4)
+      expect(report.additionalDurations.startTillInteractive).toBeCloseTo(
+        1_504.4,
+      )
     })
 
     it('should not end with interruption', () => {
@@ -1505,39 +1516,42 @@ describe('TraceManager', () => {
       expect(reportFn).toHaveBeenCalled()
       const {
         entries,
-        spanAttributes,
         ...report
       }: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
         reportFn.mock.calls[0][0]
 
       expect(report).toMatchInlineSnapshot(`
         {
+          "additionalDurations": {
+            "completeTillInteractive": 0,
+            "startTillInteractive": 1302.3999999910593,
+            "startTillRequirementsMet": 1285.6000000089407,
+          },
           "attributes": {},
-          "completeTillInteractive": 0,
           "computedRenderBeaconSpans": {
             "ConversationPane": {
+              "firstRenderTillContent": 831.2999999821186,
+              "firstRenderTillData": 753.5,
+              "firstRenderTillLoading": 138.59999999403954,
               "renderCount": 5,
-              "startOffset": 528.4000000059605,
-              "sumOfDurations": 283.0999999791384,
-              "timeToContent": 761.9999999850988,
-              "timeToData": 723.0999999940395,
-              "timeToLoading": 69.29999999701977,
+              "startOffset": 459.1000000089407,
+              "sumOfRenderDurations": 283.0999999791384,
             },
             "OmniComposer": {
+              "firstRenderTillContent": 211.99999998509884,
+              "firstRenderTillData": 97.20000000298023,
+              "firstRenderTillLoading": 0,
               "renderCount": 8,
-              "startOffset": 733.5,
-              "sumOfDurations": 258.3999999910593,
-              "timeToContent": 541.8000000119209,
-              "timeToData": 61.5,
-              "timeToLoading": 0,
+              "startOffset": 640.4000000059605,
+              "sumOfRenderDurations": 258.3999999910593,
             },
             "OmniLog": {
+              "firstRenderTillContent": 815.9000000059605,
+              "firstRenderTillData": 746.5,
+              "firstRenderTillLoading": 113.2000000178814,
               "renderCount": 9,
-              "startOffset": 526.3000000119209,
-              "sumOfDurations": 255.90000002086163,
-              "timeToContent": 776.0999999791384,
-              "timeToData": 724.5999999940395,
-              "timeToLoading": 56.6000000089407,
+              "startOffset": 469.70000000298023,
+              "sumOfRenderDurations": 255.90000002086163,
             },
           },
           "computedSpans": {},
@@ -1549,7 +1563,6 @@ describe('TraceManager', () => {
           "scope": {
             "ticketId": "74",
           },
-          "startTillInteractive": 1302.3999999910593,
           "startTime": {
             "epoch": 1732236012113.3,
             "now": 34982.5,
@@ -1560,7 +1573,9 @@ describe('TraceManager', () => {
       `)
       expect(report.duration).toBeCloseTo(1_302.4)
       expect(report.interruptionReason).toBeUndefined()
-      expect(report.startTillInteractive).toBeCloseTo(1_302.4)
+      expect(report.additionalDurations.startTillInteractive).toBeCloseTo(
+        1_302.4,
+      )
     })
   })
 })

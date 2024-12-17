@@ -170,8 +170,7 @@ export interface TraceDefinition<
    * we're giving the power to the engineer to manually define
    * which parts of the product are "critical" or most important
    */
-  // v3 TODO: should we rename `requiredToEnd` to `requiredToComplete` for consistency?
-  requiredToEnd: ArrayWithAtLeastOneElement<
+  requiredSpans: ArrayWithAtLeastOneElement<
     SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >
   debounceOn?: ArrayWithAtLeastOneElement<
@@ -223,7 +222,7 @@ export interface CompleteTraceDefinition<
     AllPossibleScopesT
   >
 
-  requiredToEnd: ArrayWithAtLeastOneElement<
+  requiredSpans: ArrayWithAtLeastOneElement<
     SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
   >
   debounceOn?: ArrayWithAtLeastOneElement<

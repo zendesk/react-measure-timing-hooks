@@ -37,7 +37,7 @@ describe('createCPUIdleProcessor', () => {
 
     const firstCPUIdle = getFirstCPUIdleEntry({ fmpTime, entries })
 
-    expect(firstCPUIdle).toBe(fmpTime)
+    expect(firstCPUIdle).toEqual({ firstCpuIdle: 200 })
   })
 
   it('One light cluster after FMP, FirstCPUIdle at FMP', () => {
@@ -59,7 +59,7 @@ describe('createCPUIdleProcessor', () => {
     `)
     const firstCPUIdle = getFirstCPUIdleEntry({ fmpTime, entries })
 
-    expect(firstCPUIdle).toBe(fmpTime)
+    expect(firstCPUIdle).toEqual({ firstCpuIdle: 200 })
   })
 
   it('One heavy cluster after FMP, FirstCPUIdle after the cluster', () => {
@@ -82,7 +82,7 @@ describe('createCPUIdleProcessor', () => {
     `)
     const firstCPUIdle = getFirstCPUIdleEntry({ fmpTime, entries })
 
-    expect(firstCPUIdle).toBe(700)
+    expect(firstCPUIdle).toEqual({ firstCpuIdle: 700 })
   })
 
   it('Multiple heavy clusters, FirstCPUIdle updated to end of last cluster', () => {
@@ -108,7 +108,7 @@ describe('createCPUIdleProcessor', () => {
     const lastLongTask = entries.at(-2)!
     const expectedResult = lastLongTask.startTime + lastLongTask.duration
 
-    expect(firstCPUIdle).toBe(expectedResult)
+    expect(firstCPUIdle).toEqual({ firstCpuIdle: expectedResult })
   })
 
   it('Checking before the quiet window has passed - no long tasks processed, FirstCPUIdle not found', () => {
@@ -120,7 +120,7 @@ describe('createCPUIdleProcessor', () => {
     `)
     const firstCPUIdle = getFirstCPUIdleEntry({ fmpTime, entries })
 
-    expect(firstCPUIdle).toBeUndefined()
+    expect(firstCPUIdle).toEqual({ nextCheck: 2_400 })
   })
 
   it('One heavy cluster, followed by two light, value is after 1st heavy cluster', () => {
@@ -149,7 +149,7 @@ describe('createCPUIdleProcessor', () => {
     const expectedResult =
       lastHeavyClusterLongTask.startTime + lastHeavyClusterLongTask.duration
 
-    expect(firstCPUIdle).toBe(expectedResult)
+    expect(firstCPUIdle).toEqual({ firstCpuIdle: expectedResult })
   })
 
   it('Continuous heavy clusters', () => {
@@ -196,8 +196,7 @@ describe('createCPUIdleProcessor', () => {
     `)
 
     const firstCPUIdle = getFirstCPUIdleEntry({ fmpTime, entries })
-
-    expect(firstCPUIdle).toBeUndefined()
+    expect(firstCPUIdle).toEqual({ nextCheck: 7_450 })
   })
 
   it('Light cluster followed by a heavy cluster a second later, FirstCPUIdle updated', () => {
@@ -230,7 +229,7 @@ describe('createCPUIdleProcessor', () => {
     const lastLongTask = entries.at(-2)!
     const expectedResult = lastLongTask.startTime + lastLongTask.duration
 
-    expect(firstCPUIdle).toBe(expectedResult)
+    expect(firstCPUIdle).toEqual({ firstCpuIdle: expectedResult })
   })
 
   it('A long task overlaps FMP, we consider FirstCPUIdle after the long task', () => {
@@ -253,6 +252,6 @@ describe('createCPUIdleProcessor', () => {
     const lastLongTask = entries.at(-2)!
     const expectedResult = lastLongTask.startTime + lastLongTask.duration
 
-    expect(firstCPUIdle).toBe(expectedResult)
+    expect(firstCPUIdle).toEqual({ firstCpuIdle: expectedResult })
   })
 })
