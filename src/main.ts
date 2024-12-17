@@ -46,9 +46,12 @@ export {
 // export type * from './v2/types'
 
 // v3
+export * from './v3/constants'
 export * from './v3/convertToRum'
+export * from './v3/defaultDeduplicationStrategy'
 export * from './v3/ensureTimestamp'
 export * from './v3/firstCPUIdle'
+export * from './v3/getCommonUrlForTracing'
 export * from './v3/getDynamicQuietWindowDuration'
 export * from './v3/getSpanFromPerformanceEntry'
 export * from './v3/hooks'
