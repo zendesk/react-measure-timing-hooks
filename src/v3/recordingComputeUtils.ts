@@ -114,11 +114,12 @@ export function getComputedSpans<
               definition: traceDefinition,
             }),
           )
-        : undefined
+        : startSpanMatcher
 
-    const matchingStartTime = matchingStartEntry
-      ? matchingStartEntry.span.startTime.now
-      : input.startTime.now
+    const matchingStartTime =
+      matchingStartEntry === 'operation-start'
+        ? input.startTime.now
+        : matchingStartEntry?.span.startTime.now
 
     const endSpanMatcher =
       endSpan === 'operation-end'
