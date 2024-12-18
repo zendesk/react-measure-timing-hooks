@@ -28,7 +28,6 @@
   ],
   "exports": {
     ".": {
-      "types": "./src/index.ts",
       "import": "./esm/main.js",
       "require": "./cjs/main.js"
     },
@@ -53,7 +52,6 @@
   "main": "cjs/main.js",
   "module": "esm/main.js",
   "source": "src/main.ts",
-  "types": "src/index.ts",
   "scripts": {
     "dev": "echo \"export * from '../src/main'\" > ./esm/main.d.ts && yarn webpack build --mode development --entry ./src/main --watch",
     "build": "yarn build:cjs && yarn build:esm && yarn copy:css",
