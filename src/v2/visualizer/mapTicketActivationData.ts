@@ -11,6 +11,7 @@ const order: Record<string, number> = {
 }
 
 export interface MappedOperation {
+  name: string
   ttrData: TaskDataEmbeddedInOperation
   ttiData: TaskDataEmbeddedInOperation
   ttrDuration: number
@@ -169,6 +170,7 @@ export const mapTicketActivationData = (
   // Create a new operation object without the TTR and TTI tasks;
   // this avoids any side effects from modifying tempOperation directly.
   return {
+    name: operationData.operationName,
     tasks,
     includedCommonTaskNames,
     ttrData,

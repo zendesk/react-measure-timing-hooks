@@ -25,7 +25,6 @@ import {
 } from '@zendeskgarden/react-dropdowns'
 import { Grid as GardenGrid } from '@zendeskgarden/react-grid'
 import { ThemeProvider } from '@zendeskgarden/react-theming'
-import TicketData from '../../../2024/ticket-fixtures/ticket-open-new-format-slow.json'
 import type {
   TaskDataEmbeddedInOperation,
   TaskSpanKind,
@@ -42,8 +41,6 @@ import {
   RESOURCES_TEXT,
 } from '../constants'
 import { MappedOperation } from '../mapTicketActivationData'
-
-const rootOperation = TicketData
 
 const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
 
@@ -329,7 +326,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   const yMax = height - margin.bottom - margin.top // - 132
 
   const xScale = scaleLinear({
-    domain: [0, rootOperation.duration + 10],
+    domain: [0, operation.ttiDuration + 10],
     range: [0, xMax],
   })
 
@@ -378,7 +375,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
             fontFamily: 'sans-serif',
           }}
         >
-          Operation: {rootOperation.name}
+          Operation: {operation.name}
         </h1>
       </header>
       <main style={{ height: `${height + margin.top + margin.bottom}px` }}>
