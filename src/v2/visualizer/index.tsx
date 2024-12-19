@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Operation } from '../../2024/types'
+import { LegacyOperation } from '../../2024/legacyTypes'
 import { DropTarget } from './components/DropTarget'
 import FileUploadButton from './components/FileUploadButton'
 import OperationVisualization from './components/OperationVisualization'
@@ -28,7 +28,7 @@ const OperationVisualizer = ({ width, margin }: OperationVisualizerProps) => {
     [COLLAPSE_IFRAME_SPANS]: false,
   })
 
-  const [fileContent, setFileContent] = useState<Operation | null>(null)
+  const [fileContent, setFileContent] = useState<LegacyOperation | null>(null)
   const readFile = (file: File | undefined) => {
     if (file && file.type === 'application/json') {
       const reader = new FileReader()
@@ -36,7 +36,7 @@ const OperationVisualizer = ({ width, margin }: OperationVisualizerProps) => {
         const result = e.target?.result
         if (result && typeof result === 'string') {
           // should validate the file?
-          setFileContent(JSON.parse(result) as Operation)
+          setFileContent(JSON.parse(result) as LegacyOperation)
         }
       })
       reader.readAsText(file)

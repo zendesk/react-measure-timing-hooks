@@ -4,14 +4,14 @@ import { type Subscription, Observable, share } from 'rxjs'
 import { getCommonUrlForTracing } from '../v2/getCommonUrlForTracing'
 import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
 import type {
-  Operation,
+  LegacyOperation,
   OperationSpanMetadata,
   PerformanceEntryLike,
-  Task,
+  LegacyTask,
   TaskDataEmbeddedInOperation,
   TaskSpanKind,
   TaskSpanMetadata,
-} from './types'
+} from './legacyTypes'
 
 interface ProcessedEntry {
   commonName: string
@@ -193,16 +193,16 @@ class ActiveOperation {
   private name: string
   private metadata?: Record<string, unknown>
   private onEnd?: (values: {
-    operationMeasure: Operation
-    tasks: Task[]
+    operationMeasure: LegacyOperation
+    tasks: LegacyTask[]
   }) => void
   private id: string
-  private tasks: Task[] = []
+  private tasks: LegacyTask[] = []
   private remainingRequiredMeasureNames: Set<string>
   private occurrenceCounts = new Map<string, number>()
   private globalOccurrenceCounts = new Map<string, number>()
   private includedCommonTaskNames = new Set<string>()
-  private lastRequiredTask: Task | undefined
+  private lastRequiredTask: LegacyTask | undefined
   private lastRequiredTaskEndTime: number | undefined
   private subscription: Subscription
   private finalizing = false
@@ -216,7 +216,10 @@ class ActiveOperation {
     name: string
     requiredMeasureNames: string[]
     metadata?: Record<string, unknown>
-    onEnd?: (values: { operationMeasure: Operation; tasks: Task[] }) => void
+    onEnd?: (values: {
+      operationMeasure: LegacyOperation
+      tasks: LegacyTask[]
+    }) => void
   }) {
     console.log(`Starting operation: ${name}`)
     this.name = name
@@ -261,7 +264,7 @@ class ActiveOperation {
         start: this.startTime,
         end: this.lastRequiredTask!.startTime + this.lastRequiredTask!.duration,
         detail: { operationName: this.name },
-      }) as Operation
+      }) as LegacyOperation
 
       const embeddedTasksDetails = this.tasks.map(
         (rawTask): TaskDataEmbeddedInOperation => {
@@ -393,7 +396,7 @@ class ActiveOperation {
       // eslint-disable-next-line no-param-reassign
       entry.operations[this.name] = taskSpanMetadata
 
-      const task = entry as Task
+      const task = entry as LegacyTask
 
       this.tasks.push(task)
       this.includedCommonTaskNames.add(commonName)
@@ -434,7 +437,10 @@ export function startOperation({
   name: string
   requiredMeasureNames: string[]
   metadata?: Record<string, unknown>
-  onEnd?: (values: { operationMeasure: Operation; tasks: Task[] }) => void
+  onEnd?: (values: {
+    operationMeasure: LegacyOperation
+    tasks: LegacyTask[]
+  }) => void
 }) {
   return new ActiveOperation({ name, requiredMeasureNames, metadata, onEnd })
 }

@@ -1,4 +1,7 @@
-import { Operation, TaskDataEmbeddedInOperation } from '../../2024/types'
+import {
+  LegacyOperation,
+  TaskDataEmbeddedInOperation,
+} from '../../2024/legacyTypes'
 
 const order: Record<string, number> = {
   longtask: 0,
@@ -22,7 +25,7 @@ export interface MappedOperation {
   includedCommonTaskNames: string[]
 }
 export const mapTicketActivationData = (
-  file: Operation,
+  file: LegacyOperation,
   {
     collapseRenders = true,
     collapseAssets = true,
@@ -39,7 +42,7 @@ export const mapTicketActivationData = (
     displayMeasures?: boolean
   } = {},
 ): MappedOperation | null => {
-  const operationData = file.operations['ticket/activation']
+  const operationData = Object.values(file.operations)[0]
   if (!operationData) return null
 
   const {

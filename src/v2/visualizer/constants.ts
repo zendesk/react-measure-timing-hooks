@@ -1,4 +1,4 @@
-import type { TaskSpanKind } from '../../2024/types'
+import type { TaskSpanKind } from '../../2024/legacyTypes'
 
 export const RESOURCES_TEXT = 'Show Resources'
 export const MEASURES_TEXT = 'Show Measures'

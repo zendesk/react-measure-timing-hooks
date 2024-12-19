@@ -28,7 +28,7 @@ import { ThemeProvider } from '@zendeskgarden/react-theming'
 import type {
   TaskDataEmbeddedInOperation,
   TaskSpanKind,
-} from '../../../2024/types'
+} from '../../../2024/legacyTypes'
 import {
   type FilterOption,
   BAR_FILL_COLOR,
