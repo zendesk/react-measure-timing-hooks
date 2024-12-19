@@ -24,7 +24,10 @@ export const FILTER_OPTIONS: FilterOption[] = [
   COLLAPSE_IFRAME_SPANS,
 ]
 
-export const BAR_FILL_COLOR: Record<TaskSpanKind | 'resource-ember', string> = {
+export const BAR_FILL_COLOR: Record<
+  TaskSpanKind | 'resource-ember' | 'trace',
+  string
+> = {
   render: '#ff7f0e',
   measure: '#2ca02c',
   resource: '#1f77b4',
@@ -46,4 +49,5 @@ export const BAR_FILL_COLOR: Record<TaskSpanKind | 'resource-ember', string> = {
   navigation: '#ff9896',
   paint: '#ff9896',
   taskattribution: '#ff9896',
+  trace: '#ff0000', // Add color for TTI and TTR lines
 }

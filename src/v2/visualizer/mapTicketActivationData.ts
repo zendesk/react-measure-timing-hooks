@@ -1,7 +1,7 @@
-import {
-  LegacyOperation,
-  TaskDataEmbeddedInOperation,
-} from '../../2024/legacyTypes'
+import { SpanAnnotation } from '../../v3/spanAnnotationTypes'
+import { Span } from '../../v3/spanTypes'
+import { TraceRecording } from '../../v3/traceRecordingTypes'
+import { MappedSpanAndAnnotation } from './types'
 
 const order: Record<string, number> = {
   longtask: 0,
@@ -15,17 +15,15 @@ const order: Record<string, number> = {
 
 export interface MappedOperation {
   name: string
-  ttrData: TaskDataEmbeddedInOperation
-  ttiData: TaskDataEmbeddedInOperation
-  ttrDuration: number
-  ttiDuration: number
-  spanEvents: TaskDataEmbeddedInOperation[]
+  spanEvents: MappedSpanAndAnnotation[]
   kinds: Set<string>
-  tasks: TaskDataEmbeddedInOperation[]
+  tasks: MappedSpanAndAnnotation[]
   includedCommonTaskNames: string[]
+  duration: number
 }
+
 export const mapTicketActivationData = (
-  file: LegacyOperation,
+  traceRecording: TraceRecording<any, any>,
   {
     collapseRenders = true,
     collapseAssets = true,
@@ -33,53 +31,41 @@ export const mapTicketActivationData = (
     collapseIframes = false,
     displayResources = true,
     displayMeasures = true,
-  }: {
-    collapseRenders?: boolean
-    collapseAssets?: boolean
-    collapseEmberResources?: boolean
-    collapseIframes?: boolean
-    displayResources?: boolean
-    displayMeasures?: boolean
   } = {},
 ): MappedOperation | null => {
-  const operationData = Object.values(file.operations)[0]
-  if (!operationData) return null
+  const allEntries = traceRecording.entries
+  if (!allEntries || !traceRecording.duration) return null
 
-  const {
-    includedCommonTaskNames: _,
-    // this function depends on the tasks being sorted by startTime
-    tasks: allTasks,
-  } = operationData
-
-  const OPERATION_SPAN_NAME = 'performance/ticket/activation'
-
-  // Use helper functions to find the TTR and TTI data.
-  const isTTITask = (task: (typeof allTasks)[number]) =>
-    task.name.startsWith(OPERATION_SPAN_NAME) && task.name.endsWith('/tti')
-  const ttiData = allTasks.find(isTTITask)!
-
-  const isTTRTask = (task: (typeof allTasks)[number]) =>
-    task.name.startsWith(OPERATION_SPAN_NAME) && task.name.endsWith('/ttr')
-  const ttrData = allTasks.find(isTTRTask)!
-
-  // Extract durations if the tasks were found.
-  const ttrDuration = ttrData?.duration
-  const ttiDuration = ttiData?.duration
+  const allTasks = allEntries.flatMap((entry, idx) => {
+    if (entry.span.type === 'component-render-start') {
+      return []
+    }
+    const task: MappedSpanAndAnnotation = {
+      span: entry.span,
+      annotation: entry.annotation,
+      commonName: entry.span.name,
+      kind: entry.span.type,
+      metadata: entry.span.performanceEntry
+        ? { ...entry.span.performanceEntry }
+        : undefined,
+    }
+    return task
+  })
 
   const tasks = allTasks
-    .filter((task) => !isTTITask(task) && !isTTRTask(task) && task.duration > 0)
+    .filter((task) => task.span.duration > 0)
     .map((task, idx) => {
       let overrideCommonName: string | undefined
       let { kind } = task
 
-      if (task.name.endsWith('.svg')) {
+      if (task.span.name.endsWith('.svg')) {
         overrideCommonName =
           overrideCommonName ??
           task.commonName.split('/').at(-1) ??
           task.commonName
         kind = 'asset'
       }
-      if (collapseRenders && kind === 'render') {
+      if (collapseRenders && kind === 'component-render') {
         overrideCommonName = 'renders'
       }
       if (collapseAssets && kind === 'asset') {
@@ -115,17 +101,16 @@ export const mapTicketActivationData = (
           task.commonName
         if (
           task.commonName.startsWith('graphql/local/') &&
-          task.detail?.feature
+          task.span.attributes?.feature
         ) {
-          const { feature } = task.detail
-          // match "graphql/local" "resource" with `detail.feature` with next "resource" of the same `metadata.feature`.
-          // use commonName of the former.
+          const { feature } = task.span.attributes
           const matchingResourceTask = allTasks
             .slice(idx + 1)
             .find(
-              (t) => t.metadata?.feature === feature && t.kind === 'resource',
+              (t) =>
+                t.span.attributes?.feature === feature && t.kind === 'resource',
             )
-          const resourceUrl = matchingResourceTask?.name
+          const resourceUrl = matchingResourceTask?.span.name
           if (matchingResourceTask) {
             matchingResourceTask.commonName = commonName
           }
@@ -137,19 +122,19 @@ export const mapTicketActivationData = (
               ...task.metadata,
               resourceUrl,
             },
-          } as const
+          }
         }
         return {
           ...task,
           commonName,
           kind: 'resource',
-        } as const
+        }
       }
       return {
         ...task,
         commonName: overrideCommonName ?? task.commonName,
         kind,
-      } as const
+      }
     })
     .filter(
       (task) =>
@@ -162,25 +147,19 @@ export const mapTicketActivationData = (
       return orderA - orderB
     })
 
-  const spanEvents = allTasks.filter((task) => task.duration === 0)
+  const spanEvents = allTasks.filter((task) => task.span.duration === 0)
   const kinds = new Set(tasks.map((task) => task.kind))
 
-  // regenerate the includedCommonTaskNames
   const includedCommonTaskNames = [
     ...new Set(tasks.map((task) => task.commonName)),
   ]
 
-  // Create a new operation object without the TTR and TTI tasks;
-  // this avoids any side effects from modifying tempOperation directly.
   return {
-    name: operationData.operationName,
+    name: traceRecording.name,
     tasks,
     includedCommonTaskNames,
-    ttrData,
-    ttiData,
-    ttrDuration,
-    ttiDuration,
     spanEvents,
     kinds,
+    duration: traceRecording.duration,
   }
 }

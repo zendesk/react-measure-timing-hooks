@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { LegacyOperation } from '../../2024/legacyTypes'
+import { TraceRecording } from '../../v3/traceRecordingTypes'
 import { DropTarget } from './components/DropTarget'
 import FileUploadButton from './components/FileUploadButton'
 import OperationVisualization from './components/OperationVisualization'
@@ -28,15 +28,18 @@ const OperationVisualizer = ({ width, margin }: OperationVisualizerProps) => {
     [COLLAPSE_IFRAME_SPANS]: false,
   })
 
-  const [fileContent, setFileContent] = useState<LegacyOperation | null>(null)
+  const [fileContent, setFileContent] = useState<TraceRecording<
+    any,
+    any
+  > | null>(null)
   const readFile = (file: File | undefined) => {
     if (file && file.type === 'application/json') {
       const reader = new FileReader()
       reader.addEventListener('load', (e) => {
         const result = e.target?.result
         if (result && typeof result === 'string') {
-          // should validate the file?
-          setFileContent(JSON.parse(result) as LegacyOperation)
+          // Parse the JSON file as a TraceRecording
+          setFileContent(JSON.parse(result) as TraceRecording<any, any>)
         }
       })
       reader.readAsText(file)

@@ -25,10 +25,7 @@ import {
 } from '@zendeskgarden/react-dropdowns'
 import { Grid as GardenGrid } from '@zendeskgarden/react-grid'
 import { ThemeProvider } from '@zendeskgarden/react-theming'
-import type {
-  TaskDataEmbeddedInOperation,
-  TaskSpanKind,
-} from '../../../2024/legacyTypes'
+import type { TaskSpanKind } from '../../../2024/legacyTypes'
 import {
   type FilterOption,
   BAR_FILL_COLOR,
@@ -41,15 +38,16 @@ import {
   RESOURCES_TEXT,
 } from '../constants'
 import { MappedOperation } from '../mapTicketActivationData'
+import { MappedSpanAndAnnotation } from '../types'
 
 const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
 
 export interface TTLineProps {
-  hoverData: TaskDataEmbeddedInOperation
+  hoverData: MappedSpanAndAnnotation
   xCoordinate: number
   yMax: number
   showTooltip: (
-    data: Partial<WithTooltipProvidedProps<TaskDataEmbeddedInOperation>>,
+    data: Partial<WithTooltipProvidedProps<MappedSpanAndAnnotation>>,
   ) => void
   hideTooltip: () => void
   title: string
@@ -112,9 +110,9 @@ const TTLine: React.FC<TTLineProps> = ({
           <Label
             fontColor={color}
             title={title}
-            subtitle={`${(hoverData.duration === 0
-              ? hoverData.operationStartOffset
-              : hoverData.duration
+            subtitle={`${(hoverData.span.duration === 0
+              ? hoverData.annotation.operationRelativeStartTime
+              : hoverData.span.duration
             ).toFixed(2)} ms`}
             showAnchorLine={false}
             backgroundFill="gray"
@@ -303,16 +301,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   setDisplayOptions,
   margin = DEFAULT_MARGIN,
 }) => {
-  const {
-    ttrData,
-    ttiData,
-    ttrDuration,
-    ttiDuration,
-    spanEvents,
-    kinds,
-    includedCommonTaskNames,
-    tasks,
-  } = operation
+  const { spanEvents, kinds, includedCommonTaskNames, tasks } = operation
 
   // Render proportions
   const tickHeight = 20
@@ -326,7 +315,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   const yMax = height - margin.bottom - margin.top // - 132
 
   const xScale = scaleLinear({
-    domain: [0, operation.ttiDuration + 10],
+    domain: [0, operation.duration + 10],
     range: [0, xMax],
   })
 
@@ -345,9 +334,6 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
     range: [...kinds].map((kind) => BAR_FILL_COLOR[kind as TaskSpanKind]),
   })
 
-  const ttiXCoor = xScale(ttiDuration ?? 0)
-  const ttrXCoor = xScale(ttrDuration ?? 0)
-
   const {
     tooltipOpen,
     tooltipLeft,
@@ -355,7 +341,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
     tooltipData,
     hideTooltip,
     showTooltip,
-  } = useTooltip<TaskDataEmbeddedInOperation>()
+  } = useTooltip<MappedSpanAndAnnotation>()
   let tooltipTimeout: number
 
   return width < 10 ? null : (
@@ -388,28 +374,12 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
               height={yMax}
               numTicksRows={includedCommonTaskNames.length}
             />
-            <TTLine
-              title="TTR"
-              xCoordinate={ttrXCoor}
-              hoverData={ttrData}
-              showTooltip={showTooltip}
-              hideTooltip={hideTooltip}
-              yMax={yMax}
-            />
-            <TTLine
-              title="TTI"
-              xCoordinate={ttiXCoor}
-              hoverData={ttiData}
-              showTooltip={showTooltip}
-              hideTooltip={hideTooltip}
-              yMax={yMax}
-            />
-            {spanEvents.map((task) => (
+            {spanEvents.map((task, index) => (
               <TTLine
-                key={task.name}
+                key={`spanEvent-${index}`}
                 title={task.commonName}
                 color={BAR_FILL_COLOR[task.kind]}
-                xCoordinate={xScale(task.operationStartOffset)}
+                xCoordinate={xScale(task.annotation.operationRelativeStartTime)}
                 hoverData={task}
                 showTooltip={showTooltip}
                 hideTooltip={hideTooltip}
@@ -418,39 +388,55 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
               />
             ))}
             {tasks.map((task, i) => (
-              <Bar
-                opacity={0.4}
-                rx={4}
-                key={i}
-                x={xScale(task.operationStartOffset)}
-                y={labelScale(`${task.commonName}`)}
-                width={xScale(task.duration)}
-                height={labelScale.bandwidth()}
-                fill={BAR_FILL_COLOR[task.kind]}
-                onMouseLeave={() => {
-                  // Prevent tooltip from flickering.
-                  tooltipTimeout = window.setTimeout(() => {
-                    hideTooltip()
-                  }, 300)
-                }}
-                onMouseMove={(event: React.MouseEvent<SVGRectElement>) => {
-                  if (tooltipTimeout) clearTimeout(tooltipTimeout)
-                  if (!('ownerSVGElement' in event.target)) return
-                  // Update tooltip position and data
-                  // const eventSvg = event.target;
-                  const coords = localPoint(
-                    event.target.ownerSVGElement as Element,
-                    event,
-                  )
-                  if (coords) {
-                    showTooltip({
-                      tooltipLeft: coords.x + 10,
-                      tooltipTop: coords.y + 10,
-                      tooltipData: task,
-                    })
-                  }
-                }}
-              />
+              <React.Fragment key={`task-${i}`}>
+                <Bar
+                  opacity={0.4}
+                  rx={4}
+                  x={xScale(task.annotation.operationRelativeStartTime)}
+                  y={labelScale(`${task.commonName}`)}
+                  width={xScale(task.span.duration)}
+                  height={labelScale.bandwidth()}
+                  fill={BAR_FILL_COLOR[task.kind]}
+                  onMouseLeave={() => {
+                    // Prevent tooltip from flickering.
+                    tooltipTimeout = window.setTimeout(() => {
+                      hideTooltip()
+                    }, 300)
+                  }}
+                  onMouseMove={(event: React.MouseEvent<SVGRectElement>) => {
+                    if (tooltipTimeout) clearTimeout(tooltipTimeout)
+                    if (!('ownerSVGElement' in event.target)) return
+                    // Update tooltip position and data
+                    // const eventSvg = event.target;
+                    const coords = localPoint(
+                      event.target.ownerSVGElement as Element,
+                      event,
+                    )
+                    if (coords) {
+                      showTooltip({
+                        tooltipLeft: coords.x + 10,
+                        tooltipTop: coords.y + 10,
+                        tooltipData: task,
+                      })
+                    }
+                  }}
+                />
+                {(task.annotation.markedComplete ||
+                  task.annotation.markedPageInteractive) && (
+                  <TTLine
+                    title={task.annotation.markedComplete ? 'TTR' : 'TTI'}
+                    xCoordinate={xScale(
+                      task.annotation.operationRelativeStartTime +
+                        task.span.duration,
+                    )}
+                    hoverData={task}
+                    showTooltip={showTooltip}
+                    hideTooltip={hideTooltip}
+                    yMax={yMax}
+                    color="red"
+                  />
+                )}
+              </React.Fragment>
             ))}
             <AxisLeft
               scale={labelScale}
@@ -527,22 +513,27 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
           }}
         >
           <div>
-            <strong>{tooltipData.name}</strong>
+            <strong>{tooltipData.commonName}</strong>
             <div style={{ marginTop: '5px', fontSize: '12px', opacity: '80%' }}>
               <div>kind: {tooltipData.kind}</div>
-              <div>occurrence: {tooltipData.occurrence}</div>
-              <div>start: {tooltipData.operationStartOffset.toFixed(2)}ms</div>
-              <div>duration: {tooltipData.duration.toFixed(2)}ms</div>
+              <div>occurrence: {tooltipData.annotation.occurrence}</div>
+              <div>
+                start:{' '}
+                {tooltipData.annotation.operationRelativeStartTime.toFixed(2)}ms
+              </div>
+              <div>duration: {tooltipData.span.duration.toFixed(2)}ms</div>
               {tooltipData.metadata && (
                 <div>
                   <div>metadata:</div>
                   <pre>{JSON.stringify(tooltipData.metadata, null, 2)}</pre>
                 </div>
               )}
-              {tooltipData.detail && (
+              {tooltipData.span.attributes && (
                 <div>
-                  <div>Detail:</div>
-                  <pre>{JSON.stringify(tooltipData.detail, null, 2)}</pre>
+                  <div>Attributes:</div>
+                  <pre>
+                    {JSON.stringify(tooltipData.span.attributes, null, 2)}
+                  </pre>
                 </div>
               )}
             </div>
