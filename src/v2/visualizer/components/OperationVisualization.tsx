@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { Annotation, Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
@@ -32,6 +32,17 @@ import SpanDetails from './SpanDetails'
 
 const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
 
+const StyledLine = styled(Line)`
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    stroke-opacity: 0.8;
+    stroke-width: 3.5px;
+    filter: brightness(1.2);
+  }
+`
+
 export interface TTLineProps {
   hoverData: MappedSpanAndAnnotation
   xCoordinate: number
@@ -43,7 +54,10 @@ export interface TTLineProps {
   title: string
   color?: string
   annotateAt?: 'top' | 'none'
+  onClick?: () => void
+  scrollContainerRef: React.RefObject<HTMLDivElement>
 }
+
 const TTLine: React.FC<TTLineProps> = ({
   hoverData,
   xCoordinate,
@@ -53,12 +67,29 @@ const TTLine: React.FC<TTLineProps> = ({
   title,
   color = 'red',
   annotateAt = 'top',
+  onClick,
+  scrollContainerRef,
 }) => {
   let tooltipTimeout: number
 
+  const handleTooltip = (event: React.MouseEvent<SVGLineElement>) => {
+    if (tooltipTimeout) clearTimeout(tooltipTimeout)
+    if (!('ownerSVGElement' in event.target)) return
+
+    const coords = localPoint(event.target.ownerSVGElement as Element, event)
+    if (coords && scrollContainerRef.current) {
+      const { scrollTop } = scrollContainerRef.current
+      showTooltip({
+        tooltipLeft: coords.x + 20,
+        tooltipTop: coords.y + 10 - scrollTop,
+        tooltipData: hoverData,
+      })
+    }
+  }
+
   return (
     <>
-      <Line
+      <StyledLine
         from={{ x: xCoordinate, y: 0 }}
         to={{ x: xCoordinate, y: yMax }}
         stroke={color}
@@ -72,23 +103,8 @@ const TTLine: React.FC<TTLineProps> = ({
             hideTooltip()
           }, 300)
         }}
-        onMouseMove={(event) => {
-          if (tooltipTimeout) clearTimeout(tooltipTimeout)
-          if (!('ownerSVGElement' in event.target)) return
-          // Update tooltip position and data
-          // const eventSvg = event.target;
-          const coords = localPoint(
-            event.target.ownerSVGElement as Element,
-            event,
-          )
-          if (coords) {
-            showTooltip({
-              tooltipLeft: coords.x + 10,
-              tooltipTop: coords.y + 10,
-              tooltipData: hoverData,
-            })
-          }
-        }}
+        onMouseMove={handleTooltip}
+        onClick={onClick}
       />
       {annotateAt === 'top' && (
         <Annotation
@@ -278,6 +294,28 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
     return 0.4 // Default state
   }
 
+  // Add ref for scroll container
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  // Update tooltip handling in Bar components
+  const handleTooltip = (
+    event: React.MouseEvent<SVGRectElement>,
+    entry: MappedSpanAndAnnotation,
+  ) => {
+    if (tooltipTimeout) clearTimeout(tooltipTimeout)
+    if (!('ownerSVGElement' in event.target)) return
+
+    const coords = localPoint(event.target.ownerSVGElement as Element, event)
+    if (coords && scrollContainerRef.current) {
+      const { scrollTop } = scrollContainerRef.current
+      showTooltip({
+        tooltipLeft: coords.x + 20,
+        tooltipTop: coords.y + 10 - scrollTop,
+        tooltipData: entry,
+      })
+    }
+  }
+
   return width < 10 ? null : (
     <div
       style={{
@@ -288,6 +326,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
       }}
     >
       <div
+        ref={scrollContainerRef}
         style={{
           width,
           transition: 'width 0.2s ease-in-out',
@@ -336,6 +375,8 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                   hideTooltip={hideTooltip}
                   yMax={yMax}
                   annotateAt="none"
+                  onClick={() => void handleSpanClick(entry)}
+                  scrollContainerRef={scrollContainerRef}
                 />
               ))}
               {spansWithDuration.map((entry, i) => (
@@ -354,23 +395,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                         hideTooltip()
                       }, 300)
                     }}
-                    onMouseMove={(event: React.MouseEvent<SVGRectElement>) => {
-                      if (tooltipTimeout) clearTimeout(tooltipTimeout)
-                      if (!('ownerSVGElement' in event.target)) return
-                      // Update tooltip position and data
-                      // const eventSvg = event.target;
-                      const coords = localPoint(
-                        event.target.ownerSVGElement as Element,
-                        event,
-                      )
-                      if (coords) {
-                        showTooltip({
-                          tooltipLeft: coords.x + 10,
-                          tooltipTop: coords.y + 10,
-                          tooltipData: entry,
-                        })
-                      }
-                    }}
+                    onMouseMove={(event) => void handleTooltip(event, entry)}
                     onClick={() => void handleSpanClick(entry)}
                   />
                   {(entry.annotation.markedComplete ||
@@ -386,6 +411,8 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                       hideTooltip={hideTooltip}
                       yMax={yMax}
                       color="red"
+                      onClick={() => void handleSpanClick(entry)}
+                      scrollContainerRef={scrollContainerRef}
                     />
                   )}
                 </React.Fragment>
