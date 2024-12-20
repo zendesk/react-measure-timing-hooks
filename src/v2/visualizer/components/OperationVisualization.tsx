@@ -1,18 +1,12 @@
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
 import React, { useMemo, useState } from 'react'
-import styled from 'styled-components'
-import { Annotation, Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
-import { localPoint } from '@visx/event'
 import { Grid } from '@visx/grid'
 import { Group } from '@visx/group'
 import { LegendItem, LegendLabel, LegendOrdinal } from '@visx/legend'
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale'
-import { Bar, Line } from '@visx/shape'
-import { TooltipWithBounds, useTooltip } from '@visx/tooltip'
-import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
-import { getColor } from '@zendeskgarden/react-theming'
+import { useTooltip } from '@visx/tooltip'
 import {
   type FilterOption,
   BAR_FILL_COLOR,
@@ -21,205 +15,23 @@ import {
 import { MappedOperation } from '../mapTicketActivationData'
 import { MappedSpanAndAnnotation } from '../types'
 import { FilterGroup } from './FilterGroup'
-import { Legend } from './Legend'
+import InteractiveSpan from './InteractiveSpan'
+import { LegendGroup } from './Legend'
 import SpanDetails from './SpanDetails'
+import {
+  Container,
+  Footer,
+  FooterContent,
+  Header,
+  ScrollContainer,
+  StyledRect,
+  StyledTooltip,
+  Title,
+  TooltipContent,
+  TooltipTitle,
+} from './styled'
 
 const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
-
-export interface TTLineProps {
-  hoverData: MappedSpanAndAnnotation
-  xCoordinate: number
-  yMax: number
-  showTooltip: (
-    data: Partial<WithTooltipProvidedProps<MappedSpanAndAnnotation>>,
-  ) => void
-  hideTooltip: () => void
-  title: string
-  color?: string
-  annotateAt?: 'top' | 'none'
-  onClick?: () => void
-  scrollContainerRef: React.RefObject<HTMLDivElement>
-}
-
-const TTLine: React.FC<TTLineProps> = ({
-  hoverData,
-  xCoordinate,
-  yMax,
-  showTooltip,
-  hideTooltip,
-  title,
-  color = 'red',
-  annotateAt = 'top',
-  onClick,
-  scrollContainerRef,
-}) => {
-  let tooltipTimeout: number
-
-  const handleTooltip = (event: React.MouseEvent<SVGLineElement>) => {
-    if (tooltipTimeout) clearTimeout(tooltipTimeout)
-    if (!('ownerSVGElement' in event.target)) return
-
-    const coords = localPoint(event.target.ownerSVGElement as Element, event)
-    if (coords && scrollContainerRef.current) {
-      const { scrollTop } = scrollContainerRef.current
-      showTooltip({
-        tooltipLeft: coords.x + 20,
-        tooltipTop: coords.y + 10 - scrollTop,
-        tooltipData: hoverData,
-      })
-    }
-  }
-
-  return (
-    <>
-      <StyledLine
-        from={{ x: xCoordinate, y: 0 }}
-        to={{ x: xCoordinate, y: yMax }}
-        stroke={color}
-        strokeOpacity={0.3}
-        strokeWidth={2.5}
-        strokeDasharray={8}
-        opacity={0.8}
-        onMouseLeave={() => {
-          // Prevent tooltip from flickering.
-          tooltipTimeout = window.setTimeout(() => {
-            hideTooltip()
-          }, 300)
-        }}
-        onMouseMove={handleTooltip}
-        onClick={onClick}
-      />
-      {annotateAt === 'top' && (
-        <Annotation
-          x={xCoordinate + 15}
-          y={-2}
-          dx={0} // x offset of label from subject
-          dy={0} // y offset of label from subject
-        >
-          <Label
-            fontColor={color}
-            title={title}
-            subtitle={`${hoverData.annotation.operationRelativeEndTime.toFixed(
-              2,
-            )} ms`}
-            showAnchorLine={false}
-            backgroundFill="gray"
-            backgroundProps={{
-              opacity: 0.1,
-            }}
-          />
-        </Annotation>
-      )}
-    </>
-  )
-}
-
-const StyledRect = styled.rect`
-  shape-rendering: geometricPrecision;
-`
-
-const StyledTooltip = styled(TooltipWithBounds)`
-  font-family: ${(props) => props.theme.fonts.system};
-  background-color: ${(props) =>
-    getColor({ theme: props.theme, variable: 'background.raised' })};
-  color: ${(props) =>
-    getColor({ theme: props.theme, variable: 'foreground.default' })};
-  border: ${(props) => props.theme.borders.sm};
-  border-color: ${(props) =>
-    getColor({ theme: props.theme, variable: 'border.default' })};
-  border-radius: ${(props) => props.theme.borderRadii.md};
-  box-shadow: ${(props) =>
-    props.theme.shadows.lg(
-      '2px',
-      '4px',
-      getColor({ theme: props.theme, variable: 'shadow.large' }),
-    )};
-  padding: ${(props) => props.theme.space.sm};
-  max-width: 400px;
-  max-height: 800px;
-`
-
-const TooltipTitle = styled.strong`
-  font-weight: ${(props) => props.theme.fontWeights.semibold};
-  font-size: ${(props) => props.theme.fontSizes.md};
-  color: ${(props) =>
-    getColor({ theme: props.theme, variable: 'foreground.primary' })};
-`
-
-const TooltipContent = styled.div`
-  margin-top: ${(props) => props.theme.space.xs};
-  font-size: ${(props) => props.theme.fontSizes.sm};
-  opacity: 0.9;
-`
-
-const StyledLine = styled(Line)`
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    stroke-opacity: 0.8;
-    stroke-width: 3.5px;
-    filter: brightness(1.2);
-  }
-`
-
-const StyledBar = styled(Bar)`
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    opacity: 0.7 !important;
-    filter: brightness(1.2);
-    stroke: #fff;
-    stroke-width: 2px;
-  }
-`
-
-const Container = styled.div<{ width: number }>`
-  display: flex;
-  width: ${(props) => props.width}px;
-  overflow: hidden;
-  height: 100vh;
-`
-
-const ScrollContainer = styled.div<{ width: number }>`
-  width: ${(props) => props.width}px;
-  transition: width 0.2s ease-in-out;
-  overflow: auto;
-  height: 100%;
-`
-
-const Header = styled.header`
-  display: flex;
-  flex-direction: row;
-  padding: ${(props) => props.theme.space.xs};
-`
-
-const Title = styled.h1`
-  font-size: ${(props) => props.theme.fontSizes.xl};
-  color: ${(props) => props.theme.colors.neutralHue};
-  font-family: ${(props) => props.theme.fonts.system};
-  font-weight: ${(props) => props.theme.fontWeights.semibold};
-`
-
-const Footer = styled.footer<{ width: number; height: number }>`
-  position: fixed;
-  bottom: 0;
-  background-color: ${(props) =>
-    getColor({ theme: props.theme, variable: 'background.default' })};
-  height: ${(props) => props.height}px;
-  width: 100%;
-`
-
-const FooterContent = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: ${(props) => props.theme.space.md};
-  height: 100%;
-  padding: 0 ${(props) => props.theme.space.md};
-`
 
 export interface OperationVisualizationProps {
   width: number
@@ -286,8 +98,6 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
     hideTooltip,
     showTooltip,
   } = useTooltip<MappedSpanAndAnnotation>()
-  let tooltipTimeout: number
-
   const handleSpanClick = (span: MappedSpanAndAnnotation) => {
     setSelectedSpan(span)
   }
@@ -306,26 +116,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   // Add ref for scroll container
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
 
-  // Update tooltip handling in Bar components
-  const handleTooltip = (
-    event: React.MouseEvent<SVGRectElement>,
-    entry: MappedSpanAndAnnotation,
-  ) => {
-    if (tooltipTimeout) clearTimeout(tooltipTimeout)
-    if (!('ownerSVGElement' in event.target)) return
-
-    const coords = localPoint(event.target.ownerSVGElement as Element, event)
-    if (coords && scrollContainerRef.current) {
-      const { scrollTop } = scrollContainerRef.current
-      showTooltip({
-        tooltipLeft: coords.x + 20,
-        tooltipTop: coords.y + 10 - scrollTop,
-        tooltipData: entry,
-      })
-    }
-  }
-
-  return width < 10 ? null : (
+  return (
     <Container width={containerWidth}>
       <ScrollContainer ref={scrollContainerRef} width={width}>
         <Header>
@@ -342,54 +133,77 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                 numTicksRows={uniqueGroups.length}
               />
               {spanEvents.map((entry, index) => (
-                <TTLine
+                <InteractiveSpan
                   key={`spanEvent-${index}`}
-                  title={entry.groupName}
-                  color={BAR_FILL_COLOR[entry.type]}
-                  xCoordinate={xScale(
-                    entry.annotation.operationRelativeStartTime,
-                  )}
-                  hoverData={entry}
+                  type="line"
+                  data={entry}
+                  from={{
+                    x: xScale(entry.annotation.operationRelativeStartTime),
+                    y: 0,
+                  }}
+                  to={{
+                    x: xScale(entry.annotation.operationRelativeStartTime),
+                    y: yMax,
+                  }}
+                  stroke={BAR_FILL_COLOR[entry.type]}
+                  strokeOpacity={0.3}
+                  strokeWidth={2.5}
+                  strokeDasharray="8,2"
+                  opacity={0.8}
                   showTooltip={showTooltip}
                   hideTooltip={hideTooltip}
-                  yMax={yMax}
-                  annotateAt="none"
                   onClick={() => void handleSpanClick(entry)}
                   scrollContainerRef={scrollContainerRef}
                 />
               ))}
+
               {spansWithDuration.map((entry, i) => (
                 <React.Fragment key={`entry-${i}`}>
-                  <StyledBar
-                    opacity={getBarOpacity(entry)}
-                    rx={4}
+                  <InteractiveSpan
+                    type="bar"
+                    data={entry}
                     x={xScale(entry.annotation.operationRelativeStartTime)}
                     y={labelScale(`${entry.groupName}`)}
                     width={xScale(entry.span.duration)}
                     height={labelScale.bandwidth()}
                     fill={BAR_FILL_COLOR[entry.type]}
-                    onMouseLeave={() => {
-                      // Prevent tooltip from flickering.
-                      tooltipTimeout = window.setTimeout(() => {
-                        hideTooltip()
-                      }, 300)
-                    }}
-                    onMouseMove={(event) => void handleTooltip(event, entry)}
+                    opacity={getBarOpacity(entry)}
+                    rx={4}
+                    showTooltip={showTooltip}
+                    hideTooltip={hideTooltip}
                     onClick={() => void handleSpanClick(entry)}
+                    scrollContainerRef={scrollContainerRef}
                   />
                   {(entry.annotation.markedComplete ||
                     entry.annotation.markedPageInteractive) && (
-                    <TTLine
-                      title={entry.annotation.markedComplete ? 'TTR' : 'TTI'}
+                    <InteractiveSpan
+                      type="line"
+                      title={
+                        entry.annotation.markedComplete
+                          ? 'complete'
+                          : 'interactive'
+                      }
+                      annotateAt="top"
                       xCoordinate={xScale(
-                        entry.annotation.operationRelativeStartTime +
-                          entry.span.duration,
+                        entry.annotation.operationRelativeEndTime,
                       )}
-                      hoverData={entry}
+                      color="red"
+                      data={entry}
+                      from={{
+                        x: xScale(entry.annotation.operationRelativeEndTime),
+                        y: 0,
+                      }}
+                      to={{
+                        x: xScale(entry.annotation.operationRelativeEndTime),
+                        y: yMax,
+                      }}
+                      stroke="red"
+                      strokeOpacity={0.3}
+                      strokeWidth={2.5}
+                      strokeDasharray="8,2"
+                      opacity={0.8}
                       showTooltip={showTooltip}
                       hideTooltip={hideTooltip}
-                      yMax={yMax}
-                      color="red"
                       onClick={() => void handleSpanClick(entry)}
                       scrollContainerRef={scrollContainerRef}
                     />
@@ -418,7 +232,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
           </svg>
           <FooterContent>
             <FilterGroup setState={setDisplayOptions} state={displayOptions} />
-            <Legend>
+            <LegendGroup>
               <LegendOrdinal
                 scale={colorScale}
                 labelFormat={(label) => `${label.toUpperCase()}`}
@@ -442,7 +256,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                   </div>
                 )}
               </LegendOrdinal>
-            </Legend>
+            </LegendGroup>
           </FooterContent>
         </Footer>
         {tooltipOpen && tooltipData && (

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { IGardenTheme } from '@zendeskgarden/react-theming'
 import { SpanAnnotation } from '../../v3/spanAnnotationTypes'
 import { Span } from '../../v3/spanTypes'

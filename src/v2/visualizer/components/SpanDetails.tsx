@@ -10,7 +10,7 @@ const DetailsContainer = styled.div`
   width: ${DETAILS_PANEL_WIDTH}px;
   flex-shrink: 0;
   position: relative;
-  height: 100vh;
+  height: 80vh;
   background-color: ${(props) =>
     getColor({ theme: props.theme, variable: 'background.default' })};
 `
@@ -18,7 +18,7 @@ const DetailsContainer = styled.div`
 const StyledSheet = styled(Sheet)`
   position: sticky;
   top: 0;
-  height: 80vh;
+  height: 100%;
   width: ${DETAILS_PANEL_WIDTH}px;
   max-width: 100%;
   border-radius: ${(props) => props.theme.borderRadii.md} 0 0
