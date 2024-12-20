@@ -2,15 +2,17 @@
 /* eslint-disable import/no-extraneous-dependencies */
 
 import React from 'react'
-import styled from 'styled-components'
+import styled, { useTheme } from 'styled-components'
 import { Annotation, Label } from '@visx/annotation'
 import { localPoint } from '@visx/event'
 import { Bar, Line } from '@visx/shape'
 import type { BarProps } from '@visx/shape/lib/shapes/Bar'
 import type { LineProps } from '@visx/shape/lib/shapes/Line'
 import type { AddSVGProps } from '@visx/shape/lib/types'
+import { Text } from '@visx/text'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
 import type { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale'
+import { getColor } from '@zendeskgarden/react-theming'
 import { BAR_FILL_COLOR } from '../constants'
 import { MappedSpanAndAnnotation } from '../types'
 
@@ -91,6 +93,8 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
   } = props
   let tooltipTimeout: number
 
+  const theme = useTheme()
+
   const handleMouseLeave = () => {
     // prevent tooltip flickering
     tooltipTimeout = window.setTimeout(() => {
@@ -135,18 +139,37 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
         onClick={onClick}
       />
     ) : (
-      // @ts-expect-error odd typing issue
-      <StyledBar
-        {...restProps}
-        x={xScale(data.annotation.operationRelativeStartTime)}
-        y={yScale(data.groupName)}
-        width={xScale(data.span.duration)}
-        height={yScale.bandwidth()}
-        fill={BAR_FILL_COLOR[data.type]}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        onClick={onClick}
-      />
+      <>
+        <StyledBar
+          {...restProps}
+          data-status={data.span.status}
+          x={xScale(data.annotation.operationRelativeStartTime)}
+          y={yScale(data.groupName)}
+          width={xScale(data.span.duration)}
+          height={yScale.bandwidth()}
+          fill={
+            data.span.status === 'error'
+              ? getColor({ theme, variable: 'background.dangerEmphasis' })
+              : BAR_FILL_COLOR[data.type]
+          }
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onClick={onClick}
+        />
+        {data.span.status === 'error' && (
+          <Text
+            x={xScale(data.annotation.operationRelativeStartTime) + 4}
+            y={yScale(data.groupName)! + yScale.bandwidth() / 2}
+            dy=".33em"
+            fontSize={12}
+            textAnchor="start"
+            fill={getColor({ theme, variable: 'background.danger' })}
+            style={{ pointerEvents: 'none' }}
+          >
+            ❌ error
+          </Text>
+        )}
+      </>
     )
 
   const xCoordinate = xScale(data.annotation.operationRelativeEndTime)

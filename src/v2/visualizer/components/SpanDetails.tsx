@@ -28,6 +28,10 @@ const StyledSheet = styled(Sheet)`
     )};
 `
 
+const StyledSheetTitle = styled(Sheet.Title)`
+  overflow-wrap: break-word;
+`
+
 const DetailRow = styled.div`
   margin-bottom: ${(props) => props.theme.space.xs};
   border-radius: ${(props) => props.theme.borderRadii.sm};
@@ -82,7 +86,7 @@ const SpanDetails: React.FC<SpanDetailsProps> = ({ span, onClose }) => {
     <DetailsContainer>
       <StyledSheet isOpen={!!span}>
         <Sheet.Header>
-          <Sheet.Title>{span.groupName}</Sheet.Title>
+          <StyledSheetTitle>{span.groupName}</StyledSheetTitle>
           <Sheet.Description>Type: {span.type}</Sheet.Description>
         </Sheet.Header>
         <Sheet.Body>
