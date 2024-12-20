@@ -310,7 +310,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   const footerScaleHeight = 30
 
   const xMax = width - margin.left - margin.right
-  const yMax = height - margin.bottom - margin.top // - 132
+  const yMax = height - margin.bottom - margin.top
 
   const xScale = scaleLinear({
     domain: [0, operation.duration + 10],

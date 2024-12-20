@@ -35,67 +35,78 @@ export const mapTicketActivationData = (
   const allEntries = traceRecording.entries
   if (!allEntries || !traceRecording.duration) return null
 
-  const mappedEntries = allEntries
-    .flatMap<MappedSpanAndAnnotation>((entry, idx) => {
-      if (entry.span.type === 'component-render-start') {
-        return []
-      }
-      const mapped: MappedSpanAndAnnotation = {
-        span: entry.span,
-        annotation: entry.annotation,
-        groupName: entry.span.name,
-        type: entry.span.type,
-      }
-      let overrideCommonName: string | undefined
-      let { type } = mapped
+  const preMappedEntries = allEntries
+    .flatMap<MappedSpanAndAnnotation & { overrideCommonName?: string }>(
+      (entry, idx) => {
+        if (entry.span.type === 'component-render-start') {
+          return []
+        }
+        const mapped: MappedSpanAndAnnotation = {
+          span: entry.span,
+          annotation: entry.annotation,
+          groupName: entry.span.name,
+          type: entry.span.type,
+        }
+        let overrideCommonName: string | undefined
+        let { type } = mapped
 
-      if (mapped.span.name.endsWith('.svg')) {
-        overrideCommonName =
-          overrideCommonName ??
-          mapped.groupName.split('/').at(-1) ??
-          mapped.groupName
-        type = 'asset'
-      }
-      if (collapseRenders && type === 'component-render') {
-        overrideCommonName = 'renders'
-      }
-      if (collapseAssets && type === 'asset') {
-        overrideCommonName = 'assets'
-      }
-      if (collapseIframes && type === 'iframe') {
-        overrideCommonName = 'iframes'
-      }
-      if (type === 'asset' || type === 'iframe') {
-        overrideCommonName =
-          overrideCommonName ??
-          mapped.groupName.split('/').at(-1) ??
-          mapped.groupName
-      }
-      if (mapped.groupName.startsWith('https://')) {
-        const shortenedName = mapped.groupName.split('zendesk.com').at(-1)
-        if (mapped.span.attributes?.initiatorType === 'xmlhttprequest') {
-          overrideCommonName = collapseEmberResources
-            ? 'ember-resource'
-            : overrideCommonName ?? shortenedName ?? mapped.groupName
-          type = 'resource-ember'
-        }
-        if (type === 'resource') {
+        if (mapped.span.name.endsWith('.svg')) {
           overrideCommonName =
-            overrideCommonName ?? shortenedName ?? mapped.groupName
+            overrideCommonName ?? mapped.groupName.split('/').at(-1)
+          type = 'asset'
         }
-      }
+        if (collapseRenders && type === 'component-render') {
+          overrideCommonName = 'renders'
+        }
+        if (collapseAssets && type === 'asset') {
+          overrideCommonName = 'assets'
+        }
+        if (collapseIframes && type === 'iframe') {
+          overrideCommonName = 'iframes'
+        }
+        if (type === 'asset' || type === 'iframe') {
+          overrideCommonName =
+            overrideCommonName ?? mapped.groupName.split('/').at(-1)
+        }
+        if (mapped.groupName.startsWith('https://')) {
+          const shortenedName = mapped.groupName.split('zendesk.com').at(-1)
+          if (mapped.span.attributes?.initiatorType === 'xmlhttprequest') {
+            overrideCommonName = collapseEmberResources
+              ? 'ember-resource'
+              : overrideCommonName ?? shortenedName
+            type = 'resource-ember'
+          }
+          if (type === 'resource') {
+            overrideCommonName = overrideCommonName ?? shortenedName
+          }
+        }
+        return {
+          ...mapped,
+          overrideCommonName,
+          type,
+        }
+      },
+    )
+    .sort((a, b) => {
+      const orderA = order[a.type] ?? 100
+      const orderB = order[b.type] ?? 100
+      return orderA - orderB
+    })
+
+  const mappedEntries = preMappedEntries.map<MappedSpanAndAnnotation>(
+    (mapped, idx) => {
       if (mapped.groupName.startsWith('graphql/')) {
         const operationName = mapped.groupName.split('/').at(-1)
         const commonName =
-          overrideCommonName ||
-          (operationName && `graphql:${operationName}`) ||
+          mapped.overrideCommonName ??
+          (operationName && `graphql:${operationName}`) ??
           mapped.groupName
         if (
           mapped.groupName.startsWith('graphql/local/') &&
           mapped.span.attributes?.feature
         ) {
           const { feature } = mapped.span.attributes
-          const matchingResourceTask = mappedEntries
+          const matchingResourceTask = preMappedEntries
             .slice(idx + 1)
             .find(
               (t) =>
@@ -118,15 +129,10 @@ export const mapTicketActivationData = (
       }
       return {
         ...mapped,
-        groupName: overrideCommonName ?? mapped.groupName,
-        type,
+        groupName: mapped.overrideCommonName ?? mapped.groupName,
       }
-    })
-    .sort((a, b) => {
-      const orderA = order[a.type] ?? 100
-      const orderB = order[b.type] ?? 100
-      return orderA - orderB
-    })
+    },
+  )
 
   const spansWithDuration = mappedEntries
     .filter((task) => task.span.duration > 0)
