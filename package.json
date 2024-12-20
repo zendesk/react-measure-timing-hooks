@@ -143,6 +143,7 @@
     "@visx/tooltip": "^3.12.0",
     "@visx/vendor": "^3.12.0",
     "@visx/visx": "^3.12.0",
+    "@zendeskgarden/css-bedrock": "^10.0.1",
     "@zendeskgarden/react-accordions": "^9.4.0",
     "@zendeskgarden/react-avatars": "^9.4.0",
     "@zendeskgarden/react-buttons": "^9.4.0",

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import styled from 'styled-components'
 import { Annotation, Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
@@ -11,11 +11,7 @@ import { Group } from '@visx/group'
 import { LegendItem, LegendLabel, LegendOrdinal } from '@visx/legend'
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale'
 import { Bar, Line } from '@visx/shape'
-import {
-  defaultStyles as defaultTooltipStyles,
-  TooltipWithBounds,
-  useTooltip,
-} from '@visx/tooltip'
+import { TooltipWithBounds, useTooltip } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
 import { ToggleButton } from '@zendeskgarden/react-buttons'
 import { Grid as GardenGrid } from '@zendeskgarden/react-grid'

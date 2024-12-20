@@ -32,33 +32,45 @@ const StyledSheet = styled(Sheet)`
 `
 
 const DetailRow = styled.div`
-  margin-bottom: ${(props) => props.theme.space.sm};
+  margin-bottom: ${(props) => props.theme.space.xs};
+  border-radius: ${(props) => props.theme.borderRadii.sm};
+  background-color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'background.raised' })};
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 `
 
 const Label = styled.span`
+  display: block;
   font-weight: ${(props) => props.theme.fontWeights.semibold};
-  margin-right: ${(props) => props.theme.space.sm};
+  margin-bottom: ${(props) => props.theme.space.xs};
+  color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'foreground.primary' })};
+`
+
+const Value = styled.span`
   color: ${(props) =>
     getColor({ theme: props.theme, variable: 'foreground.default' })};
+  font-family: ${(props) => props.theme.fonts.mono};
 `
 
 const JsonValue = styled.pre`
+  font-family: ${(props) => props.theme.fonts.mono};
+  font-size: ${(props) => props.theme.fontSizes.sm};
   background: ${(props) =>
-    getColor({
-      theme: props.theme,
-      hue: 'neutralHue',
-      shade: 800,
-    })};
+    getColor({ theme: props.theme, variable: 'background.recessed' })};
   color: ${(props) =>
-    getColor({
-      theme: props.theme,
-      hue: 'neutralHue',
-      shade: 100,
-    })};
+    getColor({ theme: props.theme, variable: 'foreground.default' })};
   padding: ${(props) => props.theme.space.sm};
-  border-radius: ${(props) => props.theme.borderRadii.md};
+  border-radius: ${(props) => props.theme.borderRadii.sm};
+  border: ${(props) => props.theme.borders.sm};
+  border-color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'border.default' })};
   overflow: auto;
   max-height: 200px;
+  margin-top: ${(props) => props.theme.space.xs};
 `
 
 interface SpanDetailsProps {
@@ -78,20 +90,22 @@ const SpanDetails: React.FC<SpanDetailsProps> = ({ span, onClose }) => {
         </Sheet.Header>
         <Sheet.Body>
           <DetailRow>
-            <Label>Start Time:</Label>
-            {span.annotation.operationRelativeStartTime.toFixed(2)}ms
+            <Label>Start Time</Label>
+            <Value>
+              {span.annotation.operationRelativeStartTime.toFixed(2)}ms
+            </Value>
           </DetailRow>
           <DetailRow>
-            <Label>Duration:</Label>
-            {span.span.duration.toFixed(2)}ms
+            <Label>Duration</Label>
+            <Value>{span.span.duration.toFixed(2)}ms</Value>
           </DetailRow>
           <DetailRow>
-            <Label>Occurrence:</Label>
-            {span.annotation.occurrence}
+            <Label>Occurrence</Label>
+            <Value>{span.annotation.occurrence}</Value>
           </DetailRow>
           {span.span.performanceEntry && (
             <DetailRow>
-              <Label>Performance Entry:</Label>
+              <Label>Performance Entry</Label>
               <JsonValue>
                 {JSON.stringify(span.span.performanceEntry, null, 2)}
               </JsonValue>
@@ -99,7 +113,7 @@ const SpanDetails: React.FC<SpanDetailsProps> = ({ span, onClose }) => {
           )}
           {span.span.attributes && (
             <DetailRow>
-              <Label>Attributes:</Label>
+              <Label>Attributes</Label>
               <JsonValue>
                 {JSON.stringify(span.span.attributes, null, 2)}
               </JsonValue>
