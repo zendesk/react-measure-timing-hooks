@@ -1,6 +1,5 @@
-import { TraceRecording } from '../../v3/traceRecordingTypes'
 import type { SupportedSpanTypes } from './constants'
-import { MappedSpanAndAnnotation } from './types'
+import { type RecordingInputFile, MappedSpanAndAnnotation } from './types'
 
 const order: Record<string, number> = {
   longtask: 0,
@@ -22,7 +21,7 @@ export interface MappedOperation {
 }
 
 export const mapTicketActivationData = (
-  traceRecording: TraceRecording<any, any>,
+  traceRecording: RecordingInputFile,
   {
     collapseRenders = true,
     collapseAssets = true,
@@ -36,7 +35,7 @@ export const mapTicketActivationData = (
   if (!allEntries || !traceRecording.duration) return null
 
   const preMappedEntries = allEntries
-    .flatMap<MappedSpanAndAnnotation & { overrideCommonName?: string }>(
+    .flatMap<MappedSpanAndAnnotation & { overrideGroupName?: string }>(
       (entry, idx) => {
         if (entry.span.type === 'component-render-start') {
           return []
@@ -47,42 +46,49 @@ export const mapTicketActivationData = (
           groupName: entry.span.name,
           type: entry.span.type,
         }
-        let overrideCommonName: string | undefined
+        let overrideGroupName: string | undefined
         let { type } = mapped
 
         if (mapped.span.name.endsWith('.svg')) {
-          overrideCommonName =
-            overrideCommonName ?? mapped.groupName.split('/').at(-1)
+          overrideGroupName =
+            overrideGroupName ?? mapped.groupName.split('/').at(-1)
           type = 'asset'
         }
         if (collapseRenders && type === 'component-render') {
-          overrideCommonName = 'renders'
+          overrideGroupName = 'renders'
         }
         if (collapseAssets && type === 'asset') {
-          overrideCommonName = 'assets'
+          overrideGroupName = 'assets'
         }
         if (collapseIframes && type === 'iframe') {
-          overrideCommonName = 'iframes'
+          overrideGroupName = 'iframes'
         }
         if (type === 'asset' || type === 'iframe') {
-          overrideCommonName =
-            overrideCommonName ?? mapped.groupName.split('/').at(-1)
+          overrideGroupName =
+            overrideGroupName ?? mapped.groupName.split('/').at(-1)
         }
-        if (mapped.groupName.startsWith('https://')) {
-          const shortenedName = mapped.groupName.split('zendesk.com').at(-1)
+        if (
+          type === 'measure' &&
+          (entry.span.name.endsWith('/tti') || entry.span.name.endsWith('/ttr'))
+        ) {
+          // remove suffix from measure name
+          overrideGroupName = entry.span.name.split('/').slice(0, -1).join('/')
+        }
+        if (entry.span.name.startsWith('https://')) {
+          const shortenedName = entry.span.name.split('zendesk.com').at(-1)
           if (mapped.span.attributes?.initiatorType === 'xmlhttprequest') {
-            overrideCommonName = collapseEmberResources
+            overrideGroupName = collapseEmberResources
               ? 'ember-resource'
-              : overrideCommonName ?? shortenedName
+              : overrideGroupName ?? shortenedName
             type = 'resource-ember'
           }
           if (type === 'resource') {
-            overrideCommonName = overrideCommonName ?? shortenedName
+            overrideGroupName = overrideGroupName ?? shortenedName
           }
         }
         return {
           ...mapped,
-          overrideCommonName,
+          overrideGroupName,
           type,
         }
       },
@@ -98,7 +104,7 @@ export const mapTicketActivationData = (
       if (mapped.groupName.startsWith('graphql/')) {
         const operationName = mapped.groupName.split('/').at(-1)
         const commonName =
-          mapped.overrideCommonName ??
+          mapped.overrideGroupName ??
           (operationName && `graphql:${operationName}`) ??
           mapped.groupName
         if (
@@ -129,7 +135,7 @@ export const mapTicketActivationData = (
       }
       return {
         ...mapped,
-        groupName: mapped.overrideCommonName ?? mapped.groupName,
+        groupName: mapped.overrideGroupName ?? mapped.groupName,
       }
     },
   )

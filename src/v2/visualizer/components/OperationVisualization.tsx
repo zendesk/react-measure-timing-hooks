@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import debounce from 'lodash.debounce'
+import React, { useMemo, useState } from 'react'
+import styled from 'styled-components'
 import { Annotation, Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
 import { localPoint } from '@visx/event'
@@ -16,28 +17,18 @@ import {
   useTooltip,
 } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
-import {
-  type OptionValue,
-  Combobox,
-  Field,
-  IComboboxProps,
-  Option,
-} from '@zendeskgarden/react-dropdowns'
+import { ToggleButton } from '@zendeskgarden/react-buttons'
 import { Grid as GardenGrid } from '@zendeskgarden/react-grid'
-import { ThemeProvider } from '@zendeskgarden/react-theming'
+import { Tooltip } from '@zendeskgarden/react-tooltips'
 import {
   type FilterOption,
   BAR_FILL_COLOR,
-  COLLAPSE_ASSET_SPANS_TEXT,
-  COLLAPSE_EMBER_RESOURCE_SPANS,
-  COLLAPSE_IFRAME_SPANS,
-  COLLAPSE_RENDER_SPANS_TEXT,
+  DETAILS_PANEL_WIDTH,
   FILTER_OPTIONS,
-  MEASURES_TEXT,
-  RESOURCES_TEXT,
 } from '../constants'
 import { MappedOperation } from '../mapTicketActivationData'
 import { MappedSpanAndAnnotation } from '../types'
+import SpanDetails from './SpanDetails'
 
 const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
 
@@ -109,10 +100,9 @@ const TTLine: React.FC<TTLineProps> = ({
           <Label
             fontColor={color}
             title={title}
-            subtitle={`${(hoverData.span.duration === 0
-              ? hoverData.annotation.operationRelativeStartTime
-              : hoverData.span.duration
-            ).toFixed(2)} ms`}
+            subtitle={`${hoverData.annotation.operationRelativeEndTime.toFixed(
+              2,
+            )} ms`}
             showAnchorLine={false}
             backgroundFill="gray"
             backgroundProps={{
@@ -125,141 +115,51 @@ const TTLine: React.FC<TTLineProps> = ({
   )
 }
 
-function handleOption({
-  selectionValue,
-  setter,
-  type,
-  text,
-}: {
-  selectionValue: OptionValue[]
-  setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
-  type: string
-  text: string
-}) {
-  if (selectionValue?.includes(text)) {
-    setter((prev) => ({ ...prev, [text]: true }))
-  } else if (
-    !selectionValue?.includes(text) &&
-    (type === 'input:keyDown:Enter' ||
-      type === 'option:click' ||
-      type === 'fn:setSelectionValue')
-  ) {
-    setter((prev) => ({ ...prev, [text]: false }))
-  }
-}
-export interface MultiSelectProps {
+interface VisualizationFiltersProps {
   setState: React.Dispatch<React.SetStateAction<Record<FilterOption, boolean>>>
   state: Record<string, boolean>
 }
-const MultiSelect: React.FC<MultiSelectProps> = ({ state, setState }) => {
-  const [options, setOptions] = useState(FILTER_OPTIONS)
 
-  const handleChange = useCallback<NonNullable<IComboboxProps['onChange']>>(
-    ({ selectionValue, inputValue, type }) => {
-      if (!Array.isArray(selectionValue)) return
-
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: COLLAPSE_RENDER_SPANS_TEXT,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: RESOURCES_TEXT,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: MEASURES_TEXT,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: COLLAPSE_ASSET_SPANS_TEXT,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: COLLAPSE_EMBER_RESOURCE_SPANS,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: COLLAPSE_IFRAME_SPANS,
-      })
-
-      if (inputValue !== undefined) {
-        if (inputValue === '') {
-          setOptions(FILTER_OPTIONS)
-        } else {
-          const regex = new RegExp(
-            inputValue.replace(/[.*+?^${}()|[\]\\]/giu, '\\$&'),
-            'giu',
-          )
-
-          setOptions(FILTER_OPTIONS.filter((option) => option.match(regex)))
-        }
-      }
-    },
-    [state, setState],
-  )
-
-  const debounceHandleChange = useMemo(
-    () => debounce(handleChange, 150),
-    [handleChange],
-  )
-
-  useEffect(
-    () => () => void debounceHandleChange.cancel(),
-    [debounceHandleChange],
-  )
-
-  return (
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    <LegendDemo title="">
-      <GardenGrid.Row justifyContent="center">
-        <GardenGrid.Col sm={13}>
-          <Field>
-            <Field.Label>Filter</Field.Label>
-            <Combobox
-              isAutocomplete
-              isMultiselectable
-              maxHeight="auto"
-              listboxMaxHeight="100px"
-              listboxMinHeight="10px"
-              onChange={debounceHandleChange}
-            >
-              {options.length === 0 ? (
-                <Option isDisabled label="" value="No matches found" />
-              ) : (
-                options.map((value) => (
-                  <Option key={value} value={value} isSelected={state[value]} />
-                ))
-              )}
-            </Combobox>
-          </Field>
-        </GardenGrid.Col>
-      </GardenGrid.Row>
-    </LegendDemo>
-  )
-}
+const VisualizationFilters: React.FC<VisualizationFiltersProps> = ({
+  state,
+  setState,
+}) => (
+  <LegendDemo title="" style={{ minWidth: '300px' }}>
+    <GardenGrid.Row>
+      <GardenGrid.Col>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {FILTER_OPTIONS.map((option) => (
+            <Tooltip key={option} content={option}>
+              <ToggleButton
+                isPressed={state[option]}
+                onClick={() =>
+                  void setState((prev) => ({
+                    ...prev,
+                    [option]: !prev[option],
+                  }))
+                }
+              >
+                {option}
+              </ToggleButton>
+            </Tooltip>
+          ))}
+        </div>
+      </GardenGrid.Col>
+    </GardenGrid.Row>
+  </LegendDemo>
+)
 
 function LegendDemo({
   title,
   children,
+  style,
 }: {
   title: string
   children: React.ReactNode
+  style?: React.CSSProperties
 }) {
   return (
-    <div className="legend">
+    <div className="legend" style={style}>
       <div className="title">{title}</div>
       {children}
       <style>{`
@@ -293,14 +193,35 @@ export interface OperationVisualizationProps {
   displayOptions: Record<FilterOption, boolean>
   margin?: { top: number; right: number; bottom: number; left: number }
 }
+
+const StyledBar = styled(Bar)`
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    opacity: 0.7 !important;
+    filter: brightness(1.2);
+    stroke: #fff;
+    stroke-width: 2px;
+  }
+`
+
 const OperationVisualization: React.FC<OperationVisualizationProps> = ({
-  width,
+  width: containerWidth,
   operation,
   displayOptions,
   setDisplayOptions,
   margin = DEFAULT_MARGIN,
 }) => {
   const { spanEvents, spanTypes, uniqueGroups, spansWithDuration } = operation
+
+  const [selectedSpan, setSelectedSpan] =
+    useState<MappedSpanAndAnnotation | null>(null)
+
+  // Adjust width when panel is open
+  const width = selectedSpan
+    ? containerWidth - DETAILS_PANEL_WIDTH + 100
+    : containerWidth
 
   // Render proportions
   const tickHeight = 20
@@ -342,207 +263,242 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   } = useTooltip<MappedSpanAndAnnotation>()
   let tooltipTimeout: number
 
+  const handleSpanClick = (span: MappedSpanAndAnnotation) => {
+    setSelectedSpan(span)
+  }
+
+  const getBarOpacity = (entry: MappedSpanAndAnnotation) => {
+    if (
+      selectedSpan &&
+      selectedSpan.span.name === entry.span.name &&
+      selectedSpan.span.startTime === entry.span.startTime
+    ) {
+      return 0.8 // Selected state
+    }
+    return 0.4 // Default state
+  }
+
   return width < 10 ? null : (
-    <ThemeProvider>
-      <header
+    <div
+      style={{
+        display: 'flex',
+        width: containerWidth,
+        overflow: 'hidden',
+        height: '100vh', // Add this to ensure full height
+      }}
+    >
+      <div
         style={{
-          display: 'flex',
-          flexDirection: 'row',
-          padding: '5px',
-          gap: '10px',
+          width,
+          transition: 'width 0.2s ease-in-out',
+          overflow: 'auto',
+          height: '100%', // Add this to ensure scroll container takes full height
         }}
       >
-        <h1
-          style={{
-            fontSize: '24px',
-            color: '#333',
-            fontFamily: 'sans-serif',
-          }}
-        >
-          Operation: {operation.name}
-        </h1>
-      </header>
-      <main style={{ height: `${height + margin.top + margin.bottom}px` }}>
-        <svg width={width - margin.right} height={height}>
-          <Group top={margin.top} left={margin.left}>
-            <Grid
-              xScale={xScale}
-              yScale={labelScale}
-              width={xMax}
-              height={yMax}
-              numTicksRows={uniqueGroups.length}
-            />
-            {spanEvents.map((entry, index) => (
-              <TTLine
-                key={`spanEvent-${index}`}
-                title={entry.groupName}
-                color={BAR_FILL_COLOR[entry.type]}
-                xCoordinate={xScale(
-                  entry.annotation.operationRelativeStartTime,
-                )}
-                hoverData={entry}
-                showTooltip={showTooltip}
-                hideTooltip={hideTooltip}
-                yMax={yMax}
-                annotateAt="none"
-              />
-            ))}
-            {spansWithDuration.map((entry, i) => (
-              <React.Fragment key={`entry-${i}`}>
-                <Bar
-                  opacity={0.4}
-                  rx={4}
-                  x={xScale(entry.annotation.operationRelativeStartTime)}
-                  y={labelScale(`${entry.groupName}`)}
-                  width={xScale(entry.span.duration)}
-                  height={labelScale.bandwidth()}
-                  fill={BAR_FILL_COLOR[entry.type]}
-                  onMouseLeave={() => {
-                    // Prevent tooltip from flickering.
-                    tooltipTimeout = window.setTimeout(() => {
-                      hideTooltip()
-                    }, 300)
-                  }}
-                  onMouseMove={(event: React.MouseEvent<SVGRectElement>) => {
-                    if (tooltipTimeout) clearTimeout(tooltipTimeout)
-                    if (!('ownerSVGElement' in event.target)) return
-                    // Update tooltip position and data
-                    // const eventSvg = event.target;
-                    const coords = localPoint(
-                      event.target.ownerSVGElement as Element,
-                      event,
-                    )
-                    if (coords) {
-                      showTooltip({
-                        tooltipLeft: coords.x + 10,
-                        tooltipTop: coords.y + 10,
-                        tooltipData: entry,
-                      })
-                    }
-                  }}
-                />
-                {(entry.annotation.markedComplete ||
-                  entry.annotation.markedPageInteractive) && (
-                  <TTLine
-                    title={entry.annotation.markedComplete ? 'TTR' : 'TTI'}
-                    xCoordinate={xScale(
-                      entry.annotation.operationRelativeStartTime +
-                        entry.span.duration,
-                    )}
-                    hoverData={entry}
-                    showTooltip={showTooltip}
-                    hideTooltip={hideTooltip}
-                    yMax={yMax}
-                    color="red"
-                  />
-                )}
-              </React.Fragment>
-            ))}
-            <AxisLeft
-              scale={labelScale}
-              numTicks={uniqueGroups.length}
-              tickLabelProps={{
-                fill: '#888',
-                fontSize: 10,
-                textAnchor: 'end',
-                dy: '0.33em',
-                width: 100,
-              }}
-              tickFormat={(value) => value}
-            />
-            <Axis scale={xScale} top={yMax} />
-          </Group>
-        </svg>
-      </main>
-      <footer
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          backgroundColor: 'white',
-          height: `${footerHeight + footerScaleHeight}px`,
-        }}
-      >
-        <svg width={width - margin.right} height={footerScaleHeight}>
-          <Axis scale={xScale} top={1} left={margin.left} />
-        </svg>
-        <div
+        <header
           style={{
             display: 'flex',
             flexDirection: 'row',
-            justifyContent: 'space-evenly',
-            alignItems: 'center',
+            padding: '5px',
             gap: '10px',
-            height: `${footerHeight}px`,
           }}
         >
-          <MultiSelect setState={setDisplayOptions} state={displayOptions} />
-          <LegendDemo title="Legend">
-            <LegendOrdinal
-              scale={colorScale}
-              labelFormat={(label) => `${label.toUpperCase()}`}
-            >
-              {(labels) => (
-                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                  {labels.map((label, i) => (
-                    <LegendItem key={`legend-${i}`} margin="0 5px">
-                      <svg width={15} height={15}>
-                        <rect fill={label.value} width={15} height={15} />
-                      </svg>
-                      <LegendLabel align="left" margin="0 0 0 4px">
-                        {label.text}
-                      </LegendLabel>
-                    </LegendItem>
-                  ))}
-                </div>
-              )}
-            </LegendOrdinal>
-          </LegendDemo>
-        </div>
-      </footer>
-      {tooltipOpen && tooltipData && (
-        <TooltipWithBounds
-          top={tooltipTop}
-          left={tooltipLeft}
+          <h1
+            style={{
+              fontSize: '24px',
+              color: '#333',
+              fontFamily: 'sans-serif',
+            }}
+          >
+            Operation: {operation.name}
+          </h1>
+        </header>
+        <main style={{ height: `${height + margin.top + margin.bottom}px` }}>
+          <svg width={width - margin.right} height={height}>
+            <Group top={margin.top} left={margin.left}>
+              <Grid
+                xScale={xScale}
+                yScale={labelScale}
+                width={xMax}
+                height={yMax}
+                numTicksRows={uniqueGroups.length}
+              />
+              {spanEvents.map((entry, index) => (
+                <TTLine
+                  key={`spanEvent-${index}`}
+                  title={entry.groupName}
+                  color={BAR_FILL_COLOR[entry.type]}
+                  xCoordinate={xScale(
+                    entry.annotation.operationRelativeStartTime,
+                  )}
+                  hoverData={entry}
+                  showTooltip={showTooltip}
+                  hideTooltip={hideTooltip}
+                  yMax={yMax}
+                  annotateAt="none"
+                />
+              ))}
+              {spansWithDuration.map((entry, i) => (
+                <React.Fragment key={`entry-${i}`}>
+                  <StyledBar
+                    opacity={getBarOpacity(entry)}
+                    rx={4}
+                    x={xScale(entry.annotation.operationRelativeStartTime)}
+                    y={labelScale(`${entry.groupName}`)}
+                    width={xScale(entry.span.duration)}
+                    height={labelScale.bandwidth()}
+                    fill={BAR_FILL_COLOR[entry.type]}
+                    onMouseLeave={() => {
+                      // Prevent tooltip from flickering.
+                      tooltipTimeout = window.setTimeout(() => {
+                        hideTooltip()
+                      }, 300)
+                    }}
+                    onMouseMove={(event: React.MouseEvent<SVGRectElement>) => {
+                      if (tooltipTimeout) clearTimeout(tooltipTimeout)
+                      if (!('ownerSVGElement' in event.target)) return
+                      // Update tooltip position and data
+                      // const eventSvg = event.target;
+                      const coords = localPoint(
+                        event.target.ownerSVGElement as Element,
+                        event,
+                      )
+                      if (coords) {
+                        showTooltip({
+                          tooltipLeft: coords.x + 10,
+                          tooltipTop: coords.y + 10,
+                          tooltipData: entry,
+                        })
+                      }
+                    }}
+                    onClick={() => void handleSpanClick(entry)}
+                  />
+                  {(entry.annotation.markedComplete ||
+                    entry.annotation.markedPageInteractive) && (
+                    <TTLine
+                      title={entry.annotation.markedComplete ? 'TTR' : 'TTI'}
+                      xCoordinate={xScale(
+                        entry.annotation.operationRelativeStartTime +
+                          entry.span.duration,
+                      )}
+                      hoverData={entry}
+                      showTooltip={showTooltip}
+                      hideTooltip={hideTooltip}
+                      yMax={yMax}
+                      color="red"
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+              <AxisLeft
+                scale={labelScale}
+                numTicks={uniqueGroups.length}
+                tickLabelProps={{
+                  fill: '#888',
+                  fontSize: 10,
+                  textAnchor: 'end',
+                  dy: '0.33em',
+                  width: 100,
+                }}
+                tickFormat={(value) => value}
+              />
+              <Axis scale={xScale} top={yMax} />
+            </Group>
+          </svg>
+        </main>
+        <footer
           style={{
-            ...defaultTooltipStyles,
-            fontFamily: 'sans-serif',
-            backgroundColor: '#283238',
-            color: 'white',
-            maxWidth: '400px',
-            maxHeight: '800px',
+            position: 'fixed',
+            bottom: 0,
+            backgroundColor: 'white',
+            height: `${footerHeight + footerScaleHeight}px`,
+            width: '100%',
           }}
         >
-          <div>
-            <strong>{tooltipData.groupName}</strong>
-            <div style={{ marginTop: '5px', fontSize: '12px', opacity: '80%' }}>
-              <div>kind: {tooltipData.type}</div>
-              <div>occurrence: {tooltipData.annotation.occurrence}</div>
-              <div>
-                start:{' '}
-                {tooltipData.annotation.operationRelativeStartTime.toFixed(2)}ms
-              </div>
-              <div>duration: {tooltipData.span.duration.toFixed(2)}ms</div>
-              {tooltipData.span.performanceEntry && (
-                <div>
-                  <div>performanceEntry:</div>
-                  <pre>
-                    {JSON.stringify(tooltipData.span.performanceEntry, null, 2)}
-                  </pre>
-                </div>
-              )}
-              {tooltipData.span.attributes && (
-                <div>
-                  <div>Attributes:</div>
-                  <pre>
-                    {JSON.stringify(tooltipData.span.attributes, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
+          <svg width={width - margin.right} height={footerScaleHeight}>
+            <Axis scale={xScale} top={1} left={margin.left} />
+          </svg>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'flex-start',
+              alignItems: 'flex-start',
+              gap: '20px',
+              height: `${footerHeight}px`,
+              padding: '0 20px',
+            }}
+          >
+            <VisualizationFilters
+              setState={setDisplayOptions}
+              state={displayOptions}
+            />
+            <LegendDemo
+              title="Legend"
+              style={{
+                minWidth: '400px',
+                maxHeight: '80px',
+                overflowY: 'auto',
+              }}
+            >
+              <LegendOrdinal
+                scale={colorScale}
+                labelFormat={(label) => `${label.toUpperCase()}`}
+              >
+                {(labels) => (
+                  <div style={{ display: 'flex', flexDirection: 'row' }}>
+                    {labels.map((label, i) => (
+                      <LegendItem key={`legend-${i}`} margin="0 5px">
+                        <svg width={15} height={15}>
+                          <rect fill={label.value} width={15} height={15} />
+                        </svg>
+                        <LegendLabel align="left" margin="0 0 0 4px">
+                          {label.text}
+                        </LegendLabel>
+                      </LegendItem>
+                    ))}
+                  </div>
+                )}
+              </LegendOrdinal>
+            </LegendDemo>
           </div>
-        </TooltipWithBounds>
-      )}
-    </ThemeProvider>
+        </footer>
+        {tooltipOpen && tooltipData && (
+          <TooltipWithBounds
+            top={tooltipTop}
+            left={tooltipLeft}
+            style={{
+              ...defaultTooltipStyles,
+              fontFamily: 'sans-serif',
+              backgroundColor: '#283238',
+              color: 'white',
+              maxWidth: '400px',
+              maxHeight: '800px',
+            }}
+          >
+            <div>
+              <strong>{tooltipData.span.name}</strong>
+              <div
+                style={{ marginTop: '5px', fontSize: '12px', opacity: '80%' }}
+              >
+                <div>kind: {tooltipData.type}</div>
+                <div>occurrence: {tooltipData.annotation.occurrence}</div>
+                <div>
+                  start:{' '}
+                  {tooltipData.annotation.operationRelativeStartTime.toFixed(2)}
+                  ms
+                </div>
+                <div>duration: {tooltipData.span.duration.toFixed(2)}ms</div>
+              </div>
+            </div>
+          </TooltipWithBounds>
+        )}
+      </div>
+      <SpanDetails
+        span={selectedSpan}
+        onClose={() => void setSelectedSpan(null)}
+      />
+    </div>
   )
 }
 

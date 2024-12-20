@@ -2,10 +2,12 @@ import type { SpanType } from '../../v3/spanTypes'
 
 export const RESOURCES_TEXT = 'Show Resources'
 export const MEASURES_TEXT = 'Show Measures'
-export const COLLAPSE_RENDER_SPANS_TEXT = 'Collapse Render Spans'
-export const COLLAPSE_ASSET_SPANS_TEXT = 'Collapse Asset Spans'
-export const COLLAPSE_EMBER_RESOURCE_SPANS = 'Collapse Ember Resource Spans'
-export const COLLAPSE_IFRAME_SPANS = 'Collapse iframe Spans'
+export const COLLAPSE_RENDER_SPANS_TEXT = 'Collapse Renders'
+export const COLLAPSE_ASSET_SPANS_TEXT = 'Collapse Assets'
+export const COLLAPSE_EMBER_RESOURCE_SPANS = 'Collapse Ember'
+export const COLLAPSE_IFRAME_SPANS = 'Collapse iframes'
+
+export const DETAILS_PANEL_WIDTH = 400
 
 export type FilterOption =
   | typeof RESOURCES_TEXT
