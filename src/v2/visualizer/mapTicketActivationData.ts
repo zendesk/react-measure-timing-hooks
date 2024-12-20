@@ -3,7 +3,7 @@ import { type RecordingInputFile, MappedSpanAndAnnotation } from './types'
 
 const order: Record<string, number> = {
   longtask: 0,
-  render: 1,
+  'component-render': 1,
   measure: 2,
   resource: 3,
   'resource-ember': 3,

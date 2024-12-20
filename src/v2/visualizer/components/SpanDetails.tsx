@@ -2,7 +2,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import { Sheet } from '@zendeskgarden/react-chrome'
-import { type IGardenTheme, getColor } from '@zendeskgarden/react-theming'
+import { getColor } from '@zendeskgarden/react-theming'
 import { DETAILS_PANEL_WIDTH } from '../constants'
 import { MappedSpanAndAnnotation } from '../types'
 
@@ -11,6 +11,8 @@ const DetailsContainer = styled.div`
   flex-shrink: 0;
   position: relative;
   height: 100vh;
+  background-color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'background.default' })};
 `
 
 const StyledSheet = styled(Sheet)`
@@ -19,35 +21,42 @@ const StyledSheet = styled(Sheet)`
   height: 80vh;
   width: ${DETAILS_PANEL_WIDTH}px;
   max-width: 100%;
-  border-radius: 8px 0 0 8px;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-  margin: 20px 0;
+  border-radius: ${(props) => props.theme.borderRadii.md} 0 0
+    ${(props) => props.theme.borderRadii.md};
+  box-shadow: ${(props) =>
+    props.theme.shadows.lg(
+      '-2px',
+      '8px',
+      getColor({ theme: props.theme, variable: 'shadow.large' }),
+    )};
 `
 
 const DetailRow = styled.div`
-  margin-bottom: 12px;
+  margin-bottom: ${(props) => props.theme.space.sm};
 `
 
 const Label = styled.span`
-  font-weight: 600;
-  margin-right: 8px;
+  font-weight: ${(props) => props.theme.fontWeights.semibold};
+  margin-right: ${(props) => props.theme.space.sm};
+  color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'foreground.default' })};
 `
 
 const JsonValue = styled.pre`
   background: ${(props) =>
     getColor({
-      theme: props.theme as IGardenTheme,
+      theme: props.theme,
       hue: 'neutralHue',
       shade: 800,
     })};
   color: ${(props) =>
     getColor({
-      theme: props.theme as IGardenTheme,
+      theme: props.theme,
       hue: 'neutralHue',
       shade: 100,
     })};
-  padding: 12px;
-  border-radius: 4px;
+  padding: ${(props) => props.theme.space.sm};
+  border-radius: ${(props) => props.theme.borderRadii.md};
   overflow: auto;
   max-height: 200px;
 `

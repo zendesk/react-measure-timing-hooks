@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import styled from 'styled-components'
 import { Annotation, Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
@@ -19,6 +19,7 @@ import {
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
 import { ToggleButton } from '@zendeskgarden/react-buttons'
 import { Grid as GardenGrid } from '@zendeskgarden/react-grid'
+import { getColor } from '@zendeskgarden/react-theming'
 import { Tooltip } from '@zendeskgarden/react-tooltips'
 import {
   type FilterOption,
@@ -222,6 +223,52 @@ const StyledBar = styled(Bar)`
   }
 `
 
+const Container = styled.div<{ width: number }>`
+  display: flex;
+  width: ${(props) => props.width}px;
+  overflow: hidden;
+  height: 100vh;
+`
+
+const ScrollContainer = styled.div<{ width: number }>`
+  width: ${(props) => props.width}px;
+  transition: width 0.2s ease-in-out;
+  overflow: auto;
+  height: 100%;
+`
+
+const Header = styled.header`
+  display: flex;
+  flex-direction: row;
+  padding: ${(props) => props.theme.space.xs};
+`
+
+const Title = styled.h1`
+  font-size: ${(props) => props.theme.fontSizes.xl};
+  color: ${(props) => props.theme.colors.neutralHue};
+  font-family: ${(props) => props.theme.fonts.system};
+  font-weight: ${(props) => props.theme.fontWeights.semibold};
+`
+
+const Footer = styled.footer<{ width: number; height: number }>`
+  position: fixed;
+  bottom: 0;
+  background-color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'background.default' })};
+  height: ${(props) => props.height}px;
+  width: 100%;
+`
+
+const FooterContent = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: ${(props) => props.theme.space.md};
+  height: 100%;
+  padding: 0 ${(props) => props.theme.space.md};
+`
+
 const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   width: containerWidth,
   operation,
@@ -317,41 +364,11 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   }
 
   return width < 10 ? null : (
-    <div
-      style={{
-        display: 'flex',
-        width: containerWidth,
-        overflow: 'hidden',
-        height: '100vh', // Add this to ensure full height
-      }}
-    >
-      <div
-        ref={scrollContainerRef}
-        style={{
-          width,
-          transition: 'width 0.2s ease-in-out',
-          overflow: 'auto',
-          height: '100%', // Add this to ensure scroll container takes full height
-        }}
-      >
-        <header
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            padding: '5px',
-            gap: '10px',
-          }}
-        >
-          <h1
-            style={{
-              fontSize: '24px',
-              color: '#333',
-              fontFamily: 'sans-serif',
-            }}
-          >
-            Operation: {operation.name}
-          </h1>
-        </header>
+    <Container width={containerWidth}>
+      <ScrollContainer ref={scrollContainerRef} width={width}>
+        <Header>
+          <Title>Operation: {operation.name}</Title>
+        </Header>
         <main style={{ height: `${height + margin.top + margin.bottom}px` }}>
           <svg width={width - margin.right} height={height}>
             <Group top={margin.top} left={margin.left}>
@@ -433,29 +450,11 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
             </Group>
           </svg>
         </main>
-        <footer
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            backgroundColor: 'white',
-            height: `${footerHeight + footerScaleHeight}px`,
-            width: '100%',
-          }}
-        >
+        <Footer width={width} height={footerHeight + footerScaleHeight}>
           <svg width={width - margin.right} height={footerScaleHeight}>
             <Axis scale={xScale} top={1} left={margin.left} />
           </svg>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'flex-start',
-              alignItems: 'flex-start',
-              gap: '20px',
-              height: `${footerHeight}px`,
-              padding: '0 20px',
-            }}
-          >
+          <FooterContent>
             <VisualizationFilters
               setState={setDisplayOptions}
               state={displayOptions}
@@ -488,8 +487,8 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                 )}
               </LegendOrdinal>
             </LegendDemo>
-          </div>
-        </footer>
+          </FooterContent>
+        </Footer>
         {tooltipOpen && tooltipData && (
           <TooltipWithBounds
             top={tooltipTop}
@@ -520,12 +519,12 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
             </div>
           </TooltipWithBounds>
         )}
-      </div>
+      </ScrollContainer>
       <SpanDetails
         span={selectedSpan}
         onClose={() => void setSelectedSpan(null)}
       />
-    </div>
+    </Container>
   )
 }
 

@@ -1,3 +1,4 @@
+import type { IGardenTheme } from '@zendeskgarden/react-theming'
 import { SpanAnnotation } from '../../v3/spanAnnotationTypes'
 import { Span } from '../../v3/spanTypes'
 import type { TraceRecording } from '../../v3/traceRecordingTypes'
@@ -11,3 +12,7 @@ export interface MappedSpanAndAnnotation {
 }
 
 export type RecordingInputFile = TraceRecording<any, any>
+
+declare module 'styled-components' {
+  export interface DefaultTheme extends IGardenTheme {}
+}
