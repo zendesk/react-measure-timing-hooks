@@ -31,7 +31,7 @@ import {
   TooltipTitle,
 } from './styled'
 
-const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
+const DEFAULT_MARGIN = { top: 50, left: 200, right: 20, bottom: 0 }
 
 export interface OperationVisualizationProps {
   width: number
@@ -57,7 +57,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
 
   // Adjust width when panel is open
   const width = selectedSpan
-    ? containerWidth - DETAILS_PANEL_WIDTH + 100
+    ? containerWidth - DETAILS_PANEL_WIDTH
     : containerWidth
 
   // Render proportions
@@ -117,13 +117,17 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
 
   return (
-    <Container width={containerWidth}>
-      <ScrollContainer ref={scrollContainerRef} width={width}>
+    <Container>
+      <ScrollContainer ref={scrollContainerRef}>
         <Header>
           <Title>Operation: {operation.name}</Title>
         </Header>
-        <main style={{ height: `${height + margin.top + margin.bottom}px` }}>
-          <svg width={width - margin.right} height={height}>
+        <main
+          style={{
+            marginTop: `-${Math.round(margin.top / 2)}px`,
+          }}
+        >
+          <svg width={width} height={height} style={{ display: 'block' }}>
             <Group top={margin.top} left={margin.left}>
               <Grid
                 xScale={xScale}
@@ -200,12 +204,12 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                 }}
                 tickFormat={(value) => value}
               />
-              <Axis scale={xScale} top={yMax} />
+              {/* <Axis scale={xScale} top={yMax} /> */}
             </Group>
           </svg>
         </main>
         <Footer width={width} height={footerHeight + footerScaleHeight}>
-          <svg width={width - margin.right} height={footerScaleHeight}>
+          <svg width={width} height={footerScaleHeight}>
             <Axis scale={xScale} top={1} left={margin.left} />
           </svg>
           <FooterContent>

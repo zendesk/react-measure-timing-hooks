@@ -41,22 +41,23 @@ export const TooltipContent = styled.div`
   opacity: 0.9;
 `
 
-export const Container = styled.div<{ width: number }>`
+export const Container = styled.div`
   display: flex;
-  width: ${(props) => props.width}px;
 `
 
-export const ScrollContainer = styled.div<{ width: number }>`
-  width: ${(props) => props.width}px;
+// overflow: auto;
+export const ScrollContainer = styled.div`
   transition: width 0.2s ease-in-out;
-  overflow: auto;
   height: 100%;
+  display: flex;
+  flex-direction: column;
 `
 
 export const Header = styled.header`
   display: flex;
   flex-direction: row;
   padding: ${(props) => props.theme.space.xs};
+  z-index: 1;
 `
 
 export const Title = styled.h1`
@@ -67,8 +68,9 @@ export const Title = styled.h1`
 `
 
 export const Footer = styled.footer<{ width: number; height: number }>`
-  position: fixed;
+  position: sticky;
   bottom: 0;
+  align-self: flex-end;
   background-color: ${(props) =>
     getColor({ theme: props.theme, variable: 'background.default' })};
   height: ${(props) => props.height}px;

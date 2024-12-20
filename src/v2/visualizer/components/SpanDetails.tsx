@@ -7,20 +7,17 @@ import { DETAILS_PANEL_WIDTH } from '../constants'
 import { MappedSpanAndAnnotation } from '../types'
 
 const DetailsContainer = styled.div`
-  width: ${DETAILS_PANEL_WIDTH}px;
+  width: ${DETAILS_PANEL_WIDTH - 20}px;
   flex-shrink: 0;
-  position: relative;
-  height: 80vh;
+  position: sticky;
+  top: 0;
+  max-height: 80vh;
   background-color: ${(props) =>
     getColor({ theme: props.theme, variable: 'background.default' })};
 `
 
 const StyledSheet = styled(Sheet)`
-  position: sticky;
-  top: 0;
   height: 100%;
-  width: ${DETAILS_PANEL_WIDTH}px;
-  max-width: 100%;
   border-radius: ${(props) => props.theme.borderRadii.md} 0 0
     ${(props) => props.theme.borderRadii.md};
   box-shadow: ${(props) =>
@@ -69,7 +66,7 @@ const JsonValue = styled.pre`
   border-color: ${(props) =>
     getColor({ theme: props.theme, variable: 'border.default' })};
   overflow: auto;
-  max-height: 200px;
+  max-height: 240px;
   margin-top: ${(props) => props.theme.space.xs};
 `
 
