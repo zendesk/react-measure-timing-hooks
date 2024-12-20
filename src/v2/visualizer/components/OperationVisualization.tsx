@@ -25,7 +25,6 @@ import {
 } from '@zendeskgarden/react-dropdowns'
 import { Grid as GardenGrid } from '@zendeskgarden/react-grid'
 import { ThemeProvider } from '@zendeskgarden/react-theming'
-import type { TaskSpanKind } from '../../../2024/legacyTypes'
 import {
   type FilterOption,
   BAR_FILL_COLOR,
@@ -301,12 +300,11 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   setDisplayOptions,
   margin = DEFAULT_MARGIN,
 }) => {
-  const { spanEvents, kinds, includedCommonTaskNames, tasks } = operation
+  const { spanEvents, spanTypes, uniqueGroups, spansWithDuration } = operation
 
   // Render proportions
   const tickHeight = 20
-  const height =
-    includedCommonTaskNames.length * tickHeight + margin.top + margin.bottom
+  const height = uniqueGroups.length * tickHeight + margin.top + margin.bottom
 
   const footerHeight = 100
   const footerScaleHeight = 30
@@ -322,16 +320,16 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   const labelScale = useMemo(
     () =>
       scaleBand({
-        domain: includedCommonTaskNames,
+        domain: uniqueGroups,
         range: [0, yMax],
         padding: 0.2,
       }),
-    [includedCommonTaskNames, yMax],
+    [uniqueGroups, yMax],
   )
 
   const colorScale = scaleOrdinal({
-    domain: [...kinds],
-    range: [...kinds].map((kind) => BAR_FILL_COLOR[kind as TaskSpanKind]),
+    domain: [...spanTypes],
+    range: [...spanTypes].map((kind) => BAR_FILL_COLOR[kind]),
   })
 
   const {
@@ -372,31 +370,33 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
               yScale={labelScale}
               width={xMax}
               height={yMax}
-              numTicksRows={includedCommonTaskNames.length}
+              numTicksRows={uniqueGroups.length}
             />
-            {spanEvents.map((task, index) => (
+            {spanEvents.map((entry, index) => (
               <TTLine
                 key={`spanEvent-${index}`}
-                title={task.commonName}
-                color={BAR_FILL_COLOR[task.kind]}
-                xCoordinate={xScale(task.annotation.operationRelativeStartTime)}
-                hoverData={task}
+                title={entry.groupName}
+                color={BAR_FILL_COLOR[entry.type]}
+                xCoordinate={xScale(
+                  entry.annotation.operationRelativeStartTime,
+                )}
+                hoverData={entry}
                 showTooltip={showTooltip}
                 hideTooltip={hideTooltip}
                 yMax={yMax}
                 annotateAt="none"
               />
             ))}
-            {tasks.map((task, i) => (
-              <React.Fragment key={`task-${i}`}>
+            {spansWithDuration.map((entry, i) => (
+              <React.Fragment key={`entry-${i}`}>
                 <Bar
                   opacity={0.4}
                   rx={4}
-                  x={xScale(task.annotation.operationRelativeStartTime)}
-                  y={labelScale(`${task.commonName}`)}
-                  width={xScale(task.span.duration)}
+                  x={xScale(entry.annotation.operationRelativeStartTime)}
+                  y={labelScale(`${entry.groupName}`)}
+                  width={xScale(entry.span.duration)}
                   height={labelScale.bandwidth()}
-                  fill={BAR_FILL_COLOR[task.kind]}
+                  fill={BAR_FILL_COLOR[entry.type]}
                   onMouseLeave={() => {
                     // Prevent tooltip from flickering.
                     tooltipTimeout = window.setTimeout(() => {
@@ -416,20 +416,20 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                       showTooltip({
                         tooltipLeft: coords.x + 10,
                         tooltipTop: coords.y + 10,
-                        tooltipData: task,
+                        tooltipData: entry,
                       })
                     }
                   }}
                 />
-                {(task.annotation.markedComplete ||
-                  task.annotation.markedPageInteractive) && (
+                {(entry.annotation.markedComplete ||
+                  entry.annotation.markedPageInteractive) && (
                   <TTLine
-                    title={task.annotation.markedComplete ? 'TTR' : 'TTI'}
+                    title={entry.annotation.markedComplete ? 'TTR' : 'TTI'}
                     xCoordinate={xScale(
-                      task.annotation.operationRelativeStartTime +
-                        task.span.duration,
+                      entry.annotation.operationRelativeStartTime +
+                        entry.span.duration,
                     )}
-                    hoverData={task}
+                    hoverData={entry}
                     showTooltip={showTooltip}
                     hideTooltip={hideTooltip}
                     yMax={yMax}
@@ -440,7 +440,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
             ))}
             <AxisLeft
               scale={labelScale}
-              numTicks={includedCommonTaskNames.length}
+              numTicks={uniqueGroups.length}
               tickLabelProps={{
                 fill: '#888',
                 fontSize: 10,
@@ -513,19 +513,21 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
           }}
         >
           <div>
-            <strong>{tooltipData.commonName}</strong>
+            <strong>{tooltipData.groupName}</strong>
             <div style={{ marginTop: '5px', fontSize: '12px', opacity: '80%' }}>
-              <div>kind: {tooltipData.kind}</div>
+              <div>kind: {tooltipData.type}</div>
               <div>occurrence: {tooltipData.annotation.occurrence}</div>
               <div>
                 start:{' '}
                 {tooltipData.annotation.operationRelativeStartTime.toFixed(2)}ms
               </div>
               <div>duration: {tooltipData.span.duration.toFixed(2)}ms</div>
-              {tooltipData.metadata && (
+              {tooltipData.span.performanceEntry && (
                 <div>
-                  <div>metadata:</div>
-                  <pre>{JSON.stringify(tooltipData.metadata, null, 2)}</pre>
+                  <div>performanceEntry:</div>
+                  <pre>
+                    {JSON.stringify(tooltipData.span.performanceEntry, null, 2)}
+                  </pre>
                 </div>
               )}
               {tooltipData.span.attributes && (

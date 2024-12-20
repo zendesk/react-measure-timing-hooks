@@ -1,6 +1,5 @@
-import { SpanAnnotation } from '../../v3/spanAnnotationTypes'
-import { Span } from '../../v3/spanTypes'
 import { TraceRecording } from '../../v3/traceRecordingTypes'
+import type { SupportedSpanTypes } from './constants'
 import { MappedSpanAndAnnotation } from './types'
 
 const order: Record<string, number> = {
@@ -16,9 +15,9 @@ const order: Record<string, number> = {
 export interface MappedOperation {
   name: string
   spanEvents: MappedSpanAndAnnotation[]
-  kinds: Set<string>
-  tasks: MappedSpanAndAnnotation[]
-  includedCommonTaskNames: string[]
+  spanTypes: Set<SupportedSpanTypes>
+  spansWithDuration: MappedSpanAndAnnotation[]
+  uniqueGroups: string[]
   duration: number
 }
 
@@ -36,130 +35,120 @@ export const mapTicketActivationData = (
   const allEntries = traceRecording.entries
   if (!allEntries || !traceRecording.duration) return null
 
-  const allTasks = allEntries.flatMap((entry, idx) => {
-    if (entry.span.type === 'component-render-start') {
-      return []
-    }
-    const task: MappedSpanAndAnnotation = {
-      span: entry.span,
-      annotation: entry.annotation,
-      commonName: entry.span.name,
-      kind: entry.span.type,
-      metadata: entry.span.performanceEntry
-        ? { ...entry.span.performanceEntry }
-        : undefined,
-    }
-    return task
-  })
-
-  const tasks = allTasks
-    .filter((task) => task.span.duration > 0)
-    .map((task, idx) => {
+  const mappedEntries = allEntries
+    .flatMap<MappedSpanAndAnnotation>((entry, idx) => {
+      if (entry.span.type === 'component-render-start') {
+        return []
+      }
+      const mapped: MappedSpanAndAnnotation = {
+        span: entry.span,
+        annotation: entry.annotation,
+        groupName: entry.span.name,
+        type: entry.span.type,
+      }
       let overrideCommonName: string | undefined
-      let { kind } = task
+      let { type } = mapped
 
-      if (task.span.name.endsWith('.svg')) {
+      if (mapped.span.name.endsWith('.svg')) {
         overrideCommonName =
           overrideCommonName ??
-          task.commonName.split('/').at(-1) ??
-          task.commonName
-        kind = 'asset'
+          mapped.groupName.split('/').at(-1) ??
+          mapped.groupName
+        type = 'asset'
       }
-      if (collapseRenders && kind === 'component-render') {
+      if (collapseRenders && type === 'component-render') {
         overrideCommonName = 'renders'
       }
-      if (collapseAssets && kind === 'asset') {
+      if (collapseAssets && type === 'asset') {
         overrideCommonName = 'assets'
       }
-      if (collapseIframes && kind === 'iframe') {
+      if (collapseIframes && type === 'iframe') {
         overrideCommonName = 'iframes'
       }
-      if (kind === 'asset' || kind === 'iframe') {
+      if (type === 'asset' || type === 'iframe') {
         overrideCommonName =
           overrideCommonName ??
-          task.commonName.split('/').at(-1) ??
-          task.commonName
+          mapped.groupName.split('/').at(-1) ??
+          mapped.groupName
       }
-      if (task.commonName.startsWith('https://')) {
-        const shortenedName = task.commonName.split('zendesk.com').at(-1)
-        if (task.metadata?.initiatorType === 'xmlhttprequest') {
+      if (mapped.groupName.startsWith('https://')) {
+        const shortenedName = mapped.groupName.split('zendesk.com').at(-1)
+        if (mapped.span.attributes?.initiatorType === 'xmlhttprequest') {
           overrideCommonName = collapseEmberResources
             ? 'ember-resource'
-            : overrideCommonName ?? shortenedName ?? task.commonName
-          kind = 'resource-ember'
+            : overrideCommonName ?? shortenedName ?? mapped.groupName
+          type = 'resource-ember'
         }
-        if (kind === 'resource') {
+        if (type === 'resource') {
           overrideCommonName =
-            overrideCommonName ?? shortenedName ?? task.commonName
+            overrideCommonName ?? shortenedName ?? mapped.groupName
         }
       }
-      if (task.commonName.startsWith('graphql/')) {
-        const operationName = task.commonName.split('/').at(-1)
+      if (mapped.groupName.startsWith('graphql/')) {
+        const operationName = mapped.groupName.split('/').at(-1)
         const commonName =
           overrideCommonName ||
           (operationName && `graphql:${operationName}`) ||
-          task.commonName
+          mapped.groupName
         if (
-          task.commonName.startsWith('graphql/local/') &&
-          task.span.attributes?.feature
+          mapped.groupName.startsWith('graphql/local/') &&
+          mapped.span.attributes?.feature
         ) {
-          const { feature } = task.span.attributes
-          const matchingResourceTask = allTasks
+          const { feature } = mapped.span.attributes
+          const matchingResourceTask = mappedEntries
             .slice(idx + 1)
             .find(
               (t) =>
-                t.span.attributes?.feature === feature && t.kind === 'resource',
+                t.span.attributes?.feature === feature && t.type === 'resource',
             )
-          const resourceUrl = matchingResourceTask?.span.name
           if (matchingResourceTask) {
-            matchingResourceTask.commonName = commonName
+            matchingResourceTask.groupName = commonName
           }
           return {
-            ...task,
-            commonName,
-            kind: 'resource',
-            metadata: {
-              ...task.metadata,
-              resourceUrl,
-            },
+            ...mapped,
+            groupName: commonName,
+            type: 'resource',
           }
         }
         return {
-          ...task,
-          commonName,
-          kind: 'resource',
+          ...mapped,
+          groupName: commonName,
+          type: 'resource',
         }
       }
       return {
-        ...task,
-        commonName: overrideCommonName ?? task.commonName,
-        kind,
+        ...mapped,
+        groupName: overrideCommonName ?? mapped.groupName,
+        type,
       }
     })
-    .filter(
-      (task) =>
-        (displayResources || task.kind !== 'resource') &&
-        (displayMeasures || task.kind !== 'measure'),
-    )
     .sort((a, b) => {
-      const orderA = order[a.kind] ?? 100
-      const orderB = order[b.kind] ?? 100
+      const orderA = order[a.type] ?? 100
+      const orderB = order[b.type] ?? 100
       return orderA - orderB
     })
 
-  const spanEvents = allTasks.filter((task) => task.span.duration === 0)
-  const kinds = new Set(tasks.map((task) => task.kind))
+  const spansWithDuration = mappedEntries
+    .filter((task) => task.span.duration > 0)
+    .filter(
+      (task) =>
+        (displayResources || task.type !== 'resource') &&
+        (displayMeasures || task.type !== 'measure'),
+    )
 
-  const includedCommonTaskNames = [
-    ...new Set(tasks.map((task) => task.commonName)),
+  const spanEvents = mappedEntries.filter((task) => task.span.duration === 0)
+  const kinds = new Set(spansWithDuration.map((task) => task.type))
+
+  const uniqueGroups = [
+    ...new Set(spansWithDuration.map((task) => task.groupName)),
   ]
 
   return {
     name: traceRecording.name,
-    tasks,
-    includedCommonTaskNames,
+    spansWithDuration,
+    uniqueGroups,
     spanEvents,
-    kinds,
+    spanTypes: kinds,
     duration: traceRecording.duration,
   }
 }

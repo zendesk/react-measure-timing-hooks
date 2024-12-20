@@ -1,4 +1,4 @@
-import type { TaskSpanKind } from '../../2024/legacyTypes'
+import type { SpanType } from '../../v3/spanTypes'
 
 export const RESOURCES_TEXT = 'Show Resources'
 export const MEASURES_TEXT = 'Show Measures'
@@ -24,23 +24,31 @@ export const FILTER_OPTIONS: FilterOption[] = [
   COLLAPSE_IFRAME_SPANS,
 ]
 
-export const BAR_FILL_COLOR: Record<
-  TaskSpanKind | 'resource-ember' | 'trace',
-  string
-> = {
-  render: '#ff7f0e',
+export type SupportedSpanTypes =
+  | SpanType
+  | 'resource-ember'
+  | 'asset'
+  | 'iframe'
+  | 'element'
+  | 'action'
+  | 'error'
+
+export const BAR_FILL_COLOR: Record<SupportedSpanTypes, string> = {
+  'component-render-start': '#ffffff', // invisible
+  'component-render': '#ff7f0e',
   measure: '#2ca02c',
   resource: '#1f77b4',
   'resource-ember': '#17becf',
   longtask: '#d62728',
+  'long-animation-frame': '#d62728',
   mark: '#9467bd',
   asset: '#8c564b',
   iframe: '#e377c2',
   element: '#7f7f7f',
   action: '#bcbd22',
 
+  'component-unmount': '#ff9896',
   error: '#ff9896',
-  vital: '#ffbb78',
   'first-input': '#aec7e8',
   'largest-contentful-paint': '#98df8a',
   'layout-shift': '#ff9896',
@@ -49,5 +57,4 @@ export const BAR_FILL_COLOR: Record<
   navigation: '#ff9896',
   paint: '#ff9896',
   taskattribution: '#ff9896',
-  trace: '#ff0000', // Add color for TTI and TTR lines
 }
