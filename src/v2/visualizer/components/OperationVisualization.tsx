@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { Annotation, Label } from '@visx/annotation'
 import { Axis, AxisLeft } from '@visx/axis'
@@ -166,6 +166,74 @@ const VisualizationFilters: React.FC<VisualizationFiltersProps> = ({
   </LegendDemo>
 )
 
+const LegendContainer = styled.div`
+  line-height: 0.9em;
+  color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'foreground.subtle' })};
+  font-size: ${(props) => props.theme.fontSizes.sm};
+  font-family: ${(props) => props.theme.fonts.system};
+  padding: ${(props) => props.theme.space.sm};
+  border: ${(props) => props.theme.borders.sm};
+  border-color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'border.default' })};
+  border-radius: ${(props) => props.theme.borderRadii.md};
+  margin: ${(props) => props.theme.space.xs};
+`
+
+const LegendTitle = styled.div`
+  font-size: ${(props) => props.theme.fontSizes.md};
+  margin-bottom: ${(props) => props.theme.space.sm};
+  font-weight: ${(props) => props.theme.fontWeights.light};
+`
+
+const LegendContent = styled.div<{
+  minWidth?: string
+  maxHeight?: string
+  overflowY?: string
+}>`
+  min-width: ${(props) => props.minWidth ?? 'auto'};
+  max-height: ${(props) => props.maxHeight};
+  overflow-y: ${(props) => props.overflowY ?? 'visible'};
+`
+
+const StyledRect = styled.rect`
+  shape-rendering: geometricPrecision;
+`
+
+const StyledTooltip = styled(TooltipWithBounds)`
+  font-family: ${(props) => props.theme.fonts.system};
+  background-color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'background.raised' })};
+  color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'foreground.default' })};
+  border: ${(props) => props.theme.borders.sm};
+  border-color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'border.default' })};
+  border-radius: ${(props) => props.theme.borderRadii.md};
+  box-shadow: ${(props) =>
+    props.theme.shadows.lg(
+      '2px',
+      '4px',
+      getColor({ theme: props.theme, variable: 'shadow.large' }),
+    )};
+  padding: ${(props) => props.theme.space.sm};
+  max-width: 400px;
+  max-height: 800px;
+`
+
+const TooltipTitle = styled.strong`
+  font-weight: ${(props) => props.theme.fontWeights.semibold};
+  font-size: ${(props) => props.theme.fontSizes.md};
+  color: ${(props) =>
+    getColor({ theme: props.theme, variable: 'foreground.primary' })};
+`
+
+const TooltipContent = styled.div`
+  margin-top: ${(props) => props.theme.space.xs};
+  font-size: ${(props) => props.theme.fontSizes.sm};
+  opacity: 0.9;
+`
+
 function LegendDemo({
   title,
   children,
@@ -173,31 +241,17 @@ function LegendDemo({
 }: {
   title: string
   children: React.ReactNode
-  style?: React.CSSProperties
+  style?: {
+    minWidth?: string
+    maxHeight?: string
+    overflowY?: string
+  }
 }) {
   return (
-    <div className="legend" style={style}>
-      <div className="title">{title}</div>
-      {children}
-      <style>{`
-        .legend {
-          line-height: 0.9em;
-          color: gray;
-          font-size: 10px;
-          font-family: arial;
-          padding: 10px 10px;
-          float: left;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 8px;
-          margin: 5px 5px;
-        }
-        .title {
-          font-size: 12px;
-          margin-bottom: 10px;
-          font-weight: 100;
-        }
-      `}</style>
-    </div>
+    <LegendContainer>
+      <LegendTitle>{title}</LegendTitle>
+      <LegendContent {...style}>{children}</LegendContent>
+    </LegendContainer>
   )
 }
 
@@ -476,7 +530,11 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                     {labels.map((label, i) => (
                       <LegendItem key={`legend-${i}`} margin="0 5px">
                         <svg width={15} height={15}>
-                          <rect fill={label.value} width={15} height={15} />
+                          <StyledRect
+                            fill={label.value}
+                            width={15}
+                            height={15}
+                          />
                         </svg>
                         <LegendLabel align="left" margin="0 0 0 4px">
                           {label.text}
@@ -490,23 +548,10 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
           </FooterContent>
         </Footer>
         {tooltipOpen && tooltipData && (
-          <TooltipWithBounds
-            top={tooltipTop}
-            left={tooltipLeft}
-            style={{
-              ...defaultTooltipStyles,
-              fontFamily: 'sans-serif',
-              backgroundColor: '#283238',
-              color: 'white',
-              maxWidth: '400px',
-              maxHeight: '800px',
-            }}
-          >
+          <StyledTooltip top={tooltipTop} left={tooltipLeft}>
             <div>
-              <strong>{tooltipData.span.name}</strong>
-              <div
-                style={{ marginTop: '5px', fontSize: '12px', opacity: '80%' }}
-              >
+              <TooltipTitle>{tooltipData.span.name}</TooltipTitle>
+              <TooltipContent>
                 <div>kind: {tooltipData.type}</div>
                 <div>occurrence: {tooltipData.annotation.occurrence}</div>
                 <div>
@@ -515,9 +560,9 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                   ms
                 </div>
                 <div>duration: {tooltipData.span.duration.toFixed(2)}ms</div>
-              </div>
+              </TooltipContent>
             </div>
-          </TooltipWithBounds>
+          </StyledTooltip>
         )}
       </ScrollContainer>
       <SpanDetails
