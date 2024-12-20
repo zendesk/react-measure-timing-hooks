@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
 import React, { useMemo, useState } from 'react'
@@ -13,32 +12,19 @@ import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale'
 import { Bar, Line } from '@visx/shape'
 import { TooltipWithBounds, useTooltip } from '@visx/tooltip'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
-import { ToggleButton } from '@zendeskgarden/react-buttons'
-import { Grid as GardenGrid } from '@zendeskgarden/react-grid'
 import { getColor } from '@zendeskgarden/react-theming'
-import { Tooltip } from '@zendeskgarden/react-tooltips'
 import {
   type FilterOption,
   BAR_FILL_COLOR,
   DETAILS_PANEL_WIDTH,
-  FILTER_OPTIONS,
 } from '../constants'
 import { MappedOperation } from '../mapTicketActivationData'
 import { MappedSpanAndAnnotation } from '../types'
+import { FilterGroup } from './FilterGroup'
+import { Legend } from './Legend'
 import SpanDetails from './SpanDetails'
 
 const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
-
-const StyledLine = styled(Line)`
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    stroke-opacity: 0.8;
-    stroke-width: 3.5px;
-    filter: brightness(1.2);
-  }
-`
 
 export interface TTLineProps {
   hoverData: MappedSpanAndAnnotation
@@ -128,70 +114,6 @@ const TTLine: React.FC<TTLineProps> = ({
   )
 }
 
-interface VisualizationFiltersProps {
-  setState: React.Dispatch<React.SetStateAction<Record<FilterOption, boolean>>>
-  state: Record<string, boolean>
-}
-
-const VisualizationFilters: React.FC<VisualizationFiltersProps> = ({
-  state,
-  setState,
-}) => (
-  <LegendDemo title="" style={{ minWidth: '300px' }}>
-    <GardenGrid.Row>
-      <GardenGrid.Col>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {FILTER_OPTIONS.map((option) => (
-            <Tooltip key={option} content={option}>
-              <ToggleButton
-                isPressed={state[option]}
-                onClick={() =>
-                  void setState((prev) => ({
-                    ...prev,
-                    [option]: !prev[option],
-                  }))
-                }
-              >
-                {option}
-              </ToggleButton>
-            </Tooltip>
-          ))}
-        </div>
-      </GardenGrid.Col>
-    </GardenGrid.Row>
-  </LegendDemo>
-)
-
-const LegendContainer = styled.div`
-  line-height: 0.9em;
-  color: ${(props) =>
-    getColor({ theme: props.theme, variable: 'foreground.subtle' })};
-  font-size: ${(props) => props.theme.fontSizes.sm};
-  font-family: ${(props) => props.theme.fonts.system};
-  padding: ${(props) => props.theme.space.sm};
-  border: ${(props) => props.theme.borders.sm};
-  border-color: ${(props) =>
-    getColor({ theme: props.theme, variable: 'border.default' })};
-  border-radius: ${(props) => props.theme.borderRadii.md};
-  margin: ${(props) => props.theme.space.xs};
-`
-
-const LegendTitle = styled.div`
-  font-size: ${(props) => props.theme.fontSizes.md};
-  margin-bottom: ${(props) => props.theme.space.sm};
-  font-weight: ${(props) => props.theme.fontWeights.light};
-`
-
-const LegendContent = styled.div<{
-  minWidth?: string
-  maxHeight?: string
-  overflowY?: string
-}>`
-  min-width: ${(props) => props.minWidth ?? 'auto'};
-  max-height: ${(props) => props.maxHeight};
-  overflow-y: ${(props) => props.overflowY ?? 'visible'};
-`
-
 const StyledRect = styled.rect`
   shape-rendering: geometricPrecision;
 `
@@ -230,36 +152,16 @@ const TooltipContent = styled.div`
   opacity: 0.9;
 `
 
-function LegendDemo({
-  title,
-  children,
-  style,
-}: {
-  title: string
-  children: React.ReactNode
-  style?: {
-    minWidth?: string
-    maxHeight?: string
-    overflowY?: string
-  }
-}) {
-  return (
-    <LegendContainer>
-      <LegendTitle>{title}</LegendTitle>
-      <LegendContent {...style}>{children}</LegendContent>
-    </LegendContainer>
-  )
-}
+const StyledLine = styled(Line)`
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
 
-export interface OperationVisualizationProps {
-  width: number
-  operation: MappedOperation
-  setDisplayOptions: React.Dispatch<
-    React.SetStateAction<Record<FilterOption, boolean>>
-  >
-  displayOptions: Record<FilterOption, boolean>
-  margin?: { top: number; right: number; bottom: number; left: number }
-}
+  &:hover {
+    stroke-opacity: 0.8;
+    stroke-width: 3.5px;
+    filter: brightness(1.2);
+  }
+`
 
 const StyledBar = styled(Bar)`
   cursor: pointer;
@@ -318,6 +220,16 @@ const FooterContent = styled.div`
   height: 100%;
   padding: 0 ${(props) => props.theme.space.md};
 `
+
+export interface OperationVisualizationProps {
+  width: number
+  operation: MappedOperation
+  setDisplayOptions: React.Dispatch<
+    React.SetStateAction<Record<FilterOption, boolean>>
+  >
+  displayOptions: Record<FilterOption, boolean>
+  margin?: { top: number; right: number; bottom: number; left: number }
+}
 
 const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   width: containerWidth,
@@ -505,18 +417,8 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
             <Axis scale={xScale} top={1} left={margin.left} />
           </svg>
           <FooterContent>
-            <VisualizationFilters
-              setState={setDisplayOptions}
-              state={displayOptions}
-            />
-            <LegendDemo
-              title="Legend"
-              style={{
-                minWidth: '400px',
-                maxHeight: '80px',
-                overflowY: 'auto',
-              }}
-            >
+            <FilterGroup setState={setDisplayOptions} state={displayOptions} />
+            <Legend>
               <LegendOrdinal
                 scale={colorScale}
                 labelFormat={(label) => `${label.toUpperCase()}`}
@@ -540,7 +442,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                   </div>
                 )}
               </LegendOrdinal>
-            </LegendDemo>
+            </Legend>
           </FooterContent>
         </Footer>
         {tooltipOpen && tooltipData && (
