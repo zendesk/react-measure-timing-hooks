@@ -12,6 +12,7 @@ import type { KeysOfUnion } from './typeUtils'
 
 export interface ComputedSpan {
   // time relative to beginning of the trace
+  // TODO: should this be renamed to operationRelativeStartTime for consistency?
   startOffset: number
   duration: number
 }

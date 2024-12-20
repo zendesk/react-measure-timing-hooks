@@ -1,0 +1,201 @@
+import { adjustTimestampBy } from '../../v3/ensureTimestamp'
+import type { SupportedSpanTypes } from './constants'
+import { type RecordingInputFile, MappedSpanAndAnnotation } from './types'
+
+const orderArray = [
+  'longtask',
+  'computed-span',
+  'component-render',
+  'measure',
+  'resource',
+  'resource-ember',
+  'asset',
+  'iframe',
+] satisfies SupportedSpanTypes[]
+
+const order: Record<string, number> = Object.fromEntries(
+  orderArray.map((type, idx) => [type, idx]),
+)
+
+export interface MappedOperation {
+  name: string
+  spanEvents: MappedSpanAndAnnotation[]
+  spanTypes: Set<SupportedSpanTypes>
+  spansWithDuration: MappedSpanAndAnnotation[]
+  uniqueGroups: string[]
+  duration: number
+}
+
+export const mapOperationForVisualization = (
+  traceRecording: RecordingInputFile,
+  {
+    collapseRenders = true,
+    collapseAssets = true,
+    collapseEmberResources = false,
+    collapseIframes = false,
+    displayResources = true,
+    displayMeasures = true,
+  } = {},
+): MappedOperation | null => {
+  const allEntries = traceRecording.entries
+  if (!allEntries || !traceRecording.duration) return null
+
+  const preMappedEntries = allEntries.flatMap<
+    MappedSpanAndAnnotation & { overrideGroupName?: string }
+  >((entry, idx) => {
+    if (entry.span.type === 'component-render-start') {
+      return []
+    }
+    const mapped: MappedSpanAndAnnotation = {
+      span: entry.span,
+      annotation: entry.annotation,
+      groupName: entry.span.name,
+      type: entry.span.type,
+    }
+    let overrideGroupName: string | undefined
+    let { type } = mapped
+
+    if (mapped.span.name.endsWith('.svg')) {
+      overrideGroupName =
+        overrideGroupName ?? mapped.groupName.split('/').at(-1)
+      type = 'asset'
+    }
+    if (collapseRenders && type === 'component-render') {
+      overrideGroupName = 'renders'
+    }
+    if (collapseAssets && type === 'asset') {
+      overrideGroupName = 'assets'
+    }
+    if (collapseIframes && type === 'iframe') {
+      overrideGroupName = 'iframes'
+    }
+    if (type === 'asset' || type === 'iframe') {
+      overrideGroupName =
+        overrideGroupName ?? mapped.groupName.split('/').at(-1)
+    }
+    if (
+      type === 'measure' &&
+      (entry.span.name.endsWith('/tti') || entry.span.name.endsWith('/ttr'))
+    ) {
+      // remove suffix from measure name
+      overrideGroupName = entry.span.name.split('/').slice(0, -1).join('/')
+    }
+    if (entry.span.name.startsWith('https://')) {
+      const shortenedName = entry.span.name.split('zendesk.com').at(-1)
+      if (mapped.span.attributes?.initiatorType === 'xmlhttprequest') {
+        overrideGroupName = collapseEmberResources
+          ? 'ember-resource'
+          : overrideGroupName ?? shortenedName
+        type = 'resource-ember'
+      }
+      if (type === 'resource') {
+        overrideGroupName = overrideGroupName ?? shortenedName
+      }
+    }
+    return {
+      ...mapped,
+      overrideGroupName,
+      type,
+    }
+  })
+
+  const mappedEntries = preMappedEntries.map<MappedSpanAndAnnotation>(
+    (mapped, idx) => {
+      if (mapped.groupName.startsWith('graphql/')) {
+        const operationName = mapped.groupName.split('/').at(-1)
+        const commonName =
+          mapped.overrideGroupName ??
+          (operationName && `graphql:${operationName}`) ??
+          mapped.groupName
+        if (
+          mapped.groupName.startsWith('graphql/local/') &&
+          mapped.span.attributes?.feature
+        ) {
+          const { feature } = mapped.span.attributes
+          const matchingResourceTask = preMappedEntries
+            .slice(idx + 1)
+            .find(
+              (t) =>
+                t.span.attributes?.feature === feature && t.type === 'resource',
+            )
+          if (matchingResourceTask) {
+            matchingResourceTask.groupName = commonName
+          }
+          return {
+            ...mapped,
+            groupName: commonName,
+            type: 'resource',
+          }
+        }
+        return {
+          ...mapped,
+          groupName: commonName,
+          type: 'resource',
+        }
+      }
+      return {
+        ...mapped,
+        groupName: mapped.overrideGroupName ?? mapped.groupName,
+      }
+    },
+  )
+
+  const entriesFromComputedSpans = Object.entries(
+    traceRecording.computedSpans,
+  ).map<MappedSpanAndAnnotation>(([name, computedSpan]) => ({
+    groupName: name,
+    type: 'computed-span',
+    span: {
+      type: 'computed-span',
+      duration: computedSpan.duration,
+      name,
+      startTime: adjustTimestampBy(
+        traceRecording.startTime,
+        computedSpan.startOffset,
+      ),
+      scope: traceRecording.scope,
+    },
+    annotation: {
+      id: traceRecording.id,
+      occurrence: 1,
+      operationRelativeStartTime: computedSpan.startOffset,
+      operationRelativeEndTime:
+        computedSpan.startOffset + computedSpan.duration,
+    },
+  }))
+
+  const entriesWithComputedSpans = [
+    ...mappedEntries,
+    ...entriesFromComputedSpans,
+  ].sort((a, b) => {
+    const orderA = order[a.type] ?? 100
+    const orderB = order[b.type] ?? 100
+    return orderA - orderB
+  })
+
+  const spansWithDuration = entriesWithComputedSpans
+    .filter((task) => task.span.duration > 0)
+    .filter(
+      (task) =>
+        (displayResources || task.type !== 'resource') &&
+        (displayMeasures || task.type !== 'measure'),
+    )
+
+  const spanEvents = entriesWithComputedSpans.filter(
+    (entry) => entry.span.duration === 0,
+  )
+  const spanTypes = new Set(spansWithDuration.map((entry) => entry.type))
+
+  const uniqueGroups = [
+    ...new Set(spansWithDuration.map((task) => task.groupName)),
+  ]
+
+  return {
+    name: traceRecording.name,
+    spansWithDuration,
+    uniqueGroups,
+    spanEvents,
+    spanTypes,
+    duration: traceRecording.duration,
+  }
+}

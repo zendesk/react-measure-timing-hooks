@@ -63,7 +63,8 @@ export interface Attributes {
 export type SpanStatus = 'ok' | 'error'
 
 export interface SpanBase<AllPossibleScopesT> {
-  type: SpanType
+  // TODO: allow defining custom spans that extend this SpanBase
+  type: SpanType | (string & {})
 
   /**
    * The common name of the span.

@@ -10,6 +10,8 @@ import type { BarProps } from '@visx/shape/lib/shapes/Bar'
 import type { LineProps } from '@visx/shape/lib/shapes/Line'
 import type { AddSVGProps } from '@visx/shape/lib/types'
 import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
+import type { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale'
+import { BAR_FILL_COLOR } from '../constants'
 import { MappedSpanAndAnnotation } from '../types'
 
 const interactiveStyles = `
@@ -41,8 +43,10 @@ const StyledBar = styled(Bar)`
 `
 
 interface SharedAnnotationProps {
-  xCoordinate?: number
-  color?: string
+  xScale: ScaleLinear<number, number, never>
+  yScale: ScaleBand<string>
+  yMax: number
+  titleColor?: string
   title?: string
   annotateAt?: 'top'
   data: MappedSpanAndAnnotation
@@ -72,13 +76,15 @@ type InteractiveSpanProps = InteractiveLineSpanProps | InteractiveBarSpanProps
 
 const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
   const {
+    xScale,
+    yScale,
+    yMax,
     data,
     showTooltip,
     hideTooltip,
     onClick,
     scrollContainerRef,
-    xCoordinate,
-    color,
+    titleColor: color,
     title,
     annotateAt,
     ...restProps
@@ -111,6 +117,19 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
     restProps.type === 'line' ? (
       <StyledLine
         {...restProps}
+        from={{
+          x: xScale(data.annotation.operationRelativeStartTime),
+          y: 0,
+        }}
+        to={{
+          x: xScale(data.annotation.operationRelativeEndTime),
+          y: yMax,
+        }}
+        stroke={BAR_FILL_COLOR[data.type]}
+        strokeOpacity={0.3}
+        strokeWidth={2.5}
+        strokeDasharray="8,4"
+        strokeLinecap="round"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={onClick}
@@ -119,16 +138,23 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
       // @ts-expect-error odd typing issue
       <StyledBar
         {...restProps}
+        x={xScale(data.annotation.operationRelativeStartTime)}
+        y={yScale(data.groupName)}
+        width={xScale(data.span.duration)}
+        height={yScale.bandwidth()}
+        fill={BAR_FILL_COLOR[data.type]}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={onClick}
       />
     )
 
+  const xCoordinate = xScale(data.annotation.operationRelativeEndTime)
+
   return (
     <>
       {element}
-      {annotateAt === 'top' && xCoordinate && (
+      {annotateAt === 'top' && (
         <Annotation
           x={xCoordinate + 15}
           y={-2}

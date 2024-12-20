@@ -12,7 +12,7 @@ import {
   BAR_FILL_COLOR,
   DETAILS_PANEL_WIDTH,
 } from '../constants'
-import { MappedOperation } from '../mapTicketActivationData'
+import { MappedOperation } from '../mapOperationForVisualization'
 import { MappedSpanAndAnnotation } from '../types'
 import { FilterGroup } from './FilterGroup'
 import InteractiveSpan from './InteractiveSpan'
@@ -75,7 +75,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
     range: [0, xMax],
   })
 
-  const labelScale = useMemo(
+  const yScale = useMemo(
     () =>
       scaleBand({
         domain: uniqueGroups,
@@ -127,7 +127,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
             <Group top={margin.top} left={margin.left}>
               <Grid
                 xScale={xScale}
-                yScale={labelScale}
+                yScale={yScale}
                 width={xMax}
                 height={yMax}
                 numTicksRows={uniqueGroups.length}
@@ -137,18 +137,9 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                   key={`spanEvent-${index}`}
                   type="line"
                   data={entry}
-                  from={{
-                    x: xScale(entry.annotation.operationRelativeStartTime),
-                    y: 0,
-                  }}
-                  to={{
-                    x: xScale(entry.annotation.operationRelativeStartTime),
-                    y: yMax,
-                  }}
-                  stroke={BAR_FILL_COLOR[entry.type]}
-                  strokeOpacity={0.3}
-                  strokeWidth={2.5}
-                  strokeDasharray="8,2"
+                  xScale={xScale}
+                  yScale={yScale}
+                  yMax={yMax}
                   opacity={0.8}
                   showTooltip={showTooltip}
                   hideTooltip={hideTooltip}
@@ -162,11 +153,9 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                   <InteractiveSpan
                     type="bar"
                     data={entry}
-                    x={xScale(entry.annotation.operationRelativeStartTime)}
-                    y={labelScale(`${entry.groupName}`)}
-                    width={xScale(entry.span.duration)}
-                    height={labelScale.bandwidth()}
-                    fill={BAR_FILL_COLOR[entry.type]}
+                    xScale={xScale}
+                    yScale={yScale}
+                    yMax={yMax}
                     opacity={getBarOpacity(entry)}
                     rx={4}
                     showTooltip={showTooltip}
@@ -178,29 +167,18 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                     entry.annotation.markedPageInteractive) && (
                     <InteractiveSpan
                       type="line"
+                      data={entry}
+                      xScale={xScale}
+                      yScale={yScale}
+                      yMax={yMax}
+                      annotateAt="top"
                       title={
                         entry.annotation.markedComplete
                           ? 'complete'
                           : 'interactive'
                       }
-                      annotateAt="top"
-                      xCoordinate={xScale(
-                        entry.annotation.operationRelativeEndTime,
-                      )}
-                      color="red"
-                      data={entry}
-                      from={{
-                        x: xScale(entry.annotation.operationRelativeEndTime),
-                        y: 0,
-                      }}
-                      to={{
-                        x: xScale(entry.annotation.operationRelativeEndTime),
-                        y: yMax,
-                      }}
+                      titleColor="red"
                       stroke="red"
-                      strokeOpacity={0.3}
-                      strokeWidth={2.5}
-                      strokeDasharray="8,2"
                       opacity={0.8}
                       showTooltip={showTooltip}
                       hideTooltip={hideTooltip}
@@ -211,7 +189,7 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                 </React.Fragment>
               ))}
               <AxisLeft
-                scale={labelScale}
+                scale={yScale}
                 numTicks={uniqueGroups.length}
                 tickLabelProps={{
                   fill: '#888',

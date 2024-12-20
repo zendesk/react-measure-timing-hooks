@@ -1,0 +1,1 @@
+- When there are multiple overlaying spans on one lane, add a little "+" button to expand the spans into separate lanes. The "+" button should be replaced with a "-" button when clicked, and when clicked again, it will collapse the spans within that lane.

@@ -34,6 +34,7 @@ export type SupportedSpanTypes =
   | 'element'
   | 'action'
   | 'error'
+  | 'computed-span'
 
 export const BAR_FILL_COLOR: Record<SupportedSpanTypes, string> = {
   'component-render-start': '#ffffff', // invisible
@@ -48,6 +49,7 @@ export const BAR_FILL_COLOR: Record<SupportedSpanTypes, string> = {
   iframe: '#e377c2',
   element: '#7f7f7f',
   action: '#bcbd22',
+  'computed-span': '#17becf',
 
   'component-unmount': '#ff9896',
   error: '#ff9896',
