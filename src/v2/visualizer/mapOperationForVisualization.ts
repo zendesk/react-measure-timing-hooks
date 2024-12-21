@@ -4,6 +4,7 @@ import { type RecordingInputFile, MappedSpanAndAnnotation } from './types'
 
 const orderArray = [
   'longtask',
+  'long-animation-frame',
   'computed-span',
   'component-render',
   'measure',
@@ -12,6 +13,43 @@ const orderArray = [
   'asset',
   'iframe',
 ] satisfies SupportedSpanTypes[]
+
+const ASSET_EXTENSIONS = [
+  '.mp3',
+  '.mp4',
+  '.webm',
+  '.wav',
+  '.ogg',
+  '.flac',
+  '.aac',
+  '.aiff',
+  '.wma',
+  '.m4a',
+  '.flv',
+  '.avi',
+  '.mov',
+  '.wmv',
+  '.mpg',
+  '.mpeg',
+  '.mkv',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.bmp',
+  '.tiff',
+  '.svg',
+  '.ico',
+  '.css',
+  '.scss',
+  '.less',
+  '.styl',
+  '.html',
+  '.htm',
+  '.xml',
+  '.js',
+]
 
 const order: Record<string, number> = Object.fromEntries(
   orderArray.map((type, idx) => [type, idx]),
@@ -42,7 +80,7 @@ export const mapOperationForVisualization = (
 
   const preMappedEntries = allEntries.flatMap<
     MappedSpanAndAnnotation & { overrideGroupName?: string }
-  >((entry, idx) => {
+  >((entry) => {
     if (entry.span.type === 'component-render-start') {
       return []
     }
@@ -55,10 +93,16 @@ export const mapOperationForVisualization = (
     let overrideGroupName: string | undefined
     let { type } = mapped
 
-    if (mapped.span.name.endsWith('.svg')) {
-      overrideGroupName =
-        overrideGroupName ?? mapped.groupName.split('/').at(-1)
-      type = 'asset'
+    if (type === 'resource') {
+      const filename = (mapped.span.performanceEntry?.name ?? mapped.span.name)
+        .split('/')
+        .at(-1)
+      const extension = filename?.split('.').at(-1)
+
+      if (extension && ASSET_EXTENSIONS.includes(`.${extension}`)) {
+        overrideGroupName = overrideGroupName ?? extension
+        type = 'asset'
+      }
     }
     if (collapseRenders && type === 'component-render') {
       overrideGroupName = 'renders'

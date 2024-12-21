@@ -6552,7 +6552,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/brush@npm:3.12.0":
+"@visx/brush@npm:3.12.0, @visx/brush@npm:^3.12.0":
   version: 3.12.0
   resolution: "@visx/brush@npm:3.12.0"
   dependencies:
@@ -6788,7 +6788,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@visx/pattern@npm:3.12.0":
+"@visx/pattern@npm:3.12.0, @visx/pattern@npm:^3.12.0":
   version: 3.12.0
   resolution: "@visx/pattern@npm:3.12.0"
   dependencies:
@@ -7455,12 +7455,14 @@ __metadata:
     "@types/webpack-sources": "npm:^3.2.3"
     "@visx/annotation": "npm:^3.12.0"
     "@visx/axis": "npm:^3.12.0"
+    "@visx/brush": "npm:^3.12.0"
     "@visx/curve": "npm:^3.12.0"
     "@visx/event": "npm:^3.12.0"
     "@visx/gradient": "npm:^3.12.0"
     "@visx/group": "npm:^3.12.0"
     "@visx/legend": "npm:^3.12.0"
     "@visx/mock-data": "npm:^3.12.0"
+    "@visx/pattern": "npm:^3.12.0"
     "@visx/responsive": "npm:^3.12.0"
     "@visx/scale": "npm:^3.12.0"
     "@visx/shape": "npm:^3.12.0"

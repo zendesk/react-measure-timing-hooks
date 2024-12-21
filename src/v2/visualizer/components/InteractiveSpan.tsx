@@ -166,7 +166,9 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
     )
   } else {
     /* Calculate if span is tiny based on scaled width */
-    const scaledWidth = xScale(data.span.duration)
+    const scaledWidth =
+      xScale(data.annotation.operationRelativeEndTime) -
+      xScale(data.annotation.operationRelativeStartTime)
     const isTiny = scaledWidth < MIN_SPAN_WIDTH
     const width = isTiny ? MIN_SPAN_WIDTH : scaledWidth
     const fill =

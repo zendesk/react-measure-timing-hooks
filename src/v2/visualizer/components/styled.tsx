@@ -45,9 +45,8 @@ export const Container = styled.div`
   display: flex;
 `
 
-// overflow: auto;
 export const ScrollContainer = styled.div`
-  transition: width 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
   height: 100%;
   display: flex;
   flex-direction: column;
