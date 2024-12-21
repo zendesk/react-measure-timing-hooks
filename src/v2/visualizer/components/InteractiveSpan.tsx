@@ -25,6 +25,8 @@ const interactiveStyles = `
   }
 `
 
+const MIN_SPAN_WIDTH = 10 // minimum width in pixels for any span bar
+
 const StyledLine = styled(Line)`
   ${interactiveStyles}
 
@@ -34,7 +36,12 @@ const StyledLine = styled(Line)`
   }
 `
 
-const StyledBar = styled(Bar)`
+interface StyledBarProps {
+  $isTiny?: boolean
+  $fill?: string
+}
+
+const StyledBar = styled(Bar)<StyledBarProps>`
   ${interactiveStyles}
 
   &:hover {
@@ -42,6 +49,19 @@ const StyledBar = styled(Bar)`
     stroke: #fff;
     stroke-width: 2px;
   }
+
+  ${(props) =>
+    props.$isTiny &&
+    `
+    stroke: ${props.$fill};
+    stroke-width: 2px;
+    rx: 4px;
+
+    &:hover {
+      stroke-width: 3px;
+      filter: brightness(1.3);
+    }
+  `}
 `
 
 interface SharedAnnotationProps {
@@ -117,8 +137,13 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
     }
   }
 
-  const element =
-    restProps.type === 'line' ? (
+  const handleClick = (event: React.MouseEvent) => {
+    event.stopPropagation() // Prevent click from bubbling to container
+    onClick()
+  }
+  let element: React.ReactNode
+  if (restProps.type === 'line') {
+    element = (
       <StyledLine
         {...restProps}
         from={{
@@ -136,41 +161,59 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
         strokeLinecap="round"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        onClick={onClick}
+        onClick={handleClick}
       />
-    ) : (
+    )
+  } else {
+    /* Calculate if span is tiny based on scaled width */
+    const scaledWidth = xScale(data.span.duration)
+    const isTiny = scaledWidth < MIN_SPAN_WIDTH
+    const width = isTiny ? MIN_SPAN_WIDTH : scaledWidth
+    const fill =
+      data.span.status === 'error'
+        ? getColor({ theme, variable: 'background.dangerEmphasis' })
+        : BAR_FILL_COLOR[data.type]
+
+    const height = isTiny ? yScale.bandwidth() / 2 : yScale.bandwidth()
+    const y =
+      (yScale(data.groupName) ?? 0) + (isTiny ? yScale.bandwidth() / 4 : 0)
+    element = (
       <>
-        <StyledBar
-          {...restProps}
-          data-status={data.span.status}
-          x={xScale(data.annotation.operationRelativeStartTime)}
-          y={yScale(data.groupName)}
-          width={xScale(data.span.duration)}
-          height={yScale.bandwidth()}
-          fill={
-            data.span.status === 'error'
-              ? getColor({ theme, variable: 'background.dangerEmphasis' })
-              : BAR_FILL_COLOR[data.type]
-          }
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          onClick={onClick}
-        />
+        {
+          <StyledBar
+            {...restProps}
+            data-status={data.span.status}
+            x={xScale(data.annotation.operationRelativeStartTime)}
+            y={y}
+            width={width}
+            height={height}
+            fill={fill}
+            rx={2}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleClick}
+          />
+        }
         {data.span.status === 'error' && (
           <Text
-            x={xScale(data.annotation.operationRelativeStartTime) + 4}
+            x={
+              (xScale(data.annotation.operationRelativeStartTime) +
+                xScale(data.annotation.operationRelativeEndTime)) /
+              2
+            }
             y={yScale(data.groupName)! + yScale.bandwidth() / 2}
             dy=".33em"
             fontSize={12}
-            textAnchor="start"
+            textAnchor="middle"
             fill={getColor({ theme, variable: 'background.danger' })}
             style={{ pointerEvents: 'none' }}
           >
-            ❌ error
+            ❌
           </Text>
         )}
       </>
     )
+  }
 
   const xCoordinate = xScale(data.annotation.operationRelativeEndTime)
 

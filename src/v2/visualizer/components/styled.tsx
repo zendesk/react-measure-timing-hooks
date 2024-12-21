@@ -83,6 +83,5 @@ export const FooterContent = styled.div`
   justify-content: flex-start;
   align-items: flex-start;
   gap: ${(props) => props.theme.space.md};
-  height: 100%;
   padding: 0 ${(props) => props.theme.space.md};
 `

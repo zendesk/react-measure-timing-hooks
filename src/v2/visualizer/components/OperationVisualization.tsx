@@ -1,6 +1,6 @@
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Axis, AxisLeft } from '@visx/axis'
 import { Grid } from '@visx/grid'
 import { Group } from '@visx/group'
@@ -116,9 +116,35 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
   // Add ref for scroll container
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
 
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && selectedSpan) {
+        setSelectedSpan(null)
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => void document.removeEventListener('keydown', handleEscape)
+  }, [selectedSpan])
+
+  // Handle click outside
+  const handleContainerClick = (event: React.MouseEvent) => {
+    // Only handle clicks directly on the SVG or main container
+    if (
+      event.target === event.currentTarget ||
+      (event.target as Element).tagName === 'svg'
+    ) {
+      setSelectedSpan(null)
+    }
+  }
+
   return (
     <Container>
-      <ScrollContainer ref={scrollContainerRef}>
+      <ScrollContainer
+        ref={scrollContainerRef}
+        onClick={selectedSpan ? handleContainerClick : undefined}
+      >
         <Header>
           <Title>Operation: {operation.name}</Title>
         </Header>
@@ -127,7 +153,12 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
             marginTop: `-${Math.round(margin.top / 2)}px`,
           }}
         >
-          <svg width={width} height={height} style={{ display: 'block' }}>
+          <svg
+            width={width}
+            height={height}
+            style={{ display: 'block' }}
+            onClick={selectedSpan ? handleContainerClick : undefined}
+          >
             <Group top={margin.top} left={margin.left}>
               <Grid
                 xScale={xScale}
@@ -161,7 +192,6 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                     yScale={yScale}
                     yMax={yMax}
                     opacity={getBarOpacity(entry)}
-                    rx={4}
                     showTooltip={showTooltip}
                     hideTooltip={hideTooltip}
                     onClick={() => void handleSpanClick(entry)}
