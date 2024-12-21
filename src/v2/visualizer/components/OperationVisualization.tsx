@@ -259,12 +259,13 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
                       yMax={yMax}
                       annotateAt="top"
                       title={
-                        entry.annotation.markedComplete
-                          ? 'complete'
-                          : 'interactive'
+                        entry.annotation.markedComplete &&
+                        entry.annotation.markedPageInteractive
+                          ? 'complete & interactive'
+                          : entry.annotation.markedPageInteractive
+                          ? 'interactive'
+                          : 'complete'
                       }
-                      titleColor="red"
-                      stroke="red"
                       opacity={0.8}
                       showTooltip={showTooltip}
                       hideTooltip={hideTooltip}

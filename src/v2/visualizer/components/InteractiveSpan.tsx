@@ -147,7 +147,7 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
       <StyledLine
         {...restProps}
         from={{
-          x: xScale(data.annotation.operationRelativeStartTime),
+          x: xScale(data.annotation.operationRelativeEndTime),
           y: 0,
         }}
         to={{
@@ -237,9 +237,18 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
               2,
             )} ms`}
             showAnchorLine={false}
-            backgroundFill="gray"
+            backgroundFill={getColor({
+              theme,
+              variable: 'background.success',
+            })}
+            titleProps={{
+              width: 200,
+              color: getColor({ theme, variable: 'foreground.primary' }),
+            }}
             backgroundProps={{
-              opacity: 0.1,
+              opacity: 1,
+              rx: 5,
+              width: 160,
             }}
           />
         </Annotation>

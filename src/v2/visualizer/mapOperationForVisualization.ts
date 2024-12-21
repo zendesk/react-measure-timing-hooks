@@ -97,9 +97,14 @@ export const mapOperationForVisualization = (
       const filename = (mapped.span.performanceEntry?.name ?? mapped.span.name)
         .split('/')
         .at(-1)
+        ?.split('?')
+        .at(0)
       const extension = filename?.split('.').at(-1)
 
-      if (extension && ASSET_EXTENSIONS.includes(`.${extension}`)) {
+      if (
+        filename === '$file' ||
+        (extension && ASSET_EXTENSIONS.includes(`.${extension}`))
+      ) {
         overrideGroupName = overrideGroupName ?? extension
         type = 'asset'
       }
@@ -146,22 +151,18 @@ export const mapOperationForVisualization = (
   const mappedEntries = preMappedEntries.map<MappedSpanAndAnnotation>(
     (mapped, idx) => {
       if (mapped.groupName.startsWith('graphql/')) {
-        const operationName = mapped.groupName.split('/').at(-1)
-        const commonName =
-          mapped.overrideGroupName ??
-          (operationName && `graphql:${operationName}`) ??
-          mapped.groupName
+        const operationName = mapped.span.attributes?.operationName
+        const clientName = mapped.span.attributes?.apolloClientName
+        const commonName = mapped.overrideGroupName ?? mapped.groupName
         if (
           mapped.groupName.startsWith('graphql/local/') &&
           mapped.span.attributes?.feature
         ) {
           const { feature } = mapped.span.attributes
-          const matchingResourceTask = preMappedEntries
-            .slice(idx + 1)
-            .find(
-              (t) =>
-                t.span.attributes?.feature === feature && t.type === 'resource',
-            )
+          const matchingResourceTask = preMappedEntries.find(
+            (t) =>
+              t.span.attributes?.feature === feature && t.type === 'resource',
+          )
           if (matchingResourceTask) {
             matchingResourceTask.groupName = commonName
           }
