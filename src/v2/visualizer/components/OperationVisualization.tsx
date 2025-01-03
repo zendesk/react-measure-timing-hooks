@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Axis, AxisLeft } from '@visx/axis'
 import { Brush } from '@visx/brush'
-import BaseBrush from '@visx/brush/lib/BaseBrush'
 import type { BrushHandleRenderProps } from '@visx/brush/lib/BrushHandle'
 import { Bounds } from '@visx/brush/lib/types'
 import { Grid } from '@visx/grid'

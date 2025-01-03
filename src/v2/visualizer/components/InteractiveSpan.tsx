@@ -88,7 +88,7 @@ interface InteractiveLineSpanProps
 
 interface InteractiveBarSpanProps
   extends SharedAnnotationProps,
-    Omit<AddSVGProps<BarProps, SVGLineElement>, 'ref'> {
+    Omit<AddSVGProps<BarProps, SVGRectElement>, 'ref'> {
   type: 'bar'
   onClick: () => void
   scrollContainerRef: React.RefObject<HTMLDivElement>
@@ -179,6 +179,7 @@ const InteractiveSpan: React.FC<InteractiveSpanProps> = (props) => {
     const height = isTiny ? yScale.bandwidth() / 2 : yScale.bandwidth()
     const y =
       (yScale(data.groupName) ?? 0) + (isTiny ? yScale.bandwidth() / 4 : 0)
+
     element = (
       <>
         {

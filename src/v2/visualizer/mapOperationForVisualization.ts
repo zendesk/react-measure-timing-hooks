@@ -151,13 +151,9 @@ export const mapOperationForVisualization = (
   const mappedEntries = preMappedEntries.map<MappedSpanAndAnnotation>(
     (mapped, idx) => {
       if (mapped.groupName.startsWith('graphql/')) {
-        const operationName = mapped.span.attributes?.operationName
         const clientName = mapped.span.attributes?.apolloClientName
         const commonName = mapped.overrideGroupName ?? mapped.groupName
-        if (
-          mapped.groupName.startsWith('graphql/local/') &&
-          mapped.span.attributes?.feature
-        ) {
+        if (clientName === 'local' && mapped.span.attributes?.feature) {
           const { feature } = mapped.span.attributes
           const matchingResourceTask = preMappedEntries.find(
             (t) =>
