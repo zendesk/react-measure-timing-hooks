@@ -1,294 +1,46 @@
 /* eslint-disable no-magic-numbers */
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import debounce from 'lodash.debounce'
-import { Annotation, Label } from '@visx/annotation'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Axis, AxisLeft } from '@visx/axis'
-import { localPoint } from '@visx/event'
+import { Brush } from '@visx/brush'
+import type { BrushHandleRenderProps } from '@visx/brush/lib/BrushHandle'
+import { Bounds } from '@visx/brush/lib/types'
 import { Grid } from '@visx/grid'
 import { Group } from '@visx/group'
 import { LegendItem, LegendLabel, LegendOrdinal } from '@visx/legend'
+import { PatternLines } from '@visx/pattern'
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale'
-import { Bar, Line } from '@visx/shape'
-import {
-  defaultStyles as defaultTooltipStyles,
-  TooltipWithBounds,
-  useTooltip,
-} from '@visx/tooltip'
-import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
-import {
-  type OptionValue,
-  Combobox,
-  Field,
-  IComboboxProps,
-  Option,
-} from '@zendeskgarden/react-dropdowns'
-import { Grid as GardenGrid } from '@zendeskgarden/react-grid'
-import { ThemeProvider } from '@zendeskgarden/react-theming'
-import TicketData from '../../../2024/ticket-fixtures/ticket-open-new-format-slow.json'
-import type {
-  TaskDataEmbeddedInOperation,
-  TaskSpanKind,
-} from '../../../2024/types'
+import { useTooltip } from '@visx/tooltip'
 import {
   type FilterOption,
   BAR_FILL_COLOR,
-  COLLAPSE_ASSET_SPANS_TEXT,
-  COLLAPSE_EMBER_RESOURCE_SPANS,
-  COLLAPSE_IFRAME_SPANS,
-  COLLAPSE_RENDER_SPANS_TEXT,
-  FILTER_OPTIONS,
-  MEASURES_TEXT,
-  RESOURCES_TEXT,
+  DETAILS_PANEL_WIDTH,
 } from '../constants'
-import { MappedOperation } from '../mapTicketActivationData'
+import { MappedOperation } from '../mapOperationForVisualization'
+import { MappedSpanAndAnnotation } from '../types'
+import { FilterGroup } from './FilterGroup'
+import InteractiveSpan from './InteractiveSpan'
+import { LegendGroup } from './Legend'
+import SpanDetails from './SpanDetails'
+import {
+  Container,
+  Footer,
+  FooterContent,
+  Header,
+  ScrollContainer,
+  StyledRect,
+  StyledTooltip,
+  Title,
+  TooltipContent,
+  TooltipTitle,
+} from './styled'
 
-const rootOperation = TicketData
+const DEFAULT_MARGIN = { top: 50, left: 200, right: 20, bottom: 0 }
 
-const DEFAULT_MARGIN = { top: 50, left: 200, right: 120, bottom: 30 }
-
-export interface TTLineProps {
-  hoverData: TaskDataEmbeddedInOperation
-  xCoordinate: number
-  yMax: number
-  showTooltip: (
-    data: Partial<WithTooltipProvidedProps<TaskDataEmbeddedInOperation>>,
-  ) => void
-  hideTooltip: () => void
-  title: string
-  color?: string
-  annotateAt?: 'top' | 'none'
-}
-const TTLine: React.FC<TTLineProps> = ({
-  hoverData,
-  xCoordinate,
-  yMax,
-  showTooltip,
-  hideTooltip,
-  title,
-  color = 'red',
-  annotateAt = 'top',
-}) => {
-  let tooltipTimeout: number
-
-  return (
-    <>
-      <Line
-        from={{ x: xCoordinate, y: 0 }}
-        to={{ x: xCoordinate, y: yMax }}
-        stroke={color}
-        strokeOpacity={0.3}
-        strokeWidth={2.5}
-        strokeDasharray={8}
-        opacity={0.8}
-        onMouseLeave={() => {
-          // Prevent tooltip from flickering.
-          tooltipTimeout = window.setTimeout(() => {
-            hideTooltip()
-          }, 300)
-        }}
-        onMouseMove={(event) => {
-          if (tooltipTimeout) clearTimeout(tooltipTimeout)
-          if (!('ownerSVGElement' in event.target)) return
-          // Update tooltip position and data
-          // const eventSvg = event.target;
-          const coords = localPoint(
-            event.target.ownerSVGElement as Element,
-            event,
-          )
-          if (coords) {
-            showTooltip({
-              tooltipLeft: coords.x + 10,
-              tooltipTop: coords.y + 10,
-              tooltipData: hoverData,
-            })
-          }
-        }}
-      />
-      {annotateAt === 'top' && (
-        <Annotation
-          x={xCoordinate + 15}
-          y={-2}
-          dx={0} // x offset of label from subject
-          dy={0} // y offset of label from subject
-        >
-          <Label
-            fontColor={color}
-            title={title}
-            subtitle={`${(hoverData.duration === 0
-              ? hoverData.operationStartOffset
-              : hoverData.duration
-            ).toFixed(2)} ms`}
-            showAnchorLine={false}
-            backgroundFill="gray"
-            backgroundProps={{
-              opacity: 0.1,
-            }}
-          />
-        </Annotation>
-      )}
-    </>
-  )
-}
-
-function handleOption({
-  selectionValue,
-  setter,
-  type,
-  text,
-}: {
-  selectionValue: OptionValue[]
-  setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
-  type: string
-  text: string
-}) {
-  if (selectionValue?.includes(text)) {
-    setter((prev) => ({ ...prev, [text]: true }))
-  } else if (
-    !selectionValue?.includes(text) &&
-    (type === 'input:keyDown:Enter' ||
-      type === 'option:click' ||
-      type === 'fn:setSelectionValue')
-  ) {
-    setter((prev) => ({ ...prev, [text]: false }))
-  }
-}
-export interface MultiSelectProps {
-  setState: React.Dispatch<React.SetStateAction<Record<FilterOption, boolean>>>
-  state: Record<string, boolean>
-}
-const MultiSelect: React.FC<MultiSelectProps> = ({ state, setState }) => {
-  const [options, setOptions] = useState(FILTER_OPTIONS)
-
-  const handleChange = useCallback<NonNullable<IComboboxProps['onChange']>>(
-    ({ selectionValue, inputValue, type }) => {
-      if (!Array.isArray(selectionValue)) return
-
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: COLLAPSE_RENDER_SPANS_TEXT,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: RESOURCES_TEXT,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: MEASURES_TEXT,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: COLLAPSE_ASSET_SPANS_TEXT,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: COLLAPSE_EMBER_RESOURCE_SPANS,
-      })
-      handleOption({
-        selectionValue,
-        setter: setState,
-        type,
-        text: COLLAPSE_IFRAME_SPANS,
-      })
-
-      if (inputValue !== undefined) {
-        if (inputValue === '') {
-          setOptions(FILTER_OPTIONS)
-        } else {
-          const regex = new RegExp(
-            inputValue.replace(/[.*+?^${}()|[\]\\]/giu, '\\$&'),
-            'giu',
-          )
-
-          setOptions(FILTER_OPTIONS.filter((option) => option.match(regex)))
-        }
-      }
-    },
-    [state, setState],
-  )
-
-  const debounceHandleChange = useMemo(
-    () => debounce(handleChange, 150),
-    [handleChange],
-  )
-
-  useEffect(
-    () => () => void debounceHandleChange.cancel(),
-    [debounceHandleChange],
-  )
-
-  return (
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    <LegendDemo title="">
-      <GardenGrid.Row justifyContent="center">
-        <GardenGrid.Col sm={13}>
-          <Field>
-            <Field.Label>Filter</Field.Label>
-            <Combobox
-              isAutocomplete
-              isMultiselectable
-              maxHeight="auto"
-              listboxMaxHeight="100px"
-              listboxMinHeight="10px"
-              onChange={debounceHandleChange}
-            >
-              {options.length === 0 ? (
-                <Option isDisabled label="" value="No matches found" />
-              ) : (
-                options.map((value) => (
-                  <Option key={value} value={value} isSelected={state[value]} />
-                ))
-              )}
-            </Combobox>
-          </Field>
-        </GardenGrid.Col>
-      </GardenGrid.Row>
-    </LegendDemo>
-  )
-}
-
-function LegendDemo({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="legend">
-      <div className="title">{title}</div>
-      {children}
-      <style>{`
-        .legend {
-          line-height: 0.9em;
-          color: gray;
-          font-size: 10px;
-          font-family: arial;
-          padding: 10px 10px;
-          float: left;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 8px;
-          margin: 5px 5px;
-        }
-        .title {
-          font-size: 12px;
-          margin-bottom: 10px;
-          font-weight: 100;
-        }
-      `}</style>
-    </div>
-  )
-}
+const GROUP_HEIGHT = 20
+const FOOTER_HEIGHT = 100
+const FOOTER_SCALE_HEIGHT = 30
+const MINIMAP_HEIGHT = 25
 
 export interface OperationVisualizationProps {
   width: number
@@ -299,57 +51,95 @@ export interface OperationVisualizationProps {
   displayOptions: Record<FilterOption, boolean>
   margin?: { top: number; right: number; bottom: number; left: number }
 }
+
+// Define a custom handle component
+function BrushHandle({ x, height, isBrushActive }: BrushHandleRenderProps) {
+  const pathWidth = 8
+  const pathHeight = 15
+  if (!isBrushActive) {
+    return null
+  }
+  return (
+    <Group left={x + pathWidth / 2} top={(height - pathHeight) / 2}>
+      <path
+        fill="#f2f2f2"
+        d="M -4.5 0.5 L 3.5 0.5 L 3.5 15.5 L -4.5 15.5 L -4.5 0.5 M -1.5 4 L -1.5 12 M 0.5 4 L 0.5 12"
+        stroke="#999999"
+        strokeWidth="1"
+        style={{ cursor: 'ew-resize' }}
+      />
+    </Group>
+  )
+}
+
 const OperationVisualization: React.FC<OperationVisualizationProps> = ({
-  width,
+  width: containerWidth,
   operation,
   displayOptions,
   setDisplayOptions,
   margin = DEFAULT_MARGIN,
 }) => {
-  const {
-    ttrData,
-    ttiData,
-    ttrDuration,
-    ttiDuration,
-    spanEvents,
-    kinds,
-    includedCommonTaskNames,
-    tasks,
-  } = operation
+  const { spanEvents, spanTypes, uniqueGroups, spansWithDuration } = operation
+
+  const [selectedSpan, setSelectedSpan] =
+    useState<MappedSpanAndAnnotation | null>(null)
+
+  // Add new state to control zoom domain
+  const [zoomDomain, setZoomDomain] = useState<[number, number]>([
+    0,
+    operation.duration + 10,
+  ])
+
+  // Adjust width when panel is open
+  const width = selectedSpan
+    ? containerWidth - DETAILS_PANEL_WIDTH
+    : containerWidth
 
   // Render proportions
-  const tickHeight = 20
-  const height =
-    includedCommonTaskNames.length * tickHeight + margin.top + margin.bottom
-
-  const footerHeight = 100
-  const footerScaleHeight = 30
+  const height = uniqueGroups.length * GROUP_HEIGHT + margin.top + margin.bottom
 
   const xMax = width - margin.left - margin.right
-  const yMax = height - margin.bottom - margin.top // - 132
+  const yMax = height - margin.bottom - margin.top
 
+  // Brush scale for the minimap
+  const xMinimapScale = useMemo(
+    () =>
+      scaleLinear({
+        domain: [0, operation.duration + 10],
+        range: [0, width - margin.left - margin.right],
+      }),
+    [operation.duration, width, margin.left, margin.right],
+  )
+
+  // Update domain on brush
+  const handleMinimapBrushChange = (domain: Bounds | null) => {
+    if (!domain) return
+    setZoomDomain([domain.x0, domain.x1])
+  }
+  const handleMinimapReset = () => {
+    setZoomDomain([0, operation.duration + 10])
+  }
+
+  // Make main xScale use zoomDomain
   const xScale = scaleLinear({
-    domain: [0, rootOperation.duration + 10],
+    domain: zoomDomain,
     range: [0, xMax],
   })
 
-  const labelScale = useMemo(
+  const yScale = useMemo(
     () =>
       scaleBand({
-        domain: includedCommonTaskNames,
+        domain: uniqueGroups,
         range: [0, yMax],
         padding: 0.2,
       }),
-    [includedCommonTaskNames, yMax],
+    [uniqueGroups, yMax],
   )
 
   const colorScale = scaleOrdinal({
-    domain: [...kinds],
-    range: [...kinds].map((kind) => BAR_FILL_COLOR[kind as TaskSpanKind]),
+    domain: [...spanTypes],
+    range: [...spanTypes].map((kind) => BAR_FILL_COLOR[kind]),
   })
-
-  const ttiXCoor = xScale(ttiDuration ?? 0)
-  const ttrXCoor = xScale(ttrDuration ?? 0)
 
   const {
     tooltipOpen,
@@ -358,201 +148,245 @@ const OperationVisualization: React.FC<OperationVisualizationProps> = ({
     tooltipData,
     hideTooltip,
     showTooltip,
-  } = useTooltip<TaskDataEmbeddedInOperation>()
-  let tooltipTimeout: number
+  } = useTooltip<MappedSpanAndAnnotation>()
+  const handleSpanClick = (span: MappedSpanAndAnnotation) => {
+    setSelectedSpan(span)
+  }
 
-  return width < 10 ? null : (
-    <ThemeProvider>
-      <header
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          padding: '5px',
-          gap: '10px',
-        }}
+  const getBarOpacity = (entry: MappedSpanAndAnnotation) => {
+    if (
+      selectedSpan &&
+      selectedSpan.span.name === entry.span.name &&
+      selectedSpan.span.startTime === entry.span.startTime
+    ) {
+      return 0.8 // Selected state
+    }
+    return 0.4 // Default state
+  }
+
+  // Add ref for scroll container
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && selectedSpan) {
+        setSelectedSpan(null)
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => void document.removeEventListener('keydown', handleEscape)
+  }, [selectedSpan])
+
+  // Handle click outside
+  const handleContainerClick = (event: React.MouseEvent) => {
+    // Only handle clicks directly on the SVG or main container
+    if (
+      event.target === event.currentTarget ||
+      (event.target as Element).tagName === 'svg'
+    ) {
+      setSelectedSpan(null)
+    }
+  }
+
+  return (
+    <Container>
+      <ScrollContainer
+        ref={scrollContainerRef}
+        onClick={selectedSpan ? handleContainerClick : undefined}
       >
-        <h1
+        <Header>
+          <Title>Operation: {operation.name}</Title>
+        </Header>
+        <main
           style={{
-            fontSize: '24px',
-            color: '#333',
-            fontFamily: 'sans-serif',
+            marginTop: `-${Math.round(margin.top / 2)}px`,
           }}
         >
-          Operation: {rootOperation.name}
-        </h1>
-      </header>
-      <main style={{ height: `${height + margin.top + margin.bottom}px` }}>
-        <svg width={width - margin.right} height={height}>
-          <Group top={margin.top} left={margin.left}>
-            <Grid
-              xScale={xScale}
-              yScale={labelScale}
-              width={xMax}
-              height={yMax}
-              numTicksRows={includedCommonTaskNames.length}
-            />
-            <TTLine
-              title="TTR"
-              xCoordinate={ttrXCoor}
-              hoverData={ttrData}
-              showTooltip={showTooltip}
-              hideTooltip={hideTooltip}
-              yMax={yMax}
-            />
-            <TTLine
-              title="TTI"
-              xCoordinate={ttiXCoor}
-              hoverData={ttiData}
-              showTooltip={showTooltip}
-              hideTooltip={hideTooltip}
-              yMax={yMax}
-            />
-            {spanEvents.map((task) => (
-              <TTLine
-                key={task.name}
-                title={task.commonName}
-                color={BAR_FILL_COLOR[task.kind]}
-                xCoordinate={xScale(task.operationStartOffset)}
-                hoverData={task}
-                showTooltip={showTooltip}
-                hideTooltip={hideTooltip}
-                yMax={yMax}
-                annotateAt="none"
+          <svg
+            width={width}
+            height={height}
+            style={{ display: 'block' }}
+            onClick={selectedSpan ? handleContainerClick : undefined}
+          >
+            <Group top={margin.top} left={margin.left}>
+              <Grid
+                xScale={xScale}
+                yScale={yScale}
+                width={xMax}
+                height={yMax}
+                numTicksRows={uniqueGroups.length}
               />
-            ))}
-            {tasks.map((task, i) => (
-              <Bar
-                opacity={0.4}
-                rx={4}
-                key={i}
-                x={xScale(task.operationStartOffset)}
-                y={labelScale(`${task.commonName}`)}
-                width={xScale(task.duration)}
-                height={labelScale.bandwidth()}
-                fill={BAR_FILL_COLOR[task.kind]}
-                onMouseLeave={() => {
-                  // Prevent tooltip from flickering.
-                  tooltipTimeout = window.setTimeout(() => {
-                    hideTooltip()
-                  }, 300)
+              {spanEvents.map((entry, index) => (
+                <InteractiveSpan
+                  key={`spanEvent-${index}`}
+                  type="line"
+                  data={entry}
+                  xScale={xScale}
+                  yScale={yScale}
+                  yMax={yMax}
+                  opacity={0.8}
+                  showTooltip={showTooltip}
+                  hideTooltip={hideTooltip}
+                  onClick={() => void handleSpanClick(entry)}
+                  scrollContainerRef={scrollContainerRef}
+                />
+              ))}
+
+              {spansWithDuration.map((entry, i) => (
+                <React.Fragment key={`entry-${i}`}>
+                  <InteractiveSpan
+                    type="bar"
+                    data={entry}
+                    xScale={xScale}
+                    yScale={yScale}
+                    yMax={yMax}
+                    opacity={getBarOpacity(entry)}
+                    showTooltip={showTooltip}
+                    hideTooltip={hideTooltip}
+                    onClick={() => void handleSpanClick(entry)}
+                    scrollContainerRef={scrollContainerRef}
+                  />
+                  {(entry.annotation.markedComplete ||
+                    entry.annotation.markedPageInteractive) && (
+                    <InteractiveSpan
+                      type="line"
+                      data={entry}
+                      xScale={xScale}
+                      yScale={yScale}
+                      yMax={yMax}
+                      annotateAt="top"
+                      title={
+                        entry.annotation.markedComplete &&
+                        entry.annotation.markedPageInteractive
+                          ? 'complete & interactive'
+                          : entry.annotation.markedPageInteractive
+                          ? 'interactive'
+                          : 'complete'
+                      }
+                      opacity={0.8}
+                      showTooltip={showTooltip}
+                      hideTooltip={hideTooltip}
+                      onClick={() => void handleSpanClick(entry)}
+                      scrollContainerRef={scrollContainerRef}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+              <AxisLeft
+                scale={yScale}
+                numTicks={uniqueGroups.length}
+                tickLabelProps={{
+                  fill: '#888',
+                  fontSize: 10,
+                  textAnchor: 'end',
+                  dy: '0.33em',
+                  width: 100,
                 }}
-                onMouseMove={(event: React.MouseEvent<SVGRectElement>) => {
-                  if (tooltipTimeout) clearTimeout(tooltipTimeout)
-                  if (!('ownerSVGElement' in event.target)) return
-                  // Update tooltip position and data
-                  // const eventSvg = event.target;
-                  const coords = localPoint(
-                    event.target.ownerSVGElement as Element,
-                    event,
-                  )
-                  if (coords) {
-                    showTooltip({
-                      tooltipLeft: coords.x + 10,
-                      tooltipTop: coords.y + 10,
-                      tooltipData: task,
-                    })
-                  }
-                }}
+                tickFormat={(value) => value}
               />
-            ))}
-            <AxisLeft
-              scale={labelScale}
-              numTicks={includedCommonTaskNames.length}
-              tickLabelProps={{
-                fill: '#888',
-                fontSize: 10,
-                textAnchor: 'end',
-                dy: '0.33em',
-                width: 100,
-              }}
-              tickFormat={(value) => value}
-            />
-            <Axis scale={xScale} top={yMax} />
-          </Group>
-        </svg>
-      </main>
-      <footer
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          backgroundColor: 'white',
-          height: `${footerHeight + footerScaleHeight}px`,
-        }}
-      >
-        <svg width={width - margin.right} height={footerScaleHeight}>
-          <Axis scale={xScale} top={1} left={margin.left} />
-        </svg>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'space-evenly',
-            alignItems: 'center',
-            gap: '10px',
-            height: `${footerHeight}px`,
-          }}
+              {/* <Axis scale={xScale} top={yMax} /> */}
+            </Group>
+          </svg>
+        </main>
+        <Footer
+          width={width}
+          height={FOOTER_HEIGHT + FOOTER_SCALE_HEIGHT + MINIMAP_HEIGHT}
         >
-          <MultiSelect setState={setDisplayOptions} state={displayOptions} />
-          <LegendDemo title="Legend">
-            <LegendOrdinal
-              scale={colorScale}
-              labelFormat={(label) => `${label.toUpperCase()}`}
-            >
-              {(labels) => (
-                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                  {labels.map((label, i) => (
-                    <LegendItem key={`legend-${i}`} margin="0 5px">
-                      <svg width={15} height={15}>
-                        <rect fill={label.value} width={15} height={15} />
-                      </svg>
-                      <LegendLabel align="left" margin="0 0 0 4px">
-                        {label.text}
-                      </LegendLabel>
-                    </LegendItem>
-                  ))}
-                </div>
-              )}
-            </LegendOrdinal>
-          </LegendDemo>
-        </div>
-      </footer>
-      {tooltipOpen && tooltipData && (
-        <TooltipWithBounds
-          top={tooltipTop}
-          left={tooltipLeft}
-          style={{
-            ...defaultTooltipStyles,
-            fontFamily: 'sans-serif',
-            backgroundColor: '#283238',
-            color: 'white',
-            maxWidth: '400px',
-            maxHeight: '800px',
-          }}
-        >
-          <div>
-            <strong>{tooltipData.name}</strong>
-            <div style={{ marginTop: '5px', fontSize: '12px', opacity: '80%' }}>
-              <div>kind: {tooltipData.kind}</div>
-              <div>occurrence: {tooltipData.occurrence}</div>
-              <div>start: {tooltipData.operationStartOffset.toFixed(2)}ms</div>
-              <div>duration: {tooltipData.duration.toFixed(2)}ms</div>
-              {tooltipData.metadata && (
+          <svg
+            width={width}
+            height={FOOTER_SCALE_HEIGHT + MINIMAP_HEIGHT}
+            style={{ display: 'block' }}
+          >
+            <Axis scale={xScale} top={1} left={margin.left} />
+            <Group top={FOOTER_SCALE_HEIGHT} left={margin.left}>
+              <PatternLines
+                id="brush_pattern"
+                height={8}
+                width={8}
+                stroke="#f6acc8"
+                strokeWidth={1}
+                orientation={['diagonal']}
+              />
+              <Brush
+                xScale={xMinimapScale}
+                yScale={scaleLinear({
+                  domain: [0, 1],
+                  range: [MINIMAP_HEIGHT, 0],
+                })}
+                margin={{
+                  left: margin.left,
+                  right: margin.right,
+                }}
+                width={xMinimapScale.range()[1]}
+                height={MINIMAP_HEIGHT}
+                handleSize={8}
+                selectedBoxStyle={{
+                  fill: 'url(#brush_pattern)',
+                  stroke: 'red',
+                }}
+                onChange={handleMinimapBrushChange}
+                onClick={handleMinimapReset}
+                resizeTriggerAreas={['left', 'right']}
+                brushDirection="horizontal"
+                useWindowMoveEvents
+                renderBrushHandle={(props) => <BrushHandle {...props} />}
+              />
+            </Group>
+          </svg>
+          <FooterContent>
+            <FilterGroup setState={setDisplayOptions} state={displayOptions} />
+            <LegendGroup>
+              <LegendOrdinal
+                scale={colorScale}
+                labelFormat={(label) => `${label.toUpperCase()}`}
+              >
+                {(labels) => (
+                  <div style={{ display: 'flex', flexDirection: 'row' }}>
+                    {labels.map((label, i) => (
+                      <LegendItem key={`legend-${i}`} margin="0 5px">
+                        <svg width={15} height={15}>
+                          <StyledRect
+                            fill={label.value}
+                            width={15}
+                            height={15}
+                          />
+                        </svg>
+                        <LegendLabel align="left" margin="0 0 0 4px">
+                          {label.text}
+                        </LegendLabel>
+                      </LegendItem>
+                    ))}
+                  </div>
+                )}
+              </LegendOrdinal>
+            </LegendGroup>
+          </FooterContent>
+        </Footer>
+        {tooltipOpen && tooltipData && (
+          <StyledTooltip top={tooltipTop} left={tooltipLeft}>
+            <div>
+              <TooltipTitle>{tooltipData.span.name}</TooltipTitle>
+              <TooltipContent>
+                <div>kind: {tooltipData.type}</div>
+                <div>occurrence: {tooltipData.annotation.occurrence}</div>
                 <div>
-                  <div>metadata:</div>
-                  <pre>{JSON.stringify(tooltipData.metadata, null, 2)}</pre>
+                  start:{' '}
+                  {tooltipData.annotation.operationRelativeStartTime.toFixed(2)}
+                  ms
                 </div>
-              )}
-              {tooltipData.detail && (
-                <div>
-                  <div>Detail:</div>
-                  <pre>{JSON.stringify(tooltipData.detail, null, 2)}</pre>
-                </div>
-              )}
+                <div>duration: {tooltipData.span.duration.toFixed(2)}ms</div>
+              </TooltipContent>
             </div>
-          </div>
-        </TooltipWithBounds>
-      )}
-    </ThemeProvider>
+          </StyledTooltip>
+        )}
+      </ScrollContainer>
+      <SpanDetails
+        span={selectedSpan}
+        onClose={() => void setSelectedSpan(null)}
+      />
+    </Container>
   )
 }
 

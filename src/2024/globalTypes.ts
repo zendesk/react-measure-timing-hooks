@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-import type { SpanKind, SpanMetadata } from './types'
+import type { SpanKind, SpanMetadata } from './legacyTypes'
 
 type Writeable<T> = {
   -readonly [P in keyof T]: T[P]

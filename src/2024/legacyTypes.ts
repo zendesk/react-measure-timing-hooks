@@ -53,12 +53,12 @@ export interface TaskDataEmbeddedInOperation
   detail?: Record<string, unknown>
 }
 
-export type Span<Metadata extends SpanMetadata<SpanKind>> =
+export type LegacySpan<Metadata extends SpanMetadata<SpanKind>> =
   AnyPerformanceEntry & {
-    // duration: number
-    // entryType: string
-    // name: string
-    // startTime: number
+    duration: number
+    entryType: string
+    name: string
+    startTime: number
     operations: Record<string, Metadata>
   }
 /**
@@ -67,10 +67,10 @@ export type Span<Metadata extends SpanMetadata<SpanKind>> =
  * and ending once the the page settles into the expected user experience
  * (ex. loading the page),
  */
-export type Operation = Span<OperationSpanMetadata>
+export type LegacyOperation = LegacySpan<OperationSpanMetadata>
 
 /**
  * a Child Span representing the underlying process that is being tracked
  * e.g. a fetch, rendering a component, computing a value
  */
-export type Task = Span<TaskSpanMetadata>
+export type LegacyTask = LegacySpan<TaskSpanMetadata>

@@ -1,7 +1,7 @@
 /* eslint-disable prefer-destructuring */
 import type { Timestamp } from './types'
 
-const JUST_CREATED = 10
+const JUST_CREATED_THRESHOLD_MS_AGO = 10
 
 /**
  * Ensures that the input timestamp object has both epoch and performance.now() time.
@@ -28,7 +28,7 @@ export const ensureTimestamp = (input?: Partial<Timestamp>): Timestamp => {
     return {
       epoch: inputEpoch,
       now:
-        Math.abs(differenceFromNow) < JUST_CREATED
+        Math.abs(differenceFromNow) < JUST_CREATED_THRESHOLD_MS_AGO
           ? performance.now()
           : performance.now() + differenceFromNow,
     }
@@ -83,3 +83,11 @@ export function getEpochCorrectedForDrift({ epoch, now }: Timestamp) {
   }
   return Math.round(navigationStartEpoch + now)
 }
+
+export const adjustTimestampBy = (
+  timestamp: Timestamp,
+  adjustment: number,
+) => ({
+  epoch: timestamp.epoch + adjustment,
+  now: timestamp.now + adjustment,
+})

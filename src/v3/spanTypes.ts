@@ -63,7 +63,8 @@ export interface Attributes {
 export type SpanStatus = 'ok' | 'error'
 
 export interface SpanBase<AllPossibleScopesT> {
-  type: SpanType
+  // TODO: allow defining custom spans that extend this SpanBase
+  type: SpanType | (string & {})
 
   /**
    * The common name of the span.
@@ -73,8 +74,8 @@ export interface SpanBase<AllPossibleScopesT> {
 
   startTime: Timestamp
 
-  // non performance entries, scope would be coming from outside like ticket id or user id
-  // performance entries, there is no scope OR scope is in performance detail
+  // for non performance entries, scope is set explicitly in the span, something like ticket id or user id
+  // performance entries can derive scope based using `deriveScopeFromPerformanceEntry`
   scope?: ScopeOnASpan<AllPossibleScopesT>
 
   attributes: Attributes
