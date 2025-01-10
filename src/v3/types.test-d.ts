@@ -102,6 +102,7 @@ describe('type tests', () => {
     // valid beacon
     useBeacon({
       name: 'OmniLog',
+      team: 'test',
       renderedOutput: 'content',
       scope: { ticketId: '123' },
     })
@@ -109,6 +110,7 @@ describe('type tests', () => {
     // valid beacon
     useBeacon({
       name: 'UserPage',
+      team: 'test',
       renderedOutput: 'content',
       scope: { userId: '123' },
     })
@@ -116,6 +118,7 @@ describe('type tests', () => {
     // invalid
     useBeacon({
       name: 'UserPage',
+      team: 'test',
       renderedOutput: 'content',
       // @ts-expect-error invalid scope
       scope: { invalid: '123' },

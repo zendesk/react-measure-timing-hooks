@@ -12,7 +12,7 @@ import type { ScopeValue, Timestamp } from './types'
 
 type MakeEntryInput<AllPossibleScopesT> = Omit<
   ComponentRenderSpan<AllPossibleScopesT>,
-  'startTime'
+  'startTime' | 'team'
 > & {
   startTime?: Timestamp
 }
@@ -40,17 +40,19 @@ export const generateUseBeacon =
     const renderCountRef = useRef(0)
     renderCountRef.current += 1
 
-    const { attributes, renderedOutput } = config
+    // For ease of use we accept `team` as a separate field in the config, but we need to merge it into the attributes
+    const { attributes: _attributes, team, ...remainingConfig } = config
+    const attributes = { ..._attributes, team }
 
     const status = config.error ? 'error' : 'ok'
 
     const isIdle =
       config.isIdle ??
-      (renderedOutput === 'content' || renderedOutput === 'error')
+      (config.renderedOutput === 'content' || config.renderedOutput === 'error')
 
     const renderStartTaskEntry: ComponentRenderSpan<AllPossibleScopesT> =
       makeEntry({
-        ...config,
+        ...remainingConfig,
         type: 'component-render-start',
         duration: 0,
         attributes,
@@ -68,7 +70,7 @@ export const generateUseBeacon =
     useEffect(() => {
       traceManager.processSpan(
         makeEntry({
-          ...config,
+          ...remainingConfig,
           startTime: renderStartRef.current!,
           type: 'component-render',
           duration: performance.now() - renderStartRef.current!.now,
@@ -85,7 +87,7 @@ export const generateUseBeacon =
     useOnComponentUnmount(
       (errorBoundaryMetadata) => {
         const unmountEntry = makeEntry({
-          ...config,
+          ...remainingConfig,
           type: 'component-unmount',
           attributes,
           error: errorBoundaryMetadata?.error,

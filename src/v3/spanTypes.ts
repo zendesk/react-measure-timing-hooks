@@ -115,7 +115,7 @@ export interface SpanBase<AllPossibleScopesT> {
 
 export interface ComponentRenderSpan<AllPossibleScopesT>
   extends Omit<SpanBase<AllPossibleScopesT>, 'scope' | 'attributes'>,
-    BeaconConfig<AllPossibleScopesT> {
+    Omit<BeaconConfig<AllPossibleScopesT>, 'team'> {
   type: ComponentLifecycleSpanType
   isIdle: boolean
   errorInfo?: ErrorInfo

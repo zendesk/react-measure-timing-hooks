@@ -8,6 +8,7 @@ export interface BeaconConfig<AllPossibleScopesT> {
   name: string
   scope: ScopeOnASpan<AllPossibleScopesT>
   renderedOutput: RenderedOutput
+  team: string
   isIdle?: boolean
   attributes?: Attributes
   error?: Error

@@ -36,6 +36,7 @@ export const TicketView: React.FC<TicketViewProps> = ({
 }) => {
   useBeacon({
     name: 'TicketView',
+    team: 'test',
     scope: { ticketId },
     renderedOutput: cached ? 'content' : 'loading',
     isIdle: cached,
