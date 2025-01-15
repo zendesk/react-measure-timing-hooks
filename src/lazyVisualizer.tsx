@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
+import * as ReactDOM from 'react-dom/client'
 import type { ActionLog } from './ActionLog'
 import type { ActionWithStateMetadata } from './types'
 
@@ -90,11 +90,11 @@ export function useVisualizer({
         Object.assign(document.createElement('div'), { id: targetElementId })
       if (!existingElement) document.body?.append(rootEl)
     }
-    ReactDOM.render(
+    const root = ReactDOM.createRoot(rootEl)
+    root.render(
       <Suspense fallback={null}>
         <LazyTimingDisplay {...props} enabled={enabled} />
       </Suspense>,
-      rootEl,
     )
   }, [enabled])
 }
