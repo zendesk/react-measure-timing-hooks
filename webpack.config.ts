@@ -77,9 +77,10 @@ export default ({
       alias: {
         '#image_overlay': path.join(__dirname, 'src/dummy.png'),
         react: path.join(__dirname, 'src/reactInterop.js'),
-        'react-dom': path.join(__dirname, 'src/reactDomInterop.js'),
+        'react-dom': path.join(__dirname, 'src/reactDomInterop'),
         'external-react': 'react',
         'external-react-dom': 'react-dom',
+        'external-react-dom-client': 'react-dom/client',
       },
     },
     mode: 'production',

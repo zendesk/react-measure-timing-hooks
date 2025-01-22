@@ -6,8 +6,9 @@ import { getColor } from '@zendeskgarden/react-theming'
 import { DETAILS_PANEL_WIDTH } from '../constants'
 import { MappedSpanAndAnnotation } from '../types'
 
+const PANEL_WIDTH_ADJ = 20
 const DetailsContainer = styled.div`
-  width: ${DETAILS_PANEL_WIDTH - 20}px;
+  width: ${DETAILS_PANEL_WIDTH - PANEL_WIDTH_ADJ}px;
   flex-shrink: 0;
   position: sticky;
   top: 0;
