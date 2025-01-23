@@ -1,3 +1,5 @@
+# Frontend Tracing Addendum: Model Overview
+
 ### Model Overview
 
 The primary way to capture metrics would be to record a **Product Operation trace**. Such a **trace** would include the **spans** that occurred while the application was changing state, e.g. after a user performed a specific operation. The associated trace recording would then contain browser **spans**, like network requests, or other PerformanceEntries, as well as custom **spans**, like component renders.
