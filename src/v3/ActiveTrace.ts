@@ -832,6 +832,7 @@ export class ActiveTrace<
       // )
       return undefined
     }
+    // TODO: also ignore events that started a long long time before the trace started
 
     // check if the performanceEntry has already been processed
     // a single performanceEntry can have Spans created from it multiple times
