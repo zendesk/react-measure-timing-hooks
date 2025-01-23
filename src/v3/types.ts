@@ -323,6 +323,12 @@ export interface ComputedValueDefinition<
     // as many matches as match of type Span<ScopeT>
     ...matches: MapTuple<MatchersT, SpanAndAnnotation<AllPossibleScopesT>[]>
   ) => number | string | boolean | undefined
+
+  /**
+   * If true, we will attempt to compute the span even if the trace was interrupted.
+   * Alternatively, specify an array of InterruptionReasons in which the span should be computed.
+   */
+  // TODO: forceCompute: boolean | InterruptionReason[]
 }
 
 /**
