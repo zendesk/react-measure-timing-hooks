@@ -297,6 +297,12 @@ export interface ComputedSpanDefinition<
     | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
     | 'operation-end'
     | 'interactive'
+
+  /**
+   * If true, we will attempt to compute the span even if the trace was interrupted.
+   * Alternatively, specify an array of InterruptionReasons in which the span should be computed.
+   */
+  // TODO: forceCompute: boolean | InterruptionReason[]
 }
 
 /**
