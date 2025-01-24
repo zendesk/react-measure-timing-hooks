@@ -37,8 +37,10 @@ const ticketOperationTracer = traceManager.createTracer({
     },
   ],
   scopes: ['ticketId'],
+  variantsByOriginatedFrom: {
+    click: { timeoutDuration: 45_000 },
+  },
   // debounceDuration: 1_000,
-  timeoutDuration: 45_000,
   debounceOn: [
     {
       name: 'TicketView',
@@ -94,7 +96,10 @@ export const App: React.FC = () => {
     //   waitUntilInteractive: true,
     //   interruptSelf: true,
     // })
-    ticketOperationTracer.start({ scope: { ticketId: id } })
+    ticketOperationTracer.start({
+      scope: { ticketId: id },
+      originatedFrom: 'click',
+    })
 
     setSelectedTicketId(id)
   }
