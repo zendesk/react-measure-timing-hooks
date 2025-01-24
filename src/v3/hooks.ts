@@ -29,12 +29,16 @@ const makeEntry = <AllPossibleScopesT>(
  * emit component-render-start, component-render, component-unmount entries
  */
 export const generateUseBeacon =
-  <AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue }>(
+  <
+    AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
+    RequiredAttributesT = {},
+  >(
     traceManager: TraceManager<AllPossibleScopesT>,
-  ): UseBeacon<AllPossibleScopesT> =>
+  ): UseBeacon<AllPossibleScopesT, RequiredAttributesT> =>
   (
     config: BeaconConfig<
-      GetScopeTFromTraceManager<TraceManager<AllPossibleScopesT>>
+      GetScopeTFromTraceManager<TraceManager<AllPossibleScopesT>>,
+      RequiredAttributesT
     >,
   ) => {
     const renderCountRef = useRef(0)

@@ -82,7 +82,15 @@ describe('type tests', () => {
       }
     },
   })
+
+  interface RequiredBeaconAttributes {
+    team: string
+  }
   const useBeacon = generateUseBeacon<ExampleAllPossibleScopes>(traceManager)
+  const useBeaconWithRequiredAttributes = generateUseBeacon<
+    ExampleAllPossibleScopes,
+    RequiredBeaconAttributes
+  >(traceManager)
 
   it('works', () => {
     // invalid because in the matcher functions, we cannot compare objects (due to object equality comparison)
@@ -119,6 +127,31 @@ describe('type tests', () => {
       renderedOutput: 'content',
       // @ts-expect-error invalid scope
       scope: { invalid: '123' },
+    })
+
+    // valid beacon with only required attributes
+    useBeaconWithRequiredAttributes({
+      name: 'UserPage',
+      renderedOutput: 'content',
+      scope: { userId: '123' },
+      attributes: { team: 'test' },
+    })
+
+    // valid beacon required attributes and additional attributes
+    useBeaconWithRequiredAttributes({
+      name: 'UserPage',
+      renderedOutput: 'content',
+      scope: { userId: '123' },
+      attributes: { randoKey: 'test', team: 'test' },
+    })
+
+    // invalid beacon missing required attributes
+    useBeaconWithRequiredAttributes({
+      name: 'UserPage',
+      renderedOutput: 'content',
+      scope: { userId: '123' },
+      // @ts-expect-error attributes require a team key
+      attributes: { randoKey: 'test' },
     })
 
     // valid definition
