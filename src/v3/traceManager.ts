@@ -7,7 +7,7 @@ import {
 import { ensureTimestamp } from './ensureTimestamp'
 import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
-import type { Span, StartTraceConfig } from './spanTypes'
+import type { BaseStartTraceConfig, Span, StartTraceConfig } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
@@ -160,6 +160,9 @@ export class TraceManager<
         } as ComputedValueDefinition<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>)
       },
       start: (input) => this.startTrace(completeTraceDefinition, input),
+      provisionalStart: (inputWithScope) => {
+        this.provisionalStartTrace(completeTraceDefinition, inputWithScope)
+      },
     }
   }
 
@@ -182,6 +185,33 @@ export class TraceManager<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
       OriginatedFromT
     >,
+  ): string {
+    const traceId = this.provisionalStartTrace(definition, input)
+    this.initializeActiveTrace()
+    return traceId
+  }
+
+  // can have config changed until we move into recording
+  // from input: scope (required), attributes (optional, merge into)
+  // from definition, can add items to: requiredSpans (additionalRequiredSpans), debounceOn (additionalDebounceOnSpans)
+  // documentation: interruption still works and all the other events are buffered
+  private initializeActiveTrace(inputAndDefinitionModifications) {
+    const currentTrace = this.activeTrace
+    // if a trace has an undefined scope, it means it
+    if (!currentTrace?.isProvisional) {
+      // this is an already initialized active trace, do nothing:
+      return
+    }
+    // else, we want to initialize the trace with the scope and other modifications:
+    // TODO ...
+  }
+
+  // todo: wont have scope yet
+  private provisionalStartTrace<
+    const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  >(
+    definition: CompleteTraceDefinition<TracerScopeKeysT, AllPossibleScopesT>,
+    input: BaseStartTraceConfig,
   ): string {
     if (this.activeTrace) {
       this.activeTrace.interrupt('another-trace-started')
@@ -209,6 +239,8 @@ export class TraceManager<
       definition,
       input: {
         ...input,
+        // scope will be overwritten later during initialization of the trace
+        scope: undefined,
         startTime: ensureTimestamp(input.startTime),
         id,
       },

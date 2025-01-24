@@ -41,13 +41,19 @@ export interface FinalState<TracerScopeT> {
   lastRequiredSpanAndAnnotation?: SpanAndAnnotation<TracerScopeT>
 }
 
-type InitialTraceState = 'recording'
+type InitialTraceState = 'initial'
 export type NonTerminalTraceStates =
   | InitialTraceState
+  | 'recording'
   | 'debouncing'
   | 'waiting-for-interactive'
 type TerminalTraceStates = 'interrupted' | 'complete'
 export type TraceStates = NonTerminalTraceStates | TerminalTraceStates
+
+interface OnEnterRecording {
+  transitionToState: 'recording'
+  transitionFromState: 'initial'
+}
 
 interface OnEnterInterrupted {
   transitionToState: 'interrupted'
@@ -71,6 +77,7 @@ interface OnEnterDebouncing {
 }
 
 type OnEnterStatePayload<AllPossibleScopesT> =
+  | OnEnterRecording
   | OnEnterInterrupted
   | OnEnterComplete<AllPossibleScopesT>
   | OnEnterDebouncing
@@ -150,7 +157,7 @@ export class TraceStateMachine<
       options: PrepareAndEmitRecordingOptions<AllPossibleScopesT>,
     ) => void
   }
-  currentState: TraceStates = 'recording'
+  currentState: TraceStates = 'initial'
   /** the span that ended at the furthest point in time */
   lastRelevant: SpanAndAnnotation<AllPossibleScopesT> | undefined
   lastRequiredSpan: SpanAndAnnotation<AllPossibleScopesT> | undefined
@@ -226,9 +233,21 @@ export class TraceStateMachine<
    * if we have long tasks before FMP, we want to use them as a potential grouping post FMP.
    */
   debouncingSpanBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
+  #provisionalBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
+
+  // eslint-disable-next-line consistent-return
+  #processProvisionalBuffer(): OnEnterStatePayload<AllPossibleScopesT> | void {
+    // process items in the buffer (stick the scope in the entries) (if its empty, well we can skip this!)
+    let span: SpanAndAnnotation<AllPossibleScopesT> | undefined
+    // eslint-disable-next-line no-cond-assign
+    while ((span = this.#provisionalBuffer.shift())) {
+      const transition = this.emit('onProcessSpan', span)
+      if (transition) return transition
+    }
+  }
 
   readonly states = {
-    recording: {
+    initial: {
       onEnterState: () => {
         this.setGlobalDeadline(
           this.context.input.startTime.epoch +
@@ -236,6 +255,40 @@ export class TraceStateMachine<
               this.context.input.originatedFrom
             ]!.timeoutDuration,
         )
+      },
+      // onInitializeStart: () => ({
+      //   transitionToState: 'recording',
+      // }),
+
+      onProcessSpan: (
+        spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+      ) => {
+        // if any span is interrupted!
+        // else, add into array buffer
+        this.#provisionalBuffer.push(spanAndAnnotation)
+      },
+
+      onInterrupt: (reason: TraceInterruptionReason) => ({
+        transitionToState: 'interrupted',
+        interruptionReason: reason,
+      }),
+
+      onDeadline: (deadlineType: DeadlineType) => {
+        if (deadlineType === 'global') {
+          return {
+            transitionToState: 'interrupted',
+            interruptionReason: 'timeout',
+          }
+        }
+        // other cases should never happen
+        return undefined
+      },
+    },
+    recording: {
+      // eslint-disable-next-line consistent-return
+      onEnterState: () => {
+        const transition = this.#processProvisionalBuffer()
+        if (transition) return transition
       },
 
       onProcessSpan: (
@@ -774,6 +827,7 @@ export class TraceStateMachine<
     if (transitionPayload) {
       const transitionFromState = this.currentState as NonTerminalTraceStates
       this.currentState = transitionPayload.transitionToState
+      // PROV START TODO: update types
       const onEnterStateEvent: OnEnterStatePayload<AllPossibleScopesT> = {
         transitionFromState,
         ...transitionPayload,
@@ -807,6 +861,10 @@ export class ActiveTrace<
     OriginatedFromT
   >
   private readonly deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
+
+  get isProvisional() {
+    return this.stateMachine.currentState === 'initial'
+  }
 
   recordedItems: Set<SpanAndAnnotation<AllPossibleScopesT>> = new Set()
   stateMachine: TraceStateMachine<
