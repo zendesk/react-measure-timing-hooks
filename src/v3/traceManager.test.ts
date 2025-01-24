@@ -11,6 +11,15 @@ import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
+import { DEFAULT_TIMEOUT_DURATION } from './constants'
+import {
+  describe,
+  it,
+  expect,
+  vitest as jest,
+  beforeEach,
+  afterEach,
+} from 'vitest'
 
 interface TicketScope {
   ticketId: string
@@ -25,10 +34,7 @@ describe('TraceManager', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<
-      ReturnType<ReportFn<TicketScope, TicketScope>>,
-      Parameters<ReportFn<TicketScope, TicketScope>>
-    >()
+    reportFn = jest.fn<ReportFn<TicketScope, TicketScope>>()
     generateId = jest.fn().mockReturnValue('trace-id')
   })
 
@@ -44,8 +50,14 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [{ name: 'end' }],
+      variantsByOriginatedFrom: {
+        cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+      },
     })
-    const traceId = tracer.start({ scope: { ticketId: '1' } })
+    const traceId = tracer.start({
+      scope: { ticketId: '1' },
+      originatedFrom: 'cold_boot',
+    })
     expect(traceId).toBe('trace-id')
 
     // prettier-ignore
@@ -81,8 +93,14 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [{ name: 'end' }],
+      variantsByOriginatedFrom: {
+        cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+      },
     })
-    const traceId = tracer.start({ scope: { ticketId: '1' } })
+    const traceId = tracer.start({
+      scope: { ticketId: '1' },
+      originatedFrom: 'cold_boot',
+    })
 
     const computedSpanName = 'render-1-to-3'
     // Define a computed span
@@ -130,8 +148,14 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [{ name: 'end' }],
+      variantsByOriginatedFrom: {
+        cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+      },
     })
-    const traceId = tracer.start({ scope: { ticketId: '1' } })
+    const traceId = tracer.start({
+      scope: { ticketId: '1' },
+      originatedFrom: 'cold_boot',
+    })
 
     // Define a computed value
     tracer.defineComputedValue({
@@ -179,9 +203,15 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [{ name: 'Component', isIdle: true }],
+      variantsByOriginatedFrom: {
+        cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+      },
     })
 
-    const traceId = tracer.start({ scope: { ticketId: '1' } })
+    const traceId = tracer.start({
+      scope: { ticketId: '1' },
+      originatedFrom: 'cold_boot',
+    })
 
     // prettier-ignore
     const { spans } = getSpansFromTimeline<TicketIdScope>`
@@ -228,8 +258,10 @@ describe('TraceManager', () => {
       name: 'ticket.scope-operation',
       type: 'operation',
       scopes: ['ticketId'],
-      timeoutDuration: 5_000,
       requiredSpans: [{ name: 'end', matchScopes: true }],
+      variantsByOriginatedFrom: {
+        cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+      },
     })
     const scope = {
       ticketId: '4',
@@ -237,6 +269,7 @@ describe('TraceManager', () => {
     }
     const traceId = tracer.start({
       scope,
+      originatedFrom: 'cold_boot',
     })
     expect(traceId).toBe('trace-id')
 
@@ -278,11 +311,15 @@ describe('TraceManager', () => {
         scopes: [],
         requiredSpans: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
+        variantsByOriginatedFrom: {
+          cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+        },
       })
       const traceId = tracer.start({
         scope: {
           ticketId: '1',
         },
+        originatedFrom: 'cold_boot',
       })
       expect(traceId).toBe('trace-id')
 
@@ -323,11 +360,15 @@ describe('TraceManager', () => {
         requiredSpans: [matchSpan.withName('end')],
         debounceOn: [matchSpan.withName((n: string) => n.endsWith('debounce'))],
         debounceDuration: 300,
+        variantsByOriginatedFrom: {
+          cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+        },
       })
       tracer.start({
         scope: {
           ticketId: '1',
         },
+        originatedFrom: 'cold_boot',
       })
 
       // prettier-ignore
@@ -370,11 +411,15 @@ describe('TraceManager', () => {
         scopes: [],
         requiredSpans: [matchSpan.withName('end')],
         interruptOn: [matchSpan.withName('interrupt')],
+        variantsByOriginatedFrom: {
+          cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+        },
       })
       tracer.start({
         scope: {
           ticketId: '1',
         },
+        originatedFrom: 'cold_boot',
       })
 
       // prettier-ignore
@@ -415,11 +460,15 @@ describe('TraceManager', () => {
         scopes: [],
         requiredSpans: [{ name: 'end' }],
         debounceOn: [{ name: 'debounce' }],
+        variantsByOriginatedFrom: {
+          cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+        },
       })
       const traceId = tracer.start({
         scope: {
           ticketId: '1',
         },
+        originatedFrom: 'cold_boot',
       })
       expect(traceId).toBe('trace-id')
 
@@ -435,6 +484,7 @@ describe('TraceManager', () => {
         scope: {
           ticketId: '1',
         },
+        originatedFrom: 'cold_boot',
       })
       expect(newTraceId).toBe('trace-id')
       expect(reportFn).toHaveBeenCalled()
@@ -468,11 +518,15 @@ describe('TraceManager', () => {
         scopes: [],
         requiredSpans: [{ name: 'end', isIdle: true }],
         debounceOn: [{ name: 'end' }],
+        variantsByOriginatedFrom: {
+          cold_boot: { timeoutDuration: DEFAULT_TIMEOUT_DURATION },
+        },
       })
       tracer.start({
         scope: {
           ticketId: '1',
         },
+        originatedFrom: 'cold_boot',
       })
 
       // prettier-ignore
@@ -514,13 +568,14 @@ describe('TraceManager', () => {
           type: 'operation',
           scopes: ['ticketId'],
           requiredSpans: [{ name: 'timed-out-render' }],
-          timeoutDuration: 500,
+          variantsByOriginatedFrom: { cold_boot: { timeoutDuration: 500 } },
         })
         const traceId = tracer.start({
           startTime: { now: 0, epoch: 0 },
           scope: {
             ticketId: '1',
           },
+          originatedFrom: 'cold_boot',
         })
         expect(traceId).toBe('trace-id')
 
@@ -566,13 +621,16 @@ describe('TraceManager', () => {
           type: 'operation',
           scopes: [],
           requiredSpans: [{ name: 'timed-out-render' }],
-          timeoutDuration: CUSTOM_TIMEOUT_DURATION,
+          variantsByOriginatedFrom: {
+            cold_boot: { timeoutDuration: CUSTOM_TIMEOUT_DURATION },
+          },
         })
         const traceId = tracer.start({
           startTime: { now: 0, epoch: 0 },
           scope: {
             ticketId: '1',
           },
+          originatedFrom: 'cold_boot',
         })
         expect(traceId).toBe('trace-id')
 
@@ -615,13 +673,16 @@ describe('TraceManager', () => {
           scopes: [],
           requiredSpans: [{ name: 'end' }],
           debounceOn: [{ name: 'debounce' }],
-          timeoutDuration: CUSTOM_TIMEOUT_DURATION,
+          variantsByOriginatedFrom: {
+            cold_boot: { timeoutDuration: CUSTOM_TIMEOUT_DURATION },
+          },
         })
         const traceId = tracer.start({
           startTime: { now: 0, epoch: 0 },
           scope: {
             ticketId: '1',
           },
+          originatedFrom: 'cold_boot',
         })
         expect(traceId).toBe('trace-id')
 
@@ -672,6 +733,7 @@ describe('TraceManager', () => {
       tracer.start({
         scope,
         startTime: fixtureEntries[0]!.span.startTime,
+        originatedFrom: 'cold_boot',
       })
 
       for (const entry of fixtureEntries) {
@@ -762,6 +824,7 @@ describe('TraceManager', () => {
             fixtureEntries[0]!.span.startTime.now -
             fixtureEntries[0]!.annotation.operationRelativeStartTime,
         },
+        originatedFrom: 'cold_boot',
       })
 
       for (const entry of fixtureEntries) {

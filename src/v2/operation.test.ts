@@ -7,6 +7,14 @@ import {
   type OperationDefinition,
   type PerformanceEntryLikeV2,
 } from './types'
+import {
+  describe,
+  it,
+  expect,
+  vitest as jest,
+  beforeEach,
+  afterEach,
+} from 'vitest'
 
 describe('operation tracking', () => {
   // returns mocked time:

@@ -1,3 +1,4 @@
+import { describe, it, expect, assertType } from 'vitest'
 /* eslint-disable jest/expect-expect */
 import { generateUseBeacon } from './hooks'
 import * as match from './matchSpan'
@@ -61,7 +62,7 @@ const mockSpanWithoutScope = {
 } as const
 
 // eslint-disable-next-line jest/no-disabled-tests
-describe.skip('type tests', () => {
+describe('type tests', () => {
   const traceManager = new TraceManager<ExampleAllPossibleScopes>({
     generateId: () => 'id',
     reportFn: (trace) => {
@@ -98,6 +99,8 @@ describe.skip('type tests', () => {
       reportFn: () => {},
     })
 
+    assertType(invalidTraceManager)
+
     // valid beacon
     useBeacon({
       name: 'OmniLog',
@@ -124,13 +127,19 @@ describe.skip('type tests', () => {
     const ticketActivationTracer = traceManager.createTracer({
       name: 'ticket.activation',
       scopes: ['ticketId'],
-      // scope: 'global',
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+        another_origin: { timeoutDuration: 10_000 },
+      },
       requiredSpans: [{ matchScopes: ['ticketId'] }],
     })
 
     const ticketActivationTracer2 = traceManager.createTracer({
       name: 'ticket.activation',
       scopes: ['customId', 'customOtherId'],
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       requiredSpans: [
         match.withAllConditions(
           match.withName((name, scopes) => name === `${scopes.customId}.end`),
@@ -149,6 +158,9 @@ describe.skip('type tests', () => {
     const userPageTracer = traceManager.createTracer({
       name: 'user.activation',
       scopes: ['userId'],
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       requiredSpans: [{ matchScopes: ['userId'] }],
     })
 
@@ -156,12 +168,18 @@ describe.skip('type tests', () => {
     const customFieldDropdownTracer = traceManager.createTracer({
       name: 'ticket.custom_field',
       scopes: ['ticketId', 'customFieldId'],
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       requiredSpans: [{ matchScopes: ['ticketId'] }],
     })
 
     // invalid definition. scopes match but not included in AllPossibleScopes
     const invalidTracer = traceManager.createTracer({
       name: 'ticket.activation',
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       // @ts-expect-error invalid scope
       scopes: ['invalid'],
       requiredSpans: [
@@ -176,6 +194,9 @@ describe.skip('type tests', () => {
     const shouldErrorTrace = traceManager.createTracer({
       name: 'ticket.should_error',
       scopes: ['ticketId', 'customFieldId'],
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       requiredSpans: [
         {
           // @ts-expect-error invalid scope
@@ -188,6 +209,9 @@ describe.skip('type tests', () => {
     const ticketActivationWithFnTracer = traceManager.createTracer({
       name: 'ticket.activation',
       scopes: ['ticketId'],
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       requiredSpans: [
         { matchScopes: ['ticketId'] },
         ({ span }) => span.scope?.ticketId === '123',
@@ -197,6 +221,19 @@ describe.skip('type tests', () => {
     // valid start
     ticketActivationTracer.start({
       scope: { ticketId: '123' },
+      originatedFrom: 'origin',
+    })
+    // valid start
+    ticketActivationTracer.start({
+      scope: { ticketId: '999' },
+      originatedFrom: 'another_origin',
+    })
+
+    // invalid start - wrong originatedFrom
+    ticketActivationTracer.start({
+      scope: { ticketId: '123' },
+      // @ts-expect-error invalid originatedFrom
+      originatedFrom: 'origin_wrong',
     })
 
     // invalid start (errors)
@@ -256,7 +293,9 @@ describe.skip('type tests', () => {
       name: 'ticket.scope-operation',
       type: 'operation',
       scopes: ['ticketId'],
-      timeoutDuration: 5_000,
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       requiredSpans: [{ name: 'end', matchScopes: true }],
     })
     const traceId = tracer.start({
@@ -264,7 +303,9 @@ describe.skip('type tests', () => {
         // @ts-expect-error number should not be assignable to string
         ticketId: 4,
       },
+      originatedFrom: 'origin',
     })
+    assertType(traceId)
   })
 
   // TODO TYPES
@@ -289,7 +330,9 @@ describe.skip('type tests', () => {
       name: 'ticket.event.redacted',
       type: 'operation',
       scopes: ['ticketId', 'eventId'],
-      timeoutDuration: 5_000,
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       requiredSpans: [{ name: 'OmniLogEvent', matchScopes: true }],
       debounceOn: [{ name: 'OmniLog', matchScopes: ['ticketId'] }],
     })
@@ -298,7 +341,9 @@ describe.skip('type tests', () => {
         ticketId: '4',
         eventId: '3',
       },
+      originatedFrom: 'origin',
     })
+    assertType(traceId)
   })
 
   // TODO TYPES
@@ -324,14 +369,18 @@ describe.skip('type tests', () => {
       name: 'ticket.scope-operation',
       type: 'operation',
       scopes: ['ticketId'],
-      timeoutDuration: 5_000,
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 5_000 },
+      },
       requiredSpans: [{ name: 'end', matchScopes: true }],
     })
     const traceId = tracer.start({
+      originatedFrom: 'origin',
       scope: {
         // @ts-expect-error invalid scope key
         userId: '3',
       },
     })
+    assertType(traceId)
   })
 })

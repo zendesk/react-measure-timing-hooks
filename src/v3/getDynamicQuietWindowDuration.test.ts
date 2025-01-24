@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 
 // Constants for testing

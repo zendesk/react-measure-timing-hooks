@@ -1,6 +1,12 @@
 import * as matchSpan from './matchSpan'
 import type { SpanAnnotation } from './spanAnnotationTypes'
-import type { ComponentRenderSpan, SpanBase } from './spanTypes'
+import type {
+  ActiveTraceInput,
+  ComponentRenderSpan,
+  SpanBase,
+} from './spanTypes'
+import { describe, it, expect } from 'vitest'
+import type { CompleteTraceDefinition } from './types'
 
 // Mock data for TraceEntryBase
 interface TicketScope {
@@ -69,7 +75,8 @@ const mockContext = {
       now: Date.now(),
       epoch: Date.now(),
     },
-  },
+    originatedFrom: 'origin',
+  } satisfies ActiveTraceInput<TicketScope, 'origin'>,
   definition: {
     name: 'test',
     type: 'operation',
@@ -77,17 +84,24 @@ const mockContext = {
     requiredSpans: [() => true],
     computedSpanDefinitions: [],
     computedValueDefinitions: [],
-  },
+    variantsByOriginatedFrom: {
+      origin: { timeoutDuration: 10_000 },
+    },
+  } satisfies CompleteTraceDefinition<'ticketId', TicketScope, 'origin'>,
 } as const
+
+type MockOrigin = (typeof mockContext)['input']['originatedFrom']
 
 // TESTING TODO: ask chatgpt to add 'or' and 'not' tests
 
 describe('matchSpan', () => {
   describe('name', () => {
     it('should return true for a matching entry based on name', () => {
-      const matcher = matchSpan.withName<keyof TicketScope, TicketScope>(
-        'testEntry',
-      )
+      const matcher = matchSpan.withName<
+        keyof TicketScope,
+        TicketScope,
+        MockOrigin
+      >('testEntry')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -96,9 +110,11 @@ describe('matchSpan', () => {
     })
 
     it('should return true for function matchers for name', () => {
-      const matcher = matchSpan.withName<keyof TicketScope, TicketScope>(
-        (n: string) => n.startsWith('test'),
-      )
+      const matcher = matchSpan.withName<
+        keyof TicketScope,
+        TicketScope,
+        MockOrigin
+      >((n: string) => n.startsWith('test'))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -107,9 +123,11 @@ describe('matchSpan', () => {
     })
 
     it('should return true for regex matchers for name', () => {
-      const matcher = matchSpan.withName<keyof TicketScope, TicketScope>(
-        /^test/,
-      )
+      const matcher = matchSpan.withName<
+        keyof TicketScope,
+        TicketScope,
+        MockOrigin
+      >(/^test/)
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -118,9 +136,11 @@ describe('matchSpan', () => {
     })
 
     it('should return false for a non-matching span based on name', () => {
-      const matcher = matchSpan.withName<keyof TicketScope, TicketScope>(
-        'nonMatchingEntry',
-      )
+      const matcher = matchSpan.withName<
+        keyof TicketScope,
+        TicketScope,
+        MockOrigin
+      >('nonMatchingEntry')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -133,7 +153,8 @@ describe('matchSpan', () => {
     it('should return true for a matching span based on performanceEntryName', () => {
       const matcher = matchSpan.withPerformanceEntryName<
         keyof TicketScope,
-        TicketScope
+        TicketScope,
+        MockOrigin
       >('testEntry')
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
@@ -145,7 +166,8 @@ describe('matchSpan', () => {
     it('should return false for a non-matching performanceEntryName', () => {
       const matcher = matchSpan.withPerformanceEntryName<
         keyof TicketScope,
-        TicketScope
+        TicketScope,
+        MockOrigin
       >('nonMatchingEntry')
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
@@ -158,9 +180,11 @@ describe('matchSpan', () => {
   describe('type', () => {
     describe('for Native Performance Entry', () => {
       it('should return true for matching attributes', () => {
-        const matcher = matchSpan.withType<keyof TicketScope, TicketScope>(
-          'element',
-        )
+        const matcher = matchSpan.withType<
+          keyof TicketScope,
+          TicketScope,
+          MockOrigin
+        >('element')
         const mockSpanAndAnnotation = {
           span: mockEntryBase,
           annotation: mockAnnotation,
@@ -169,9 +193,11 @@ describe('matchSpan', () => {
       })
 
       it('should return false for non-matching attributes', () => {
-        const matcher = matchSpan.withType<keyof TicketScope, TicketScope>(
-          'component-render',
-        )
+        const matcher = matchSpan.withType<
+          keyof TicketScope,
+          TicketScope,
+          MockOrigin
+        >('component-render')
         const mockSpanAndAnnotation = {
           span: mockEntryBase,
           annotation: mockAnnotation,
@@ -184,7 +210,8 @@ describe('matchSpan', () => {
       it('should return true for a matching ComponentRenderTraceEntry', () => {
         const matcher = matchSpan.withAllConditions<
           keyof TicketScope,
-          TicketScope
+          TicketScope,
+          MockOrigin
         >(
           matchSpan.withType('component-render'),
           matchSpan.withName('testEntry'),
@@ -199,7 +226,8 @@ describe('matchSpan', () => {
       it('should return false for a non-matching ComponentRenderTraceEntry', () => {
         const matcher = matchSpan.withAllConditions<
           keyof TicketScope,
-          TicketScope
+          TicketScope,
+          MockOrigin
         >(
           matchSpan.withType('component-render'),
           matchSpan.withName('nonMatchingEntry'),
@@ -215,7 +243,11 @@ describe('matchSpan', () => {
 
   describe('status', () => {
     it('should return true when status does match', () => {
-      const matcher = matchSpan.withStatus<keyof TicketScope, TicketScope>('ok')
+      const matcher = matchSpan.withStatus<
+        keyof TicketScope,
+        TicketScope,
+        MockOrigin
+      >('ok')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -224,9 +256,11 @@ describe('matchSpan', () => {
     })
 
     it('should return false when status does not match', () => {
-      const matcher = matchSpan.withStatus<keyof TicketScope, TicketScope>(
-        'error',
-      )
+      const matcher = matchSpan.withStatus<
+        keyof TicketScope,
+        TicketScope,
+        MockOrigin
+      >('error')
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
         annotation: mockAnnotation,
@@ -239,7 +273,8 @@ describe('matchSpan', () => {
     it('should return true for occurrence matching', () => {
       const matcher = matchSpan.withAllConditions<
         keyof TicketScope,
-        TicketScope
+        TicketScope,
+        MockOrigin
       >(matchSpan.withName('testEntry'), matchSpan.withOccurrence(1))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
@@ -251,7 +286,8 @@ describe('matchSpan', () => {
     it('should return false for non-matching occurrence', () => {
       const matcher = matchSpan.withAllConditions<
         keyof TicketScope,
-        TicketScope
+        TicketScope,
+        MockOrigin
       >(matchSpan.withName('testEntry'), matchSpan.withOccurrence(2))
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
@@ -263,7 +299,11 @@ describe('matchSpan', () => {
 
   describe('attributes', () => {
     it('should return true for matching attributes', () => {
-      const matcher = matchSpan.withAttributes<keyof TicketScope, TicketScope>({
+      const matcher = matchSpan.withAttributes<
+        keyof TicketScope,
+        TicketScope,
+        MockOrigin
+      >({
         attr1: 'value1',
       })
       const mockSpanAndAnnotation = {
@@ -274,7 +314,11 @@ describe('matchSpan', () => {
     })
 
     it('should return false for non-matching attributes', () => {
-      const matcher = matchSpan.withAttributes<keyof TicketScope, TicketScope>({
+      const matcher = matchSpan.withAttributes<
+        keyof TicketScope,
+        TicketScope,
+        MockOrigin
+      >({
         attr1: 'wrongValue',
       })
       const mockSpanAndAnnotation = {
@@ -287,7 +331,11 @@ describe('matchSpan', () => {
 
   describe('scopeKeys', () => {
     it('should return true when scope does match', () => {
-      const matcher = matchSpan.withAllConditions<'ticketId', TicketScope>(
+      const matcher = matchSpan.withAllConditions<
+        'ticketId',
+        TicketScope,
+        MockOrigin
+      >(
         matchSpan.withName('testEntry'),
         matchSpan.withMatchingScopes(['ticketId']),
       )
@@ -301,7 +349,8 @@ describe('matchSpan', () => {
     it('should return false when scope does not match', () => {
       const matcher = matchSpan.withAllConditions<
         'ticketId' | 'userId',
-        TicketScope & UserScope
+        TicketScope & UserScope,
+        MockOrigin
       >(
         matchSpan.withName('testEntry'),
         matchSpan.withMatchingScopes(['ticketId', 'userId']),
@@ -328,7 +377,8 @@ describe('matchSpan', () => {
   describe('isIdle', () => {
     const mockMatcher = matchSpan.withAllConditions<
       keyof TicketScope,
-      TicketScope
+      TicketScope,
+      MockOrigin
     >(matchSpan.withName('testEntry'), matchSpan.whenIdle(true))
 
     it('should return true for isIdle matching', () => {
@@ -351,7 +401,11 @@ describe('matchSpan', () => {
 
   describe('combination of conditions', () => {
     it('should return true when all conditions match', () => {
-      const matcher = matchSpan.withAllConditions<'ticketId', TicketScope>(
+      const matcher = matchSpan.withAllConditions<
+        'ticketId',
+        TicketScope,
+        MockOrigin
+      >(
         matchSpan.withName('testEntry'),
         matchSpan.withPerformanceEntryName('testEntry'),
         matchSpan.withAttributes({ attr1: 'value1' }),
@@ -367,7 +421,11 @@ describe('matchSpan', () => {
     })
 
     it('should return false when all conditions match but name', () => {
-      const matcher = matchSpan.withAllConditions<'ticketId', TicketScope>(
+      const matcher = matchSpan.withAllConditions<
+        'ticketId',
+        TicketScope,
+        MockOrigin
+      >(
         matchSpan.withName('testEntries'), // does not match
         matchSpan.withPerformanceEntryName('testEntry'),
         matchSpan.withAttributes({ attr1: 'value1' }),

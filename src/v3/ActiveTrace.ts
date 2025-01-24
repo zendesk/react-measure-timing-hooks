@@ -87,7 +87,12 @@ type FinalizeFn<TracerScopeT> = (config: FinalState<TracerScopeT>) => void
 export type States<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> = TraceStateMachine<TracerScopeKeysT, AllPossibleScopesT>['states']
+  OriginatedFromT extends string,
+> = TraceStateMachine<
+  TracerScopeKeysT,
+  AllPossibleScopesT,
+  OriginatedFromT
+>['states']
 
 interface StateHandlersBase<AllPossibleScopesT> {
   [handler: string]: (
@@ -104,7 +109,12 @@ type StatesBase<AllPossibleScopesT> = Record<
 type TraceStateMachineSideEffectHandlers<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> = TraceStateMachine<TracerScopeKeysT, AllPossibleScopesT>['sideEffectFns']
+  OriginatedFromT extends string,
+> = TraceStateMachine<
+  TracerScopeKeysT,
+  AllPossibleScopesT,
+  OriginatedFromT
+>['sideEffectFns']
 
 type EntryType<AllPossibleScopesT> = PerformanceEntryLike & {
   entry: SpanAndAnnotation<AllPossibleScopesT>
@@ -113,7 +123,8 @@ type EntryType<AllPossibleScopesT> = PerformanceEntryLike & {
 interface StateMachineContext<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> extends TraceContext<TracerScopeKeysT, AllPossibleScopesT> {
+  OriginatedFromT extends string,
+> extends TraceContext<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
   readonly requiredSpansIndexChecklist: Set<number>
 }
 
@@ -122,8 +133,13 @@ type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
 export class TraceStateMachine<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 > {
-  readonly context: StateMachineContext<TracerScopeKeysT, AllPossibleScopesT>
+  readonly context: StateMachineContext<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >
   readonly sideEffectFns: {
     readonly storeFinalizeState: FinalizeFn<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
@@ -217,8 +233,9 @@ export class TraceStateMachine<
       onEnterState: () => {
         this.setGlobalDeadline(
           this.context.input.startTime.epoch +
-            (this.context.definition.timeoutDuration ??
-              DEFAULT_TIMEOUT_DURATION),
+            this.context.definition.variantsByOriginatedFrom[
+              this.context.input.originatedFrom
+            ]!.timeoutDuration,
         )
       },
 
@@ -703,11 +720,20 @@ export class TraceStateMachine<
     input,
     sideEffectFns,
   }: {
-    definition: CompleteTraceDefinition<TracerScopeKeysT, AllPossibleScopesT>
-    input: ActiveTraceConfig<TracerScopeKeysT, AllPossibleScopesT>
+    definition: CompleteTraceDefinition<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >
+    input: ActiveTraceConfig<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >
     sideEffectFns: TraceStateMachineSideEffectHandlers<
       TracerScopeKeysT,
-      AllPossibleScopesT
+      AllPossibleScopesT,
+      OriginatedFromT
     >
   }) {
     this.context = {
@@ -727,17 +753,23 @@ export class TraceStateMachine<
   emit<
     EventName extends keyof StateHandlerPayloads<
       TracerScopeKeysT,
-      AllPossibleScopesT
+      AllPossibleScopesT,
+      OriginatedFromT
     >,
   >(
     event: EventName,
     payload: StateHandlerPayloads<
       TracerScopeKeysT,
-      AllPossibleScopesT
+      AllPossibleScopesT,
+      OriginatedFromT
     >[EventName],
   ): OnEnterStatePayload<AllPossibleScopesT> | undefined {
     const currentStateHandlers = this.states[this.currentState] as Partial<
-      MergedStateHandlerMethods<TracerScopeKeysT, AllPossibleScopesT>
+      MergedStateHandlerMethods<
+        TracerScopeKeysT,
+        AllPossibleScopesT,
+        OriginatedFromT
+      >
     >
     const transitionPayload = currentStateHandlers[event]?.(payload)
     if (transitionPayload) {
@@ -763,16 +795,26 @@ interface PrepareAndEmitRecordingOptions<AllPossibleScopesT> {
 export class ActiveTrace<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 > {
   readonly definition: CompleteTraceDefinition<
     TracerScopeKeysT,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   >
-  readonly input: ActiveTraceConfig<TracerScopeKeysT, AllPossibleScopesT>
+  readonly input: ActiveTraceConfig<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >
   private readonly deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
 
   recordedItems: Set<SpanAndAnnotation<AllPossibleScopesT>> = new Set()
-  stateMachine: TraceStateMachine<TracerScopeKeysT, AllPossibleScopesT>
+  stateMachine: TraceStateMachine<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >
   occurrenceCounters = new Map<string, number>()
   processedPerformanceEntries: WeakMap<
     PerformanceEntry,
@@ -784,8 +826,16 @@ export class ActiveTrace<
     | undefined
 
   constructor(
-    definition: CompleteTraceDefinition<TracerScopeKeysT, AllPossibleScopesT>,
-    input: ActiveTraceConfig<TracerScopeKeysT, AllPossibleScopesT>,
+    definition: CompleteTraceDefinition<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
+    input: ActiveTraceConfig<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
     deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>,
   ) {
     this.definition = definition

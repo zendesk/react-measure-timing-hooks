@@ -7,6 +7,14 @@ import {
 } from './testUtility/fixtures/ticket.activation'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
+import {
+  describe,
+  it,
+  expect,
+  vitest as jest,
+  beforeEach,
+  afterEach,
+} from 'vitest'
 
 interface TicketScope {
   ticketId: string
@@ -21,10 +29,7 @@ describe('TraceManager with Fixtures', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<
-      ReturnType<ReportFn<TicketScope, TicketScope>>,
-      Parameters<ReportFn<TicketScope, TicketScope>>
-    >()
+    reportFn = jest.fn<ReportFn<TicketScope, TicketScope>>()
     generateId = jest.fn().mockReturnValue('trace-id')
   })
 
@@ -49,6 +54,7 @@ describe('TraceManager with Fixtures', () => {
     tracer.start({
       scope,
       startTime: fixtureEntries[0]!.span.startTime,
+      originatedFrom: 'cold_boot',
     })
 
     for (const entry of fixtureEntries) {
@@ -137,6 +143,7 @@ describe('TraceManager with Fixtures', () => {
           fixtureEntries[0]!.span.startTime.now -
           fixtureEntries[0]!.annotation.operationRelativeStartTime,
       },
+      originatedFrom: 'cold_boot',
     })
 
     for (const entry of fixtureEntries) {
