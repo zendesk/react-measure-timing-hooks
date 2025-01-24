@@ -1,4 +1,12 @@
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vitest as jest,
+} from 'vitest'
+import {
   debounce,
   DebouncedFn,
   DebounceOptionsRef,

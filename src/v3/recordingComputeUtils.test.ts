@@ -1,3 +1,4 @@
+import { describe, expect, it, vitest as jest } from 'vitest'
 import { getSpanSummaryAttributes } from './convertToRum'
 import {
   createTraceRecording,
@@ -73,12 +74,15 @@ describe('recordingComputeUtils', () => {
   const onEnd = jest.fn()
 
   describe('error status propagation', () => {
-    const baseDefinition: CompleteTraceDefinition<never, AnyScope> = {
+    const baseDefinition: CompleteTraceDefinition<never, AnyScope, 'origin'> = {
       name: 'test-trace',
       scopes: [],
       requiredSpans: [() => true],
       computedSpanDefinitions: [],
       computedValueDefinitions: [],
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 45_000 },
+      },
     }
 
     it('should mark trace as error if any non-suppressed span has error status', () => {
@@ -96,6 +100,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
+            originatedFrom: 'origin',
           },
         },
         { transitionFromState: 'recording' },
@@ -127,6 +132,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
+            originatedFrom: 'origin',
           },
         },
         { transitionFromState: 'recording' },
@@ -160,6 +166,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
+            originatedFrom: 'origin',
           },
         },
         { transitionFromState: 'recording' },
@@ -183,6 +190,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
+            originatedFrom: 'origin',
           },
         },
         {
@@ -197,7 +205,7 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedSpans', () => {
-    const baseDefinition: CompleteTraceDefinition<never, AnyScope> = {
+    const baseDefinition: CompleteTraceDefinition<never, AnyScope, 'origin'> = {
       name: 'test-trace',
       scopes: [],
       requiredSpans: [() => true],
@@ -209,6 +217,9 @@ describe('recordingComputeUtils', () => {
         },
       ],
       computedValueDefinitions: [],
+      variantsByOriginatedFrom: {
+        origin: { timeoutDuration: 45_000 },
+      },
     }
 
     it('should compute duration and startOffset correctly', () => {
@@ -224,7 +235,12 @@ describe('recordingComputeUtils', () => {
             duration: 50,
           }),
         ],
-        input: { id: 'test', startTime: createTimestamp(0), scope: {} },
+        input: {
+          id: 'test',
+          startTime: createTimestamp(0),
+          scope: {},
+          originatedFrom: 'origin',
+        },
       })
 
       expect(result['test-computed-span']).toEqual({
@@ -234,7 +250,7 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle operation-start and operation-end special matchers', () => {
-      const definition: CompleteTraceDefinition<never, AnyScope> = {
+      const definition: CompleteTraceDefinition<never, AnyScope, 'origin'> = {
         ...baseDefinition,
         computedSpanDefinitions: [
           {
@@ -261,6 +277,7 @@ describe('recordingComputeUtils', () => {
           startTime: createTimestamp(0),
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
           scope: {} as never,
+          originatedFrom: 'origin',
         },
       })
 
@@ -269,19 +286,23 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedValues', () => {
-    const baseDefinition: CompleteTraceDefinition<string, AnyScope> = {
-      name: 'test-trace',
-      scopes: [],
-      requiredSpans: [() => true],
-      computedSpanDefinitions: [],
-      computedValueDefinitions: [
-        {
-          name: 'error-count',
-          matches: [({ span }) => span.status === 'error'],
-          computeValueFromMatches: (matches) => matches.length,
+    const baseDefinition: CompleteTraceDefinition<string, AnyScope, 'origin'> =
+      {
+        name: 'test-trace',
+        scopes: [],
+        requiredSpans: [() => true],
+        computedSpanDefinitions: [],
+        computedValueDefinitions: [
+          {
+            name: 'error-count',
+            matches: [({ span }) => span.status === 'error'],
+            computeValueFromMatches: (matches) => matches.length,
+          },
+        ],
+        variantsByOriginatedFrom: {
+          origin: { timeoutDuration: 45_000 },
         },
-      ],
-    }
+      }
 
     it('should compute values based on matching spans', () => {
       const result = getComputedValues({
@@ -296,6 +317,7 @@ describe('recordingComputeUtils', () => {
           startTime: createTimestamp(0),
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
           scope: {} as never,
+          originatedFrom: 'origin',
         },
       })
 
@@ -333,6 +355,9 @@ describe('recordingComputeUtils', () => {
             requiredSpans: [() => true],
             computedSpanDefinitions: [],
             computedValueDefinitions: [],
+            variantsByOriginatedFrom: {
+              origin: { timeoutDuration: 45_000 },
+            },
           },
           recordedItems: [
             createMockSpanAndAnnotation(100, {
@@ -362,6 +387,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
+            originatedFrom: 'origin',
           },
         },
         { transitionFromState: 'recording' },

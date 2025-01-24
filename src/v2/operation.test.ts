@@ -1,4 +1,11 @@
-/* eslint-disable jest/no-conditional-in-test */
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vitest as jest,
+} from 'vitest'
 import ticketActivationFixtureData from './__fixtures__/ticket-activation-select-tab-1.json'
 import { DEFAULT_DEBOUNCE_TIME, SKIP_PROCESSING } from './constants'
 import { type Operation, OperationManager } from './operation'

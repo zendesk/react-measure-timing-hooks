@@ -127,12 +127,14 @@ export function getSpanSummaryAttributes<AllPossibleScopesT>(
 export function convertTraceToRUM<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 >(
   traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT>,
+  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>,
   embedSpanSelector: SpanMatcherFn<
     TracerScopeKeysT,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   > = defaultEmbedSpanSelector,
 ): RumTraceRecording<SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording

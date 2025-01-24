@@ -66,12 +66,15 @@
     "prepare": "rrun husky install .config/husky && beemo create-config",
     "release": "beemo run-script release",
     "test": "yarn test:format && yarn test:types && yarn test:lint && yarn test:code",
-    "test:code": "rrun jest v3",
+    "test:code": "yarn vitest",
     "test:format": "yarn rrun prettier --check \"./{src,tests,.config}/**/!(*.d).{.js,jsx,ts,tsx,json,md}\"",
     "test:lint": "rrun eslint 'src/**/*.{js,jsx,ts,tsx}'",
     "test:types": "yarn rrun tsc --noEmit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "release": {
     "branches": [
@@ -159,6 +162,7 @@
     "@zendeskgarden/react-typography": "^9.4.0",
     "@zendeskgarden/svg-icons": "^7.5.0",
     "css-loader": "^7.1.2",
+    "husky": "^9.1.7",
     "lodash.debounce": "^4.0.8",
     "prettier-2": "npm:prettier@^2",
     "re-resizable": "^6.10.3",
@@ -172,6 +176,7 @@
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",
     "url-loader": "^4.1.1",
+    "vitest": "^3.0.3",
     "webpack": "5.97.1",
     "webpack-cli": "^6.0.0",
     "webpack-sources": "^3.2.3"

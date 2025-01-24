@@ -1,4 +1,5 @@
 import './testUtility/asciiTimelineSerializer'
+import { describe, expect, it } from 'vitest'
 import { createCPUIdleProcessor } from './firstCPUIdle'
 import {
   Check,

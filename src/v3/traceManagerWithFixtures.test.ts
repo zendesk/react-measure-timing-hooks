@@ -1,4 +1,12 @@
 import './testUtility/asciiTimelineSerializer'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vitest as jest,
+} from 'vitest'
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
@@ -21,10 +29,7 @@ describe('TraceManager with Fixtures', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<
-      ReturnType<ReportFn<TicketScope, TicketScope>>,
-      Parameters<ReportFn<TicketScope, TicketScope>>
-    >()
+    reportFn = jest.fn<ReportFn<TicketScope, TicketScope>>()
     generateId = jest.fn().mockReturnValue('trace-id')
   })
 
@@ -49,6 +54,7 @@ describe('TraceManager with Fixtures', () => {
     tracer.start({
       scope,
       startTime: fixtureEntries[0]!.span.startTime,
+      originatedFrom: 'cold_boot',
     })
 
     for (const entry of fixtureEntries) {
@@ -137,6 +143,7 @@ describe('TraceManager with Fixtures', () => {
           fixtureEntries[0]!.span.startTime.now -
           fixtureEntries[0]!.annotation.operationRelativeStartTime,
       },
+      originatedFrom: 'cold_boot',
     })
 
     for (const entry of fixtureEntries) {

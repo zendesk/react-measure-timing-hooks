@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable import/no-extraneous-dependencies */
+import { expect } from 'vitest'
 import { generateAsciiTimeline } from './generateAsciiTimeline'
 
 const asciiTimelineSerializer = {
@@ -14,7 +16,7 @@ const asciiTimelineSerializer = {
     generateAsciiTimeline(val as PerformanceEntry[], {
       width: 80,
     }),
-}
+} as const
 
 expect.addSnapshotSerializer(asciiTimelineSerializer)
 

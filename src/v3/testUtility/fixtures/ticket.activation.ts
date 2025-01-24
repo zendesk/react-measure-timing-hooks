@@ -14,12 +14,15 @@ const TICKET_NAVIGATED_AWAY_EVENT_NAME = `ticket.navigated-away`
 
 export const ticketActivationDefinition: TraceDefinition<
   'ticketId',
-  FixtureAllPossibleScopes
+  FixtureAllPossibleScopes,
+  'cold_boot'
 > = {
   name: 'ticket.activation',
   type: 'operation',
   scopes: ['ticketId'],
-  timeoutDuration: 60_000,
+  variantsByOriginatedFrom: {
+    cold_boot: { timeoutDuration: 60_000 },
+  },
   captureInteractive: true,
   requiredSpans: [
     {

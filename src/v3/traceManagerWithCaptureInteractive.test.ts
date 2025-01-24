@@ -1,5 +1,13 @@
 import './testUtility/asciiTimelineSerializer'
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vitest as jest,
+} from 'vitest'
+import {
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
   DEFAULT_TIMEOUT_DURATION,
 } from './constants'
@@ -39,10 +47,7 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<
-      ReturnType<ReportFn<TicketScope, TicketScope>>,
-      Parameters<ReportFn<TicketScope, TicketScope>>
-    >()
+    reportFn = jest.fn<ReportFn<TicketScope, TicketScope>>()
     generateId = jest.fn().mockReturnValue('trace-id')
   })
 
@@ -62,11 +67,16 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
-    })
-    tracer.start({
-      scope: {
-        ticketId: '1',
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
       },
+    })
+
+    tracer.start({
+      scope: { ticketId: '1' },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -110,11 +120,17 @@ describe('TraceManager with Capture Interactivity', () => {
         ...cpuIdleProcessorOptions,
         timeout: interactiveTimeout,
       },
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -155,11 +171,17 @@ describe('TraceManager with Capture Interactivity', () => {
       requiredSpans: [matchSpan.withName('end')],
       interruptOn: [matchSpan.withName('interrupt')],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -202,11 +224,17 @@ describe('TraceManager with Capture Interactivity', () => {
       debounceOn: [{ name: 'debounce' }],
       captureInteractive: cpuIdleProcessorOptions,
       debounceDuration: 300,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -252,11 +280,17 @@ describe('TraceManager with Capture Interactivity', () => {
         timeout: CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT,
       },
       debounceDuration: 100,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -305,11 +339,17 @@ describe('TraceManager with Capture Interactivity', () => {
         timeout: 100,
         getQuietWindowDuration,
       },
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -358,11 +398,17 @@ describe('TraceManager with Capture Interactivity', () => {
         timeout: 1_000,
         getQuietWindowDuration: createQuietWindowDurationCalculator(),
       },
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -403,11 +449,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -449,11 +501,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -495,11 +553,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -543,11 +607,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -592,11 +662,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -638,11 +714,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -689,11 +771,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -736,11 +824,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore
@@ -786,11 +880,17 @@ describe('TraceManager with Capture Interactivity', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
+      variantsByOriginatedFrom: {
+        cold_boot: {
+          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+        },
+      },
     })
     tracer.start({
       scope: {
         ticketId: '1',
       },
+      originatedFrom: 'cold_boot',
     })
 
     // prettier-ignore

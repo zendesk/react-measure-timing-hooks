@@ -34,21 +34,24 @@ import { findLast } from './utils'
 export interface ComputeRecordingData<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> extends TraceContext<TracerScopeKeysT, AllPossibleScopesT> {
+  OriginatedFromT extends string,
+> extends TraceContext<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
   recordedItems: SpanAndAnnotation<AllPossibleScopesT>[]
 }
 
 export function getComputedValues<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 >({
   definition: traceDefinition,
   recordedItems,
   input,
-}: ComputeRecordingData<TracerScopeKeysT, AllPossibleScopesT>): TraceRecording<
+}: ComputeRecordingData<
   TracerScopeKeysT,
-  AllPossibleScopesT
->['computedValues'] {
+  AllPossibleScopesT,
+  OriginatedFromT
+>): TraceRecording<TracerScopeKeysT, AllPossibleScopesT>['computedValues'] {
   const computedValues: TraceRecording<
     TracerScopeKeysT,
     AllPossibleScopesT
@@ -89,14 +92,16 @@ const markedInteractive = <AllPossibleScopesT>(
 export function getComputedSpans<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 >({
   definition: traceDefinition,
   recordedItems,
   input,
-}: ComputeRecordingData<TracerScopeKeysT, AllPossibleScopesT>): TraceRecording<
+}: ComputeRecordingData<
   TracerScopeKeysT,
-  AllPossibleScopesT
->['computedSpans'] {
+  AllPossibleScopesT,
+  OriginatedFromT
+>): TraceRecording<TracerScopeKeysT, AllPossibleScopesT>['computedSpans'] {
   // loop through the computed span definitions, check for entries that match in recorded items, then calculate the startOffset and duration
   const computedSpans: TraceRecording<
     TracerScopeKeysT,
@@ -163,13 +168,16 @@ export function getComputedSpans<
 
   return computedSpans
 }
+
 function getComputedRenderBeaconSpans<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 >(
   recordedItems: SpanAndAnnotation<AllPossibleScopesT>[],
   input: ActiveTraceInput<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+    OriginatedFromT
   >,
 ): TraceRecording<
   TracerScopeKeysT,
@@ -298,8 +306,13 @@ function getComputedRenderBeaconSpans<
 export function createTraceRecording<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 >(
-  data: ComputeRecordingData<TracerScopeKeysT, AllPossibleScopesT>,
+  data: ComputeRecordingData<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >,
   {
     transitionFromState,
     interruptionReason,

@@ -5,16 +5,18 @@ import type { ArrayWithAtLeastOneElement, KeysOfUnion } from './typeUtils'
 export function ensureMatcherFn<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
   MatcherInputT extends SpanMatch<
     TracerScopeKeysT,
-    AllPossibleScopesT
-  > = SpanMatch<TracerScopeKeysT, AllPossibleScopesT>,
+    AllPossibleScopesT,
+    OriginatedFromT
+  > = SpanMatch<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>,
 >(
   matcherFnOrDefinition: MatcherInputT,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
   return typeof matcherFnOrDefinition === 'function'
     ? matcherFnOrDefinition
-    : fromDefinition<TracerScopeKeysT, AllPossibleScopesT>(
+    : fromDefinition<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>(
         matcherFnOrDefinition,
       )
 }
@@ -28,19 +30,24 @@ function arrayHasAtLeastOneElement<T>(
 export function convertMatchersToFns<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 >(
   matchers:
-    | readonly SpanMatch<TracerScopeKeysT, AllPossibleScopesT>[]
+    | readonly SpanMatch<
+        TracerScopeKeysT,
+        AllPossibleScopesT,
+        OriginatedFromT
+      >[]
     | undefined,
 ):
   | ArrayWithAtLeastOneElement<
-      SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
+      SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
     >
   | undefined {
   const mapped:
-    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>[]
+    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>[]
     | undefined = matchers?.map((m) =>
-    ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT>(m),
+    ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>(m),
   )
   if (mapped && arrayHasAtLeastOneElement(mapped)) {
     return mapped
@@ -51,20 +58,31 @@ export function convertMatchersToFns<
 export function convertLabelMatchersToFns<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  const OriginatedFromT extends string,
 >(
   definitionLabelMatchers: LabelMatchingInputRecord<
     TracerScopeKeysT,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   >,
-): LabelMatchingFnsRecord<TracerScopeKeysT, AllPossibleScopesT> {
-  const matchers: LabelMatchingFnsRecord<TracerScopeKeysT, AllPossibleScopesT> =
-    {}
+): LabelMatchingFnsRecord<
+  TracerScopeKeysT,
+  AllPossibleScopesT,
+  OriginatedFromT
+> {
+  const matchers: LabelMatchingFnsRecord<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  > = {}
   for (const key in definitionLabelMatchers) {
     // eslint-disable-next-line no-continue
     if (!definitionLabelMatchers?.[key]) continue
-    matchers[key] = ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT>(
-      definitionLabelMatchers[key],
-    )
+    matchers[key] = ensureMatcherFn<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >(definitionLabelMatchers[key])
   }
   return matchers
 }

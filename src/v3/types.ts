@@ -50,25 +50,31 @@ export type TraceInterruptionReason =
 export type SingleTraceReportFn<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  OriginatedFromT extends string,
 > = (
   trace: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT>,
+  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>,
 ) => void
 
 export type ReportFn<
   ForEachPossibleScopeT,
   AllPossibleScopesT extends ForEachPossibleScopeT = ForEachPossibleScopeT,
+  OriginatedFromT extends string = string,
 > = UnionToIntersection<
   ForEachPossibleScopeT extends ForEachPossibleScopeT
     ? SingleTraceReportFn<
         KeysOfUnion<ForEachPossibleScopeT> & KeysOfUnion<AllPossibleScopesT>,
-        AllPossibleScopesT
+        AllPossibleScopesT,
+        OriginatedFromT
       >
     : never
 >
 
-export interface TraceManagerConfig<AllPossibleScopesT> {
-  reportFn: ReportFn<AllPossibleScopesT>
+export interface TraceManagerConfig<
+  AllPossibleScopesT,
+  OriginatedFromT extends string,
+> {
+  reportFn: ReportFn<AllPossibleScopesT, AllPossibleScopesT, OriginatedFromT>
 
   generateId: () => string
 
@@ -89,33 +95,37 @@ export interface TraceManagerConfig<AllPossibleScopesT> {
 export interface Tracer<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  OriginatedFromT extends string,
 > {
   /**
    * @returns The ID of the trace.
    */
   start: (
     input: StartTraceConfig<
-      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+      OriginatedFromT
     >,
   ) => string
 
   defineComputedSpan: (
     computedSpanDefinition: ComputedSpanDefinitionInput<
       TracerScopeKeysT,
-      AllPossibleScopesT
+      AllPossibleScopesT,
+      OriginatedFromT
     >,
   ) => void
 
   defineComputedValue: <
     MatchersT extends (
-      | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
+      | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
       | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
     )[],
   >(
     computedValueDefinition: ComputedValueDefinitionInput<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      MatchersT
+      MatchersT,
+      OriginatedFromT
     >,
   ) => void
 }
@@ -130,12 +140,24 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
 export type LabelMatchingInputRecord<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> = Record<string, SpanMatch<TracerScopeKeysT, AllPossibleScopesT>>
+  OriginatedFromT extends string,
+> = Record<
+  string,
+  SpanMatch<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
+>
 
 export type LabelMatchingFnsRecord<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> = Record<string, SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>>
+  OriginatedFromT extends string,
+> = Record<
+  string,
+  SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
+>
+
+export interface OriginatedFromVariant {
+  timeoutDuration: number
+}
 
 /**
  * Definition of a trace that includes conditions on when to end, debounce, and interrupt.
@@ -145,6 +167,7 @@ export type LabelMatchingFnsRecord<
 export interface TraceDefinition<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  OriginatedFromT extends string,
 > {
   /**
    * The name of the trace.
@@ -158,7 +181,8 @@ export interface TraceDefinition<
   // TypeScript TODO: typing this so that the span labels are inferred?
   labelMatching?: LabelMatchingInputRecord<
     NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   >
 
   /**
@@ -170,16 +194,17 @@ export interface TraceDefinition<
    * which parts of the product are "critical" or most important
    */
   requiredSpans: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
+    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, OriginatedFromT>
   >
   debounceOn?: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
+    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, OriginatedFromT>
   >
   interruptOn?: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
+    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, OriginatedFromT>
   >
   debounceDuration?: number
-  timeoutDuration?: number
+
+  variantsByOriginatedFrom: Record<OriginatedFromT, OriginatedFromVariant>
 
   /**
    * Indicates the operation should continue capturing events until interactivity is reached after the operation ends.
@@ -194,7 +219,8 @@ export interface TraceDefinition<
    */
   suppressErrorStatusPropagationOn?: readonly SpanMatch<
     NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   >[]
 }
 
@@ -205,30 +231,54 @@ export interface TraceDefinition<
 export interface CompleteTraceDefinition<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-> extends TraceDefinition<TracerScopeKeysT, AllPossibleScopesT> {
+  OriginatedFromT extends string,
+> extends TraceDefinition<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  > {
   computedSpanDefinitions: readonly ComputedSpanDefinition<
     NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   >[]
   computedValueDefinitions: readonly ComputedValueDefinition<
     NoInfer<TracerScopeKeysT>,
     AllPossibleScopesT,
-    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>[]
+    OriginatedFromT,
+    SpanMatcherFn<
+      NoInfer<TracerScopeKeysT>,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >[]
   >[]
 
   labelMatching?: LabelMatchingFnsRecord<
     NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   >
 
   requiredSpans: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
+    SpanMatcherFn<
+      NoInfer<TracerScopeKeysT>,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >
   >
   debounceOn?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
+    SpanMatcherFn<
+      NoInfer<TracerScopeKeysT>,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >
   >
   interruptOn?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT>
+    SpanMatcherFn<
+      NoInfer<TracerScopeKeysT>,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >
   >
 
   /**
@@ -237,7 +287,8 @@ export interface CompleteTraceDefinition<
    */
   suppressErrorStatusPropagationOn?: readonly SpanMatcherFn<
     NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   >[]
 }
 
@@ -282,21 +333,28 @@ export interface SpanDeduplicationStrategy<AllPossibleScopesT> {
 export interface ComputedSpanDefinition<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  OriginatedFromT extends string,
 > {
   name: string
   /**
    * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
    */
   startSpan:
-    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
+    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
     | 'operation-start'
   /**
    * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
    */
   endSpan:
-    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>
+    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
     | 'operation-end'
     | 'interactive'
+
+  /**
+   * If true, we will attempt to compute the span even if the trace was interrupted.
+   * Alternatively, specify an array of InterruptionReasons in which the span should be computed.
+   */
+  // TODO: forceCompute: boolean | InterruptionReason[]
 }
 
 /**
@@ -305,10 +363,12 @@ export interface ComputedSpanDefinition<
 export interface ComputedValueDefinition<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  OriginatedFromT extends string,
   MatchersT extends SpanMatcherFn<
     TracerScopeKeysT,
-    AllPossibleScopesT
-  >[] = SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT>[],
+    AllPossibleScopesT,
+    OriginatedFromT
+  >[] = SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>[],
 > {
   name: string
   matches: [...MatchersT]
@@ -317,6 +377,12 @@ export interface ComputedValueDefinition<
     // as many matches as match of type Span<ScopeT>
     ...matches: MapTuple<MatchersT, SpanAndAnnotation<AllPossibleScopesT>[]>
   ) => number | string | boolean | undefined
+
+  /**
+   * If true, we will attempt to compute the span even if the trace was interrupted.
+   * Alternatively, specify an array of InterruptionReasons in which the span should be computed.
+   */
+  // TODO: forceCompute: boolean | InterruptionReason[]
 }
 
 /**
@@ -325,11 +391,14 @@ export interface ComputedValueDefinition<
 export interface ComputedSpanDefinitionInput<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  OriginatedFromT extends string,
 > {
   name: string
-  startSpan: SpanMatch<TracerScopeKeysT, AllPossibleScopesT> | 'operation-start'
+  startSpan:
+    | SpanMatch<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
+    | 'operation-start'
   endSpan:
-    | SpanMatch<TracerScopeKeysT, AllPossibleScopesT>
+    | SpanMatch<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
     | 'operation-end'
     | 'interactive'
 }
@@ -340,7 +409,12 @@ export interface ComputedSpanDefinitionInput<
 export interface ComputedValueDefinitionInput<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  MatchersT extends SpanMatch<TracerScopeKeysT, AllPossibleScopesT>[],
+  MatchersT extends SpanMatch<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >[],
+  OriginatedFromT extends string,
 > {
   name: string
   matches: [...MatchersT]
@@ -363,12 +437,15 @@ export type DeriveScopeFromPerformanceEntryFn<AllPossibleScopesT> = (
 export interface TraceContext<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  OriginatedFromT extends string,
 > {
   readonly definition: CompleteTraceDefinition<
     TracerScopeKeysT,
-    AllPossibleScopesT
+    AllPossibleScopesT,
+    OriginatedFromT
   >
   readonly input: ActiveTraceInput<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+    OriginatedFromT
   >
 }

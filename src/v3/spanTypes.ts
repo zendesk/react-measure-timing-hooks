@@ -31,18 +31,22 @@ export type ComponentLifecycleSpanType =
 
 export type SpanType = NativePerformanceEntryType | ComponentLifecycleSpanType
 
-export interface StartTraceConfig<TracerScopeT> {
+export interface StartTraceConfig<
+  TracerScopeT,
+  OriginatedFromT extends string,
+> {
   id?: string
   scope: TracerScopeT
   startTime?: Partial<Timestamp>
+  originatedFrom: OriginatedFromT
   /**
    * any attributes that are relevant to the entire trace
    */
   attributes?: Attributes
 }
 
-export interface ActiveTraceInput<TracerScopeT>
-  extends StartTraceConfig<TracerScopeT> {
+export interface ActiveTraceInput<TracerScopeT, OriginatedFromT extends string>
+  extends StartTraceConfig<TracerScopeT, OriginatedFromT> {
   id: string
   startTime: Timestamp
 }
@@ -50,10 +54,16 @@ export interface ActiveTraceInput<TracerScopeT>
 export interface ActiveTraceConfig<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
+  OriginatedFromT extends string,
 > extends ActiveTraceInput<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+    OriginatedFromT
   > {
-  onEnd: SingleTraceReportFn<TracerScopeKeysT, AllPossibleScopesT>
+  onEnd: SingleTraceReportFn<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
