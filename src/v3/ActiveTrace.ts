@@ -52,7 +52,7 @@ export type TraceStates = NonTerminalTraceStates | TerminalTraceStates
 
 interface OnEnterRecording {
   transitionToState: 'recording'
-  transitionFromState: 'initial'
+  transitionFromState: NonTerminalTraceStates
 }
 
 interface OnEnterInterrupted {
@@ -263,9 +263,40 @@ export class TraceStateMachine<
       onProcessSpan: (
         spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
       ) => {
-        // if any span is interrupted!
+        const spanEndTimeEpoch =
+          spanAndAnnotation.span.startTime.epoch +
+          spanAndAnnotation.span.duration
+
+        if (spanEndTimeEpoch > this.#timeoutDeadline) {
+          // we consider this interrupted, because of the clamping of the total duration of the operation
+          // as potential other events could have happened and prolonged the operation
+          // we can be a little picky, because we expect to record many operations
+          // it's best to compare like-to-like
+          return {
+            transitionToState: 'interrupted',
+            interruptionReason: 'timeout',
+          }
+        }
+
+        // if the entry matches any of the interruptOn criteria,
+        // transition to complete state with the 'matched-on-interrupt' interruptionReason
+        if (this.context.definition.interruptOn) {
+          for (const doesSpanMatch of this.context.definition.interruptOn) {
+            if (doesSpanMatch(spanAndAnnotation, this.context)) {
+              return {
+                transitionToState: 'complete',
+                interruptionReason: 'matched-on-interrupt',
+                lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+                completeSpanAndAnnotation: this.completeSpan,
+              }
+            }
+          }
+        }
+
         // else, add into array buffer
         this.#provisionalBuffer.push(spanAndAnnotation)
+
+        return undefined
       },
 
       onInterrupt: (reason: TraceInterruptionReason) => ({
@@ -284,11 +315,13 @@ export class TraceStateMachine<
         return undefined
       },
     },
+
     recording: {
-      // eslint-disable-next-line consistent-return
-      onEnterState: () => {
-        const transition = this.#processProvisionalBuffer()
-        if (transition) return transition
+      onEnterState: (_transition: OnEnterRecording) => {
+        const nextTransition = this.#processProvisionalBuffer()
+        if (nextTransition) return nextTransition
+
+        return undefined
       },
 
       onProcessSpan: (
@@ -377,7 +410,7 @@ export class TraceStateMachine<
     // we want to ensure the end of the operation captures
     // the final, settled state of the component
     debouncing: {
-      onEnterState: (payload: OnEnterDebouncing) => {
+      onEnterState: (_payload: OnEnterDebouncing) => {
         if (!this.lastRelevant) {
           // this should never happen
           return {
@@ -510,7 +543,7 @@ export class TraceStateMachine<
     },
 
     'waiting-for-interactive': {
-      onEnterState: (payload: OnEnterWaitingForInteractive) => {
+      onEnterState: (_payload: OnEnterWaitingForInteractive) => {
         if (!this.lastRelevant) {
           // this should never happen
           return {
@@ -850,7 +883,13 @@ export class ActiveTrace<
   AllPossibleScopesT,
   const OriginatedFromT extends string,
 > {
-  readonly definition: CompleteTraceDefinition<
+  readonly sourceDefinition: CompleteTraceDefinition<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >
+  /** the mutable definition */
+  definition: CompleteTraceDefinition<
     TracerScopeKeysT,
     AllPossibleScopesT,
     OriginatedFromT
@@ -895,7 +934,8 @@ export class ActiveTrace<
     >,
     deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>,
   ) {
-    this.definition = definition
+    this.definition = structuredClone(definition)
+    this.sourceDefinition = definition
     this.input = {
       ...input,
       startTime: ensureTimestamp(input.startTime),

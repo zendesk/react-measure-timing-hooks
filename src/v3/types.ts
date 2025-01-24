@@ -3,6 +3,8 @@ import type { SpanMatch, SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type {
   ActiveTraceInput,
+  Attributes,
+  BaseStartTraceConfig,
   Span,
   SpanStatus,
   StartTraceConfig,
@@ -90,6 +92,27 @@ export interface TraceManagerConfig<
   performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<
     Partial<AllPossibleScopesT>
   >
+
+  reportErrorFn: (error: Error) => void
+}
+
+export interface TraceModifications<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+  OriginatedFromT extends string,
+> {
+  scope: SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  attributes?: Attributes
+  additionalRequiredSpans?: SpanMatcherFn<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >[]
+  additionalDebounceOnSpans?: SpanMatcherFn<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >[]
 }
 
 export interface Tracer<
@@ -105,7 +128,19 @@ export interface Tracer<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
       OriginatedFromT
     >,
-  ) => string
+  ) => string | undefined
+
+  provisionalStart: (
+    input: BaseStartTraceConfig<OriginatedFromT>,
+  ) => string | undefined
+
+  initializeProvisional: (
+    mods: TraceModifications<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
+  ) => void
 
   defineComputedSpan: (
     computedSpanDefinition: ComputedSpanDefinitionInput<

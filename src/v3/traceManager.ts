@@ -21,6 +21,7 @@ import type {
   TraceContext,
   TraceDefinition,
   TraceManagerConfig,
+  TraceModifications,
   Tracer,
 } from './types'
 import type { KeysOfUnion } from './typeUtils'
@@ -44,8 +45,11 @@ export class TraceManager<
     | ActiveTrace<KeysOfUnion<AllPossibleScopesT>, AllPossibleScopesT, string>
     | undefined = undefined
 
+  private reportErrorFn: (error: Error) => void
+
   constructor({
     reportFn,
+    reportErrorFn,
     generateId,
     performanceEntryDeduplicationStrategy,
   }: TraceManagerConfig<AllPossibleScopesT, string>) {
@@ -53,6 +57,7 @@ export class TraceManager<
     this.generateId = generateId
     this.performanceEntryDeduplicationStrategy =
       performanceEntryDeduplicationStrategy
+    this.reportErrorFn = reportErrorFn
   }
 
   createTracer<
@@ -160,9 +165,10 @@ export class TraceManager<
         } as ComputedValueDefinition<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>)
       },
       start: (input) => this.startTrace(completeTraceDefinition, input),
-      provisionalStart: (inputWithScope) => {
-        this.provisionalStartTrace(completeTraceDefinition, inputWithScope)
-      },
+      provisionalStart: (input) =>
+        this.provisionalStartTrace(completeTraceDefinition, input),
+      initializeProvisional: (inputAndDefinitionModifications) =>
+        void this.initializeActiveTrace(inputAndDefinitionModifications),
     }
   }
 
@@ -185,9 +191,10 @@ export class TraceManager<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
       OriginatedFromT
     >,
-  ): string {
+  ): string | undefined {
     const traceId = this.provisionalStartTrace(definition, input)
-    this.initializeActiveTrace()
+    if (!traceId) return undefined
+    this.initializeActiveTrace({ scope: input.scope })
     return traceId
   }
 
@@ -195,24 +202,85 @@ export class TraceManager<
   // from input: scope (required), attributes (optional, merge into)
   // from definition, can add items to: requiredSpans (additionalRequiredSpans), debounceOn (additionalDebounceOnSpans)
   // documentation: interruption still works and all the other events are buffered
-  private initializeActiveTrace(inputAndDefinitionModifications) {
-    const currentTrace = this.activeTrace
-    // if a trace has an undefined scope, it means it
-    if (!currentTrace?.isProvisional) {
-      // this is an already initialized active trace, do nothing:
+  private initializeActiveTrace<
+    TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+    OriginatedFromT extends string,
+  >(
+    inputAndDefinitionModifications: TraceModifications<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
+  ): void {
+    if (!this.activeTrace) {
+      this.reportErrorFn(
+        new Error(
+          `No currently active trace when initializing a trace. Call tracer.startTrace(...) or tracer.provisionalStartTrace(...) beforehand.`,
+        ),
+      )
       return
     }
+
+    // this is an already initialized active trace, do nothing:
+    if (!this.activeTrace.isProvisional) {
+      this.reportErrorFn(
+        new Error(
+          `You are trying to initialize a trace that has already been initialized before (${this.activeTrace.definition.name}).`,
+        ),
+      )
+      return
+    }
+
+    const { scope, attributes } = this.activeTrace.input
+
+    this.activeTrace.input.scope = scope
+    this.activeTrace.input.attributes = {
+      ...this.activeTrace.input.attributes,
+      ...attributes,
+    }
+
+    const additionalRequiredSpans = convertMatchersToFns<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >(inputAndDefinitionModifications.additionalRequiredSpans)
+
+    const additionalDebounceOnSpans = convertMatchersToFns<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >(inputAndDefinitionModifications.additionalDebounceOnSpans)
+
+    const { activeTrace } = this
+
+    if (additionalRequiredSpans?.length) {
+      activeTrace.definition.requiredSpans = [
+        ...activeTrace.sourceDefinition.requiredSpans,
+        ...additionalRequiredSpans,
+      ] as (typeof activeTrace)['definition']['requiredSpans']
+    }
+    if (additionalDebounceOnSpans?.length) {
+      activeTrace.definition.debounceOn = [
+        ...(activeTrace.sourceDefinition.debounceOn ?? []),
+        ...additionalDebounceOnSpans,
+      ] as (typeof activeTrace)['definition']['debounceOn']
+    }
+
     // else, we want to initialize the trace with the scope and other modifications:
     // TODO ...
   }
 
-  // todo: wont have scope yet
   private provisionalStartTrace<
     const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+    const OriginatedFromT extends string,
   >(
-    definition: CompleteTraceDefinition<TracerScopeKeysT, AllPossibleScopesT>,
-    input: BaseStartTraceConfig,
-  ): string {
+    definition: CompleteTraceDefinition<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
+    input: BaseStartTraceConfig<OriginatedFromT>,
+  ): string | undefined {
     if (this.activeTrace) {
       this.activeTrace.interrupt('another-trace-started')
       this.activeTrace = undefined
@@ -222,13 +290,16 @@ export class TraceManager<
 
     // Verify that the originatedFrom value is valid and has a corresponding timeout
     if (!(input.originatedFrom in definition.variantsByOriginatedFrom)) {
-      throw new Error(
-        `Invalid originatedFrom value: ${
-          input.originatedFrom
-        }. Must be one of: ${Object.keys(
-          definition.variantsByOriginatedFrom,
-        ).join(', ')}`,
+      this.reportErrorFn(
+        new Error(
+          `Invalid originatedFrom value: ${
+            input.originatedFrom
+          }. Must be one of: ${Object.keys(
+            definition.variantsByOriginatedFrom,
+          ).join(', ')}`,
+        ),
       )
+      return undefined
     }
 
     const activeTraceContext: TraceContext<
