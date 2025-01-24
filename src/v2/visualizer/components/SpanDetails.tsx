@@ -128,4 +128,5 @@ const SpanDetails: React.FC<SpanDetailsProps> = ({ span, onClose }) => {
   )
 }
 
+// eslint-disable-next-line import/no-default-export
 export default SpanDetails

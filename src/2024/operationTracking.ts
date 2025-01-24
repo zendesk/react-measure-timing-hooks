@@ -5,9 +5,9 @@ import { getCommonUrlForTracing } from '../v2/getCommonUrlForTracing'
 import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
 import type {
   LegacyOperation,
+  LegacyTask,
   OperationSpanMetadata,
   PerformanceEntryLike,
-  LegacyTask,
   TaskDataEmbeddedInOperation,
   TaskSpanKind,
   TaskSpanMetadata,

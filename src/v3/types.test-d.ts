@@ -1,5 +1,4 @@
-import { describe, it, expect, assertType } from 'vitest'
-/* eslint-disable jest/expect-expect */
+import { assertType, describe, expect, it } from 'vitest'
 import { generateUseBeacon } from './hooks'
 import * as match from './matchSpan'
 import { TraceManager } from './traceManager'
@@ -61,7 +60,6 @@ const mockSpanWithoutScope = {
   startTime: { now: 0, epoch: 0 },
 } as const
 
-// eslint-disable-next-line jest/no-disabled-tests
 describe('type tests', () => {
   const traceManager = new TraceManager<ExampleAllPossibleScopes>({
     generateId: () => 'id',

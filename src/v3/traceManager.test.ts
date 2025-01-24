@@ -1,4 +1,13 @@
 import './testUtility/asciiTimelineSerializer'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vitest as jest,
+} from 'vitest'
+import { DEFAULT_TIMEOUT_DURATION } from './constants'
 import * as matchSpan from './matchSpan'
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
@@ -11,15 +20,6 @@ import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
-import { DEFAULT_TIMEOUT_DURATION } from './constants'
-import {
-  describe,
-  it,
-  expect,
-  vitest as jest,
-  beforeEach,
-  afterEach,
-} from 'vitest'
 
 interface TicketScope {
   ticketId: string

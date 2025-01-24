@@ -1,5 +1,13 @@
 import './testUtility/asciiTimelineSerializer'
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vitest as jest,
+} from 'vitest'
+import {
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
   DEFAULT_TIMEOUT_DURATION,
 } from './constants'
@@ -15,14 +23,6 @@ import {
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
-import {
-  describe,
-  it,
-  expect,
-  vitest as jest,
-  beforeEach,
-  afterEach,
-} from 'vitest'
 
 const GOOGLES_QUIET_WINDOW_DURATION = 2_000
 const GOOGLES_CLUSTER_PADDING = 1_000

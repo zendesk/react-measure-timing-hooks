@@ -1,4 +1,12 @@
 import './testUtility/asciiTimelineSerializer'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vitest as jest,
+} from 'vitest'
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
@@ -7,14 +15,6 @@ import {
 } from './testUtility/fixtures/ticket.activation'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
-import {
-  describe,
-  it,
-  expect,
-  vitest as jest,
-  beforeEach,
-  afterEach,
-} from 'vitest'
 
 interface TicketScope {
   ticketId: string

@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import * as matchSpan from './matchSpan'
 import type { SpanAnnotation } from './spanAnnotationTypes'
 import type {
@@ -5,7 +6,6 @@ import type {
   ComponentRenderSpan,
   SpanBase,
 } from './spanTypes'
-import { describe, it, expect } from 'vitest'
 import type { CompleteTraceDefinition } from './types'
 
 // Mock data for TraceEntryBase

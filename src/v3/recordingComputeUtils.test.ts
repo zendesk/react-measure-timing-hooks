@@ -1,10 +1,10 @@
+import { describe, expect, it, vitest as jest } from 'vitest'
 import { getSpanSummaryAttributes } from './convertToRum'
 import {
   createTraceRecording,
   getComputedSpans,
   getComputedValues,
 } from './recordingComputeUtils'
-import { describe, it, expect, vitest as jest } from 'vitest'
 import type { SpanAndAnnotation, SpanAnnotation } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
 import type { CompleteTraceDefinition, Timestamp } from './types'

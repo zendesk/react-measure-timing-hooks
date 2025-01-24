@@ -27,6 +27,7 @@ function getStoredContent(): RecordingInputFile | null {
     const stored = localStorage.getItem(STORAGE_KEY.FILE_CONTENT)
     return stored ? (JSON.parse(stored) as RecordingInputFile) : null
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to parse stored content:', error)
     return null
   }
@@ -51,6 +52,7 @@ function getStoredDisplayOptions(): Record<FilterOption, boolean> {
         }
       : defaultDisplayOptions
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to parse stored display options:', error)
     return defaultDisplayOptions
   }

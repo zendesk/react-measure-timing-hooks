@@ -1,9 +1,9 @@
 import {
-  describe,
-  it,
-  expect,
-  beforeEach,
   afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
   vitest as jest,
 } from 'vitest'
 import {

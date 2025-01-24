@@ -4,7 +4,6 @@ import {
   DEADLINE_BUFFER,
   DEFAULT_DEBOUNCE_DURATION,
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
-  DEFAULT_TIMEOUT_DURATION,
 } from './constants'
 import { ensureTimestamp } from './ensureTimestamp'
 import {

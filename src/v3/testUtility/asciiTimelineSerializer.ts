@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { generateAsciiTimeline } from './generateAsciiTimeline'
+/* eslint-disable import/no-extraneous-dependencies */
 import { expect } from 'vitest'
+import { generateAsciiTimeline } from './generateAsciiTimeline'
 
 const asciiTimelineSerializer = {
   test: (val: unknown) =>
