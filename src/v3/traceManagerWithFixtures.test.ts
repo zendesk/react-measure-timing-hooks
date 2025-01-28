@@ -23,6 +23,7 @@ interface TicketScope {
 describe('TraceManager with Fixtures', () => {
   let reportFn: jest.Mock
   let generateId: jest.Mock
+  let reportErrorFn: jest.Mock
 
   jest.useFakeTimers({
     now: 0,
@@ -31,6 +32,7 @@ describe('TraceManager with Fixtures', () => {
   beforeEach(() => {
     reportFn = jest.fn<ReportFn<TicketScope, TicketScope>>()
     generateId = jest.fn().mockReturnValue('trace-id')
+    reportErrorFn = jest.fn()
   })
 
   afterEach(() => {
@@ -42,6 +44,7 @@ describe('TraceManager with Fixtures', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const fixtureEntries = shouldCompleteAndHaveInteractiveTime
 
@@ -128,6 +131,7 @@ describe('TraceManager with Fixtures', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const fixtureEntries = shouldNotEndWithInteractiveTimeout
     const scopeEntry = fixtureEntries.find((entry) => 'scope' in entry.span)!

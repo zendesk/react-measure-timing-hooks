@@ -3,6 +3,7 @@ import type { SpanMatch, SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type {
   ActiveTraceInput,
+  DraftTraceInput,
   Attributes,
   BaseStartTraceConfig,
   Span,
@@ -130,11 +131,11 @@ export interface Tracer<
     >,
   ) => string | undefined
 
-  provisionalStart: (
+  createDraft: (
     input: BaseStartTraceConfig<OriginatedFromT>,
   ) => string | undefined
 
-  initializeProvisional: (
+  transitionDraftToActive: (
     mods: TraceModifications<
       TracerScopeKeysT,
       AllPossibleScopesT,
@@ -468,6 +469,22 @@ export type SelectScopeByKey<
 export type DeriveScopeFromPerformanceEntryFn<AllPossibleScopesT> = (
   entry: PerformanceEntry,
 ) => ScopeOnASpan<AllPossibleScopesT> | undefined
+
+export interface DraftTraceContext<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+  OriginatedFromT extends string,
+> {
+  readonly definition: CompleteTraceDefinition<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  >
+  readonly input: DraftTraceInput<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+    OriginatedFromT
+  >
+}
 
 export interface TraceContext<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,

@@ -5,6 +5,7 @@ import {
   DEFAULT_DEBOUNCE_DURATION,
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
 } from './constants'
+import { convertMatchersToFns } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import {
   type CPUIdleLongTaskProcessor,
@@ -18,14 +19,16 @@ import type {
   SpanAnnotation,
   SpanAnnotationRecord,
 } from './spanAnnotationTypes'
-import type { ActiveTraceConfig, Span } from './spanTypes'
+import type { ActiveTraceConfig, DraftTraceInput, Span } from './spanTypes'
 import type {
   CompleteTraceDefinition,
   SelectScopeByKey,
+  SingleTraceReportFn,
   SpanDeduplicationStrategy,
   TraceInterruptionReason,
+  TraceModifications,
 } from './types'
-import { TraceContext } from './types'
+import { DraftTraceContext } from './types'
 import type {
   DistributiveOmit,
   KeysOfUnion,
@@ -41,17 +44,18 @@ export interface FinalState<TracerScopeT> {
   lastRequiredSpanAndAnnotation?: SpanAndAnnotation<TracerScopeT>
 }
 
-type InitialTraceState = 'initial'
+const INITIAL_STATE = 'draft'
+type InitialTraceState = typeof INITIAL_STATE
 export type NonTerminalTraceStates =
   | InitialTraceState
-  | 'recording'
+  | 'active'
   | 'debouncing'
   | 'waiting-for-interactive'
 type TerminalTraceStates = 'interrupted' | 'complete'
 export type TraceStates = NonTerminalTraceStates | TerminalTraceStates
 
-interface OnEnterRecording {
-  transitionToState: 'recording'
+interface OnEnterActive {
+  transitionToState: 'active'
   transitionFromState: NonTerminalTraceStates
 }
 
@@ -77,7 +81,7 @@ interface OnEnterDebouncing {
 }
 
 type OnEnterStatePayload<AllPossibleScopesT> =
-  | OnEnterRecording
+  | OnEnterActive
   | OnEnterInterrupted
   | OnEnterComplete<AllPossibleScopesT>
   | OnEnterDebouncing
@@ -130,7 +134,11 @@ interface StateMachineContext<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
   OriginatedFromT extends string,
-> extends TraceContext<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+> extends DraftTraceContext<
+    TracerScopeKeysT,
+    AllPossibleScopesT,
+    OriginatedFromT
+  > {
   readonly requiredSpansIndexChecklist: Set<number>
 }
 
@@ -157,7 +165,7 @@ export class TraceStateMachine<
       options: PrepareAndEmitRecordingOptions<AllPossibleScopesT>,
     ) => void
   }
-  currentState: TraceStates = 'initial'
+  currentState: TraceStates = INITIAL_STATE
   /** the span that ended at the furthest point in time */
   lastRelevant: SpanAndAnnotation<AllPossibleScopesT> | undefined
   lastRequiredSpan: SpanAndAnnotation<AllPossibleScopesT> | undefined
@@ -247,7 +255,7 @@ export class TraceStateMachine<
   }
 
   readonly states = {
-    initial: {
+    draft: {
       onEnterState: () => {
         this.setGlobalDeadline(
           this.context.input.startTime.epoch +
@@ -256,9 +264,10 @@ export class TraceStateMachine<
             ]!.timeoutDuration,
         )
       },
-      // onInitializeStart: () => ({
-      //   transitionToState: 'recording',
-      // }),
+      onActive: () => ({
+        transitionToState: 'active',
+        transitionFromState: INITIAL_STATE,
+      }),
 
       onProcessSpan: (
         spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
@@ -295,7 +304,6 @@ export class TraceStateMachine<
 
         // else, add into array buffer
         this.#provisionalBuffer.push(spanAndAnnotation)
-
         return undefined
       },
 
@@ -315,9 +323,8 @@ export class TraceStateMachine<
         return undefined
       },
     },
-
-    recording: {
-      onEnterState: (_transition: OnEnterRecording) => {
+    active: {
+      onEnterState: (_transition: OnEnterActive) => {
         const nextTransition = this.#processProvisionalBuffer()
         if (nextTransition) return nextTransition
 
@@ -810,9 +817,8 @@ export class TraceStateMachine<
       AllPossibleScopesT,
       OriginatedFromT
     >
-    input: ActiveTraceConfig<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
+    input: DraftTraceInput<
+      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
       OriginatedFromT
     >
     sideEffectFns: TraceStateMachineSideEffectHandlers<
@@ -860,7 +866,6 @@ export class TraceStateMachine<
     if (transitionPayload) {
       const transitionFromState = this.currentState as NonTerminalTraceStates
       this.currentState = transitionPayload.transitionToState
-      // PROV START TODO: update types
       const onEnterStateEvent: OnEnterStatePayload<AllPossibleScopesT> = {
         transitionFromState,
         ...transitionPayload,
@@ -894,15 +899,38 @@ export class ActiveTrace<
     AllPossibleScopesT,
     OriginatedFromT
   >
-  readonly input: ActiveTraceConfig<
+  get input(): ActiveTraceConfig<
     TracerScopeKeysT,
     AllPossibleScopesT,
+    OriginatedFromT
+  > {
+    if (!this.draftInput.scope) {
+      throw new Error('tried to access input without scope')
+    }
+    return this.draftInput as ActiveTraceConfig<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >
+  }
+  set input(
+    value: ActiveTraceConfig<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
+  ) {
+    this.draftInput = value
+  }
+
+  draftInput: DraftTraceInput<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
     OriginatedFromT
   >
   private readonly deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
 
-  get isProvisional() {
-    return this.stateMachine.currentState === 'initial'
+  get isDraft() {
+    return this.stateMachine.currentState === INITIAL_STATE
   }
 
   recordedItems: Set<SpanAndAnnotation<AllPossibleScopesT>> = new Set()
@@ -927,16 +955,43 @@ export class ActiveTrace<
       AllPossibleScopesT,
       OriginatedFromT
     >,
-    input: ActiveTraceConfig<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
+    input: DraftTraceInput<
+      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
       OriginatedFromT
     >,
     deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>,
   ) {
-    this.definition = structuredClone(definition)
+    this.definition = {
+      name: definition.name,
+      type: definition.type,
+      scopes: [...definition.scopes],
+      variantsByOriginatedFrom: { ...definition.variantsByOriginatedFrom },
+
+      labelMatching: { ...definition.labelMatching },
+
+      requiredSpans: [...definition.requiredSpans],
+      computedSpanDefinitions: [...definition.computedSpanDefinitions],
+      computedValueDefinitions: [...definition.computedValueDefinitions],
+
+      interruptOn: definition.interruptOn
+        ? [...definition.interruptOn]
+        : undefined,
+      debounceOn: definition.debounceOn
+        ? [...definition.debounceOn]
+        : undefined,
+      debounceDuration: definition.debounceDuration,
+      captureInteractive: definition.captureInteractive
+        ? typeof definition.captureInteractive === 'boolean'
+          ? definition.captureInteractive
+          : { ...definition.captureInteractive }
+        : undefined,
+      suppressErrorStatusPropagationOn:
+        definition.suppressErrorStatusPropagationOn
+          ? [...definition.suppressErrorStatusPropagationOn]
+          : undefined,
+    }
     this.sourceDefinition = definition
-    this.input = {
+    this.draftInput = {
       ...input,
       startTime: ensureTimestamp(input.startTime),
     }
@@ -967,12 +1022,65 @@ export class ActiveTrace<
     this.stateMachine.emit('onInterrupt', reason)
   }
 
+  transitionDraftToActive(
+    inputAndDefinitionModifications: TraceModifications<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
+    onEnd: SingleTraceReportFn<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
+  ) {
+    const { attributes } = this.draftInput
+
+    this.input = {
+      ...this.draftInput,
+      scope: inputAndDefinitionModifications.scope,
+      attributes: {
+        ...this.draftInput.attributes,
+        ...attributes,
+      },
+      onEnd,
+    }
+
+    const additionalRequiredSpans = convertMatchersToFns<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >(inputAndDefinitionModifications.additionalRequiredSpans)
+
+    const additionalDebounceOnSpans = convertMatchersToFns<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >(inputAndDefinitionModifications.additionalDebounceOnSpans)
+
+    const { definition } = this
+    if (additionalRequiredSpans?.length) {
+      definition.requiredSpans = [
+        ...this.sourceDefinition.requiredSpans,
+        ...additionalRequiredSpans,
+      ] as (typeof definition)['requiredSpans']
+    }
+    if (additionalDebounceOnSpans?.length) {
+      definition.debounceOn = [
+        ...(this.sourceDefinition.debounceOn ?? []),
+        ...additionalDebounceOnSpans,
+      ] as (typeof definition)['debounceOn']
+    }
+
+    this.stateMachine.emit('onActive', undefined)
+  }
+
   processSpan(
     span: Span<AllPossibleScopesT>,
   ): SpanAnnotationRecord | undefined {
     const spanEndTime = span.startTime.now + span.duration
     // check if valid for this trace:
-    if (spanEndTime < this.input.startTime.now) {
+    if (spanEndTime < this.draftInput.startTime.now) {
       // TODO: maybe we should actually keep events that happened right before the trace started, e.g. 'event' spans for clicks?
       // console.log(
       //   `# span ${span.type} ${span.name} is ignored because it started before the trace started at ${this.input.startTime.now}`,
@@ -1008,11 +1116,11 @@ export class ActiveTrace<
       this.occurrenceCounters.set(spanId, occurrence + 1)
 
       const annotation: SpanAnnotation = {
-        id: this.input.id,
+        id: this.draftInput.id,
         operationRelativeStartTime:
-          span.startTime.now - this.input.startTime.now,
+          span.startTime.now - this.draftInput.startTime.now,
         operationRelativeEndTime:
-          span.startTime.now - this.input.startTime.now + span.duration,
+          span.startTime.now - this.draftInput.startTime.now + span.duration,
         occurrence,
         recordedInState: this.stateMachine
           .currentState as NonTerminalTraceStates,
@@ -1050,7 +1158,7 @@ export class ActiveTrace<
 
   private getSpanLabels(span: SpanAndAnnotation<AllPossibleScopesT>): string[] {
     const labels: string[] = []
-    const context = { definition: this.definition, input: this.input }
+    const context = { definition: this.definition, input: this.draftInput }
     if (!this.definition.labelMatching) return labels
 
     Object.entries(this.definition.labelMatching).forEach(

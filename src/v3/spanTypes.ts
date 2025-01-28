@@ -41,32 +41,36 @@ export interface BaseStartTraceConfig<OriginatedFromT extends string> {
   attributes?: Attributes
 }
 
-export interface StartTraceConfigWithOptionalScope<
-  TracerScopeT,
-  OriginatedFromT extends string,
-> extends BaseStartTraceConfig<OriginatedFromT> {
+export interface DraftTraceConfig<TracerScopeT, OriginatedFromT extends string>
+  extends BaseStartTraceConfig<OriginatedFromT> {
   scope: TracerScopeT | undefined
 }
 
 export interface StartTraceConfig<TracerScopeT, OriginatedFromT extends string>
-  extends BaseStartTraceConfig<OriginatedFromT> {
+  extends DraftTraceConfig<TracerScopeT, OriginatedFromT> {
   scope: TracerScopeT
 }
 
-export interface ActiveTraceInput<TracerScopeT, OriginatedFromT extends string>
-  extends StartTraceConfigWithOptionalScope<TracerScopeT, OriginatedFromT> {
+export interface DraftTraceInput<TracerScopeT, OriginatedFromT extends string>
+  extends DraftTraceConfig<TracerScopeT, OriginatedFromT> {
   id: string
   startTime: Timestamp
+}
+
+export interface ActiveTraceInput<TracerScopeT, OriginatedFromT extends string>
+  extends DraftTraceInput<TracerScopeT, OriginatedFromT> {
+  scope: TracerScopeT
 }
 
 export interface ActiveTraceConfig<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
   OriginatedFromT extends string,
-> extends ActiveTraceInput<
+> extends DraftTraceInput<
     SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
     OriginatedFromT
   > {
+  scope: SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
   onEnd: SingleTraceReportFn<
     TracerScopeKeysT,
     AllPossibleScopesT,

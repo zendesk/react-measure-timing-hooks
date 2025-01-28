@@ -14,6 +14,10 @@ export const traceManager = new TraceManager<TicketIdScope>({
   },
   // eslint-disable-next-line no-magic-numbers
   generateId: () => Math.random().toString(36).slice(2),
+  reportErrorFn: (error) => {
+    // eslint-disable-next-line no-console
+    console.error(error)
+  },
 })
 
 observePerformanceWithTraceManager({

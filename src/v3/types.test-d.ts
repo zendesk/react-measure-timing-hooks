@@ -81,6 +81,9 @@ describe('type tests', () => {
         expect(trace.scope.customFieldId).toBeDefined()
       }
     },
+    reportErrorFn: (error) => {
+      console.error(error)
+    },
   })
 
   interface RequiredBeaconAttributes {
@@ -173,11 +176,11 @@ describe('type tests', () => {
       },
       requiredSpans: [
         match.withAllConditions(
-          match.withName((name, scopes) => name === `${scopes.customId}.end`),
+          match.withName((name, scopes) => name === `${scopes?.customId}.end`),
           match.withName('end'),
           match.withMatchingScopes(['customId']),
         ),
-        match.withName((name, scopes) => name === `${scopes.customId}.end`),
+        match.withName((name, scopes) => name === `${scopes?.customId}.end`),
         match.withName('customFieldId'),
         match.withMatchingScopes(['customId']),
         // @ts-expect-error invalid scope

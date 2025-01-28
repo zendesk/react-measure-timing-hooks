@@ -56,8 +56,8 @@ export interface TraceRecordingBase<TracerScopeT> {
   duration: number | null
 
   additionalDurations: {
-    startTillRequirementsMet: number | null
     startTillInteractive: number | null
+    startTillRequirementsMet: number | null
     completeTillInteractive: number | null
   }
 

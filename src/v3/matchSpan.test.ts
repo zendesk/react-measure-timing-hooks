@@ -63,7 +63,7 @@ const mockAnnotation: SpanAnnotation = {
   occurrence: 1,
   operationRelativeEndTime: 0,
   operationRelativeStartTime: 0,
-  recordedInState: 'recording',
+  recordedInState: 'active',
   labels: [],
 }
 

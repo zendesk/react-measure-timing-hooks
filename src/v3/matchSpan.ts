@@ -1,6 +1,6 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes, SpanStatus, SpanType } from './spanTypes'
-import type { SelectScopeByKey, TraceContext } from './types'
+import type { SelectScopeByKey, DraftTraceContext } from './types'
 import type { KeysOfUnion } from './typeUtils'
 
 export interface SpanMatcherTags {
@@ -17,7 +17,7 @@ export interface SpanMatcherFn<
 > extends SpanMatcherTags {
   (
     spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
-    context: TraceContext<
+    context: DraftTraceContext<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
@@ -28,7 +28,7 @@ export interface SpanMatcherFn<
 export type NameMatcher<TracerScopeT> =
   | string
   | RegExp
-  | ((name: string, scope: TracerScopeT) => boolean)
+  | ((name: string, scope: TracerScopeT | undefined) => boolean)
 
 export interface SpanMatchDefinition<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
@@ -69,6 +69,8 @@ export function withName<
     return value(span.name, scope)
   }
 }
+// DRAFT TODO: make test case if one doesnt exist yet
+// withName((name, scope) => !scope ? false : name === `OmniLog/${scope.ticketId}`)
 
 export function withLabel<
   const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
@@ -152,7 +154,10 @@ export function withMatchingScopes<
   OriginatedFromT
 > {
   return ({ span }, { input: { scope }, definition: { scopes } }) => {
-    if (!span.scope) return false
+    // DRAFT TODO: add test case when scope is missing
+    // if the scope isn't set on the trace yet, we can't match against it, so we return early
+    // similarly, if the span doesn't have any scope set
+    if (!span.scope || !scope) return false
     const spanScope = span.scope as AllPossibleScopesT & object
     const resolvedKeys = typeof keys === 'boolean' && keys ? scopes : keys
     if (!resolvedKeys) return false

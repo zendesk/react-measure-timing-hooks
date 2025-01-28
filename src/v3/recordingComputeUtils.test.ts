@@ -28,7 +28,7 @@ describe('recordingComputeUtils', () => {
     operationRelativeEndTime:
       span.startTime.now + span.duration - traceStartTime.now,
     occurrence: 1,
-    recordedInState: 'recording',
+    recordedInState: 'active',
     labels: [],
     ...partial,
   })
@@ -103,7 +103,7 @@ describe('recordingComputeUtils', () => {
             originatedFrom: 'origin',
           },
         },
-        { transitionFromState: 'recording' },
+        { transitionFromState: 'active' },
       )
 
       expect(recording.status).toBe('error')
@@ -135,7 +135,7 @@ describe('recordingComputeUtils', () => {
             originatedFrom: 'origin',
           },
         },
-        { transitionFromState: 'recording' },
+        { transitionFromState: 'active' },
       )
 
       expect(recording.status).toBe('ok')
@@ -169,7 +169,7 @@ describe('recordingComputeUtils', () => {
             originatedFrom: 'origin',
           },
         },
-        { transitionFromState: 'recording' },
+        { transitionFromState: 'active' },
       )
 
       expect(recording.status).toBe('error')
@@ -194,7 +194,7 @@ describe('recordingComputeUtils', () => {
           },
         },
         {
-          transitionFromState: 'recording',
+          transitionFromState: 'active',
           interruptionReason: 'timeout',
         },
       )
@@ -390,7 +390,7 @@ describe('recordingComputeUtils', () => {
             originatedFrom: 'origin',
           },
         },
-        { transitionFromState: 'recording' },
+        { transitionFromState: 'active' },
       )
 
       expect(recording.computedRenderBeaconSpans['test-component']).toEqual({

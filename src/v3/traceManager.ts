@@ -13,12 +13,12 @@ import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
   ComputedValueDefinition,
+  DraftTraceContext,
   ReportFn,
   ScopeValue,
   SelectScopeByKey,
   SingleTraceReportFn,
   SpanDeduplicationStrategy,
-  TraceContext,
   TraceDefinition,
   TraceManagerConfig,
   TraceModifications,
@@ -165,10 +165,9 @@ export class TraceManager<
         } as ComputedValueDefinition<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>)
       },
       start: (input) => this.startTrace(completeTraceDefinition, input),
-      provisionalStart: (input) =>
-        this.provisionalStartTrace(completeTraceDefinition, input),
-      initializeProvisional: (inputAndDefinitionModifications) =>
-        void this.initializeActiveTrace(inputAndDefinitionModifications),
+      createDraft: (input) => this.createDraft(completeTraceDefinition, input),
+      transitionDraftToActive: (inputAndDefinitionModifications) =>
+        void this.transitionDraftToActive(inputAndDefinitionModifications),
     }
   }
 
@@ -192,17 +191,18 @@ export class TraceManager<
       OriginatedFromT
     >,
   ): string | undefined {
-    const traceId = this.provisionalStartTrace(definition, input)
+    const traceId = this.createDraft(definition, input)
     if (!traceId) return undefined
-    this.initializeActiveTrace({ scope: input.scope })
+
+    this.transitionDraftToActive({ scope: input.scope })
     return traceId
   }
 
-  // can have config changed until we move into recording
+  // can have config changed until we move into active
   // from input: scope (required), attributes (optional, merge into)
   // from definition, can add items to: requiredSpans (additionalRequiredSpans), debounceOn (additionalDebounceOnSpans)
   // documentation: interruption still works and all the other events are buffered
-  private initializeActiveTrace<
+  private transitionDraftToActive<
     TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
     OriginatedFromT extends string,
   >(
@@ -222,7 +222,7 @@ export class TraceManager<
     }
 
     // this is an already initialized active trace, do nothing:
-    if (!this.activeTrace.isProvisional) {
+    if (!this.activeTrace.isDraft) {
       this.reportErrorFn(
         new Error(
           `You are trying to initialize a trace that has already been initialized before (${this.activeTrace.definition.name}).`,
@@ -231,46 +231,31 @@ export class TraceManager<
       return
     }
 
-    const { scope, attributes } = this.activeTrace.input
-
-    this.activeTrace.input.scope = scope
-    this.activeTrace.input.attributes = {
-      ...this.activeTrace.input.attributes,
-      ...attributes,
-    }
-
-    const additionalRequiredSpans = convertMatchersToFns<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >(inputAndDefinitionModifications.additionalRequiredSpans)
-
-    const additionalDebounceOnSpans = convertMatchersToFns<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >(inputAndDefinitionModifications.additionalDebounceOnSpans)
-
     const { activeTrace } = this
 
-    if (additionalRequiredSpans?.length) {
-      activeTrace.definition.requiredSpans = [
-        ...activeTrace.sourceDefinition.requiredSpans,
-        ...additionalRequiredSpans,
-      ] as (typeof activeTrace)['definition']['requiredSpans']
+    const onEnd = (
+      traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
+    ) => {
+      if (traceRecording.id === activeTrace?.input.id) {
+        this.activeTrace = undefined
+      }
+      // needs this cast because TS is confused about the type of this.reportFn due to generic usage
+      ;(
+        this.reportFn as SingleTraceReportFn<
+          TracerScopeKeysT,
+          AllPossibleScopesT,
+          OriginatedFromT
+        >
+      )(traceRecording, activeTrace)
     }
-    if (additionalDebounceOnSpans?.length) {
-      activeTrace.definition.debounceOn = [
-        ...(activeTrace.sourceDefinition.debounceOn ?? []),
-        ...additionalDebounceOnSpans,
-      ] as (typeof activeTrace)['definition']['debounceOn']
-    }
+
+    activeTrace.transitionDraftToActive(inputAndDefinitionModifications, onEnd)
 
     // else, we want to initialize the trace with the scope and other modifications:
     // TODO ...
   }
 
-  private provisionalStartTrace<
+  private createDraft<
     const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
     const OriginatedFromT extends string,
   >(
@@ -302,7 +287,7 @@ export class TraceManager<
       return undefined
     }
 
-    const activeTraceContext: TraceContext<
+    const draftTraceContext: DraftTraceContext<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
@@ -317,29 +302,13 @@ export class TraceManager<
       },
     }
 
-    const onEnd = (
-      traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-    ) => {
-      if (id === this.activeTrace?.input.id) {
-        this.activeTrace = undefined
-      }
-      // needs this cast because TS is confused about the type of this.reportFn due to generic usage
-      ;(
-        this.reportFn as SingleTraceReportFn<
-          TracerScopeKeysT,
-          AllPossibleScopesT,
-          OriginatedFromT
-        >
-      )(traceRecording, activeTraceContext)
-    }
-
     const activeTrace = new ActiveTrace<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
     >(
       definition,
-      { ...activeTraceContext.input, onEnd },
+      draftTraceContext.input,
       this.performanceEntryDeduplicationStrategy,
     )
 

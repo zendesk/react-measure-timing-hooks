@@ -7,10 +7,7 @@ import {
   it,
   vitest as jest,
 } from 'vitest'
-import {
-  DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
-  DEFAULT_TIMEOUT_DURATION,
-} from './constants'
+import { DEFAULT_INTERACTIVE_TIMEOUT_DURATION } from './constants'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
 import { type TicketIdScope } from './testUtility/fixtures/ticket.activation'
@@ -41,6 +38,8 @@ interface TicketScope {
 describe('TraceManager with Capture Interactivity', () => {
   let reportFn: jest.Mock
   let generateId: jest.Mock
+  let reportErrorFn: jest.Mock
+  const DEFAULT_COLDBOOT_TIMEOUT_DURATION = 45_000
 
   jest.useFakeTimers({
     now: 0,
@@ -49,6 +48,7 @@ describe('TraceManager with Capture Interactivity', () => {
   beforeEach(() => {
     reportFn = jest.fn<ReportFn<TicketScope, TicketScope>>()
     generateId = jest.fn().mockReturnValue('trace-id')
+    reportErrorFn = jest.fn()
   })
 
   afterEach(() => {
@@ -60,6 +60,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -69,7 +70,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -109,6 +110,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const interactiveTimeout = 5_000
     const tracer = traceManager.createTracer({
@@ -122,7 +124,7 @@ describe('TraceManager with Capture Interactivity', () => {
       },
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -163,6 +165,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.interrupt-during-long-task-operation',
@@ -173,7 +176,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -215,6 +218,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.debounce-then-interrupted-operation',
@@ -226,7 +230,7 @@ describe('TraceManager with Capture Interactivity', () => {
       debounceDuration: 300,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -240,7 +244,7 @@ describe('TraceManager with Capture Interactivity', () => {
     // prettier-ignore
     const { spans } = getSpansFromTimeline<TicketIdScope>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${Render('debounce', 0)}------${Check}
-      Time:   ${0}                      ${50}                   ${100}                        ${DEFAULT_TIMEOUT_DURATION + 100}
+      Time:   ${0}                      ${50}                   ${100}                        ${DEFAULT_COLDBOOT_TIMEOUT_DURATION + 100}
       `
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
@@ -267,6 +271,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT = 300
     const tracer = traceManager.createTracer({
@@ -282,7 +287,7 @@ describe('TraceManager with Capture Interactivity', () => {
       debounceDuration: 100,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -296,7 +301,7 @@ describe('TraceManager with Capture Interactivity', () => {
     // prettier-ignore
     const { spans } = getSpansFromTimeline<TicketIdScope>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}---------------------${Render('debounce', 100)}------------------${Check}
-      Time:   ${0}                      ${DEFAULT_TIMEOUT_DURATION - 500}       ${DEFAULT_TIMEOUT_DURATION - 499}           ${DEFAULT_TIMEOUT_DURATION + 1}
+      Time:   ${0}                      ${DEFAULT_COLDBOOT_TIMEOUT_DURATION - 500}       ${DEFAULT_COLDBOOT_TIMEOUT_DURATION - 499}           ${DEFAULT_COLDBOOT_TIMEOUT_DURATION + 1}
       `
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
@@ -323,6 +328,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const CUSTOM_QUIET_WINDOW_DURATION = 2_000
     const TRACE_DURATION = 1_000
@@ -341,7 +347,7 @@ describe('TraceManager with Capture Interactivity', () => {
       },
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -385,6 +391,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const TRACE_DURATION = 1_000
 
@@ -400,7 +407,7 @@ describe('TraceManager with Capture Interactivity', () => {
       },
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -442,6 +449,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -451,7 +459,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -494,6 +502,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -503,7 +512,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -546,6 +555,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -555,7 +565,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -600,6 +610,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -609,7 +620,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -655,6 +666,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -664,7 +676,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -707,6 +719,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -716,7 +729,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -764,6 +777,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -773,7 +787,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -817,6 +831,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -826,7 +841,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -873,6 +888,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const traceManager = new TraceManager<TicketIdScope>({
       reportFn,
       generateId,
+      reportErrorFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
@@ -882,7 +898,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variantsByOriginatedFrom: {
         cold_boot: {
-          timeoutDuration: DEFAULT_TIMEOUT_DURATION,
+          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
