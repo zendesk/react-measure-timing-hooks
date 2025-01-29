@@ -43,7 +43,7 @@ export interface TraceRecordingBase<TracerScopeT> {
   name: string
 
   startTime: Timestamp
-  scope: TracerScopeT
+  scope: TracerScopeT | undefined
 
   type: TraceType
 

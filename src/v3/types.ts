@@ -1,14 +1,12 @@
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
-import type { SpanMatch, SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
+import type { SpanMatch, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type {
   ActiveTraceInput,
   DraftTraceInput,
   Attributes,
-  BaseStartTraceConfig,
   Span,
   SpanStatus,
-  StartTraceConfig,
 } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
@@ -114,56 +112,6 @@ export interface TraceModifications<
     AllPossibleScopesT,
     OriginatedFromT
   >[]
-}
-
-export interface Tracer<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  OriginatedFromT extends string,
-> {
-  /**
-   * @returns The ID of the trace.
-   */
-  start: (
-    input: StartTraceConfig<
-      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-      OriginatedFromT
-    >,
-  ) => string | undefined
-
-  createDraft: (
-    input: BaseStartTraceConfig<OriginatedFromT>,
-  ) => string | undefined
-
-  transitionDraftToActive: (
-    mods: TraceModifications<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >,
-  ) => void
-
-  defineComputedSpan: (
-    computedSpanDefinition: ComputedSpanDefinitionInput<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >,
-  ) => void
-
-  defineComputedValue: <
-    MatchersT extends (
-      | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
-      | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
-    )[],
-  >(
-    computedValueDefinition: ComputedValueDefinitionInput<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      MatchersT,
-      OriginatedFromT
-    >,
-  ) => void
 }
 
 export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
@@ -273,12 +221,12 @@ export interface CompleteTraceDefinition<
     AllPossibleScopesT,
     OriginatedFromT
   > {
-  computedSpanDefinitions: readonly ComputedSpanDefinition<
+  computedSpanDefinitions: ComputedSpanDefinition<
     NoInfer<TracerScopeKeysT>,
     AllPossibleScopesT,
     OriginatedFromT
   >[]
-  computedValueDefinitions: readonly ComputedValueDefinition<
+  computedValueDefinitions: ComputedValueDefinition<
     NoInfer<TracerScopeKeysT>,
     AllPossibleScopesT,
     OriginatedFromT,
@@ -496,8 +444,13 @@ export interface TraceContext<
     AllPossibleScopesT,
     OriginatedFromT
   >
-  readonly input: ActiveTraceInput<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-    OriginatedFromT
-  >
+  readonly input:
+    | ActiveTraceInput<
+        SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+        OriginatedFromT
+      >
+    | DraftTraceInput<
+        SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+        OriginatedFromT
+      >
 }

@@ -25,8 +25,6 @@ export interface SpanSummaryAttributes {
 
 export interface RumTraceRecording<TracerScopeT>
   extends TraceRecordingBase<TracerScopeT> {
-  scope: TracerScopeT
-
   // spans that don't exist as separate spans in the DB
   // useful for things like renders, which can repeat tens of times
   // during the same operation

@@ -1,7 +1,7 @@
 /* eslint-disable no-continue */
 import type { FinalState } from './ActiveTrace'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { ActiveTraceInput } from './spanTypes'
+import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   PossibleScopeObject,
@@ -303,6 +303,27 @@ function getComputedRenderBeaconSpans<
   return computedRenderBeaconSpans
 }
 
+function isActiveTraceInput<
+  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
+  AllPossibleScopesT,
+  const OriginatedFromT extends string,
+>(
+  input:
+    | DraftTraceInput<
+        SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+        OriginatedFromT
+      >
+    | ActiveTraceInput<
+        SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+        OriginatedFromT
+      >,
+): input is ActiveTraceInput<
+  SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
+  OriginatedFromT
+> {
+  return Boolean(input.scope)
+}
+
 export function createTraceRecording<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
@@ -329,9 +350,10 @@ export function createTraceRecording<
     interruptionReason && transitionFromState !== 'waiting-for-interactive'
   const computedSpans = !wasInterrupted ? getComputedSpans(data) : {}
   const computedValues = !wasInterrupted ? getComputedValues(data) : {}
-  const computedRenderBeaconSpans = !wasInterrupted
-    ? getComputedRenderBeaconSpans(recordedItems, input)
-    : {}
+  const computedRenderBeaconSpans =
+    !wasInterrupted && isActiveTraceInput(input)
+      ? getComputedRenderBeaconSpans(recordedItems, input)
+      : {}
 
   const anyNonSuppressedErrors = recordedItems.some(
     (spanAndAnnotation) =>

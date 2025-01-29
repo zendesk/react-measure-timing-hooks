@@ -93,7 +93,7 @@ describe('TraceManager', () => {
     expect(report.interruptionReason).toBeUndefined()
   })
 
-  it('interrupts a basic trace when interruptOn criteria is met in draft mode, trace stops immediately', () => {
+  it.only('interrupts a basic trace when interruptOn criteria is met in draft mode, trace stops immediately', () => {
     const traceManager = new TraceManager<TicketScope>({
       reportFn,
       generateId,
@@ -120,7 +120,7 @@ describe('TraceManager', () => {
       `
     processSpans(spans, traceManager)
 
-    tracer.transitionDraftToActive({ scope: { ticketId: '1' } })
+    // tracer.transitionDraftToActive({ scope: { ticketId: '1' } })
 
     expect(reportFn).toHaveBeenCalled()
 

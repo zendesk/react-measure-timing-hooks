@@ -64,6 +64,8 @@ describe('type tests', () => {
   const traceManager = new TraceManager<ExampleAllPossibleScopes>({
     generateId: () => 'id',
     reportFn: (trace) => {
+      if (!trace.scope) return
+
       if ('ticketId' in trace.scope) {
         // valid
         expect(trace.scope.ticketId).toBeDefined()

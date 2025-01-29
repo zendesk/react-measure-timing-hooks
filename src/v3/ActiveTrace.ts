@@ -108,7 +108,10 @@ interface StateHandlersBase<AllPossibleScopesT> {
   [handler: string]: (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     payload: any,
-  ) => void | undefined | Transition<AllPossibleScopesT>
+  ) =>
+    | void
+    | undefined
+    | (Transition<AllPossibleScopesT> & { transitionFromState?: never })
 }
 
 type StatesBase<AllPossibleScopesT> = Record<
@@ -244,7 +247,7 @@ export class TraceStateMachine<
   #provisionalBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
 
   // eslint-disable-next-line consistent-return
-  #processProvisionalBuffer(): OnEnterStatePayload<AllPossibleScopesT> | void {
+  #processProvisionalBuffer(): Transition<AllPossibleScopesT> | void {
     // process items in the buffer (stick the scope in the entries) (if its empty, well we can skip this!)
     let span: SpanAndAnnotation<AllPossibleScopesT> | undefined
     // eslint-disable-next-line no-cond-assign
@@ -264,9 +267,9 @@ export class TraceStateMachine<
             ]!.timeoutDuration,
         )
       },
+
       onActive: () => ({
         transitionToState: 'active',
-        transitionFromState: INITIAL_STATE,
       }),
 
       onProcessSpan: (
@@ -863,12 +866,13 @@ export class TraceStateMachine<
       >
     >
     const transitionPayload = currentStateHandlers[event]?.(payload)
+    console.log('transitionPayload', transitionPayload)
     if (transitionPayload) {
       const transitionFromState = this.currentState as NonTerminalTraceStates
       this.currentState = transitionPayload.transitionToState
       const onEnterStateEvent: OnEnterStatePayload<AllPossibleScopesT> = {
-        transitionFromState,
         ...transitionPayload,
+        transitionFromState,
       }
       return this.emit('onEnterState', onEnterStateEvent) ?? onEnterStateEvent
     }
@@ -1022,18 +1026,21 @@ export class ActiveTrace<
     this.stateMachine.emit('onInterrupt', reason)
   }
 
-  transitionDraftToActive(
+  transitionDraftToActive({
+    inputAndDefinitionModifications,
+    onEnd,
+  }: {
     inputAndDefinitionModifications: TraceModifications<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
-    >,
+    >
     onEnd: SingleTraceReportFn<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
-    >,
-  ) {
+    >
+  }) {
     const { attributes } = this.draftInput
 
     this.input = {
@@ -1198,10 +1205,11 @@ export class ActiveTrace<
                     endOfOperationSpan.span.duration,
               )
             : [...this.recordedItems],
-          input: this.input,
+          input: this.draftInput,
         },
         transition,
       )
+      // TODO: move the onEnd being ActiveTrace
       this.input.onEnd(traceRecording, this)
 
       // memory clean-up in case something retains the ActiveTrace instance
@@ -1212,3 +1220,15 @@ export class ActiveTrace<
     }
   }
 }
+
+export type AllPossibleActiveTraces<
+  ForEachPossibleScopeT,
+  AllPossibleScopesT = ForEachPossibleScopeT,
+> = ForEachPossibleScopeT extends ForEachPossibleScopeT
+  ? ActiveTrace<
+      KeysOfUnion<ForEachPossibleScopeT> & KeysOfUnion<AllPossibleScopesT>,
+      AllPossibleScopesT,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    >
+  : never
