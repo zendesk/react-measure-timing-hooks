@@ -3,17 +3,14 @@ import { ensureMatcherFn } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import type { SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
-import { TraceManager } from './traceManager'
-import type { TraceRecording } from './traceRecordingTypes'
 import {
+  type TraceManagerUtilities,
   CompleteTraceDefinition,
   ComputedSpanDefinitionInput,
   ComputedValueDefinition,
   ComputedValueDefinitionInput,
-  DraftTraceContext,
   ScopeValue,
   SelectScopeByKey,
-  SingleTraceReportFn,
   TraceModifications,
 } from './types'
 import type { KeysOfUnion } from './typeUtils'
@@ -31,16 +28,7 @@ export class Tracer<
     AllPossibleScopesT,
     OriginatedFromT
   >
-  traceManager: TraceManager<AllPossibleScopesT>
-  activeTrace?: AllPossibleActiveTraces<AllPossibleScopesT>
-
-  replaceActiveTrace: (
-    newTrace: AllPossibleActiveTraces<AllPossibleScopesT>,
-  ) => void
-
-  cleanupActiveTrace: (
-    traceToCleanUp: AllPossibleActiveTraces<AllPossibleScopesT>,
-  ) => void
+  traceUtilities: TraceManagerUtilities<AllPossibleScopesT>
 
   constructor(
     definition: CompleteTraceDefinition<
@@ -48,21 +36,10 @@ export class Tracer<
       AllPossibleScopesT,
       OriginatedFromT
     >,
-    traceManager: TraceManager<AllPossibleScopesT>,
-    replaceActiveTrace: (
-      newTrace: AllPossibleActiveTraces<AllPossibleScopesT>,
-    ) => void,
-    cleanupActiveTrace: (
-      traceToCleanUp: AllPossibleActiveTraces<AllPossibleScopesT>,
-    ) => void,
+    traceUtilities: TraceManagerUtilities<AllPossibleScopesT>,
   ) {
     this.definition = definition
-    this.traceManager = traceManager
-    this.replaceActiveTrace = (newTrace) => {
-      replaceActiveTrace(newTrace)
-      this.activeTrace = newTrace
-    }
-    this.cleanupActiveTrace = cleanupActiveTrace
+    this.traceUtilities = traceUtilities
   }
 
   /**
@@ -84,11 +61,11 @@ export class Tracer<
   createDraft(
     input: BaseStartTraceConfig<OriginatedFromT>,
   ): string | undefined {
-    const id = input.id ?? this.traceManager.generateId()
+    const id = input.id ?? this.traceUtilities.generateId()
 
     // Verify that the originatedFrom value is valid and has a corresponding timeout
     if (!(input.originatedFrom in this.definition.variantsByOriginatedFrom)) {
-      this.traceManager.reportErrorFn(
+      this.traceUtilities.reportErrorFn(
         new Error(
           `Invalid originatedFrom value: ${
             input.originatedFrom
@@ -100,32 +77,23 @@ export class Tracer<
       return undefined
     }
 
-    const draftTraceContext: DraftTraceContext<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    > = {
-      definition: this.definition,
-      input: {
-        ...input,
-        // scope will be overwritten later during initialization of the trace
-        scope: undefined,
-        startTime: ensureTimestamp(input.startTime),
-        id,
-      },
-    }
-
     const activeTrace = new ActiveTrace<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
     >(
       this.definition,
-      draftTraceContext.input,
-      this.traceManager.performanceEntryDeduplicationStrategy,
+      {
+        ...input,
+        // scope will be overwritten later during initialization of the trace
+        scope: undefined,
+        startTime: ensureTimestamp(input.startTime),
+        id,
+      },
+      this.traceUtilities,
     )
 
-    this.replaceActiveTrace(
+    this.traceUtilities.replaceActiveTrace(
       activeTrace as unknown as AllPossibleActiveTraces<AllPossibleScopesT>,
     )
 
@@ -143,9 +111,9 @@ export class Tracer<
       OriginatedFromT
     >,
   ): void {
-    const { activeTrace } = this
+    const activeTrace = this.traceUtilities.getActiveTrace()
     if (!activeTrace) {
-      this.traceManager.reportErrorFn(
+      this.traceUtilities.reportErrorFn(
         new Error(
           `No currently active trace when initializing a trace. Call tracer.startTrace(...) or tracer.provisionalStartTrace(...) beforehand.`,
         ),
@@ -155,7 +123,7 @@ export class Tracer<
 
     // this is an already initialized active trace, do nothing:
     if (!activeTrace.isDraft) {
-      this.traceManager.reportErrorFn(
+      this.traceUtilities.reportErrorFn(
         new Error(
           `You are trying to initialize a trace that has already been initialized before (${activeTrace.definition.name}).`,
         ),
@@ -169,23 +137,7 @@ export class Tracer<
       OriginatedFromT
     >
 
-    const onEnd = (
-      traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-    ) => {
-      this.cleanupActiveTrace(activeTrace)
-      ;(
-        this.traceManager.reportFn as SingleTraceReportFn<
-          TracerScopeKeysT,
-          AllPossibleScopesT,
-          OriginatedFromT
-        >
-      )(traceRecording, typedActiveTrace)
-    }
-
-    typedActiveTrace.transitionDraftToActive({
-      inputAndDefinitionModifications,
-      onEnd,
-    })
+    typedActiveTrace.transitionDraftToActive(inputAndDefinitionModifications)
   }
 
   defineComputedSpan(

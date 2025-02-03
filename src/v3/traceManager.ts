@@ -11,11 +11,11 @@ import type {
   CompleteTraceDefinition,
   ComputedSpanDefinition,
   ComputedValueDefinition,
-  ReportFn,
   ScopeValue,
   SpanDeduplicationStrategy,
   TraceDefinition,
   TraceManagerConfig,
+  TraceManagerUtilities,
 } from './types'
 import type { KeysOfUnion } from './typeUtils'
 
@@ -25,10 +25,6 @@ import type { KeysOfUnion } from './typeUtils'
 export class TraceManager<
   AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
 > {
-  readonly reportFn: ReportFn<AllPossibleScopesT, AllPossibleScopesT, string>
-  readonly generateId: () => string
-  readonly reportErrorFn: (error: Error) => void
-
   readonly performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
   private activeTrace: AllPossibleActiveTraces<AllPossibleScopesT> | undefined =
     undefined
@@ -37,22 +33,35 @@ export class TraceManager<
     if (!this.activeTrace) return undefined
     return {
       definition: this.activeTrace.definition,
-      input: this.activeTrace.draftInput,
+      input: this.activeTrace.input,
     }
   }
 
-  constructor({
-    reportFn,
-    reportErrorFn,
-    generateId,
-    performanceEntryDeduplicationStrategy,
-  }: TraceManagerConfig<AllPossibleScopesT, string>) {
-    this.reportFn = reportFn
-    this.generateId = generateId
-    this.performanceEntryDeduplicationStrategy =
-      performanceEntryDeduplicationStrategy
-    this.reportErrorFn = reportErrorFn
+  constructor(configInput: TraceManagerConfig<AllPossibleScopesT>) {
+    this.utilities = {
+      ...configInput,
+      replaceActiveTrace: (
+        newTrace: AllPossibleActiveTraces<AllPossibleScopesT>,
+      ) => {
+        if (this.activeTrace) {
+          this.activeTrace.interrupt('another-trace-started')
+          this.activeTrace = undefined
+        }
+        this.activeTrace = newTrace
+      },
+      cleanupActiveTrace: (
+        traceToCleanUp: AllPossibleActiveTraces<AllPossibleScopesT>,
+      ) => {
+        if (traceToCleanUp === this.activeTrace) {
+          this.activeTrace = undefined
+        }
+        // warn on miss?
+      },
+      getActiveTrace: () => this.activeTrace,
+    }
   }
+
+  private utilities: TraceManagerUtilities<AllPossibleScopesT>
 
   createTracer<
     const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
@@ -124,31 +133,7 @@ export class TraceManager<
       labelMatching,
     }
 
-    return new Tracer(
-      completeTraceDefinition,
-      this,
-      this.replaceActiveTrace,
-      this.cleanupActiveTrace,
-    )
-  }
-
-  private replaceActiveTrace = (
-    newTrace: AllPossibleActiveTraces<AllPossibleScopesT>,
-  ) => {
-    if (this.activeTrace) {
-      this.activeTrace.interrupt('another-trace-started')
-      this.activeTrace = undefined
-    }
-    this.activeTrace = newTrace
-  }
-
-  private cleanupActiveTrace = (
-    traceToCleanUp: AllPossibleActiveTraces<AllPossibleScopesT>,
-  ) => {
-    if (traceToCleanUp === this.activeTrace) {
-      this.activeTrace = undefined
-    }
-    // warn on miss?
+    return new Tracer(completeTraceDefinition, this.utilities)
   }
 
   processSpan(

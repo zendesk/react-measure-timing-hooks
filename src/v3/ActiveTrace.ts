@@ -20,12 +20,13 @@ import type {
   SpanAnnotationRecord,
 } from './spanAnnotationTypes'
 import type { ActiveTraceConfig, DraftTraceInput, Span } from './spanTypes'
+import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
   SelectScopeByKey,
   SingleTraceReportFn,
-  SpanDeduplicationStrategy,
   TraceInterruptionReason,
+  TraceManagerUtilities,
   TraceModifications,
 } from './types'
 import { DraftTraceContext } from './types'
@@ -119,15 +120,20 @@ type StatesBase<AllPossibleScopesT> = Record<
   StateHandlersBase<AllPossibleScopesT>
 >
 
-type TraceStateMachineSideEffectHandlers<
+interface TraceStateMachineSideEffectHandlers<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
-> = TraceStateMachine<
-  TracerScopeKeysT,
-  AllPossibleScopesT,
-  OriginatedFromT
->['sideEffectFns']
+> {
+  readonly storeFinalizeState: FinalizeFn<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  >
+  readonly addSpanToRecording: (
+    spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+  ) => void
+  readonly prepareAndEmitRecording: (
+    options: PrepareAndEmitRecordingOptions<AllPossibleScopesT>,
+  ) => void
+}
 
 type EntryType<AllPossibleScopesT> = PerformanceEntryLike & {
   entry: SpanAndAnnotation<AllPossibleScopesT>
@@ -142,7 +148,10 @@ interface StateMachineContext<
     AllPossibleScopesT,
     OriginatedFromT
   > {
-  readonly requiredSpansIndexChecklist: Set<number>
+  sideEffectFns: TraceStateMachineSideEffectHandlers<
+    TracerScopeKeysT,
+    AllPossibleScopesT
+  >
 }
 
 type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
@@ -152,21 +161,29 @@ export class TraceStateMachine<
   AllPossibleScopesT,
   const OriginatedFromT extends string,
 > {
+  constructor(
+    context: StateMachineContext<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      OriginatedFromT
+    >,
+  ) {
+    this.context = context
+    this.requiredSpansIndexChecklist = new Set(
+      context.definition.requiredSpans.map((_, i) => i),
+    )
+    this.emit('onEnterState', undefined)
+  }
+
+  readonly requiredSpansIndexChecklist: Set<number>
+
   readonly context: StateMachineContext<
     TracerScopeKeysT,
     AllPossibleScopesT,
     OriginatedFromT
   >
-  readonly sideEffectFns: {
-    readonly storeFinalizeState: FinalizeFn<
-      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
-    >
-    readonly addSpanToRecording: (
-      spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
-    ) => void
-    readonly prepareAndEmitRecording: (
-      options: PrepareAndEmitRecordingOptions<AllPossibleScopesT>,
-    ) => void
+  get sideEffectFns() {
+    return this.context.sideEffectFns
   }
   currentState: TraceStates = INITIAL_STATE
   /** the span that ended at the furthest point in time */
@@ -365,7 +382,7 @@ export class TraceStateMachine<
         }
 
         for (let i = 0; i < this.context.definition.requiredSpans.length; i++) {
-          if (!this.context.requiredSpansIndexChecklist.has(i)) {
+          if (!this.requiredSpansIndexChecklist.has(i)) {
             // we previously checked off this index
             // eslint-disable-next-line no-continue
             continue
@@ -374,7 +391,7 @@ export class TraceStateMachine<
           const doesSpanMatch = this.context.definition.requiredSpans[i]!
           if (doesSpanMatch(spanAndAnnotation, this.context)) {
             // remove the index of this definition from the list of requiredSpans
-            this.context.requiredSpansIndexChecklist.delete(i)
+            this.requiredSpansIndexChecklist.delete(i)
 
             // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
             if (
@@ -389,7 +406,7 @@ export class TraceStateMachine<
 
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
-        if (this.context.requiredSpansIndexChecklist.size === 0) {
+        if (this.requiredSpansIndexChecklist.size === 0) {
           return { transitionToState: 'debouncing' }
         }
         return undefined
@@ -810,37 +827,6 @@ export class TraceStateMachine<
     },
   } satisfies StatesBase<AllPossibleScopesT>
 
-  constructor({
-    definition,
-    input,
-    sideEffectFns,
-  }: {
-    definition: CompleteTraceDefinition<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >
-    input: DraftTraceInput<
-      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-      OriginatedFromT
-    >
-    sideEffectFns: TraceStateMachineSideEffectHandlers<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >
-  }) {
-    this.context = {
-      definition,
-      input,
-      requiredSpansIndexChecklist: new Set(
-        definition.requiredSpans.map((_, i) => i),
-      ),
-    }
-    this.sideEffectFns = sideEffectFns
-    this.emit('onEnterState', undefined)
-  }
-
   /**
    * @returns the last OnEnterState event if a transition was made
    */
@@ -866,7 +852,6 @@ export class TraceStateMachine<
       >
     >
     const transitionPayload = currentStateHandlers[event]?.(payload)
-    console.log('transitionPayload', transitionPayload)
     if (transitionPayload) {
       const transitionFromState = this.currentState as NonTerminalTraceStates
       this.currentState = transitionPayload.transitionToState
@@ -903,35 +888,35 @@ export class ActiveTrace<
     AllPossibleScopesT,
     OriginatedFromT
   >
-  get input(): ActiveTraceConfig<
+  get activeInput(): ActiveTraceConfig<
     TracerScopeKeysT,
     AllPossibleScopesT,
     OriginatedFromT
   > {
-    if (!this.draftInput.scope) {
+    if (!this.input.scope) {
       throw new Error('tried to access input without scope')
     }
-    return this.draftInput as ActiveTraceConfig<
+    return this.input as ActiveTraceConfig<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
     >
   }
-  set input(
+  set activeInput(
     value: ActiveTraceConfig<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
     >,
   ) {
-    this.draftInput = value
+    this.input = value
   }
 
-  draftInput: DraftTraceInput<
+  input: DraftTraceInput<
     SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
     OriginatedFromT
   >
-  private readonly deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
+  private readonly traceUtilities: TraceManagerUtilities<AllPossibleScopesT>
 
   get isDraft() {
     return this.stateMachine.currentState === INITIAL_STATE
@@ -963,8 +948,9 @@ export class ActiveTrace<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
       OriginatedFromT
     >,
-    deduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>,
+    traceUtilities: TraceManagerUtilities<AllPossibleScopesT>,
   ) {
+    this.sourceDefinition = definition
     this.definition = {
       name: definition.name,
       type: definition.type,
@@ -994,31 +980,79 @@ export class ActiveTrace<
           ? [...definition.suppressErrorStatusPropagationOn]
           : undefined,
     }
-    this.sourceDefinition = definition
-    this.draftInput = {
+    this.input = {
       ...input,
       startTime: ensureTimestamp(input.startTime),
     }
-    this.deduplicationStrategy = deduplicationStrategy
-    this.stateMachine = new TraceStateMachine({
-      definition,
-      input,
-      sideEffectFns: {
-        storeFinalizeState: this.storeFinalizeState,
-        addSpanToRecording: (spanAndAnnotation) => {
-          if (!this.recordedItems.has(spanAndAnnotation)) {
-            this.recordedItems.add(spanAndAnnotation)
-          }
-        },
-        prepareAndEmitRecording: this.prepareAndEmitRecording.bind(this),
-      },
-    })
+    this.traceUtilities = traceUtilities
+    this.stateMachine = new TraceStateMachine(this)
   }
 
-  storeFinalizeState: FinalizeFn<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
-  > = (config) => {
-    this.finalState = config
+  sideEffectFns: TraceStateMachineSideEffectHandlers<
+    TracerScopeKeysT,
+    AllPossibleScopesT
+  > = {
+    storeFinalizeState: (config) => {
+      this.finalState = config
+    },
+    addSpanToRecording: (spanAndAnnotation) => {
+      if (!this.recordedItems.has(spanAndAnnotation)) {
+        this.recordedItems.add(spanAndAnnotation)
+      }
+    },
+    prepareAndEmitRecording: ({
+      transition,
+      lastRelevantSpanAndAnnotation,
+    }) => {
+      if (
+        transition.transitionToState === 'interrupted' ||
+        transition.transitionToState === 'complete'
+      ) {
+        const endOfOperationSpan =
+          (transition.transitionToState === 'complete' &&
+            (transition.cpuIdleSpanAndAnnotation ??
+              transition.completeSpanAndAnnotation)) ||
+          lastRelevantSpanAndAnnotation
+
+        const traceRecording = createTraceRecording(
+          {
+            definition: this.definition,
+            // only keep items captured until the endOfOperationSpan
+            recordedItems: endOfOperationSpan
+              ? [...this.recordedItems].filter(
+                  (item) =>
+                    item.span.startTime.now + item.span.duration <=
+                    endOfOperationSpan.span.startTime.now +
+                      endOfOperationSpan.span.duration,
+                )
+              : [...this.recordedItems],
+            input: this.input,
+          },
+          transition,
+        )
+        this.onEnd(traceRecording)
+
+        // memory clean-up in case something retains the ActiveTrace instance
+        this.recordedItems.clear()
+        this.occurrenceCounters.clear()
+        this.processedPerformanceEntries = new WeakMap()
+        this.traceUtilities.performanceEntryDeduplicationStrategy?.reset()
+      }
+    },
+  }
+
+  onEnd(
+    traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
+  ): void {
+    // @ts-expect-error TS isn't smart enough to disambiguate this situation yet; maybe in the future this will work OOTB
+    this.traceUtilities.cleanupActiveTrace(this)
+    ;(
+      this.traceUtilities.reportFn as SingleTraceReportFn<
+        TracerScopeKeysT,
+        AllPossibleScopesT,
+        OriginatedFromT
+      >
+    )(traceRecording, this)
   }
 
   // this is public API only and should not be called internally
@@ -1026,31 +1060,22 @@ export class ActiveTrace<
     this.stateMachine.emit('onInterrupt', reason)
   }
 
-  transitionDraftToActive({
-    inputAndDefinitionModifications,
-    onEnd,
-  }: {
+  transitionDraftToActive(
     inputAndDefinitionModifications: TraceModifications<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
-    >
-    onEnd: SingleTraceReportFn<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >
-  }) {
-    const { attributes } = this.draftInput
+    >,
+  ) {
+    const { attributes } = this.input
 
-    this.input = {
-      ...this.draftInput,
+    this.activeInput = {
+      ...this.input,
       scope: inputAndDefinitionModifications.scope,
       attributes: {
-        ...this.draftInput.attributes,
+        ...this.input.attributes,
         ...attributes,
       },
-      onEnd,
     }
 
     const additionalRequiredSpans = convertMatchersToFns<
@@ -1087,7 +1112,7 @@ export class ActiveTrace<
   ): SpanAnnotationRecord | undefined {
     const spanEndTime = span.startTime.now + span.duration
     // check if valid for this trace:
-    if (spanEndTime < this.draftInput.startTime.now) {
+    if (spanEndTime < this.input.startTime.now) {
       // TODO: maybe we should actually keep events that happened right before the trace started, e.g. 'event' spans for clicks?
       // console.log(
       //   `# span ${span.type} ${span.name} is ignored because it started before the trace started at ${this.input.startTime.now}`,
@@ -1105,7 +1130,10 @@ export class ActiveTrace<
     const existingAnnotation =
       (span.performanceEntry &&
         this.processedPerformanceEntries.get(span.performanceEntry)) ??
-      this.deduplicationStrategy?.findDuplicate(span, this.recordedItems)
+      this.traceUtilities.performanceEntryDeduplicationStrategy?.findDuplicate(
+        span,
+        this.recordedItems,
+      )
 
     let spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>
 
@@ -1113,7 +1141,7 @@ export class ActiveTrace<
       spanAndAnnotation = existingAnnotation
       // update the span in the recording using the strategy's selector
       spanAndAnnotation.span =
-        this.deduplicationStrategy?.selectPreferredSpan(
+        this.traceUtilities.performanceEntryDeduplicationStrategy?.selectPreferredSpan(
           existingAnnotation.span,
           span,
         ) ?? span
@@ -1123,11 +1151,11 @@ export class ActiveTrace<
       this.occurrenceCounters.set(spanId, occurrence + 1)
 
       const annotation: SpanAnnotation = {
-        id: this.draftInput.id,
+        id: this.input.id,
         operationRelativeStartTime:
-          span.startTime.now - this.draftInput.startTime.now,
+          span.startTime.now - this.input.startTime.now,
         operationRelativeEndTime:
-          span.startTime.now - this.draftInput.startTime.now + span.duration,
+          span.startTime.now - this.input.startTime.now + span.duration,
         occurrence,
         recordedInState: this.stateMachine
           .currentState as NonTerminalTraceStates,
@@ -1139,7 +1167,10 @@ export class ActiveTrace<
         annotation,
       }
 
-      this.deduplicationStrategy?.recordSpan(span, spanAndAnnotation)
+      this.traceUtilities.performanceEntryDeduplicationStrategy?.recordSpan(
+        span,
+        spanAndAnnotation,
+      )
     }
 
     // make sure the labels are up-to-date
@@ -1165,7 +1196,7 @@ export class ActiveTrace<
 
   private getSpanLabels(span: SpanAndAnnotation<AllPossibleScopesT>): string[] {
     const labels: string[] = []
-    const context = { definition: this.definition, input: this.draftInput }
+    const context = { definition: this.definition, input: this.input }
     if (!this.definition.labelMatching) return labels
 
     Object.entries(this.definition.labelMatching).forEach(
@@ -1177,47 +1208,6 @@ export class ActiveTrace<
     )
 
     return labels
-  }
-
-  private prepareAndEmitRecording({
-    transition,
-    lastRelevantSpanAndAnnotation,
-  }: PrepareAndEmitRecordingOptions<AllPossibleScopesT>) {
-    if (
-      transition.transitionToState === 'interrupted' ||
-      transition.transitionToState === 'complete'
-    ) {
-      const endOfOperationSpan =
-        (transition.transitionToState === 'complete' &&
-          (transition.cpuIdleSpanAndAnnotation ??
-            transition.completeSpanAndAnnotation)) ||
-        lastRelevantSpanAndAnnotation
-
-      const traceRecording = createTraceRecording(
-        {
-          definition: this.definition,
-          // only keep items captured until the endOfOperationSpan
-          recordedItems: endOfOperationSpan
-            ? [...this.recordedItems].filter(
-                (item) =>
-                  item.span.startTime.now + item.span.duration <=
-                  endOfOperationSpan.span.startTime.now +
-                    endOfOperationSpan.span.duration,
-              )
-            : [...this.recordedItems],
-          input: this.draftInput,
-        },
-        transition,
-      )
-      // TODO: move the onEnd being ActiveTrace
-      this.input.onEnd(traceRecording, this)
-
-      // memory clean-up in case something retains the ActiveTrace instance
-      this.recordedItems.clear()
-      this.occurrenceCounters.clear()
-      this.processedPerformanceEntries = new WeakMap()
-      this.deduplicationStrategy?.reset()
-    }
   }
 }
 

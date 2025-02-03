@@ -1,6 +1,6 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes, SpanStatus, SpanType } from './spanTypes'
-import type { SelectScopeByKey, DraftTraceContext } from './types'
+import type { DraftTraceContext, SelectScopeByKey } from './types'
 import type { KeysOfUnion } from './typeUtils'
 
 export interface SpanMatcherTags {

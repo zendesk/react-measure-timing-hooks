@@ -93,7 +93,7 @@ describe('TraceManager', () => {
     expect(report.interruptionReason).toBeUndefined()
   })
 
-  it.only('interrupts a basic trace when interruptOn criteria is met in draft mode, trace stops immediately', () => {
+  it('interrupts a basic trace when interruptOn criteria is met in draft mode, trace stops immediately', () => {
     const traceManager = new TraceManager<TicketScope>({
       reportFn,
       generateId,
@@ -127,16 +127,8 @@ describe('TraceManager', () => {
     const report: Parameters<ReportFn<TicketScope, TicketScope>>[0] =
       reportFn.mock.calls[0][0]
 
-    // there are NO entries in the report because this trace was interrupted transitioning from draft to active
-    expect(
-      report.entries.map(
-        (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
-      ),
-    ).toMatchInlineSnapshot(`
-      events    | start
-      timeline  | |
-      time (ms) | 0
-    `)
+    // there are NO entries in the report because this trace was interrupted before transitioning from draft to active
+    expect(report.entries).toHaveLength(0)
     expect(report.name).toBe('ticket.interrupt-on-basic-operation')
     expect(report.duration).toBeNull()
     expect(report.status).toBe('interrupted')

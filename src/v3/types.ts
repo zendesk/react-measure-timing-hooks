@@ -1,10 +1,11 @@
+import type { AllPossibleActiveTraces } from './ActiveTrace'
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
 import type { SpanMatch, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type {
   ActiveTraceInput,
-  DraftTraceInput,
   Attributes,
+  DraftTraceInput,
   Span,
   SpanStatus,
 } from './spanTypes'
@@ -71,11 +72,8 @@ export type ReportFn<
     : never
 >
 
-export interface TraceManagerConfig<
-  AllPossibleScopesT,
-  OriginatedFromT extends string,
-> {
-  reportFn: ReportFn<AllPossibleScopesT, AllPossibleScopesT, OriginatedFromT>
+export interface TraceManagerConfig<AllPossibleScopesT> {
+  reportFn: ReportFn<AllPossibleScopesT, AllPossibleScopesT, string>
 
   generateId: () => string
 
@@ -93,6 +91,17 @@ export interface TraceManagerConfig<
   >
 
   reportErrorFn: (error: Error) => void
+}
+
+export interface TraceManagerUtilities<AllPossibleScopesT>
+  extends TraceManagerConfig<AllPossibleScopesT> {
+  replaceActiveTrace: (
+    newTrace: AllPossibleActiveTraces<AllPossibleScopesT>,
+  ) => void
+  cleanupActiveTrace: (
+    traceToCleanUp: AllPossibleActiveTraces<AllPossibleScopesT>,
+  ) => void
+  getActiveTrace: () => AllPossibleActiveTraces<AllPossibleScopesT> | undefined
 }
 
 export interface TraceModifications<
