@@ -122,6 +122,45 @@ export function getSpanSummaryAttributes<AllPossibleScopesT>(
   return spanAttributes
 }
 
+type RoundableObject<T = any, U = any> = T extends object
+  ? {
+      [K in keyof T]: T[K] extends number
+        ? number
+        : T[K] extends U[]
+        ? RoundableObject<U>[]
+        : T[K] extends object
+        ? RoundableObject<T[K]>
+        : T[K]
+    }
+  : T
+
+type RoundFunction = (x: number) => number
+
+function recursivelyRoundValues<T extends RoundableObject>(
+  obj: T,
+  roundFunc: RoundFunction = (x) => Math.round(x),
+): T {
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(obj as object)) {
+    if (typeof value === 'number') {
+      result[key] = roundFunc(value)
+    } else if (Array.isArray(value)) {
+      result[key] = value.map((item: number | T) =>
+        typeof item === 'number'
+          ? roundFunc(item)
+          : recursivelyRoundValues(item, roundFunc),
+      )
+    } else if (value && typeof value === 'object') {
+      result[key] = recursivelyRoundValues(value, roundFunc)
+    } else {
+      result[key] = value
+    }
+  }
+
+  return result as T
+}
+
 export function convertTraceToRUM<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
@@ -172,10 +211,14 @@ export function convertTraceToRUM<
     }
   }
 
-  return {
+  const result: RumTraceRecording<
+    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  > = {
     ...otherTraceRecordingAttributes,
     embeddedSpans: Object.fromEntries(embeddedSpans),
     nonEmbeddedSpans: [...nonEmbeddedSpans],
     spanAttributes,
   }
+
+  return recursivelyRoundValues(result)
 }
