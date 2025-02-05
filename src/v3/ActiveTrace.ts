@@ -9,8 +9,8 @@ import { convertMatchersToFns } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import {
   type CPUIdleLongTaskProcessor,
-  type PerformanceEntryLike,
   createCPUIdleProcessor,
+  type PerformanceEntryLike,
 } from './firstCPUIdle'
 import { getSpanKey } from './getSpanKey'
 import { createTraceRecording } from './recordingComputeUtils'

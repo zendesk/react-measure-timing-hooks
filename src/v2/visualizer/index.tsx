@@ -6,11 +6,11 @@ import { DropTarget } from './components/DropTarget'
 import FileUploadButton from './components/FileUploadButton'
 import OperationVisualization from './components/OperationVisualization'
 import {
-  type FilterOption,
   COLLAPSE_ASSET_SPANS_TEXT,
   COLLAPSE_EMBER_RESOURCE_SPANS,
   COLLAPSE_IFRAME_SPANS,
   COLLAPSE_RENDER_SPANS_TEXT,
+  type FilterOption,
   MEASURES_TEXT,
   RESOURCES_TEXT,
 } from './constants'

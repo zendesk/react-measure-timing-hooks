@@ -75,19 +75,19 @@ export function getCommonUrlForTracing(
   }
 
   // replace UUIDs:
-  commonUrl = commonUrl.replace(
+  commonUrl = commonUrl.replaceAll(
     // eslint-disable-next-line unicorn/better-regex
     /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g,
     '$uuid',
   )
   // replace 32-character or longer hex strings:
-  commonUrl = commonUrl.replace(
+  commonUrl = commonUrl.replaceAll(
     // eslint-disable-next-line unicorn/better-regex
     /[0-9a-f]{32,}/g,
     '$hex',
   )
   // Replace numeric parts of the ID with $id
-  commonUrl = commonUrl.replace(/\d{2,}/g, '$d')
+  commonUrl = commonUrl.replaceAll(/\d{2,}/g, '$d')
 
   return {
     commonUrl,

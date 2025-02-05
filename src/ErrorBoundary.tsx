@@ -5,7 +5,7 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-import { type DependencyList, Component, useEffect, useRef } from 'react'
+import { Component, type DependencyList, useEffect, useRef } from 'react'
 
 export interface ErrorMetadata {
   error: Error

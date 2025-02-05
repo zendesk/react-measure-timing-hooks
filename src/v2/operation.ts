@@ -22,14 +22,14 @@ import {
   type EventMatchFunction,
   type EventProcessor,
   type EventStatus,
+  FinalizationReason,
   type InputEvent,
   type InstanceOptions,
   type ObserveFn,
   type OperationDefinition,
+  OperationState,
   type PerformanceApi,
   type PerformanceEntryLikeV2,
-  FinalizationReason,
-  OperationState,
 } from './types'
 
 /** returns the best supported blocking task type or undefined if none */

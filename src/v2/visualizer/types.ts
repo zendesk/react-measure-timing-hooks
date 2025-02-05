@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { IGardenTheme } from '@zendeskgarden/react-theming'
 import { SpanAnnotation } from '../../v3/spanAnnotationTypes'
-import { type Attributes, type SpanBase, Span } from '../../v3/spanTypes'
+import { type Attributes, Span, type SpanBase } from '../../v3/spanTypes'
 import type { TraceRecording } from '../../v3/traceRecordingTypes'
 import type { Timestamp } from '../../v3/types'
 import type { SupportedSpanTypes } from './constants'

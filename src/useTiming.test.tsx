@@ -14,7 +14,7 @@ import type { ReactTestRenderer } from 'react-test-renderer'
 import { act, create } from 'react-test-renderer'
 import { ActionLog } from './ActionLog'
 import { DEFAULT_STAGES, INFORMATIVE_STAGES } from './constants'
-import { type Report, generateReport } from './generateReport'
+import { generateReport, type Report } from './generateReport'
 import * as performanceMock from './performanceMark'
 import type { ReportFnV1 } from './types'
 import { useTimingMeasurement } from './useTimingMeasurement'
@@ -552,11 +552,9 @@ describe('useTiming', () => {
           manager: expectedRenderCount,
         },
         durations: {
-          manager: [
-            ...Array.from({ length: expectedRenderCount }).map(
-              () => timeIncrement,
-            ),
-          ],
+          manager: Array.from({ length: expectedRenderCount }).map(
+            () => timeIncrement,
+          ),
         },
         spans: expect.anything(),
         timeSpent: {

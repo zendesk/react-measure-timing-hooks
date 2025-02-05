@@ -1,4 +1,4 @@
-import { type SpanMatch, type SpanMatcherFn, fromDefinition } from './matchSpan'
+import { fromDefinition, type SpanMatch, type SpanMatcherFn } from './matchSpan'
 import type { LabelMatchingFnsRecord, LabelMatchingInputRecord } from './types'
 import type { ArrayWithAtLeastOneElement, KeysOfUnion } from './typeUtils'
 

@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 
-import { type Subscription, Observable, share } from 'rxjs'
+import { Observable, share, type Subscription } from 'rxjs'
 import { getCommonUrlForTracing } from '../v2/getCommonUrlForTracing'
 import type { AnyPerformanceEntry, PerformanceEntryType } from './globalTypes'
 import type {
