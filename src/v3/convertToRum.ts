@@ -122,21 +122,21 @@ export function getSpanSummaryAttributes<AllPossibleScopesT>(
   return spanAttributes
 }
 
-type RoundableObject<T = any, U = any> = T extends object
-  ? {
-      [K in keyof T]: T[K] extends number
-        ? number
-        : T[K] extends U[]
-        ? RoundableObject<U>[]
-        : T[K] extends object
-        ? RoundableObject<T[K]>
-        : T[K]
-    }
-  : T
+// type RoundableObject<T> = T extends object
+//   ? {
+//       [K in keyof T]: T[K] extends number
+//         ? number
+//         : T[K] extends Array<infer ElementType>
+//         ? RoundableObject<ElementType>[]
+//         : T[K] extends object
+//         ? RoundableObject<T[K]>
+//         : T[K]
+//     }
+//   : T
 
 type RoundFunction = (x: number) => number
 
-function recursivelyRoundValues<T extends RoundableObject>(
+function recursivelyRoundValues<T extends object>(
   obj: T,
   roundFunc: RoundFunction = (x) => Math.round(x),
 ): T {
