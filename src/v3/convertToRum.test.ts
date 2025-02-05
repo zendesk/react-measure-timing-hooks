@@ -7,7 +7,7 @@ import {
   createMockSpanAndAnnotation,
   createTimestamp,
 } from './testUtility/createMockFactory'
-import type { CompleteTraceDefinition, Timestamp } from './types'
+import type { CompleteTraceDefinition } from './types'
 
 describe('convertTraceToRUM', () => {
   it('should round all numeric values in the trace recording', () => {

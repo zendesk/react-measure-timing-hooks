@@ -5,11 +5,11 @@ import {
   getComputedSpans,
   getComputedValues,
 } from './recordingComputeUtils'
-import type { CompleteTraceDefinition } from './types'
 import {
   createMockSpanAndAnnotation,
   createTimestamp,
 } from './testUtility/createMockFactory'
+import type { CompleteTraceDefinition } from './types'
 
 type AnyScope = Record<string, unknown>
 
