@@ -4,13 +4,13 @@ import { ensureTimestamp } from './ensureTimestamp'
 import type { SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
 import {
-  type TraceManagerUtilities,
   CompleteTraceDefinition,
   ComputedSpanDefinitionInput,
   ComputedValueDefinition,
   ComputedValueDefinitionInput,
   ScopeValue,
   SelectScopeByKey,
+  type TraceManagerUtilities,
   TraceModifications,
 } from './types'
 import type { KeysOfUnion } from './typeUtils'

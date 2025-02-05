@@ -10,8 +10,8 @@ import {
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
-  type TicketIdScope,
   ticketActivationDefinition,
+  type TicketIdScope,
 } from './testUtility/fixtures/ticket.activation'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'

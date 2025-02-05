@@ -11,8 +11,8 @@ import * as matchSpan from './matchSpan'
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
-  type TicketIdScope,
   ticketActivationDefinition,
+  type TicketIdScope,
   UserIdScope,
 } from './testUtility/fixtures/ticket.activation'
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'

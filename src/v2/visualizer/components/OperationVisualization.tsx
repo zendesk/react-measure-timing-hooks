@@ -12,9 +12,9 @@ import { PatternLines } from '@visx/pattern'
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale'
 import { useTooltip } from '@visx/tooltip'
 import {
-  type FilterOption,
   BAR_FILL_COLOR,
   DETAILS_PANEL_WIDTH,
+  type FilterOption,
 } from '../constants'
 import { MappedOperation } from '../mapOperationForVisualization'
 import { MappedSpanAndAnnotation } from '../types'
