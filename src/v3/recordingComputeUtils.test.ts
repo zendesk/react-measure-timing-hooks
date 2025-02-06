@@ -5,74 +5,15 @@ import {
   getComputedSpans,
   getComputedValues,
 } from './recordingComputeUtils'
-import type { SpanAndAnnotation, SpanAnnotation } from './spanAnnotationTypes'
-import type { Span } from './spanTypes'
-import type { CompleteTraceDefinition, Timestamp } from './types'
+import {
+  createMockSpanAndAnnotation,
+  createTimestamp,
+} from './testUtility/createMockFactory'
+import type { CompleteTraceDefinition } from './types'
 
 type AnyScope = Record<string, unknown>
 
 describe('recordingComputeUtils', () => {
-  const EPOCH_START = 1_000
-  const createTimestamp = (now: number): Timestamp => ({
-    epoch: EPOCH_START + now,
-    now,
-  })
-
-  const createAnnotation = (
-    span: Span<AnyScope>,
-    traceStartTime: Timestamp,
-    partial: Partial<SpanAnnotation> = {},
-  ): SpanAnnotation => ({
-    id: 'test-id',
-    operationRelativeStartTime: span.startTime.now - traceStartTime.now,
-    operationRelativeEndTime:
-      span.startTime.now + span.duration - traceStartTime.now,
-    occurrence: 1,
-    recordedInState: 'active',
-    labels: [],
-    ...partial,
-  })
-
-  const createMockSpan = <TSpan extends Span<AnyScope>>(
-    startTimeNow: number,
-    partial: Partial<TSpan>,
-  ): TSpan =>
-    (partial.type === 'component-render'
-      ? {
-          name: 'test-component',
-          type: 'component-render',
-          scope: {},
-          startTime: createTimestamp(startTimeNow),
-          duration: 100,
-          attributes: {},
-          isIdle: true,
-          renderCount: 1,
-          renderedOutput: 'content',
-          ...partial,
-        }
-      : {
-          name: 'test-span',
-          type: 'mark',
-          startTime: createTimestamp(startTimeNow),
-          duration: 100,
-          attributes: {},
-          ...partial,
-        }) as TSpan
-
-  const createMockSpanAndAnnotation = <TSpan extends Span<AnyScope>>(
-    startTimeNow: number,
-    spanPartial: Partial<TSpan> = {},
-    annotationPartial: Partial<SpanAnnotation> = {},
-  ): SpanAndAnnotation<AnyScope> => {
-    const span = createMockSpan<TSpan>(startTimeNow, spanPartial)
-    return {
-      span,
-      annotation: createAnnotation(span, createTimestamp(0), annotationPartial),
-    }
-  }
-
-  const onEnd = jest.fn()
-
   describe('error status propagation', () => {
     const baseDefinition: CompleteTraceDefinition<never, AnyScope, 'origin'> = {
       name: 'test-trace',

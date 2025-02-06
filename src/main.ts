@@ -56,6 +56,7 @@ export * from './v3/getDynamicQuietWindowDuration'
 export * from './v3/getSpanFromPerformanceEntry'
 export * from './v3/hooks'
 export type * from './v3/hooksTypes'
+export * from './v3/tracer'
 // eslint-disable-next-line import/first, import/newline-after-import
 import * as match from './v3/matchSpan'
 export { match }
