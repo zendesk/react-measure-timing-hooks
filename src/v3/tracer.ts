@@ -3,6 +3,7 @@ import { ensureMatcherFn } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import type { SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
 import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
+import { TracerType } from './tracerTypes'
 import {
   CompleteTraceDefinition,
   ComputedSpanDefinitionInput,
@@ -22,7 +23,8 @@ export class Tracer<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
   OriginatedFromT extends string,
-> {
+> implements TracerType<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
+{
   definition: CompleteTraceDefinition<
     TracerScopeKeysT,
     AllPossibleScopesT,
