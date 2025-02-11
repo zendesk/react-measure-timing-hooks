@@ -48,6 +48,7 @@ export type TraceInterruptionReason =
   | 'idle-component-no-longer-idle'
   | 'matched-on-interrupt'
   | 'invalid-state-transition'
+  | 'draft-cancelled'
 
 export type SingleTraceReportFn<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
@@ -102,6 +103,7 @@ export interface TraceManagerUtilities<AllPossibleScopesT>
     traceToCleanUp: AllPossibleActiveTraces<AllPossibleScopesT>,
   ) => void
   getActiveTrace: () => AllPossibleActiveTraces<AllPossibleScopesT> | undefined
+  cancelDraftTrace: () => void
 }
 
 export interface TraceModifications<

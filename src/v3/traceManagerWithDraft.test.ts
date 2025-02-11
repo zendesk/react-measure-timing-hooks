@@ -120,8 +120,6 @@ describe('TraceManager', () => {
       `
     processSpans(spans, traceManager)
 
-    // tracer.transitionDraftToActive({ scope: { ticketId: '1' } })
-
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<ReportFn<TicketScope, TicketScope>>[0] =

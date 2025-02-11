@@ -45,12 +45,12 @@ export class Tracer<
   /**
    * @returns The ID of the trace.
    */
-  start(
+  start = (
     input: StartTraceConfig<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
       OriginatedFromT
     >,
-  ): string | undefined {
+  ): string | undefined => {
     const traceId = this.createDraft(input)
     if (!traceId) return undefined
 
@@ -58,9 +58,9 @@ export class Tracer<
     return traceId
   }
 
-  createDraft(
+  createDraft = (
     input: BaseStartTraceConfig<OriginatedFromT>,
-  ): string | undefined {
+  ): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
 
     // Verify that the originatedFrom value is valid and has a corresponding timeout
@@ -100,17 +100,21 @@ export class Tracer<
     return id
   }
 
+  cancelDraft = () => {
+    this.traceUtilities.cancelDraftTrace()
+  }
+
   // can have config changed until we move into active
   // from input: scope (required), attributes (optional, merge into)
   // from definition, can add items to: requiredSpans (additionalRequiredSpans), debounceOn (additionalDebounceOnSpans)
   // documentation: interruption still works and all the other events are buffered
-  transitionDraftToActive(
+  transitionDraftToActive = (
     inputAndDefinitionModifications: TraceModifications<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
     >,
-  ): void {
+  ): void => {
     const activeTrace = this.traceUtilities.getActiveTrace()
     if (!activeTrace) {
       this.traceUtilities.reportErrorFn(
@@ -140,13 +144,13 @@ export class Tracer<
     typedActiveTrace.transitionDraftToActive(inputAndDefinitionModifications)
   }
 
-  defineComputedSpan(
+  defineComputedSpan = (
     definition: ComputedSpanDefinitionInput<
       TracerScopeKeysT,
       AllPossibleScopesT,
       OriginatedFromT
     >,
-  ): void {
+  ): void => {
     this.definition.computedSpanDefinitions.push({
       ...definition,
       startSpan:
@@ -168,7 +172,7 @@ export class Tracer<
     })
   }
 
-  defineComputedValue<
+  defineComputedValue = <
     MatchersT extends (
       | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
       | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
@@ -180,7 +184,7 @@ export class Tracer<
       MatchersT,
       OriginatedFromT
     >,
-  ): void {
+  ): void => {
     this.definition.computedValueDefinitions.push({
       ...definition,
       matches: definition.matches.map((m) =>

@@ -58,6 +58,7 @@ export class TraceManager<
         // warn on miss?
       },
       getActiveTrace: () => this.activeTrace,
+      cancelDraftTrace: () => this.activeTrace?.interrupt('draft-cancelled'),
     }
   }
 
