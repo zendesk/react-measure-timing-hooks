@@ -8,10 +8,7 @@ import {
   vitest as jest,
 } from 'vitest'
 import * as matchSpan from './matchSpan'
-import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
-import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
-  ticketActivationDefinition,
   type TicketIdScope,
   UserIdScope,
 } from './testUtility/fixtures/ticket.activation'
