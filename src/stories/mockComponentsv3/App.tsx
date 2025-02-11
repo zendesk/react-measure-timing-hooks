@@ -37,7 +37,7 @@ const ticketOperationTracer = traceManager.createTracer({
     },
   ],
   scopes: ['ticketId'],
-  variantsByOriginatedFrom: {
+  variants: {
     click: { timeoutDuration: 45_000 },
   },
   // debounceDuration: 1_000,
@@ -98,7 +98,7 @@ export const App: React.FC = () => {
     // })
     ticketOperationTracer.start({
       scope: { ticketId: id },
-      originatedFrom: 'click',
+      variant: 'click',
     })
 
     setSelectedTicketId(id)

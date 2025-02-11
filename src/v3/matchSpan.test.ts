@@ -75,7 +75,7 @@ const mockContext = {
       now: Date.now(),
       epoch: Date.now(),
     },
-    originatedFrom: 'origin',
+    variant: 'origin',
   } satisfies ActiveTraceInput<TicketScope, 'origin'>,
   definition: {
     name: 'test',
@@ -84,13 +84,13 @@ const mockContext = {
     requiredSpans: [() => true],
     computedSpanDefinitions: [],
     computedValueDefinitions: [],
-    variantsByOriginatedFrom: {
+    variants: {
       origin: { timeoutDuration: 10_000 },
     },
   } satisfies CompleteTraceDefinition<'ticketId', TicketScope, 'origin'>,
 } as const
 
-type MockOrigin = (typeof mockContext)['input']['originatedFrom']
+type MockOrigin = (typeof mockContext)['input']['variant']
 
 // TESTING TODO: ask chatgpt to add 'or' and 'not' tests
 

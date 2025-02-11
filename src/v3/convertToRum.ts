@@ -152,14 +152,14 @@ function recursivelyRoundValues<T extends object>(
 export function convertTraceToRUM<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>,
+  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
   embedSpanSelector: SpanMatcherFn<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   > = defaultEmbedSpanSelector,
 ): RumTraceRecording<SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording

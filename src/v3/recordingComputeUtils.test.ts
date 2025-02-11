@@ -5,11 +5,11 @@ import {
   getComputedSpans,
   getComputedValues,
 } from './recordingComputeUtils'
-import type { CompleteTraceDefinition } from './types'
 import {
   createMockSpanAndAnnotation,
   createTimestamp,
 } from './testUtility/createMockFactory'
+import type { CompleteTraceDefinition } from './types'
 
 type AnyScope = Record<string, unknown>
 
@@ -21,7 +21,7 @@ describe('recordingComputeUtils', () => {
       requiredSpans: [() => true],
       computedSpanDefinitions: [],
       computedValueDefinitions: [],
-      variantsByOriginatedFrom: {
+      variants: {
         origin: { timeoutDuration: 45_000 },
       },
     }
@@ -41,7 +41,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            originatedFrom: 'origin',
+            variant: 'origin',
           },
         },
         { transitionFromState: 'active' },
@@ -73,7 +73,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            originatedFrom: 'origin',
+            variant: 'origin',
           },
         },
         { transitionFromState: 'active' },
@@ -107,7 +107,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            originatedFrom: 'origin',
+            variant: 'origin',
           },
         },
         { transitionFromState: 'active' },
@@ -131,7 +131,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            originatedFrom: 'origin',
+            variant: 'origin',
           },
         },
         {
@@ -158,7 +158,7 @@ describe('recordingComputeUtils', () => {
         },
       ],
       computedValueDefinitions: [],
-      variantsByOriginatedFrom: {
+      variants: {
         origin: { timeoutDuration: 45_000 },
       },
     }
@@ -180,7 +180,7 @@ describe('recordingComputeUtils', () => {
           id: 'test',
           startTime: createTimestamp(0),
           scope: {},
-          originatedFrom: 'origin',
+          variant: 'origin',
         },
       })
 
@@ -218,7 +218,7 @@ describe('recordingComputeUtils', () => {
           startTime: createTimestamp(0),
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
           scope: {} as never,
-          originatedFrom: 'origin',
+          variant: 'origin',
         },
       })
 
@@ -240,7 +240,7 @@ describe('recordingComputeUtils', () => {
             computeValueFromMatches: (matches) => matches.length,
           },
         ],
-        variantsByOriginatedFrom: {
+        variants: {
           origin: { timeoutDuration: 45_000 },
         },
       }
@@ -258,7 +258,7 @@ describe('recordingComputeUtils', () => {
           startTime: createTimestamp(0),
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
           scope: {} as never,
-          originatedFrom: 'origin',
+          variant: 'origin',
         },
       })
 
@@ -296,7 +296,7 @@ describe('recordingComputeUtils', () => {
             requiredSpans: [() => true],
             computedSpanDefinitions: [],
             computedValueDefinitions: [],
-            variantsByOriginatedFrom: {
+            variants: {
               origin: { timeoutDuration: 45_000 },
             },
           },
@@ -328,7 +328,7 @@ describe('recordingComputeUtils', () => {
             id: 'test',
             startTime: createTimestamp(0),
             scope: {},
-            originatedFrom: 'origin',
+            variant: 'origin',
           },
         },
         { transitionFromState: 'active' },

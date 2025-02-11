@@ -20,7 +20,7 @@ export const ticketActivationDefinition: TraceDefinition<
   name: 'ticket.activation',
   type: 'operation',
   scopes: ['ticketId'],
-  variantsByOriginatedFrom: {
+  variants: {
     cold_boot: { timeoutDuration: 60_000 },
   },
   captureInteractive: true,

@@ -55,12 +55,12 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: ['ticketId'],
       requiredSpans: [{ name: 'end' }],
-      variantsByOriginatedFrom: {
+      variants: {
         cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
     const traceId = tracer.createDraft({
-      originatedFrom: 'cold_boot',
+      variant: 'cold_boot',
     })
     expect(traceId).toBe('trace-id')
 
@@ -105,12 +105,12 @@ describe('TraceManager', () => {
       scopes: [],
       requiredSpans: [matchSpan.withName('end')],
       interruptOn: [matchSpan.withName('interrupt')],
-      variantsByOriginatedFrom: {
+      variants: {
         cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
     tracer.createDraft({
-      originatedFrom: 'cold_boot',
+      variant: 'cold_boot',
     })
 
     // prettier-ignore
@@ -133,7 +133,7 @@ describe('TraceManager', () => {
     expect(report.interruptionReason).toBe('matched-on-interrupt')
   })
 
-  it('timeouts when the basic trace when an timeout duration from originatedFrom is reached', () => {
+  it('timeouts when the basic trace when an timeout duration from variant is reached', () => {
     const traceManager = new TraceManager<TicketScope>({
       reportFn,
       generateId,
@@ -144,11 +144,11 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: ['ticketId'],
       requiredSpans: [{ name: 'timed-out-render' }],
-      variantsByOriginatedFrom: { cold_boot: { timeoutDuration: 500 } },
+      variants: { cold_boot: { timeoutDuration: 500 } },
     })
     const traceId = tracer.createDraft({
       startTime: { now: 0, epoch: 0 },
-      originatedFrom: 'cold_boot',
+      variant: 'cold_boot',
     })
     expect(traceId).toBe('trace-id')
 
@@ -197,7 +197,7 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [{ name: 'end' }],
-      variantsByOriginatedFrom: {
+      variants: {
         cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
@@ -225,13 +225,13 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: ['ticketId'],
       requiredSpans: [{ name: 'end' }],
-      variantsByOriginatedFrom: {
+      variants: {
         cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
 
     tracer.createDraft({
-      originatedFrom: 'cold_boot',
+      variant: 'cold_boot',
     })
 
     tracer.transitionDraftToActive({ scope: { ticketId: '1' } })

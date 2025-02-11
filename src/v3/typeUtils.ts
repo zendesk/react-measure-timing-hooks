@@ -29,26 +29,22 @@ export type UnionToIntersection<U> = (
 type HandlerToPayloadTuples<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
+  VariantT extends string,
   State extends TraceStates = TraceStates,
 > = State extends State
   ? {
       [K in keyof States<
         TracerScopeKeysT,
         AllPossibleScopesT,
-        OriginatedFromT
+        VariantT
       >[State]]: States<
         TracerScopeKeysT,
         AllPossibleScopesT,
-        OriginatedFromT
+        VariantT
       >[State][K] extends (...args: infer ArgsT) => infer ReturnT
         ? [K, ArgsT[0], ReturnT]
         : never
-    }[keyof States<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >[State]]
+    }[keyof States<TracerScopeKeysT, AllPossibleScopesT, VariantT>[State]]
   : never
 
 type TupleToObject<T extends [PropertyKey, any, any]> = Prettify<{
@@ -62,38 +58,38 @@ type TupleToObject2<T extends [PropertyKey, any, any]> = Prettify<{
 export type StateHandlerPayloads<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
+  VariantT extends string,
 > = TupleToObject<
-  HandlerToPayloadTuples<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
+  HandlerToPayloadTuples<TracerScopeKeysT, AllPossibleScopesT, VariantT>
 >
 
 export type StateHandlerReturnTypes<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
+  VariantT extends string,
 > = TupleToObject2<
-  HandlerToPayloadTuples<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
+  HandlerToPayloadTuples<TracerScopeKeysT, AllPossibleScopesT, VariantT>
 >
 
 export type MergedStateHandlerMethods<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
+  VariantT extends string,
 > = {
   [K in keyof StateHandlerPayloads<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   >]: (
     payload: StateHandlerPayloads<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >[K],
   ) => StateHandlerReturnTypes<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   >[K]
 }
 export type ArrayWithAtLeastOneElement<T> = readonly [T, ...T[]]

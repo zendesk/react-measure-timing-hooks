@@ -13,15 +13,11 @@ export interface SpanMatcherTags {
 export interface SpanMatcherFn<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
+  VariantT extends string,
 > extends SpanMatcherTags {
   (
     spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
-    context: DraftTraceContext<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >,
+    context: DraftTraceContext<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
   ): boolean
 }
 
@@ -48,9 +44,9 @@ export interface SpanMatchDefinition<
 export type SpanMatch<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
+  VariantT extends string,
 > =
-  | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
+  | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
   | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
 
 /**
@@ -59,10 +55,10 @@ export type SpanMatch<
 export function withName<
   const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   const AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   value: NameMatcher<SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>>,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   return ({ span }, { input: { scope } }) => {
     if (typeof value === 'string') return span.name === value
     if (value instanceof RegExp) return value.test(span.name)
@@ -75,10 +71,10 @@ export function withName<
 export function withLabel<
   const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   const AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   value: string,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   return ({ annotation }) => annotation.labels?.includes(value) ?? false
 }
 
@@ -88,10 +84,10 @@ export function withLabel<
 export function withPerformanceEntryName<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   value: NameMatcher<AllPossibleScopesT>,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   return ({ span }, { input: { scope } }) => {
     const entryName = span.performanceEntry?.name
     if (!entryName) return false
@@ -104,20 +100,20 @@ export function withPerformanceEntryName<
 export function withType<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   value: SpanType,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   return ({ span }) => span.type === value
 }
 
 export function withStatus<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   value: SpanStatus,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   return ({ span }) => span.status === value
 }
 
@@ -127,10 +123,10 @@ export function withStatus<
 export function withAttributes<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   attrs: Attributes,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   return ({ span }) => {
     if (!span.attributes) return false
     return Object.entries(attrs).every(
@@ -145,13 +141,13 @@ export function withAttributes<
 export function withMatchingScopes<
   const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   const AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   keys: readonly NoInfer<TracerScopeKeysT>[] | true = true,
 ): SpanMatcherFn<
   TracerScopeKeysT & KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT
+  VariantT
 > {
   return ({ span }, { input: { scope }, definition: { scopes } }) => {
     // DRAFT TODO: add test case when scope is missing
@@ -173,10 +169,10 @@ export function withMatchingScopes<
 export function withOccurrence<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   value: number | ((occurrence: number) => boolean),
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   return ({ annotation }) => {
     if (typeof value === 'number') return annotation.occurrence === value
     return value(annotation.occurrence)
@@ -186,11 +182,11 @@ export function withOccurrence<
 export function withComponentRenderCount<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   name: string,
   renderCount: number,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   return ({ span }) => {
     if (!('renderCount' in span)) return false
     return span.name === name && span.renderCount === renderCount
@@ -203,14 +199,12 @@ export function withComponentRenderCount<
 export function whenIdle<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
->(
-  value = true,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+  const VariantT extends string,
+>(value = true): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   const matcherFn: SpanMatcherFn<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   > = ({ span }) => ('isIdle' in span ? span.isIdle === value : false)
   return Object.assign(
     matcherFn,
@@ -224,14 +218,10 @@ export function whenIdle<
 export function withAllConditions<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
-  ...matchers: SpanMatcherFn<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    OriginatedFromT
-  >[]
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+  ...matchers: SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>[]
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
@@ -240,7 +230,7 @@ export function withAllConditions<
   const matcherFn: SpanMatcherFn<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   > = (...args) => matchers.every((matcher) => matcher(...args))
   return Object.assign(matcherFn, tags)
 }
@@ -249,14 +239,10 @@ export function withAllConditions<
 export function withOneOfConditions<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
-  ...matchers: SpanMatcherFn<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    OriginatedFromT
-  >[]
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+  ...matchers: SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>[]
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
@@ -265,7 +251,7 @@ export function withOneOfConditions<
   const matcherFn: SpanMatcherFn<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   > = (...args) => matchers.some((matcher) => matcher(...args))
   return Object.assign(matcherFn, tags)
 }
@@ -273,10 +259,10 @@ export function withOneOfConditions<
 export function not<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
-  matcher: SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+  matcher: SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   // since not is a negation, we don't carry over tags
   return (...args) => !matcher(...args)
 }
@@ -284,20 +270,18 @@ export function not<
 export function fromDefinition<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 >(
   definition: SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   const matchers: SpanMatcherFn<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   >[] = []
   if (definition.name) {
     matchers.push(
-      withName<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>(
-        definition.name,
-      ),
+      withName<TracerScopeKeysT, AllPossibleScopesT, VariantT>(definition.name),
     )
   }
   if (definition.performanceEntryName) {

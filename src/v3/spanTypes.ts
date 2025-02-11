@@ -26,44 +26,44 @@ export type ComponentLifecycleSpanType =
 
 export type SpanType = NativePerformanceEntryType | ComponentLifecycleSpanType
 
-export interface BaseStartTraceConfig<OriginatedFromT extends string> {
+export interface BaseStartTraceConfig<VariantT extends string> {
   id?: string
   startTime?: Partial<Timestamp>
-  originatedFrom: OriginatedFromT
+  variant: VariantT
   /**
    * any attributes that are relevant to the entire trace
    */
   attributes?: Attributes
 }
 
-export interface DraftTraceConfig<TracerScopeT, OriginatedFromT extends string>
-  extends BaseStartTraceConfig<OriginatedFromT> {
+export interface DraftTraceConfig<TracerScopeT, VariantT extends string>
+  extends BaseStartTraceConfig<VariantT> {
   scope: TracerScopeT | undefined
 }
 
-export interface StartTraceConfig<TracerScopeT, OriginatedFromT extends string>
-  extends DraftTraceConfig<TracerScopeT, OriginatedFromT> {
+export interface StartTraceConfig<TracerScopeT, VariantT extends string>
+  extends DraftTraceConfig<TracerScopeT, VariantT> {
   scope: TracerScopeT
 }
 
-export interface DraftTraceInput<TracerScopeT, OriginatedFromT extends string>
-  extends DraftTraceConfig<TracerScopeT, OriginatedFromT> {
+export interface DraftTraceInput<TracerScopeT, VariantT extends string>
+  extends DraftTraceConfig<TracerScopeT, VariantT> {
   id: string
   startTime: Timestamp
 }
 
-export interface ActiveTraceInput<TracerScopeT, OriginatedFromT extends string>
-  extends DraftTraceInput<TracerScopeT, OriginatedFromT> {
+export interface ActiveTraceInput<TracerScopeT, VariantT extends string>
+  extends DraftTraceInput<TracerScopeT, VariantT> {
   scope: TracerScopeT
 }
 
 export interface ActiveTraceConfig<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
+  VariantT extends string,
 > extends DraftTraceInput<
     SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-    OriginatedFromT
+    VariantT
   > {
   scope: SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
 }

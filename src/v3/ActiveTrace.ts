@@ -28,6 +28,7 @@ import type {
   TraceInterruptionReason,
   TraceManagerUtilities,
   TraceModifications,
+  TraceModificationsBase,
 } from './types'
 import { DraftTraceContext } from './types'
 import type {
@@ -98,12 +99,8 @@ type FinalizeFn<TracerScopeT> = (config: FinalState<TracerScopeT>) => void
 export type States<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
-> = TraceStateMachine<
-  TracerScopeKeysT,
-  AllPossibleScopesT,
-  OriginatedFromT
->['states']
+  VariantT extends string,
+> = TraceStateMachine<TracerScopeKeysT, AllPossibleScopesT, VariantT>['states']
 
 interface StateHandlersBase<AllPossibleScopesT> {
   [handler: string]: (
@@ -142,12 +139,8 @@ type EntryType<AllPossibleScopesT> = PerformanceEntryLike & {
 interface StateMachineContext<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  OriginatedFromT extends string,
-> extends DraftTraceContext<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    OriginatedFromT
-  > {
+  VariantT extends string,
+> extends DraftTraceContext<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
   sideEffectFns: TraceStateMachineSideEffectHandlers<
     TracerScopeKeysT,
     AllPossibleScopesT
@@ -159,13 +152,13 @@ type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
 export class TraceStateMachine<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 > {
   constructor(
     context: StateMachineContext<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >,
   ) {
     this.context = context
@@ -180,7 +173,7 @@ export class TraceStateMachine<
   readonly context: StateMachineContext<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   >
   get sideEffectFns() {
     return this.context.sideEffectFns
@@ -279,9 +272,8 @@ export class TraceStateMachine<
       onEnterState: () => {
         this.setGlobalDeadline(
           this.context.input.startTime.epoch +
-            this.context.definition.variantsByOriginatedFrom[
-              this.context.input.originatedFrom
-            ]!.timeoutDuration,
+            this.context.definition.variants[this.context.input.variant]!
+              .timeoutDuration,
         )
       },
 
@@ -834,22 +826,18 @@ export class TraceStateMachine<
     EventName extends keyof StateHandlerPayloads<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >,
   >(
     event: EventName,
     payload: StateHandlerPayloads<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >[EventName],
   ): OnEnterStatePayload<AllPossibleScopesT> | undefined {
     const currentStateHandlers = this.states[this.currentState] as Partial<
-      MergedStateHandlerMethods<
-        TracerScopeKeysT,
-        AllPossibleScopesT,
-        OriginatedFromT
-      >
+      MergedStateHandlerMethods<TracerScopeKeysT, AllPossibleScopesT, VariantT>
     >
     const transitionPayload = currentStateHandlers[event]?.(payload)
     if (transitionPayload) {
@@ -875,23 +863,23 @@ interface PrepareAndEmitRecordingOptions<AllPossibleScopesT> {
 export class ActiveTrace<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT,
-  const OriginatedFromT extends string,
+  const VariantT extends string,
 > {
   readonly sourceDefinition: CompleteTraceDefinition<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   >
-  /** the mutable definition */
+  /** the final, mutable definition of this specific trace */
   definition: CompleteTraceDefinition<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   >
   get activeInput(): ActiveTraceConfig<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   > {
     if (!this.input.scope) {
       throw new Error('tried to access input without scope')
@@ -899,22 +887,18 @@ export class ActiveTrace<
     return this.input as ActiveTraceConfig<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >
   }
   set activeInput(
-    value: ActiveTraceConfig<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      OriginatedFromT
-    >,
+    value: ActiveTraceConfig<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
   ) {
     this.input = value
   }
 
   input: DraftTraceInput<
     SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-    OriginatedFromT
+    VariantT
   >
   private readonly traceUtilities: TraceManagerUtilities<AllPossibleScopesT>
 
@@ -926,7 +910,7 @@ export class ActiveTrace<
   stateMachine: TraceStateMachine<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   >
   occurrenceCounters = new Map<string, number>()
   processedPerformanceEntries: WeakMap<
@@ -942,20 +926,32 @@ export class ActiveTrace<
     definition: CompleteTraceDefinition<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >,
     input: DraftTraceInput<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-      OriginatedFromT
+      VariantT
     >,
     traceUtilities: TraceManagerUtilities<AllPossibleScopesT>,
   ) {
+    // Verify that the variant value is valid
+    const variant = definition.variants[input.variant]
+    if (!variant) {
+      traceUtilities.reportErrorFn(
+        new Error(
+          `Invalid variant value: ${
+            input.variant
+          }. Must be one of: ${Object.keys(definition.variants).join(', ')}`,
+        ),
+      )
+    }
+
     this.sourceDefinition = definition
     this.definition = {
       name: definition.name,
       type: definition.type,
       scopes: [...definition.scopes],
-      variantsByOriginatedFrom: { ...definition.variantsByOriginatedFrom },
+      variants: { ...definition.variants },
 
       labelMatching: { ...definition.labelMatching },
 
@@ -1050,7 +1046,7 @@ export class ActiveTrace<
       this.traceUtilities.reportFn as SingleTraceReportFn<
         TracerScopeKeysT,
         AllPossibleScopesT,
-        OriginatedFromT
+        VariantT
       >
     )(traceRecording, this)
   }
@@ -1064,7 +1060,7 @@ export class ActiveTrace<
     inputAndDefinitionModifications: TraceModifications<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >,
   ) {
     const { attributes } = this.input
@@ -1081,14 +1077,14 @@ export class ActiveTrace<
     const additionalRequiredSpans = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
     >(inputAndDefinitionModifications.additionalRequiredSpans)
+      VariantT
 
     const additionalDebounceOnSpans = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
     >(inputAndDefinitionModifications.additionalDebounceOnSpans)
+      VariantT
 
     const { definition } = this
     if (additionalRequiredSpans?.length) {

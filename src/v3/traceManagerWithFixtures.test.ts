@@ -57,7 +57,7 @@ describe('TraceManager with Fixtures', () => {
     tracer.start({
       scope,
       startTime: fixtureEntries[0]!.span.startTime,
-      originatedFrom: 'cold_boot',
+      variant: 'cold_boot',
     })
 
     for (const entry of fixtureEntries) {
@@ -147,7 +147,7 @@ describe('TraceManager with Fixtures', () => {
           fixtureEntries[0]!.span.startTime.now -
           fixtureEntries[0]!.annotation.operationRelativeStartTime,
       },
-      originatedFrom: 'cold_boot',
+      variant: 'cold_boot',
     })
 
     for (const entry of fixtureEntries) {

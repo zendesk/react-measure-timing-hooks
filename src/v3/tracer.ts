@@ -21,12 +21,12 @@ import type { KeysOfUnion } from './typeUtils'
 export class Tracer<
   TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
   AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
-  OriginatedFromT extends string,
+  VariantT extends string,
 > {
   definition: CompleteTraceDefinition<
     TracerScopeKeysT,
     AllPossibleScopesT,
-    OriginatedFromT
+    VariantT
   >
   traceUtilities: TraceManagerUtilities<AllPossibleScopesT>
 
@@ -34,7 +34,7 @@ export class Tracer<
     definition: CompleteTraceDefinition<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >,
     traceUtilities: TraceManagerUtilities<AllPossibleScopesT>,
   ) {
@@ -48,7 +48,7 @@ export class Tracer<
   start = (
     input: StartTraceConfig<
       SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-      OriginatedFromT
+      VariantT
     >,
   ): string | undefined => {
     const traceId = this.createDraft(input)
@@ -58,29 +58,13 @@ export class Tracer<
     return traceId
   }
 
-  createDraft = (
-    input: BaseStartTraceConfig<OriginatedFromT>,
-  ): string | undefined => {
+  createDraft = (input: BaseStartTraceConfig<VariantT>): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
-
-    // Verify that the originatedFrom value is valid and has a corresponding timeout
-    if (!(input.originatedFrom in this.definition.variantsByOriginatedFrom)) {
-      this.traceUtilities.reportErrorFn(
-        new Error(
-          `Invalid originatedFrom value: ${
-            input.originatedFrom
-          }. Must be one of: ${Object.keys(
-            this.definition.variantsByOriginatedFrom,
-          ).join(', ')}`,
-        ),
-      )
-      return undefined
-    }
 
     const activeTrace = new ActiveTrace<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >(
       this.definition,
       {
@@ -112,7 +96,7 @@ export class Tracer<
     inputAndDefinitionModifications: TraceModifications<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >,
   ): void => {
     const activeTrace = this.traceUtilities.getActiveTrace()
@@ -138,7 +122,7 @@ export class Tracer<
     const typedActiveTrace = activeTrace as unknown as ActiveTrace<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >
 
     typedActiveTrace.transitionDraftToActive(inputAndDefinitionModifications)
@@ -148,7 +132,7 @@ export class Tracer<
     definition: ComputedSpanDefinitionInput<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >,
   ): void => {
     this.definition.computedSpanDefinitions.push({
@@ -156,25 +140,21 @@ export class Tracer<
       startSpan:
         typeof definition.startSpan === 'string'
           ? definition.startSpan
-          : ensureMatcherFn<
-              TracerScopeKeysT,
-              AllPossibleScopesT,
-              OriginatedFromT
-            >(definition.startSpan),
+          : ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(
+              definition.startSpan,
+            ),
       endSpan:
         typeof definition.endSpan === 'string'
           ? definition.endSpan
-          : ensureMatcherFn<
-              TracerScopeKeysT,
-              AllPossibleScopesT,
-              OriginatedFromT
-            >(definition.endSpan),
+          : ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(
+              definition.endSpan,
+            ),
     })
   }
 
   defineComputedValue = <
     MatchersT extends (
-      | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>
+      | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
       | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
     )[],
   >(
@@ -182,16 +162,14 @@ export class Tracer<
       TracerScopeKeysT,
       AllPossibleScopesT,
       MatchersT,
-      OriginatedFromT
+      VariantT
     >,
   ): void => {
     this.definition.computedValueDefinitions.push({
       ...definition,
       matches: definition.matches.map((m) =>
-        ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>(
-          m,
-        ),
+        ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(m),
       ),
-    } as ComputedValueDefinition<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>)
+    } as ComputedValueDefinition<TracerScopeKeysT, AllPossibleScopesT, VariantT>)
   }
 }

@@ -66,30 +66,30 @@ export class TraceManager<
 
   createTracer<
     const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-    const OriginatedFromT extends string,
+    const VariantT extends string,
   >(
     traceDefinition: TraceDefinition<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >,
-  ): Tracer<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT> {
+  ): Tracer<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
     const computedSpanDefinitions: ComputedSpanDefinition<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >[] = []
     const computedValueDefinitions: ComputedValueDefinition<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT,
-      SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, OriginatedFromT>[]
+      VariantT,
+      SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>[]
     >[] = []
 
     const requiredSpans = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >(traceDefinition.requiredSpans)
 
     if (!requiredSpans) {
@@ -105,24 +105,24 @@ export class TraceManager<
     const debounceOn = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >(traceDefinition.debounceOn)
     const interruptOn = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >(traceDefinition.interruptOn)
 
     const suppressErrorStatusPropagationOn = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     >(traceDefinition.suppressErrorStatusPropagationOn)
 
     const completeTraceDefinition: CompleteTraceDefinition<
       TracerScopeKeysT,
       AllPossibleScopesT,
-      OriginatedFromT
+      VariantT
     > = {
       ...traceDefinition,
       requiredSpans,

@@ -17,7 +17,7 @@ describe('convertTraceToRUM', () => {
       requiredSpans: [() => true],
       computedSpanDefinitions: [],
       computedValueDefinitions: [],
-      variantsByOriginatedFrom: {
+      variants: {
         origin: { timeoutDuration: 45_000 },
       },
     }
@@ -26,7 +26,7 @@ describe('convertTraceToRUM', () => {
       id: 'test',
       startTime: createTimestamp(0),
       scope: {},
-      originatedFrom: 'origin',
+      variant: 'origin',
     }
 
     const traceRecording = createTraceRecording(
@@ -60,7 +60,7 @@ describe('convertTraceToRUM', () => {
           id: 'test',
           startTime: createTimestamp(0),
           scope: { ticketId: '74' },
-          originatedFrom: 'origin',
+          variant: 'origin',
         },
       },
       { transitionFromState: 'active' },
