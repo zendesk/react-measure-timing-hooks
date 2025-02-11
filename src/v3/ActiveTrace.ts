@@ -976,6 +976,9 @@ export class ActiveTrace<
           ? [...definition.suppressErrorStatusPropagationOn]
           : undefined,
     }
+
+    this.applyDefinitionModifications(variant)
+
     this.input = {
       ...input,
       startTime: ensureTimestamp(input.startTime),
@@ -1074,19 +1077,35 @@ export class ActiveTrace<
       },
     }
 
+    this.applyDefinitionModifications(inputAndDefinitionModifications)
+
+    this.stateMachine.emit('onActive', undefined)
+  }
+
+  /**
+   * The additions to the definition may come from either the variant at transition from draft to active
+   * @param definitionModifications
+   */
+  private applyDefinitionModifications(
+    definitionModifications: TraceModificationsBase<
+      TracerScopeKeysT,
+      AllPossibleScopesT,
+      VariantT
+    >,
+  ) {
+    const { definition } = this
     const additionalRequiredSpans = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
-    >(inputAndDefinitionModifications.additionalRequiredSpans)
       VariantT
+    >(definitionModifications.additionalRequiredSpans)
 
     const additionalDebounceOnSpans = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
-    >(inputAndDefinitionModifications.additionalDebounceOnSpans)
       VariantT
+    >(definitionModifications.additionalDebounceOnSpans)
 
-    const { definition } = this
     if (additionalRequiredSpans?.length) {
       definition.requiredSpans = [
         ...this.sourceDefinition.requiredSpans,
@@ -1099,8 +1118,6 @@ export class ActiveTrace<
         ...additionalDebounceOnSpans,
       ] as (typeof definition)['debounceOn']
     }
-
-    this.stateMachine.emit('onActive', undefined)
   }
 
   processSpan(
