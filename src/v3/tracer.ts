@@ -90,7 +90,7 @@ export class Tracer<
 
   // can have config changed until we move into active
   // from input: scope (required), attributes (optional, merge into)
-  // from definition, can add items to: requiredSpans (additionalRequiredSpans), debounceOn (additionalDebounceOnSpans)
+  // from definition, can add items to: requiredSpans (additionalRequiredSpans), debounceOnSpans (additionalDebounceOnSpans)
   // documentation: interruption still works and all the other events are buffered
   transitionDraftToActive = (
     inputAndDefinitionModifications: TraceModifications<

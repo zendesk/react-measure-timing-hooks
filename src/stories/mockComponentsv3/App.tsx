@@ -38,16 +38,16 @@ const ticketOperationTracer = traceManager.createTracer({
   ],
   scopes: ['ticketId'],
   variants: {
-    click: { timeoutDuration: 45_000 },
+    click: { timeout: 45_000 },
   },
-  // debounceDuration: 1_000,
-  debounceOn: [
+  // debounceWindow: 1_000,
+  debounceOnSpans: [
     {
       name: 'TicketView',
       matchScopes: ['ticketId'],
     },
   ],
-  interruptOn: [
+  interruptOnSpans: [
     {
       name: 'TicketView',
       matchScopes: ['ticketId'],

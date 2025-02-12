@@ -138,7 +138,7 @@ export interface TraceModifications<
 
 export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
   /**
-   * How long to wait for CPU Idle before giving up.
+   * How long to wait for CPU Idle before giving up and interrupting the trace.
    */
   timeout?: number
 }
@@ -167,7 +167,11 @@ export interface TraceVariant<
     AllPossibleScopesT,
     VariantT
   > {
-  timeoutDuration: number
+  /**
+   * How long before we give up and cancel the trace if the required spans have not been seen
+   * In milliseconds.
+   */
+  timeout: number
 }
 
 /**
@@ -207,13 +211,19 @@ export interface TraceDefinition<
   requiredSpans: ArrayWithAtLeastOneElement<
     SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
   >
-  debounceOn?: ArrayWithAtLeastOneElement<
+  debounceOnSpans?: ArrayWithAtLeastOneElement<
     SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
   >
-  interruptOn?: ArrayWithAtLeastOneElement<
+  interruptOnSpans?: ArrayWithAtLeastOneElement<
     SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
   >
-  debounceDuration?: number
+
+  /**
+   * How long should we wait after the last required span (or debounced span).
+   * in anticipation of more spans
+   * @default DEFAULT_DEBOUNCE_DURATION (500)
+   */
+  debounceWindow?: number
 
   /**
    * variants are used to describe slightly different versions of the same tracer
@@ -249,8 +259,9 @@ export interface TraceDefinition<
   }
 
   /**
-   * Indicates the operation should continue capturing events until interactivity is reached after the operation ends.
-   * Provide a boolean or a configuration object.
+   * Indicates the operation should continue capturing events after the trace is complete,
+   * until the page is considered fully interactive.
+   * Provide 'true' for defaults, or a custom configuration object.
    */
   captureInteractive?: boolean | CaptureInteractiveConfig
 
@@ -296,10 +307,10 @@ export interface CompleteTraceDefinition<
   requiredSpans: ArrayWithAtLeastOneElement<
     SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
   >
-  debounceOn?: ArrayWithAtLeastOneElement<
+  debounceOnSpans?: ArrayWithAtLeastOneElement<
     SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
   >
-  interruptOn?: ArrayWithAtLeastOneElement<
+  interruptOnSpans?: ArrayWithAtLeastOneElement<
     SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
   >
 

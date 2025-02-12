@@ -164,8 +164,8 @@ describe('type tests', () => {
       name: 'ticket.activation',
       scopes: ['ticketId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
-        another_origin: { timeoutDuration: 10_000 },
+        origin: { timeout: 5_000 },
+        another_origin: { timeout: 10_000 },
       },
       requiredSpans: [{ matchScopes: ['ticketId'] }],
     })
@@ -174,7 +174,7 @@ describe('type tests', () => {
       name: 'ticket.activation',
       scopes: ['customId', 'customOtherId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       requiredSpans: [
         match.withAllConditions(
@@ -195,7 +195,7 @@ describe('type tests', () => {
       name: 'user.activation',
       scopes: ['userId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       requiredSpans: [{ matchScopes: ['userId'] }],
     })
@@ -205,7 +205,7 @@ describe('type tests', () => {
       name: 'ticket.custom_field',
       scopes: ['ticketId', 'customFieldId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       requiredSpans: [{ matchScopes: ['ticketId'] }],
     })
@@ -214,7 +214,7 @@ describe('type tests', () => {
     const invalidTracer = traceManager.createTracer({
       name: 'ticket.activation',
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       // @ts-expect-error invalid scope
       scopes: ['invalid'],
@@ -231,7 +231,7 @@ describe('type tests', () => {
       name: 'ticket.should_error',
       scopes: ['ticketId', 'customFieldId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       requiredSpans: [
         {
@@ -246,7 +246,7 @@ describe('type tests', () => {
       name: 'ticket.activation',
       scopes: ['ticketId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       requiredSpans: [
         { matchScopes: ['ticketId'] },
@@ -330,7 +330,7 @@ describe('type tests', () => {
       type: 'operation',
       scopes: ['ticketId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       requiredSpans: [{ name: 'end', matchScopes: true }],
     })
@@ -350,7 +350,7 @@ describe('type tests', () => {
   //     name: 'ticket.scope-operation',
   //     type: 'operation',
   //     scopes: ['ticketId', 'customFieldId'],
-  //     timeoutDuration: 5_000,
+  //     timeout: 5_000,
   //     requiredSpans: [{ name: 'end', matchScopes: true }],
   //   })
   //   const traceId = tracer.start({
@@ -367,10 +367,10 @@ describe('type tests', () => {
       type: 'operation',
       scopes: ['ticketId', 'eventId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       requiredSpans: [{ name: 'OmniLogEvent', matchScopes: true }],
-      debounceOn: [{ name: 'OmniLog', matchScopes: ['ticketId'] }],
+      debounceOnSpans: [{ name: 'OmniLog', matchScopes: ['ticketId'] }],
     })
     const traceId = tracer.start({
       scope: {
@@ -389,7 +389,7 @@ describe('type tests', () => {
   //     type: 'operation',
   //     // @ts-expect-error enforce a complete set of keys of a given scope
   //     scopes: ['eventId'],
-  //     timeoutDuration: 5_000,
+  //     timeout: 5_000,
   //     requiredSpans: [{ name: 'OmniLogEvent', matchScopes: true }],
   //   })
   //   const traceId = tracer.start({
@@ -406,7 +406,7 @@ describe('type tests', () => {
       type: 'operation',
       scopes: ['ticketId'],
       variants: {
-        origin: { timeoutDuration: 5_000 },
+        origin: { timeout: 5_000 },
       },
       requiredSpans: [{ name: 'end', matchScopes: true }],
     })

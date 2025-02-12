@@ -56,7 +56,7 @@ describe('TraceManager', () => {
       scopes: ['ticketId'],
       requiredSpans: [{ name: 'end' }],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
     const traceId = tracer.createDraft({
@@ -93,7 +93,7 @@ describe('TraceManager', () => {
     expect(report.interruptionReason).toBeUndefined()
   })
 
-  it('interrupts a basic trace when interruptOn criteria is met in draft mode, trace stops immediately', () => {
+  it('interrupts a basic trace when interruptOnSpans criteria is met in draft mode, trace stops immediately', () => {
     const traceManager = new TraceManager<TicketScope>({
       reportFn,
       generateId,
@@ -104,9 +104,9 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [matchSpan.withName('end')],
-      interruptOn: [matchSpan.withName('interrupt')],
+      interruptOnSpans: [matchSpan.withName('interrupt')],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
     tracer.createDraft({
@@ -144,7 +144,7 @@ describe('TraceManager', () => {
       type: 'operation',
       scopes: ['ticketId'],
       requiredSpans: [{ name: 'timed-out-render' }],
-      variants: { cold_boot: { timeoutDuration: 500 } },
+      variants: { cold_boot: { timeout: 500 } },
     })
     const traceId = tracer.createDraft({
       startTime: { now: 0, epoch: 0 },
@@ -198,7 +198,7 @@ describe('TraceManager', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
 
@@ -226,7 +226,7 @@ describe('TraceManager', () => {
       scopes: ['ticketId'],
       requiredSpans: [{ name: 'end' }],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
 

@@ -21,7 +21,7 @@ export const ticketActivationDefinition: TraceDefinition<
   type: 'operation',
   scopes: ['ticketId'],
   variants: {
-    cold_boot: { timeoutDuration: 60_000 },
+    cold_boot: { timeout: 60_000 },
   },
   captureInteractive: true,
   requiredSpans: [
@@ -32,7 +32,7 @@ export const ticketActivationDefinition: TraceDefinition<
       isIdle: true,
     },
   ],
-  interruptOn: [
+  interruptOnSpans: [
     {
       type: 'mark',
       name: TICKET_DISPOSE_EVENT_NAME,
@@ -44,7 +44,7 @@ export const ticketActivationDefinition: TraceDefinition<
       matchScopes: ['ticketId'],
     },
   ],
-  debounceOn: [
+  debounceOnSpans: [
     // debounce on anything that has matching ticketId scope:
     { matchScopes: ['ticketId'] },
     // TODO: { type: 'measure', name: (name, scope) => `ticket/${scope.ticketId}/open` },

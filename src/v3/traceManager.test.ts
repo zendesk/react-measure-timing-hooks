@@ -54,7 +54,7 @@ describe('TraceManager', () => {
       scopes: ['ticketId'],
       requiredSpans: [{ name: 'end' }],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
     const traceId = tracer.start({
@@ -101,7 +101,7 @@ describe('TraceManager', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
 
@@ -161,7 +161,7 @@ describe('TraceManager', () => {
       scopes: [],
       requiredSpans: [{ name: 'end' }],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
 
@@ -221,7 +221,7 @@ describe('TraceManager', () => {
       scopes: [],
       requiredSpans: [{ name: 'Component', isIdle: true }],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
 
@@ -281,7 +281,7 @@ describe('TraceManager', () => {
       scopes: ['ticketId'],
       requiredSpans: [{ name: 'end', matchScopes: true }],
       variants: {
-        cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
     })
     const scope = {
@@ -332,9 +332,9 @@ describe('TraceManager', () => {
         type: 'operation',
         scopes: [],
         requiredSpans: [{ name: 'end' }],
-        debounceOn: [{ name: 'debounce' }],
+        debounceOnSpans: [{ name: 'debounce' }],
         variants: {
-          cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
       })
       const traceId = tracer.start({
@@ -381,10 +381,12 @@ describe('TraceManager', () => {
         type: 'operation',
         scopes: [],
         requiredSpans: [matchSpan.withName('end')],
-        debounceOn: [matchSpan.withName((n: string) => n.endsWith('debounce'))],
-        debounceDuration: 300,
+        debounceOnSpans: [
+          matchSpan.withName((n: string) => n.endsWith('debounce')),
+        ],
+        debounceWindow: 300,
         variants: {
-          cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
       })
       tracer.start({
@@ -423,7 +425,7 @@ describe('TraceManager', () => {
   })
 
   describe('interrupts', () => {
-    it('interrupts a basic trace when interruptOn criteria is met', () => {
+    it('interrupts a basic trace when interruptOnSpans criteria is met', () => {
       const traceManager = new TraceManager<TicketScope>({
         reportFn,
         generateId,
@@ -434,9 +436,9 @@ describe('TraceManager', () => {
         type: 'operation',
         scopes: [],
         requiredSpans: [matchSpan.withName('end')],
-        interruptOn: [matchSpan.withName('interrupt')],
+        interruptOnSpans: [matchSpan.withName('interrupt')],
         variants: {
-          cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
       })
       tracer.start({
@@ -484,9 +486,9 @@ describe('TraceManager', () => {
         type: 'operation',
         scopes: [],
         requiredSpans: [{ name: 'end' }],
-        debounceOn: [{ name: 'debounce' }],
+        debounceOnSpans: [{ name: 'debounce' }],
         variants: {
-          cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
       })
       const traceId = tracer.start({
@@ -543,9 +545,9 @@ describe('TraceManager', () => {
         type: 'operation',
         scopes: [],
         requiredSpans: [{ name: 'end', isIdle: true }],
-        debounceOn: [{ name: 'end' }],
+        debounceOnSpans: [{ name: 'end' }],
         variants: {
-          cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
       })
       tracer.start({
@@ -595,7 +597,7 @@ describe('TraceManager', () => {
           type: 'operation',
           scopes: ['ticketId'],
           requiredSpans: [{ name: 'timed-out-render' }],
-          variants: { cold_boot: { timeoutDuration: 500 } },
+          variants: { cold_boot: { timeout: 500 } },
         })
         const traceId = tracer.start({
           startTime: { now: 0, epoch: 0 },
@@ -650,7 +652,7 @@ describe('TraceManager', () => {
           scopes: [],
           requiredSpans: [{ name: 'timed-out-render' }],
           variants: {
-            cold_boot: { timeoutDuration: CUSTOM_TIMEOUT_DURATION },
+            cold_boot: { timeout: CUSTOM_TIMEOUT_DURATION },
           },
         })
         const traceId = tracer.start({
@@ -701,9 +703,9 @@ describe('TraceManager', () => {
           type: 'operation',
           scopes: [],
           requiredSpans: [{ name: 'end' }],
-          debounceOn: [{ name: 'debounce' }],
+          debounceOnSpans: [{ name: 'debounce' }],
           variants: {
-            cold_boot: { timeoutDuration: CUSTOM_TIMEOUT_DURATION },
+            cold_boot: { timeout: CUSTOM_TIMEOUT_DURATION },
           },
         })
         const traceId = tracer.start({

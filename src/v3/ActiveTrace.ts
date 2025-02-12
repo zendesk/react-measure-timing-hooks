@@ -273,7 +273,7 @@ export class TraceStateMachine<
         this.setGlobalDeadline(
           this.context.input.startTime.epoch +
             this.context.definition.variants[this.context.input.variant]!
-              .timeoutDuration,
+              .timeout,
         )
       },
 
@@ -299,10 +299,11 @@ export class TraceStateMachine<
           }
         }
 
-        // if the entry matches any of the interruptOn criteria,
+        // if the entry matches any of the interruptOnSpans criteria,
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
-        if (this.context.definition.interruptOn) {
-          for (const doesSpanMatch of this.context.definition.interruptOn) {
+        if (this.context.definition.interruptOnSpans) {
+          for (const doesSpanMatch of this.context.definition
+            .interruptOnSpans) {
             if (doesSpanMatch(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'complete',
@@ -361,9 +362,9 @@ export class TraceStateMachine<
           }
         }
 
-        // does span satisfy any of the "interruptOn" definitions
-        if (this.context.definition.interruptOn) {
-          for (const match of this.context.definition.interruptOn) {
+        // does span satisfy any of the "interruptOnSpans" definitions
+        if (this.context.definition.interruptOnSpans) {
+          for (const match of this.context.definition.interruptOnSpans) {
             if (match(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'interrupted',
@@ -441,7 +442,7 @@ export class TraceStateMachine<
         this.lastRequiredSpan = this.lastRelevant
         this.lastRequiredSpan.annotation.markedRequirementsMet = true
 
-        if (!this.context.definition.debounceOn) {
+        if (!this.context.definition.debounceOnSpans) {
           return { transitionToState: 'waiting-for-interactive' }
         }
         // set the first debounce deadline
@@ -449,7 +450,7 @@ export class TraceStateMachine<
           'debounce',
           this.lastRelevant.span.startTime.epoch +
             this.lastRelevant.span.duration +
-            (this.context.definition.debounceDuration ??
+            (this.context.definition.debounceWindow ??
               DEFAULT_DEBOUNCE_DURATION),
         )
 
@@ -527,8 +528,8 @@ export class TraceStateMachine<
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
-        if (this.context.definition.debounceOn) {
-          for (const doesSpanMatch of this.context.definition.debounceOn) {
+        if (this.context.definition.debounceOnSpans) {
+          for (const doesSpanMatch of this.context.definition.debounceOnSpans) {
             if (doesSpanMatch(spanAndAnnotation, this.context)) {
               // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
               if (
@@ -543,7 +544,7 @@ export class TraceStateMachine<
                   'debounce',
                   this.lastRelevant.span.startTime.epoch +
                     this.lastRelevant.span.duration +
-                    (this.context.definition.debounceDuration ??
+                    (this.context.definition.debounceWindow ??
                       DEFAULT_DEBOUNCE_DURATION),
                 )
               }
@@ -746,10 +747,11 @@ export class TraceStateMachine<
           }
         }
 
-        // if the entry matches any of the interruptOn criteria,
+        // if the entry matches any of the interruptOnSpans criteria,
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
-        if (this.context.definition.interruptOn) {
-          for (const doesSpanMatch of this.context.definition.interruptOn) {
+        if (this.context.definition.interruptOnSpans) {
+          for (const doesSpanMatch of this.context.definition
+            .interruptOnSpans) {
             if (doesSpanMatch(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'complete',
@@ -959,13 +961,13 @@ export class ActiveTrace<
       computedSpanDefinitions: [...definition.computedSpanDefinitions],
       computedValueDefinitions: [...definition.computedValueDefinitions],
 
-      interruptOn: definition.interruptOn
-        ? [...definition.interruptOn]
+      interruptOnSpans: definition.interruptOnSpans
+        ? [...definition.interruptOnSpans]
         : undefined,
-      debounceOn: definition.debounceOn
-        ? [...definition.debounceOn]
+      debounceOnSpans: definition.debounceOnSpans
+        ? [...definition.debounceOnSpans]
         : undefined,
-      debounceDuration: definition.debounceDuration,
+      debounceWindow: definition.debounceWindow,
       captureInteractive: definition.captureInteractive
         ? typeof definition.captureInteractive === 'boolean'
           ? definition.captureInteractive
@@ -1113,10 +1115,10 @@ export class ActiveTrace<
       ] as (typeof definition)['requiredSpans']
     }
     if (additionalDebounceOnSpans?.length) {
-      definition.debounceOn = [
-        ...(this.sourceDefinition.debounceOn ?? []),
+      definition.debounceOnSpans = [
+        ...(this.sourceDefinition.debounceOnSpans ?? []),
         ...additionalDebounceOnSpans,
-      ] as (typeof definition)['debounceOn']
+      ] as (typeof definition)['debounceOnSpans']
     }
   }
 

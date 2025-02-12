@@ -18,7 +18,7 @@ describe('convertTraceToRUM', () => {
       computedSpanDefinitions: [],
       computedValueDefinitions: [],
       variants: {
-        origin: { timeoutDuration: 45_000 },
+        origin: { timeout: 45_000 },
       },
     }
 

@@ -85,7 +85,7 @@ const mockContext = {
     computedSpanDefinitions: [],
     computedValueDefinitions: [],
     variants: {
-      origin: { timeoutDuration: 10_000 },
+      origin: { timeout: 10_000 },
     },
   } satisfies CompleteTraceDefinition<'ticketId', TicketScope, 'origin'>,
 } as const

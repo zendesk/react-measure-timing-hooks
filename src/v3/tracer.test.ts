@@ -43,11 +43,11 @@ describe('Tracer', () => {
         requiredSpans: [{ name: 'base-required' }],
         variants: {
           variant_a: {
-            timeoutDuration: 1_000,
+            timeout: 1_000,
             additionalRequiredSpans: [{ name: 'extra-required' }],
           },
           variant_b: {
-            timeoutDuration: 1_000,
+            timeout: 1_000,
           },
         },
       })
@@ -94,11 +94,11 @@ describe('Tracer', () => {
         type: 'operation',
         scopes: ['id'],
         requiredSpans: [{ name: 'required' }],
-        debounceOn: [{ name: 'base-debounce' }],
-        debounceDuration: 100,
+        debounceOnSpans: [{ name: 'base-debounce' }],
+        debounceWindow: 100,
         variants: {
           variant_a: {
-            timeoutDuration: 1_000,
+            timeout: 1_000,
             additionalDebounceOnSpans: [{ name: 'extra-debounce' }],
           },
         },
@@ -136,11 +136,11 @@ describe('Tracer', () => {
         requiredSpans: [{ name: 'base-required' }],
         variants: {
           variant_a: {
-            timeoutDuration: 1_000,
+            timeout: 1_000,
             additionalRequiredSpans: [{ name: 'extra-required-a' }],
           },
           variant_b: {
-            timeoutDuration: 1_000,
+            timeout: 1_000,
             additionalRequiredSpans: [{ name: 'extra-required-b' }],
           },
         },

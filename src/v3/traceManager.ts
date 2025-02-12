@@ -102,16 +102,16 @@ export class TraceManager<
       ? convertLabelMatchersToFns(traceDefinition.labelMatching)
       : undefined
 
-    const debounceOn = convertMatchersToFns<
+    const debounceOnSpans = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
       VariantT
-    >(traceDefinition.debounceOn)
-    const interruptOn = convertMatchersToFns<
+    >(traceDefinition.debounceOnSpans)
+    const interruptOnSpans = convertMatchersToFns<
       TracerScopeKeysT,
       AllPossibleScopesT,
       VariantT
-    >(traceDefinition.interruptOn)
+    >(traceDefinition.interruptOnSpans)
 
     const suppressErrorStatusPropagationOn = convertMatchersToFns<
       TracerScopeKeysT,
@@ -126,8 +126,8 @@ export class TraceManager<
     > = {
       ...traceDefinition,
       requiredSpans,
-      debounceOn,
-      interruptOn,
+      debounceOnSpans,
+      interruptOnSpans,
       suppressErrorStatusPropagationOn,
       computedSpanDefinitions,
       computedValueDefinitions,

@@ -22,7 +22,7 @@ describe('recordingComputeUtils', () => {
       computedSpanDefinitions: [],
       computedValueDefinitions: [],
       variants: {
-        origin: { timeoutDuration: 45_000 },
+        origin: { timeout: 45_000 },
       },
     }
 
@@ -159,7 +159,7 @@ describe('recordingComputeUtils', () => {
       ],
       computedValueDefinitions: [],
       variants: {
-        origin: { timeoutDuration: 45_000 },
+        origin: { timeout: 45_000 },
       },
     }
 
@@ -241,7 +241,7 @@ describe('recordingComputeUtils', () => {
           },
         ],
         variants: {
-          origin: { timeoutDuration: 45_000 },
+          origin: { timeout: 45_000 },
         },
       }
 
@@ -297,7 +297,7 @@ describe('recordingComputeUtils', () => {
             computedSpanDefinitions: [],
             computedValueDefinitions: [],
             variants: {
-              origin: { timeoutDuration: 45_000 },
+              origin: { timeout: 45_000 },
             },
           },
           recordedItems: [

@@ -122,12 +122,12 @@ export const ticketActivationTracer = traceManager.createOperationTracer({
     },
   ],
   // we do not need to debounce on anything until 'requiredToEnd' is met
-  debounceOn: [
+  debounceOnSpans: [
     {
       match: { scope: { ticket: { id } } },
     }
   ],
-  interruptOn: [
+  interruptOnSpans: [
     {
       match: {
         type: 'mark',

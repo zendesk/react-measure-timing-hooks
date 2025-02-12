@@ -70,7 +70,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -124,7 +124,7 @@ describe('TraceManager with Capture Interactivity', () => {
       },
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -172,11 +172,11 @@ describe('TraceManager with Capture Interactivity', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [matchSpan.withName('end')],
-      interruptOn: [matchSpan.withName('interrupt')],
+      interruptOnSpans: [matchSpan.withName('interrupt')],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -225,12 +225,12 @@ describe('TraceManager with Capture Interactivity', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [{ name: 'end' }],
-      debounceOn: [{ name: 'debounce' }],
+      debounceOnSpans: [{ name: 'debounce' }],
       captureInteractive: cpuIdleProcessorOptions,
-      debounceDuration: 300,
+      debounceWindow: 300,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -279,15 +279,15 @@ describe('TraceManager with Capture Interactivity', () => {
       type: 'operation',
       scopes: [],
       requiredSpans: [{ name: 'end' }],
-      debounceOn: [{ name: 'debounce' }],
+      debounceOnSpans: [{ name: 'debounce' }],
       captureInteractive: {
         ...cpuIdleProcessorOptions,
         timeout: CUSTOM_CAPTURE_INTERACTIVE_TIMEOUT,
       },
-      debounceDuration: 100,
+      debounceWindow: 100,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -347,7 +347,7 @@ describe('TraceManager with Capture Interactivity', () => {
       },
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -407,7 +407,7 @@ describe('TraceManager with Capture Interactivity', () => {
       },
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -459,7 +459,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -512,7 +512,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -565,7 +565,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -620,7 +620,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -676,7 +676,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -729,7 +729,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -787,7 +787,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -841,7 +841,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
@@ -898,7 +898,7 @@ describe('TraceManager with Capture Interactivity', () => {
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
         cold_boot: {
-          timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
+          timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION,
         },
       },
     })
