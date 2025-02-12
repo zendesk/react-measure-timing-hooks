@@ -3,12 +3,8 @@ import type { FinalState } from './ActiveTrace'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
-import type {
-  PossibleScopeObject,
-  SelectScopeByKey,
-  TraceContext,
-} from './types'
-import type { KeysOfUnion } from './typeUtils'
+import type { SelectRelationSchemaByKeysTuple, TraceContext } from './types'
+import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 import { findLast } from './utils'
 
 /**
@@ -32,36 +28,36 @@ import { findLast } from './utils'
  */
 
 export interface ComputeRecordingData<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
-> extends TraceContext<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
-  recordedItems: SpanAndAnnotation<AllPossibleScopesT>[]
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
+> extends TraceContext<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+  recordedItems: SpanAndAnnotation<RelationSchemasT>[]
 }
 
 export function getComputedValues<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  const VariantsT extends string,
 >({
   definition: traceDefinition,
   recordedItems,
   input,
 }: ComputeRecordingData<
-  TracerScopeKeysT,
-  AllPossibleScopesT,
-  VariantT
->): TraceRecording<TracerScopeKeysT, AllPossibleScopesT>['computedValues'] {
+  SelectedRelationTupleT,
+  RelationSchemasT,
+  VariantsT
+>): TraceRecording<SelectedRelationTupleT, RelationSchemasT>['computedValues'] {
   const computedValues: TraceRecording<
-    TracerScopeKeysT,
-    AllPossibleScopesT
+    SelectedRelationTupleT,
+    RelationSchemasT
   >['computedValues'] = {}
 
   for (const definition of traceDefinition.computedValueDefinitions) {
     const { name, matches, computeValueFromMatches } = definition
 
     // Initialize arrays to hold matches for each matcher
-    const matchingEntriesByMatcher: SpanAndAnnotation<AllPossibleScopesT>[][] =
+    const matchingEntriesByMatcher: SpanAndAnnotation<RelationSchemasT>[][] =
       Array.from({ length: matches.length }, () => [])
 
     // Single pass through recordedItems
@@ -81,31 +77,31 @@ export function getComputedValues<
   return computedValues
 }
 
-const markedComplete = <AllPossibleScopesT>(
-  spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+const markedComplete = <RelationSchemasT>(
+  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
 ) => spanAndAnnotation.annotation.markedComplete
 
-const markedInteractive = <AllPossibleScopesT>(
-  spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+const markedInteractive = <RelationSchemasT>(
+  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
 ) => spanAndAnnotation.annotation.markedPageInteractive
 
 export function getComputedSpans<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  const VariantsT extends string,
 >({
   definition: traceDefinition,
   recordedItems,
   input,
 }: ComputeRecordingData<
-  TracerScopeKeysT,
-  AllPossibleScopesT,
-  VariantT
->): TraceRecording<TracerScopeKeysT, AllPossibleScopesT>['computedSpans'] {
+  SelectedRelationTupleT,
+  RelationSchemasT,
+  VariantsT
+>): TraceRecording<SelectedRelationTupleT, RelationSchemasT>['computedSpans'] {
   // loop through the computed span definitions, check for entries that match in recorded items, then calculate the startOffset and duration
   const computedSpans: TraceRecording<
-    TracerScopeKeysT,
-    AllPossibleScopesT
+    SelectedRelationTupleT,
+    RelationSchemasT
   >['computedSpans'] = {}
 
   for (const definition of traceDefinition.computedSpanDefinitions) {
@@ -170,18 +166,18 @@ export function getComputedSpans<
 }
 
 function getComputedRenderBeaconSpans<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  const VariantsT extends string,
 >(
-  recordedItems: SpanAndAnnotation<AllPossibleScopesT>[],
+  recordedItems: SpanAndAnnotation<RelationSchemasT>[],
   input: ActiveTraceInput<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-    VariantT
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
+    VariantsT
   >,
 ): TraceRecording<
-  TracerScopeKeysT,
-  AllPossibleScopesT
+  SelectedRelationTupleT,
+  RelationSchemasT
 >['computedRenderBeaconSpans'] {
   const renderSpansByBeacon = new Map<
     string,
@@ -196,7 +192,7 @@ function getComputedRenderBeaconSpans<
     }
   >()
 
-  const scopeKeys = Object.keys(input.scope)
+  const scopeKeys = Object.keys(input.relatedTo)
 
   // Group render spans by beacon and compute firstStart and lastEnd
   for (const entry of recordedItems) {
@@ -206,13 +202,21 @@ function getComputedRenderBeaconSpans<
     ) {
       continue
     }
-    const { name, startTime, duration, scope, renderedOutput } = entry.span
+    const {
+      name,
+      startTime,
+      duration,
+      relatedTo: r,
+      renderedOutput,
+    } = entry.span
+
+    const relatedTo: Record<string, unknown> = r
+    const inputRelatedTo: Record<string, unknown> = input.relatedTo
 
     const scopeMatch = scopeKeys.every(
       (key) =>
-        (scope as PossibleScopeObject | undefined)?.[key] === undefined ||
-        (input.scope as PossibleScopeObject)[key] ===
-          (scope as PossibleScopeObject)[key],
+        relatedTo?.[key] === undefined ||
+        inputRelatedTo[key] === relatedTo[key],
     )
     if (!scopeMatch) continue
 
@@ -278,8 +282,8 @@ function getComputedRenderBeaconSpans<
   }
 
   const computedRenderBeaconSpans: TraceRecording<
-    TracerScopeKeysT,
-    AllPossibleScopesT
+    SelectedRelationTupleT,
+    RelationSchemasT
   >['computedRenderBeaconSpans'] = {}
 
   // Calculate duration and startOffset for each beacon
@@ -304,42 +308,52 @@ function getComputedRenderBeaconSpans<
 }
 
 function isActiveTraceInput<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  const VariantsT extends string,
 >(
   input:
     | DraftTraceInput<
-        SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-        VariantT
+        SelectRelationSchemaByKeysTuple<
+          SelectedRelationTupleT,
+          RelationSchemasT
+        >,
+        VariantsT
       >
     | ActiveTraceInput<
-        SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-        VariantT
+        SelectRelationSchemaByKeysTuple<
+          SelectedRelationTupleT,
+          RelationSchemasT
+        >,
+        VariantsT
       >,
 ): input is ActiveTraceInput<
-  SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-  VariantT
+  SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
+  VariantsT
 > {
-  return Boolean(input.scope)
+  return Boolean(input.relatedTo)
 }
 
 export function createTraceRecording<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
-  data: ComputeRecordingData<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
+  data: ComputeRecordingData<
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
+  >,
   {
     transitionFromState,
     interruptionReason,
     cpuIdleSpanAndAnnotation,
     completeSpanAndAnnotation,
     lastRequiredSpanAndAnnotation,
-  }: FinalState<AllPossibleScopesT>,
-): TraceRecording<TracerScopeKeysT, AllPossibleScopesT> {
+  }: FinalState<RelationSchemasT>,
+): TraceRecording<SelectedRelationTupleT, RelationSchemasT> {
   const { definition, recordedItems, input } = data
-  const { id, scope } = input
+  const { id, relatedTo } = input
   const { name } = definition
   // CODE CLEAN UP TODO: let's get this information (wasInterrupted) from up top (in FinalState)
   const wasInterrupted =
@@ -354,7 +368,7 @@ export function createTraceRecording<
   const anyNonSuppressedErrors = recordedItems.some(
     (spanAndAnnotation) =>
       spanAndAnnotation.span.status === 'error' &&
-      !definition.suppressErrorStatusPropagationOn?.some((doesSpanMatch) =>
+      !definition.suppressErrorStatusPropagationOnSpans?.some((doesSpanMatch) =>
         doesSpanMatch(spanAndAnnotation, data),
       ),
   )
@@ -369,7 +383,7 @@ export function createTraceRecording<
     id,
     name,
     startTime: input.startTime,
-    scope,
+    relatedTo,
     type: 'operation',
     duration,
     additionalDurations: {

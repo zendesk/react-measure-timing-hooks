@@ -2,12 +2,8 @@ import { generateUseBeacon } from '../../v3/hooks'
 import { observePerformanceWithTraceManager } from '../../v3/observePerformanceWithTraceManager'
 import { TraceManager } from '../../v3/traceManager'
 
-export interface TicketIdScope {
-  ticketId: number
-  [key: string]: number
-}
-
-export const traceManager = new TraceManager<TicketIdScope>({
+export const traceManager = new TraceManager({
+  relationSchemas: [{ ticketId: Number }],
   reportFn: (trace) => {
     // eslint-disable-next-line no-console
     console.log('# on End', trace, trace.entries, trace.duration)

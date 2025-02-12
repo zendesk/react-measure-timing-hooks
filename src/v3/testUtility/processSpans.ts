@@ -1,12 +1,14 @@
 import { Span } from '../spanTypes'
 import { TraceManager } from '../traceManager'
-import { ScopeValue } from '../types'
+import { RelationSchemaValue } from '../types'
 
 export function processSpans<
-  AllPossibleScopeT extends { [K in keyof AllPossibleScopeT]: ScopeValue },
+  const RelationSchemasT extends {
+    [K in keyof RelationSchemasT]: RelationSchemaValue
+  },
 >(
-  spans: Span<AllPossibleScopeT>[],
-  traceManager: TraceManager<AllPossibleScopeT>,
+  spans: Span<RelationSchemasT>[],
+  traceManager: TraceManager<RelationSchemasT>,
 ) {
   spans.forEach((span, i) => {
     traceManager.processSpan(span)

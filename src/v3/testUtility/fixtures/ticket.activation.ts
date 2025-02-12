@@ -1,25 +1,17 @@
 import type { TraceDefinition } from '../../types'
-
-export interface TicketIdScope {
-  ticketId: string
-}
-export interface UserIdScope {
-  userId: string
-}
-
-export type FixtureAllPossibleScopes = TicketIdScope | UserIdScope
+import type { FixtureAllPossibleRelationSchemas } from './relationSchemas'
 
 const TICKET_DISPOSE_EVENT_NAME = `ticket.dispose`
 const TICKET_NAVIGATED_AWAY_EVENT_NAME = `ticket.navigated-away`
 
 export const ticketActivationDefinition: TraceDefinition<
-  'ticketId',
-  FixtureAllPossibleScopes,
+  ['ticketId'],
+  FixtureAllPossibleRelationSchemas,
   'cold_boot'
 > = {
   name: 'ticket.activation',
   type: 'operation',
-  scopes: ['ticketId'],
+  relations: ['ticketId'],
   variants: {
     cold_boot: { timeout: 60_000 },
   },
@@ -28,7 +20,7 @@ export const ticketActivationDefinition: TraceDefinition<
     {
       type: 'component-render',
       name: 'OmniLog',
-      matchScopes: ['ticketId'],
+      withTraceRelations: ['ticketId'],
       isIdle: true,
     },
   ],
@@ -36,28 +28,28 @@ export const ticketActivationDefinition: TraceDefinition<
     {
       type: 'mark',
       name: TICKET_DISPOSE_EVENT_NAME,
-      matchScopes: ['ticketId'],
+      withTraceRelations: ['ticketId'],
     },
     {
       type: 'mark',
       name: TICKET_NAVIGATED_AWAY_EVENT_NAME,
-      matchScopes: ['ticketId'],
+      withTraceRelations: ['ticketId'],
     },
   ],
   debounceOnSpans: [
-    // debounce on anything that has matching ticketId scope:
-    { matchScopes: ['ticketId'] },
-    // TODO: { type: 'measure', name: (name, scope) => `ticket/${scope.ticketId}/open` },
+    // debounce on anything that has matching ticketId relatedTo:
+    { withTraceRelations: ['ticketId'] },
+    // TODO: { type: 'measure', name: (name, relatedTo) => `ticket/${relatedTo.ticketId}/open` },
     // metric from ember: ticket_workspace.module.js
     ({ span }) =>
       span.type === 'measure' &&
-      span.name === `ticket/${span.scope?.ticketId}/open`,
+      span.name === `ticket/${span.relatedTo?.ticketId}/open`,
     // debounce on element timing sentinels:
     ({ span }) =>
       span.type === 'element' &&
-      span.name === `ticket_workspace/${span.scope?.ticketId}`,
+      span.name === `ticket_workspace/${span.relatedTo?.ticketId}`,
     ({ span }) =>
       span.type === 'element' &&
-      span.name === `omnilog/${span.scope?.ticketId}`,
+      span.name === `omnilog/${span.relatedTo?.ticketId}`,
   ],
 }

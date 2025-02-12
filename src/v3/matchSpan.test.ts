@@ -6,17 +6,13 @@ import type {
   ComponentRenderSpan,
   SpanBase,
 } from './spanTypes'
-import type { CompleteTraceDefinition } from './types'
+import type {
+  TicketIdRelationSchema,
+  UserIdRelationSchema,
+} from './testUtility/fixtures/relationSchemas'
+import type { CompleteTraceDefinition, MapSchemaToTypes } from './types'
 
-// Mock data for TraceEntryBase
-interface TicketScope {
-  ticketId: string
-}
-interface UserScope {
-  userId: string
-}
-
-const mockScope: TicketScope = {
+const mockRelations: MapSchemaToTypes<TicketIdRelationSchema> = {
   ticketId: '123',
 }
 
@@ -27,14 +23,14 @@ const mockEntryBase = {
     now: Date.now(),
     epoch: Date.now(),
   },
-  scope: mockScope,
+  relatedTo: mockRelations,
   attributes: {
     attr1: 'value1',
     attr2: 2,
   },
   duration: 100,
   status: 'ok',
-} as const satisfies SpanBase<TicketScope>
+} as const satisfies SpanBase<TicketIdRelationSchema>
 
 const mockPerformanceEntry = {
   ...mockEntryBase,
@@ -46,10 +42,10 @@ const mockPerformanceEntry = {
     toJSON: () => ({}),
     detail: () => ({}),
   },
-} as const satisfies SpanBase<TicketScope>
+} as const satisfies SpanBase<TicketIdRelationSchema>
 
 // Mock data for ComponentRenderTraceEntry
-const mockComponentEntry: ComponentRenderSpan<TicketScope> = {
+const mockComponentEntry: ComponentRenderSpan<TicketIdRelationSchema> = {
   ...mockEntryBase,
   type: 'component-render',
   errorInfo: undefined,
@@ -70,24 +66,28 @@ const mockAnnotation: SpanAnnotation = {
 const mockContext = {
   input: {
     id: '123',
-    scope: mockScope,
+    relatedTo: mockRelations,
     startTime: {
       now: Date.now(),
       epoch: Date.now(),
     },
     variant: 'origin',
-  } satisfies ActiveTraceInput<TicketScope, 'origin'>,
+  } satisfies ActiveTraceInput<TicketIdRelationSchema, 'origin'>,
   definition: {
     name: 'test',
     type: 'operation',
-    scopes: ['ticketId'] as never,
+    relations: ['ticketId'] as never,
     requiredSpans: [() => true],
     computedSpanDefinitions: [],
     computedValueDefinitions: [],
     variants: {
       origin: { timeout: 10_000 },
     },
-  } satisfies CompleteTraceDefinition<'ticketId', TicketScope, 'origin'>,
+  } satisfies CompleteTraceDefinition<
+    ['ticketId'],
+    TicketIdRelationSchema,
+    'origin'
+  >,
 } as const
 
 type MockOrigin = (typeof mockContext)['input']['variant']
@@ -98,8 +98,8 @@ describe('matchSpan', () => {
   describe('name', () => {
     it('should return true for a matching entry based on name', () => {
       const matcher = matchSpan.withName<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >('testEntry')
       const mockSpanAndAnnotation = {
@@ -111,8 +111,8 @@ describe('matchSpan', () => {
 
     it('should return true for function matchers for name', () => {
       const matcher = matchSpan.withName<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >((n: string) => n.startsWith('test'))
       const mockSpanAndAnnotation = {
@@ -124,8 +124,8 @@ describe('matchSpan', () => {
 
     it('should return true for regex matchers for name', () => {
       const matcher = matchSpan.withName<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >(/^test/)
       const mockSpanAndAnnotation = {
@@ -137,8 +137,8 @@ describe('matchSpan', () => {
 
     it('should return false for a non-matching span based on name', () => {
       const matcher = matchSpan.withName<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >('nonMatchingEntry')
       const mockSpanAndAnnotation = {
@@ -152,8 +152,8 @@ describe('matchSpan', () => {
   describe('performanceEntryName', () => {
     it('should return true for a matching span based on performanceEntryName', () => {
       const matcher = matchSpan.withPerformanceEntryName<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >('testEntry')
       const mockSpanAndAnnotation = {
@@ -165,8 +165,8 @@ describe('matchSpan', () => {
 
     it('should return false for a non-matching performanceEntryName', () => {
       const matcher = matchSpan.withPerformanceEntryName<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >('nonMatchingEntry')
       const mockSpanAndAnnotation = {
@@ -181,8 +181,8 @@ describe('matchSpan', () => {
     describe('for Native Performance Entry', () => {
       it('should return true for matching attributes', () => {
         const matcher = matchSpan.withType<
-          keyof TicketScope,
-          TicketScope,
+          [keyof TicketIdRelationSchema],
+          TicketIdRelationSchema,
           MockOrigin
         >('element')
         const mockSpanAndAnnotation = {
@@ -194,8 +194,8 @@ describe('matchSpan', () => {
 
       it('should return false for non-matching attributes', () => {
         const matcher = matchSpan.withType<
-          keyof TicketScope,
-          TicketScope,
+          [keyof TicketIdRelationSchema],
+          TicketIdRelationSchema,
           MockOrigin
         >('component-render')
         const mockSpanAndAnnotation = {
@@ -209,8 +209,8 @@ describe('matchSpan', () => {
     describe('for ComponentRenderTraceEntry', () => {
       it('should return true for a matching ComponentRenderTraceEntry', () => {
         const matcher = matchSpan.withAllConditions<
-          keyof TicketScope,
-          TicketScope,
+          [keyof TicketIdRelationSchema],
+          TicketIdRelationSchema,
           MockOrigin
         >(
           matchSpan.withType('component-render'),
@@ -225,8 +225,8 @@ describe('matchSpan', () => {
 
       it('should return false for a non-matching ComponentRenderTraceEntry', () => {
         const matcher = matchSpan.withAllConditions<
-          keyof TicketScope,
-          TicketScope,
+          [keyof TicketIdRelationSchema],
+          TicketIdRelationSchema,
           MockOrigin
         >(
           matchSpan.withType('component-render'),
@@ -244,8 +244,8 @@ describe('matchSpan', () => {
   describe('status', () => {
     it('should return true when status does match', () => {
       const matcher = matchSpan.withStatus<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >('ok')
       const mockSpanAndAnnotation = {
@@ -257,8 +257,8 @@ describe('matchSpan', () => {
 
     it('should return false when status does not match', () => {
       const matcher = matchSpan.withStatus<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >('error')
       const mockSpanAndAnnotation = {
@@ -272,8 +272,8 @@ describe('matchSpan', () => {
   describe('occurrence', () => {
     it('should return true for occurrence matching', () => {
       const matcher = matchSpan.withAllConditions<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >(matchSpan.withName('testEntry'), matchSpan.withOccurrence(1))
       const mockSpanAndAnnotation = {
@@ -285,8 +285,8 @@ describe('matchSpan', () => {
 
     it('should return false for non-matching occurrence', () => {
       const matcher = matchSpan.withAllConditions<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >(matchSpan.withName('testEntry'), matchSpan.withOccurrence(2))
       const mockSpanAndAnnotation = {
@@ -300,8 +300,8 @@ describe('matchSpan', () => {
   describe('attributes', () => {
     it('should return true for matching attributes', () => {
       const matcher = matchSpan.withAttributes<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >({
         attr1: 'value1',
@@ -315,8 +315,8 @@ describe('matchSpan', () => {
 
     it('should return false for non-matching attributes', () => {
       const matcher = matchSpan.withAttributes<
-        keyof TicketScope,
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >({
         attr1: 'wrongValue',
@@ -330,14 +330,14 @@ describe('matchSpan', () => {
   })
 
   describe('scopeKeys', () => {
-    it('should return true when scope does match', () => {
+    it('should return true when relatedTo does match', () => {
       const matcher = matchSpan.withAllConditions<
-        'ticketId',
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >(
         matchSpan.withName('testEntry'),
-        matchSpan.withMatchingScopes(['ticketId']),
+        matchSpan.withTraceRelations(['ticketId']),
       )
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
@@ -346,14 +346,14 @@ describe('matchSpan', () => {
       expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(true)
     })
 
-    it('should return false when scope does not match', () => {
+    it('should return false when relatedTo does not match', () => {
       const matcher = matchSpan.withAllConditions<
-        'ticketId' | 'userId',
-        TicketScope & UserScope,
+        [keyof TicketIdRelationSchema] | [keyof UserIdRelationSchema],
+        TicketIdRelationSchema | UserIdRelationSchema,
         MockOrigin
       >(
         matchSpan.withName('testEntry'),
-        matchSpan.withMatchingScopes(['ticketId', 'userId']),
+        matchSpan.withTraceRelations(['ticketId', 'userId']),
       )
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
@@ -364,7 +364,7 @@ describe('matchSpan', () => {
           ...mockContext,
           input: {
             ...mockContext.input,
-            scope: {
+            relatedTo: {
               ticketId: '123',
               userId: '123',
             },
@@ -376,8 +376,8 @@ describe('matchSpan', () => {
 
   describe('isIdle', () => {
     const mockMatcher = matchSpan.withAllConditions<
-      keyof TicketScope,
-      TicketScope,
+      [keyof TicketIdRelationSchema],
+      TicketIdRelationSchema,
       MockOrigin
     >(matchSpan.withName('testEntry'), matchSpan.whenIdle(true))
 
@@ -402,14 +402,14 @@ describe('matchSpan', () => {
   describe('combination of conditions', () => {
     it('should return true when all conditions match', () => {
       const matcher = matchSpan.withAllConditions<
-        'ticketId',
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >(
         matchSpan.withName('testEntry'),
         matchSpan.withPerformanceEntryName('testEntry'),
         matchSpan.withAttributes({ attr1: 'value1' }),
-        matchSpan.withMatchingScopes(['ticketId']),
+        matchSpan.withTraceRelations(['ticketId']),
         matchSpan.withStatus('ok'),
         matchSpan.withType('element'),
       )
@@ -422,14 +422,14 @@ describe('matchSpan', () => {
 
     it('should return false when all conditions match but name', () => {
       const matcher = matchSpan.withAllConditions<
-        'ticketId',
-        TicketScope,
+        [keyof TicketIdRelationSchema],
+        TicketIdRelationSchema,
         MockOrigin
       >(
         matchSpan.withName('testEntries'), // does not match
         matchSpan.withPerformanceEntryName('testEntry'),
         matchSpan.withAttributes({ attr1: 'value1' }),
-        matchSpan.withMatchingScopes(['ticketId']),
+        matchSpan.withTraceRelations(['ticketId']),
         matchSpan.withStatus('ok'),
         matchSpan.withType('element'),
       )

@@ -194,7 +194,7 @@ export const mapOperationForVisualization = (
         traceRecording.startTime,
         computedSpan.startOffset,
       ),
-      scope: traceRecording.scope,
+      relatedTo: traceRecording.relatedTo,
     },
     annotation: {
       id: traceRecording.id,

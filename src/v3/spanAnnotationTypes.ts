@@ -50,7 +50,7 @@ export interface SpanAnnotationRecord {
   [operationName: string]: SpanAnnotation
 }
 
-export interface SpanAndAnnotation<AllPossibleScopesT> {
-  span: Span<AllPossibleScopesT>
+export interface SpanAndAnnotation<RelationSchemasT> {
+  span: Span<RelationSchemasT>
   annotation: SpanAnnotation
 }

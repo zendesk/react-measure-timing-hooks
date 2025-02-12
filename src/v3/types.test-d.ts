@@ -1,56 +1,9 @@
 import { assertType, describe, expect, it } from 'vitest'
 import { generateUseBeacon } from './hooks'
+import type { GetScopeTFromTraceManager } from './hooksTypes'
 import * as match from './matchSpan'
 import { TraceManager } from './traceManager'
-
-interface ExampleTicketScope {
-  ticketId: string
-}
-
-interface ExampleUserScope {
-  userId: string
-}
-
-interface ExampleTicketEventScope {
-  ticketId: string
-  eventId: string
-}
-
-interface ExampleCustomFieldScope {
-  customFieldId: string
-}
-
-interface ExampleScopeWithMultipleKeys {
-  customId: string
-  customOtherId: string
-}
-
-interface TicketFieldScope {
-  ticketId: string
-  ticketFieldType: 'dropdown'
-}
-interface TicketAppScope {
-  ticketId: string
-  appId: string
-}
-
-type ExampleAllPossibleScopes =
-  | ExampleTicketScope
-  | ExampleUserScope
-  | ExampleCustomFieldScope
-  | ExampleScopeWithMultipleKeys
-  | ExampleTicketEventScope
-
-// TODO:
-// // Helper type to ensure we get a tuple instead of an array type
-// type ToTuple<T extends any[]> = [...T];
-
-// // Main type that transforms union of objects to union of tuples of keys
-// type ObjectKeysToTuple<T> = T extends object
-//   ? ToTuple<keyof T extends infer K ? K extends PropertyKey ? [K] : never : never>
-//   : never;
-
-// type X = ObjectKeysToTuple<ExampleAllPossibleScopes> // ["ticketId"] | ["userId"] | ["customFieldId"] | ["customId", "customOtherId"] | ["ticketId", "eventId"]
+import type { MapSchemaToTypes } from './types'
 
 const mockSpanWithoutScope = {
   name: 'some-span',
@@ -61,26 +14,40 @@ const mockSpanWithoutScope = {
 } as const
 
 describe('type tests', () => {
-  const traceManager = new TraceManager<ExampleAllPossibleScopes>({
+  const traceManager = new TraceManager({
+    relationSchemas: [
+      { ticketId: String },
+      { userId: String },
+      { ticketId: String, customFieldId: String },
+      { customId: String, customOtherId: String },
+      { ticketId: String, eventId: String },
+    ],
     generateId: () => 'id',
     reportFn: (trace) => {
-      if (!trace.scope) return
+      if (!trace.relatedTo) return
 
-      if ('ticketId' in trace.scope) {
+      if ('ticketId' in trace.relatedTo) {
         // valid
-        expect(trace.scope.ticketId).toBeDefined()
-        // @ts-expect-error invalid scope
-        expect(trace.scope.userId).toBeDefined()
+        expect(trace.relatedTo.ticketId).toBeDefined()
+        // @ts-expect-error invalid relatedTo
+        expect(trace.relatedTo.userId).toBeDefined()
       }
-      if ('userId' in trace.scope) {
+      if ('eventId' in trace.relatedTo) {
         // valid
-        expect(trace.scope.userId).toBeDefined()
-        // @ts-expect-error invalid scope
-        expect(trace.scope.ticketId).toBeDefined()
+        expect(trace.relatedTo.eventId).toBeDefined()
+        expect(trace.relatedTo.ticketId).toBeDefined()
+        // @ts-expect-error invalid relatedTo
+        expect(trace.relatedTo.userId).toBeDefined()
+      }
+      if ('userId' in trace.relatedTo) {
+        // valid
+        expect(trace.relatedTo.userId).toBeDefined()
+        // @ts-expect-error invalid relatedTo
+        expect(trace.relatedTo.ticketId).toBeDefined()
       }
       // valid
-      if ('customFieldId' in trace.scope) {
-        expect(trace.scope.customFieldId).toBeDefined()
+      if ('customFieldId' in trace.relatedTo) {
+        expect(trace.relatedTo.customFieldId).toBeDefined()
       }
     },
     reportErrorFn: (error) => {
@@ -91,9 +58,10 @@ describe('type tests', () => {
   interface RequiredBeaconAttributes {
     team: string
   }
-  const useBeacon = generateUseBeacon<ExampleAllPossibleScopes>(traceManager)
+  const useBeacon = generateUseBeacon(traceManager)
+  type Schema = GetScopeTFromTraceManager<typeof traceManager>
   const useBeaconWithRequiredAttributes = generateUseBeacon<
-    ExampleAllPossibleScopes,
+    Schema,
     RequiredBeaconAttributes
   >(traceManager)
 
@@ -104,7 +72,7 @@ describe('type tests', () => {
     }
 
     // invalid:
-    // @ts-expect-error invalid scope
+    // @ts-expect-error invalid relatedTo
     const invalidTraceManager = new TraceManager<InvalidScope>({
       generateId: () => 'id',
       reportFn: () => {},
@@ -116,29 +84,29 @@ describe('type tests', () => {
     useBeacon({
       name: 'OmniLog',
       renderedOutput: 'content',
-      scope: { ticketId: '123' },
+      relatedTo: { ticketId: '123', customFieldId: '123' },
     })
 
     // valid beacon
     useBeacon({
       name: 'UserPage',
       renderedOutput: 'content',
-      scope: { userId: '123' },
+      relatedTo: { userId: '123' },
     })
 
     // invalid
     useBeacon({
       name: 'UserPage',
       renderedOutput: 'content',
-      // @ts-expect-error invalid scope
-      scope: { invalid: '123' },
+      // @ts-expect-error invalid relatedTo
+      relatedTo: { invalid: '123' },
     })
 
     // valid beacon with only required attributes
     useBeaconWithRequiredAttributes({
       name: 'UserPage',
       renderedOutput: 'content',
-      scope: { userId: '123' },
+      relatedTo: { userId: '123' },
       attributes: { team: 'test' },
     })
 
@@ -146,7 +114,7 @@ describe('type tests', () => {
     useBeaconWithRequiredAttributes({
       name: 'UserPage',
       renderedOutput: 'content',
-      scope: { userId: '123' },
+      relatedTo: { userId: '123' },
       attributes: { randoKey: 'test', team: 'test' },
     })
 
@@ -154,7 +122,7 @@ describe('type tests', () => {
     useBeaconWithRequiredAttributes({
       name: 'UserPage',
       renderedOutput: 'content',
-      scope: { userId: '123' },
+      relatedTo: { userId: '123' },
       // @ts-expect-error attributes require a team key
       attributes: { randoKey: 'test' },
     })
@@ -162,81 +130,85 @@ describe('type tests', () => {
     // valid definition
     const ticketActivationTracer = traceManager.createTracer({
       name: 'ticket.activation',
-      scopes: ['ticketId'],
+      relations: ['ticketId'],
       variants: {
         origin: { timeout: 5_000 },
         another_origin: { timeout: 10_000 },
       },
-      requiredSpans: [{ matchScopes: ['ticketId'] }],
+      requiredSpans: [{ withTraceRelations: ['ticketId'] }],
     })
 
     const ticketActivationTracer2 = traceManager.createTracer({
       name: 'ticket.activation',
-      scopes: ['customId', 'customOtherId'],
+      relations: ['customId', 'customOtherId'],
       variants: {
         origin: { timeout: 5_000 },
       },
       requiredSpans: [
         match.withAllConditions(
-          match.withName((name, scopes) => name === `${scopes?.customId}.end`),
+          match.withName(
+            (name, relations) => name === `${relations?.customId}.end`,
+          ),
           match.withName('end'),
-          match.withMatchingScopes(['customId']),
+          match.withTraceRelations(['customId']),
         ),
-        match.withName((name, scopes) => name === `${scopes?.customId}.end`),
+        match.withName(
+          (name, relatedTo) => name === `${relatedTo?.customId}.end`,
+        ),
         match.withName('customFieldId'),
-        match.withMatchingScopes(['customId']),
-        // @ts-expect-error invalid scope
-        match.withMatchingScopes(['sticketId']),
+        match.withTraceRelations(['customId']),
+        // @ts-expect-error invalid relatedTo
+        match.withTraceRelations(['typoId']),
       ],
     })
 
     // valid definition
     const userPageTracer = traceManager.createTracer({
       name: 'user.activation',
-      scopes: ['userId'],
+      relations: ['userId'],
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ matchScopes: ['userId'] }],
+      requiredSpans: [{ withTraceRelations: ['userId'] }],
     })
 
     // valid definition
     const customFieldDropdownTracer = traceManager.createTracer({
       name: 'ticket.custom_field',
-      scopes: ['ticketId', 'customFieldId'],
+      relations: ['ticketId', 'customFieldId'],
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ matchScopes: ['ticketId'] }],
+      requiredSpans: [{ withTraceRelations: ['ticketId'] }],
     })
 
-    // invalid definition. scopes match but not included in AllPossibleScopes
+    // invalid definition. relatedTo match but not included in AllPossibleScopes
     const invalidTracer = traceManager.createTracer({
       name: 'ticket.activation',
       variants: {
         origin: { timeout: 5_000 },
       },
-      // @ts-expect-error invalid scope
-      scopes: ['invalid'],
+      // @ts-expect-error invalid relatedTo
+      relations: ['invalid'],
       requiredSpans: [
         {
-          // @ts-expect-error invalid scope
-          matchScopes: ['invalid'],
+          // @ts-expect-error invalid relatedTo
+          withTraceRelations: ['invalid'],
         },
       ],
     })
 
-    // invalid definition. userId given in requiredSpans isn't one of the scopes the tracer says it can have
+    // invalid definition. userId given in requiredSpans isn't one of the relatedTo the tracer says it can have
     const shouldErrorTrace = traceManager.createTracer({
       name: 'ticket.should_error',
-      scopes: ['ticketId', 'customFieldId'],
+      relations: ['ticketId', 'customFieldId'],
       variants: {
         origin: { timeout: 5_000 },
       },
       requiredSpans: [
         {
-          // @ts-expect-error invalid scope
-          matchScopes: ['userId'],
+          // @ts-expect-error invalid relatedTo
+          withTraceRelations: ['userId'],
         },
       ],
     })
@@ -244,62 +216,63 @@ describe('type tests', () => {
     // valid definition
     const ticketActivationWithFnTracer = traceManager.createTracer({
       name: 'ticket.activation',
-      scopes: ['ticketId'],
+      relations: ['ticketId'],
       variants: {
         origin: { timeout: 5_000 },
       },
       requiredSpans: [
-        { matchScopes: ['ticketId'] },
-        ({ span }) => span.scope?.ticketId === '123',
+        { withTraceRelations: ['ticketId'] },
+        ({ span }) => span.relatedTo?.ticketId === '123',
       ],
     })
 
     // valid start
     ticketActivationTracer.start({
-      scope: { ticketId: '123' },
+      relatedTo: { ticketId: '123' },
       variant: 'origin',
     })
     // valid start
     ticketActivationTracer.start({
-      scope: { ticketId: '999' },
+      relatedTo: { ticketId: '999' },
       variant: 'another_origin',
     })
 
     // invalid start - wrong variant
     ticketActivationTracer.start({
-      scope: { ticketId: '123' },
+      relatedTo: { ticketId: '123' },
       // @ts-expect-error invalid variant
       variant: 'origin_wrong',
     })
 
     // invalid start (errors)
     ticketActivationTracer.start({
-      // @ts-expect-error invalid scope
-      scope: { whatever: '123' },
+      // @ts-expect-error invalid relatedTo
+      relatedTo: { whatever: '123' },
     })
 
     // invalid start (errors)
     ticketActivationTracer.start({
-      // @ts-expect-error invalid scope
-      scope: { userId: '123' },
+      // @ts-expect-error invalid relatedTo
+      relatedTo: { userId: '123' },
+      variant: 'origin',
     })
 
-    // valid - excess scope
+    // valid - excess relatedTo
     traceManager.processSpan({
       ...mockSpanWithoutScope,
-      scope: { ticketId: '123', customFieldId: '123', userId: '123' },
+      relatedTo: { ticketId: '123', customFieldId: '123', userId: '123' },
     })
 
     // valid
     traceManager.processSpan({
       ...mockSpanWithoutScope,
-      scope: { ticketId: '123' },
+      relatedTo: { ticketId: '123' },
     })
 
-    // valid - multiple scopes simultaneously
+    // valid - multiple relatedTo simultaneously
     traceManager.processSpan({
       ...mockSpanWithoutScope,
-      scope: {
+      relatedTo: {
         ticketId: '123',
         customFieldId: '123',
       },
@@ -308,8 +281,8 @@ describe('type tests', () => {
     // invalid
     traceManager.processSpan({
       ...mockSpanWithoutScope,
-      scope: {
-        // @ts-expect-error bad scope
+      relatedTo: {
+        // @ts-expect-error bad relatedTo
         bad: '123',
       },
     })
@@ -317,25 +290,25 @@ describe('type tests', () => {
     // invalid
     traceManager.processSpan({
       ...mockSpanWithoutScope,
-      scope: {
-        // @ts-expect-error bad scope
+      relatedTo: {
+        // @ts-expect-error bad relatedTo
         ticketId: 123,
       },
     })
   })
 
-  it('does not allow to include invalid scope value', () => {
+  it('does not allow to include invalid relatedTo value', () => {
     const tracer = traceManager.createTracer({
-      name: 'ticket.scope-operation',
+      name: 'ticket.relatedTo-operation',
       type: 'operation',
-      scopes: ['ticketId'],
+      relations: ['ticketId'],
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ name: 'end', matchScopes: true }],
+      requiredSpans: [{ name: 'end', withTraceRelations: true }],
     })
     const traceId = tracer.start({
-      scope: {
+      relatedTo: {
         // @ts-expect-error number should not be assignable to string
         ticketId: 4,
       },
@@ -344,79 +317,108 @@ describe('type tests', () => {
     assertType(traceId)
   })
 
-  // TODO TYPES
-  // it('mixed scopes', () => {
-  //   const tracer = traceManager.createTracer({
-  //     name: 'ticket.scope-operation',
-  //     type: 'operation',
-  //     scopes: ['ticketId', 'customFieldId'],
-  //     timeout: 5_000,
-  //     requiredSpans: [{ name: 'end', matchScopes: true }],
-  //   })
-  //   const traceId = tracer.start({
-  //     scope: {
-  //       customFieldId: '3',
-  //       ticketId: '4',
-  //     },
-  //   })
-  // })
+  it('mixed relatedTo', () => {
+    const tracer = traceManager.createTracer({
+      name: 'ticket.relatedTo-operation',
+      type: 'operation',
+      relations: ['ticketId', 'customFieldId'],
+      requiredSpans: [{ name: 'end', withTraceRelations: true }],
+      variants: { default: { timeout: 5_000 } },
+    })
+    const traceId = tracer.start({
+      variant: 'default',
+      relatedTo: {
+        customFieldId: '3',
+        ticketId: '4',
+      },
+    })
+  })
 
   it('redaction example', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.event.redacted',
       type: 'operation',
-      scopes: ['ticketId', 'eventId'],
+      relations: ['ticketId', 'eventId'],
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ name: 'OmniLogEvent', matchScopes: true }],
-      debounceOnSpans: [{ name: 'OmniLog', matchScopes: ['ticketId'] }],
+      requiredSpans: [{ name: 'OmniLogEvent', withTraceRelations: true }],
+      debounceOnSpans: [{ name: 'OmniLog', withTraceRelations: ['ticketId'] }],
     })
     const traceId = tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '4',
         eventId: '3',
       },
       variant: 'origin',
     })
-    assertType(traceId)
+    assertType<string | undefined>(traceId)
   })
 
-  // TODO TYPES
-  // it('redaction invalid example', () => {
-  //   const tracer = traceManager.createTracer({
-  //     name: 'ticket.event.redacted',
-  //     type: 'operation',
-  //     // @ts-expect-error enforce a complete set of keys of a given scope
-  //     scopes: ['eventId'],
-  //     timeout: 5_000,
-  //     requiredSpans: [{ name: 'OmniLogEvent', matchScopes: true }],
-  //   })
-  //   const traceId = tracer.start({
-  //     scope: {
-  //       ticketId: '4',
-  //       eventId: '3',
-  //     },
-  //   })
-  // })
-
-  it('does not allow to include invalid scope key', () => {
+  it('redaction invalid example', () => {
     const tracer = traceManager.createTracer({
-      name: 'ticket.scope-operation',
+      name: 'ticket.event.redacted',
       type: 'operation',
-      scopes: ['ticketId'],
+      // @ts-expect-error enforce a complete set of keys of a given relatedTo
+      relations: ['eventId'],
+      timeout: 5_000,
+      requiredSpans: [{ name: 'OmniLogEvent', withTraceRelations: true }],
+    })
+
+    const correctTracer = traceManager.createTracer({
+      name: 'ticket.event.redacted',
+      type: 'operation',
+      relations: ['ticketId', 'eventId'],
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ name: 'end', matchScopes: true }],
+      requiredSpans: [{ name: 'OmniLogEvent', withTraceRelations: true }],
+    })
+    const traceId = correctTracer.start({
+      relatedTo: {
+        ticketId: '4',
+        // @ts-expect-error trying to start trace with invalid relatedTo combination
+        customFieldId: 'werwer',
+      },
+      variant: 'origin',
+    })
+  })
+
+  it('does not allow to include invalid relatedTo key', () => {
+    const tracer = traceManager.createTracer({
+      name: 'ticket.relatedTo-operation',
+      type: 'operation',
+      relations: ['ticketId'],
+      variants: {
+        origin: { timeout: 5_000 },
+      },
+      requiredSpans: [{ name: 'end', withTraceRelations: true }],
     })
     const traceId = tracer.start({
       variant: 'origin',
-      scope: {
-        // @ts-expect-error invalid scope key
+      relatedTo: {
+        // @ts-expect-error invalid relatedTo key
         userId: '3',
       },
     })
     assertType(traceId)
+  })
+
+  it('maps schema to types', () => {
+    const testSchema = {
+      a: String,
+      b: Number,
+      c: Boolean,
+      d: ['union', 'of', 'things', 2],
+    } as const
+
+    type MappedTest = MapSchemaToTypes<typeof testSchema>
+
+    assertType<{
+      readonly a: string
+      readonly b: number
+      readonly c: boolean
+      readonly d: 'union' | 'of' | 'things' | 2
+    }>({} as MappedTest)
   })
 })

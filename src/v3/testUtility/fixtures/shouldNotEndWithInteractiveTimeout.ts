@@ -1158,7 +1158,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -1204,7 +1204,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -1237,7 +1237,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -1271,7 +1271,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -1317,7 +1317,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -1350,7 +1350,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -2183,7 +2183,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -2216,7 +2216,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -2250,7 +2250,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -2296,7 +2296,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -2331,7 +2331,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -2359,7 +2359,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -2394,7 +2394,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -2423,7 +2423,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -2471,7 +2471,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -2502,7 +2502,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -2533,7 +2533,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -4660,7 +4660,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -4691,7 +4691,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -4721,7 +4721,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '56',
         },
         isIdle: true,
@@ -4767,7 +4767,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '56',
         },
         renderedOutput: 'content',
@@ -4803,7 +4803,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -4836,7 +4836,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '56',
         },
         renderedOutput: 'content',
@@ -4873,7 +4873,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '56',
         },
         isIdle: true,
@@ -4919,7 +4919,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -4954,7 +4954,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -4985,7 +4985,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -5016,7 +5016,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -5047,7 +5047,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -6395,7 +6395,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -6441,7 +6441,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -6474,7 +6474,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -6508,7 +6508,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -6555,7 +6555,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -6601,7 +6601,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -6636,7 +6636,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -6665,7 +6665,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -6700,7 +6700,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -6729,7 +6729,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'loading',
@@ -6764,7 +6764,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -6794,7 +6794,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -6842,7 +6842,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -6873,7 +6873,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -6903,7 +6903,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: false,
@@ -7766,7 +7766,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: true,
@@ -7812,7 +7812,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'content',
@@ -7850,7 +7850,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -7879,7 +7879,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'content',
@@ -7917,7 +7917,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         attributes: {
@@ -7947,7 +7947,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         isIdle: true,
@@ -7993,7 +7993,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'content',
@@ -8636,7 +8636,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'content',
@@ -10830,7 +10830,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'content',
@@ -10866,7 +10866,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'content',
@@ -11029,7 +11029,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'content',
@@ -11065,7 +11065,7 @@ export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '74',
         },
         renderedOutput: 'content',

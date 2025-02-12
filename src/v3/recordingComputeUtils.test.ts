@@ -15,9 +15,9 @@ type AnyScope = Record<string, unknown>
 
 describe('recordingComputeUtils', () => {
   describe('error status propagation', () => {
-    const baseDefinition: CompleteTraceDefinition<never, AnyScope, 'origin'> = {
+    const baseDefinition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
       name: 'test-trace',
-      scopes: [],
+      relations: [],
       requiredSpans: [() => true],
       computedSpanDefinitions: [],
       computedValueDefinitions: [],
@@ -40,7 +40,7 @@ describe('recordingComputeUtils', () => {
           input: {
             id: 'test',
             startTime: createTimestamp(0),
-            scope: {},
+            relatedTo: {},
             variant: 'origin',
           },
         },
@@ -58,7 +58,7 @@ describe('recordingComputeUtils', () => {
         {
           definition: {
             ...baseDefinition,
-            suppressErrorStatusPropagationOn: [
+            suppressErrorStatusPropagationOnSpans: [
               ({ span }) => span.name === 'suppressed-error-span',
             ],
           },
@@ -72,7 +72,7 @@ describe('recordingComputeUtils', () => {
           input: {
             id: 'test',
             startTime: createTimestamp(0),
-            scope: {},
+            relatedTo: {},
             variant: 'origin',
           },
         },
@@ -88,7 +88,7 @@ describe('recordingComputeUtils', () => {
         {
           definition: {
             ...baseDefinition,
-            suppressErrorStatusPropagationOn: [
+            suppressErrorStatusPropagationOnSpans: [
               ({ span }) => span.name === 'suppressed-error-span',
             ],
           },
@@ -106,7 +106,7 @@ describe('recordingComputeUtils', () => {
           input: {
             id: 'test',
             startTime: createTimestamp(0),
-            scope: {},
+            relatedTo: {},
             variant: 'origin',
           },
         },
@@ -130,7 +130,7 @@ describe('recordingComputeUtils', () => {
           input: {
             id: 'test',
             startTime: createTimestamp(0),
-            scope: {},
+            relatedTo: {},
             variant: 'origin',
           },
         },
@@ -146,9 +146,9 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedSpans', () => {
-    const baseDefinition: CompleteTraceDefinition<never, AnyScope, 'origin'> = {
+    const baseDefinition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
       name: 'test-trace',
-      scopes: [],
+      relations: [],
       requiredSpans: [() => true],
       computedSpanDefinitions: [
         {
@@ -179,7 +179,7 @@ describe('recordingComputeUtils', () => {
         input: {
           id: 'test',
           startTime: createTimestamp(0),
-          scope: {},
+          relatedTo: {},
           variant: 'origin',
         },
       })
@@ -191,7 +191,7 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle operation-start and operation-end special matchers', () => {
-      const definition: CompleteTraceDefinition<never, AnyScope, 'origin'> = {
+      const definition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
         ...baseDefinition,
         computedSpanDefinitions: [
           {
@@ -217,7 +217,7 @@ describe('recordingComputeUtils', () => {
           id: 'test',
           startTime: createTimestamp(0),
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-          scope: {} as never,
+          relatedTo: {} as never,
           variant: 'origin',
         },
       })
@@ -227,23 +227,22 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedValues', () => {
-    const baseDefinition: CompleteTraceDefinition<string, AnyScope, 'origin'> =
-      {
-        name: 'test-trace',
-        scopes: [],
-        requiredSpans: [() => true],
-        computedSpanDefinitions: [],
-        computedValueDefinitions: [
-          {
-            name: 'error-count',
-            matches: [({ span }) => span.status === 'error'],
-            computeValueFromMatches: (matches) => matches.length,
-          },
-        ],
-        variants: {
-          origin: { timeout: 45_000 },
+    const baseDefinition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
+      name: 'test-trace',
+      relations: [],
+      requiredSpans: [() => true],
+      computedSpanDefinitions: [],
+      computedValueDefinitions: [
+        {
+          name: 'error-count',
+          matches: [({ span }) => span.status === 'error'],
+          computeValueFromMatches: (matches) => matches.length,
         },
-      }
+      ],
+      variants: {
+        origin: { timeout: 45_000 },
+      },
+    }
 
     it('should compute values based on matching spans', () => {
       const result = getComputedValues({
@@ -257,7 +256,7 @@ describe('recordingComputeUtils', () => {
           id: 'test',
           startTime: createTimestamp(0),
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-          scope: {} as never,
+          relatedTo: {} as never,
           variant: 'origin',
         },
       })
@@ -292,7 +291,7 @@ describe('recordingComputeUtils', () => {
         {
           definition: {
             name: 'test-trace',
-            scopes: [],
+            relations: [],
             requiredSpans: [() => true],
             computedSpanDefinitions: [],
             computedValueDefinitions: [],
@@ -304,7 +303,7 @@ describe('recordingComputeUtils', () => {
             createMockSpanAndAnnotation(100, {
               name: 'test-component',
               type: 'component-render',
-              scope: {},
+              relatedTo: {},
               duration: 50,
               isIdle: true,
               renderCount: 1,
@@ -315,7 +314,7 @@ describe('recordingComputeUtils', () => {
               {
                 name: 'test-component',
                 type: 'component-render',
-                scope: {},
+                relatedTo: {},
                 duration: 50,
                 isIdle: true,
                 renderCount: 2,
@@ -327,7 +326,7 @@ describe('recordingComputeUtils', () => {
           input: {
             id: 'test',
             startTime: createTimestamp(0),
-            scope: {},
+            relatedTo: {},
             variant: 'origin',
           },
         },

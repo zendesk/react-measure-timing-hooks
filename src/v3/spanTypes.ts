@@ -1,7 +1,12 @@
 import type { ErrorInfo } from 'react'
 import type { BeaconConfig } from './hooksTypes'
-import type { ScopeOnASpan, SelectScopeByKey, Timestamp } from './types'
-import type { KeysOfUnion } from './typeUtils'
+import type {
+  MapSchemaToTypes,
+  RelationsOnASpan,
+  SelectRelationSchemaByKeysTuple,
+  Timestamp,
+} from './types'
+import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 
 export type NativePerformanceEntryType =
   | 'element'
@@ -26,46 +31,48 @@ export type ComponentLifecycleSpanType =
 
 export type SpanType = NativePerformanceEntryType | ComponentLifecycleSpanType
 
-export interface BaseStartTraceConfig<VariantT extends string> {
+export interface BaseStartTraceConfig<VariantsT extends string> {
   id?: string
   startTime?: Partial<Timestamp>
-  variant: VariantT
+  variant: VariantsT
   /**
    * any attributes that are relevant to the entire trace
    */
   attributes?: Attributes
 }
 
-export interface DraftTraceConfig<TracerScopeT, VariantT extends string>
-  extends BaseStartTraceConfig<VariantT> {
-  scope: TracerScopeT | undefined
+export interface DraftTraceConfig<RelationSchemaT, VariantsT extends string>
+  extends BaseStartTraceConfig<VariantsT> {
+  relatedTo: MapSchemaToTypes<RelationSchemaT> | undefined
 }
 
-export interface StartTraceConfig<TracerScopeT, VariantT extends string>
-  extends DraftTraceConfig<TracerScopeT, VariantT> {
-  scope: TracerScopeT
+export interface StartTraceConfig<RelationSchemaT, VariantsT extends string>
+  extends DraftTraceConfig<RelationSchemaT, VariantsT> {
+  relatedTo: MapSchemaToTypes<RelationSchemaT>
 }
 
-export interface DraftTraceInput<TracerScopeT, VariantT extends string>
-  extends DraftTraceConfig<TracerScopeT, VariantT> {
+export interface DraftTraceInput<RelationSchemaT, VariantsT extends string>
+  extends DraftTraceConfig<RelationSchemaT, VariantsT> {
   id: string
   startTime: Timestamp
 }
 
-export interface ActiveTraceInput<TracerScopeT, VariantT extends string>
-  extends DraftTraceInput<TracerScopeT, VariantT> {
-  scope: TracerScopeT
+export interface ActiveTraceInput<RelationSchemaT, VariantsT extends string>
+  extends DraftTraceInput<RelationSchemaT, VariantsT> {
+  relatedTo: MapSchemaToTypes<RelationSchemaT>
 }
 
 export interface ActiveTraceConfig<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > extends DraftTraceInput<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-    VariantT
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
+    VariantsT
   > {
-  scope: SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  relatedTo: MapSchemaToTypes<
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
+  >
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
@@ -74,7 +81,7 @@ export interface Attributes {
 }
 export type SpanStatus = 'ok' | 'error'
 
-export interface SpanBase<AllPossibleScopesT> {
+export interface SpanBase<RelationSchemasT> {
   // TODO: allow defining custom spans that extend this SpanBase
   type: SpanType | (string & {})
 
@@ -86,9 +93,9 @@ export interface SpanBase<AllPossibleScopesT> {
 
   startTime: Timestamp
 
-  // for non performance entries, scope is set explicitly in the span, something like ticket id or user id
-  // performance entries can derive scope based using `deriveScopeFromPerformanceEntry`
-  scope?: ScopeOnASpan<AllPossibleScopesT>
+  // for non performance entries, relatedTo is set explicitly in the span, something like ticket id or user id
+  // performance entries can derive relatedTo based using `deriveScopeFromPerformanceEntry`
+  relatedTo?: RelationsOnASpan<RelationSchemasT>
 
   attributes: Attributes
 
@@ -115,9 +122,9 @@ export interface SpanBase<AllPossibleScopesT> {
   error?: Error
 }
 
-export interface ComponentRenderSpan<AllPossibleScopesT>
-  extends Omit<SpanBase<AllPossibleScopesT>, 'scope' | 'attributes'>,
-    BeaconConfig<AllPossibleScopesT> {
+export interface ComponentRenderSpan<RelationSchemasT>
+  extends Omit<SpanBase<RelationSchemasT>, 'relatedTo' | 'attributes'>,
+    BeaconConfig<RelationSchemasT> {
   type: ComponentLifecycleSpanType
   isIdle: boolean
   errorInfo?: ErrorInfo
@@ -148,8 +155,8 @@ export type InitiatorType =
   | 'xmlhttprequest'
   | 'other'
 
-export interface ResourceSpan<AllPossibleScopesT>
-  extends SpanBase<AllPossibleScopesT> {
+export interface ResourceSpan<RelationSchemasT>
+  extends SpanBase<RelationSchemasT> {
   type: 'resource'
   resourceDetails: {
     initiatorType: InitiatorType
@@ -158,15 +165,15 @@ export interface ResourceSpan<AllPossibleScopesT>
   }
 }
 
-export interface PerformanceEntrySpan<AllPossibleScopesT>
-  extends SpanBase<AllPossibleScopesT> {
+export interface PerformanceEntrySpan<RelationSchemasT>
+  extends SpanBase<RelationSchemasT> {
   type: Exclude<NativePerformanceEntryType, 'resource'>
 }
 
 /**
  * All possible trace entries
  */
-export type Span<AllPossibleScopesT> =
-  | PerformanceEntrySpan<AllPossibleScopesT>
-  | ComponentRenderSpan<AllPossibleScopesT>
-  | ResourceSpan<AllPossibleScopesT>
+export type Span<RelationSchemasT> =
+  | PerformanceEntrySpan<RelationSchemasT>
+  | ComponentRenderSpan<RelationSchemasT>
+  | ResourceSpan<RelationSchemasT>

@@ -34,7 +34,7 @@ export const createMockSpan = <TSpan extends Span<AnyScope>>(
     ? {
         name: 'test-component',
         type: 'component-render',
-        scope: {},
+        relatedTo: {},
         startTime: createTimestamp(startTimeNow),
         duration: 100,
         attributes: {},
@@ -52,11 +52,13 @@ export const createMockSpan = <TSpan extends Span<AnyScope>>(
         ...partial,
       }) as TSpan
 
-export const createMockSpanAndAnnotation = <TSpan extends Span<AnyScope>>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const createMockSpanAndAnnotation = <TSpan extends Span<any>>(
   startTimeNow: number,
   spanPartial: Partial<TSpan> = {},
   annotationPartial: Partial<SpanAnnotation> = {},
-): SpanAndAnnotation<AnyScope> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): SpanAndAnnotation<any> => {
   const span = createMockSpan<TSpan>(startTimeNow, spanPartial)
   return {
     span,

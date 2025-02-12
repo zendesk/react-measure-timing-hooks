@@ -8,35 +8,37 @@ import {
   ComputedSpanDefinitionInput,
   ComputedValueDefinition,
   ComputedValueDefinitionInput,
-  ScopeValue,
-  SelectScopeByKey,
+  RelationSchemaValue,
+  SelectRelationSchemaByKeysTuple,
   type TraceManagerUtilities,
   TraceModifications,
 } from './types'
-import type { KeysOfUnion } from './typeUtils'
+import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 
 /**
  * Tracer can create draft traces and start traces
  */
 export class Tracer<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
-  VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT extends {
+    [K in keyof RelationSchemasT]: RelationSchemaValue
+  },
+  const VariantsT extends string,
 > {
   definition: CompleteTraceDefinition<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >
-  traceUtilities: TraceManagerUtilities<AllPossibleScopesT>
+  traceUtilities: TraceManagerUtilities<RelationSchemasT>
 
   constructor(
     definition: CompleteTraceDefinition<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
-    traceUtilities: TraceManagerUtilities<AllPossibleScopesT>,
+    traceUtilities: TraceManagerUtilities<RelationSchemasT>,
   ) {
     this.definition = definition
     this.traceUtilities = traceUtilities
@@ -47,30 +49,32 @@ export class Tracer<
    */
   start = (
     input: StartTraceConfig<
-      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-      VariantT
+      SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
+      VariantsT
     >,
   ): string | undefined => {
     const traceId = this.createDraft(input)
     if (!traceId) return undefined
 
-    this.transitionDraftToActive({ scope: input.scope })
+    this.transitionDraftToActive({ relatedTo: input.relatedTo })
     return traceId
   }
 
-  createDraft = (input: BaseStartTraceConfig<VariantT>): string | undefined => {
+  createDraft = (
+    input: BaseStartTraceConfig<VariantsT>,
+  ): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
 
     const activeTrace = new ActiveTrace<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >(
       this.definition,
       {
         ...input,
-        // scope will be overwritten later during initialization of the trace
-        scope: undefined,
+        // relatedTo will be overwritten later during initialization of the trace
+        relatedTo: undefined,
         startTime: ensureTimestamp(input.startTime),
         id,
       },
@@ -78,7 +82,7 @@ export class Tracer<
     )
 
     this.traceUtilities.replaceActiveTrace(
-      activeTrace as unknown as AllPossibleActiveTraces<AllPossibleScopesT>,
+      activeTrace as unknown as AllPossibleActiveTraces<RelationSchemasT>,
     )
 
     return id
@@ -89,14 +93,14 @@ export class Tracer<
   }
 
   // can have config changed until we move into active
-  // from input: scope (required), attributes (optional, merge into)
+  // from input: relatedTo (required), attributes (optional, merge into)
   // from definition, can add items to: requiredSpans (additionalRequiredSpans), debounceOnSpans (additionalDebounceOnSpans)
   // documentation: interruption still works and all the other events are buffered
   transitionDraftToActive = (
     inputAndDefinitionModifications: TraceModifications<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
   ): void => {
     const activeTrace = this.traceUtilities.getActiveTrace()
@@ -120,9 +124,9 @@ export class Tracer<
     }
 
     const typedActiveTrace = activeTrace as unknown as ActiveTrace<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >
 
     typedActiveTrace.transitionDraftToActive(inputAndDefinitionModifications)
@@ -130,9 +134,9 @@ export class Tracer<
 
   defineComputedSpan = (
     definition: ComputedSpanDefinitionInput<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
   ): void => {
     this.definition.computedSpanDefinitions.push({
@@ -140,36 +144,40 @@ export class Tracer<
       startSpan:
         typeof definition.startSpan === 'string'
           ? definition.startSpan
-          : ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(
-              definition.startSpan,
-            ),
+          : ensureMatcherFn<
+              SelectedRelationTupleT,
+              RelationSchemasT,
+              VariantsT
+            >(definition.startSpan),
       endSpan:
         typeof definition.endSpan === 'string'
           ? definition.endSpan
-          : ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(
-              definition.endSpan,
-            ),
+          : ensureMatcherFn<
+              SelectedRelationTupleT,
+              RelationSchemasT,
+              VariantsT
+            >(definition.endSpan),
     })
   }
 
   defineComputedValue = <
     MatchersT extends (
-      | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
-      | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
+      | SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+      | SpanMatchDefinition<SelectedRelationTupleT, RelationSchemasT>
     )[],
   >(
     definition: ComputedValueDefinitionInput<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
+      SelectedRelationTupleT,
+      RelationSchemasT,
       MatchersT,
-      VariantT
+      VariantsT
     >,
   ): void => {
     this.definition.computedValueDefinitions.push({
       ...definition,
-      matches: definition.matches.map((m) =>
-        ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(m),
-      ),
-    } as ComputedValueDefinition<TracerScopeKeysT, AllPossibleScopesT, VariantT>)
+      matches: definition.matches.map<
+        SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+      >((m) => ensureMatcherFn(m)),
+    } as ComputedValueDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT>)
   }
 }

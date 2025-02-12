@@ -107,24 +107,24 @@ export const ticketActivationTracer = traceManager.createOperationTracer({
       name: '/api/tickets/:id',
     },
     {
-      scope: { ticket: { id }, component: 'OmniLog' },
+      relatedTo: { ticket: { id }, component: 'OmniLog' },
       idle: true,
       // optional:
       interruptWhenNoLongerIdle: false,
     },
     {
-      scope: { ticket: { id }, component: 'OmniComposer' },
+      relatedTo: { ticket: { id }, component: 'OmniComposer' },
       idle: true,
     },
     {
-      scope: { ticket: { id }, component: 'AppSidebar' },
+      relatedTo: { ticket: { id }, component: 'AppSidebar' },
       idle: true,
     },
   ],
   // we do not need to debounce on anything until 'requiredToEnd' is met
   debounceOnSpans: [
     {
-      match: { scope: { ticket: { id } } },
+      match: { relatedTo: { ticket: { id } } },
     }
   ],
   interruptOnSpans: [
@@ -132,13 +132,13 @@ export const ticketActivationTracer = traceManager.createOperationTracer({
       match: {
         type: 'mark',
         name: TICKET_NAVIGATED_AWAY_EVENT_NAME,
-        scope: { ticket: { id } },
+        relatedTo: { ticket: { id } },
       },
     },
     // added implicitly
     {
       inState: ['debouncing', 'waiting-for-interactive'],
-      scope: { ticket: { id }, component: 'OmniLog' },
+      relatedTo: { ticket: { id }, component: 'OmniLog' },
       idle: false,
     }
   ],
@@ -247,7 +247,7 @@ interface TraceEntryInput<ScopeT extends object> {
 
   status: 'ok' | 'error'
 
-  scope: ScopeT
+  relatedTo: ScopeT
 
   attributes: {
     [name: string]: unknown
@@ -363,7 +363,7 @@ interface Trace {
 
 ```ts
 useBeacon({
-  scope: { ticket: { id }, component: 'OmniLog' },
+  relatedTo: { ticket: { id }, component: 'OmniLog' },
   attributes: { ... },
 
   renderedOutput: 'NULL/EMTPY' | 'LOADING' | 'CONTENT' | 'ERROR',
@@ -387,7 +387,7 @@ useBeacon({
 })
 
 useBeacon('OmniLogEvent', {
-  scopes: { ticket: { id }, ticketEvent: { id } },
+  relations: { ticket: { id }, ticketEvent: { id } },
   visibilityState: '...',
 })
 ```

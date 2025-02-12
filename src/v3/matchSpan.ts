@@ -1,7 +1,11 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes, SpanStatus, SpanType } from './spanTypes'
-import type { DraftTraceContext, SelectScopeByKey } from './types'
-import type { KeysOfUnion } from './typeUtils'
+import type {
+  DraftTraceContext,
+  MapSchemaToTypes,
+  SelectRelationSchemaByKeysTuple,
+} from './types'
+import type { KeysOfRelationSchemaToTuples, Prettify } from './typeUtils'
 
 export interface SpanMatcherTags {
   isIdle?: boolean
@@ -11,70 +15,79 @@ export interface SpanMatcherTags {
  * Function type for matching performance entries.
  */
 export interface SpanMatcherFn<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > extends SpanMatcherTags {
   (
-    spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
-    context: DraftTraceContext<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
+    spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
+    context: DraftTraceContext<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >,
   ): boolean
 }
 
-export type NameMatcher<TracerScopeT> =
+export type NameMatcher<RelationSchemaT> =
   | string
   | RegExp
-  | ((name: string, scope: TracerScopeT | undefined) => boolean)
+  | ((
+      name: string,
+      relatedTo: Prettify<MapSchemaToTypes<RelationSchemaT>> | undefined,
+    ) => boolean)
 
 export interface SpanMatchDefinition<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
 > {
-  name?: NameMatcher<AllPossibleScopesT>
-  performanceEntryName?: NameMatcher<AllPossibleScopesT>
+  name?: NameMatcher<RelationSchemasT>
+  performanceEntryName?: NameMatcher<RelationSchemasT>
   type?: SpanType
   status?: SpanStatus
   attributes?: Attributes
-  matchScopes?: readonly TracerScopeKeysT[] | boolean
+  withTraceRelations?: SelectedRelationTupleT[number][] | boolean
   occurrence?: number | ((occurrence: number) => boolean)
   isIdle?: boolean
   label?: string
 }
 
 export type SpanMatch<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > =
-  | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
-  | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
+  | SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+  | SpanMatchDefinition<SelectedRelationTupleT, RelationSchemasT>
 
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.
  */
 export function withName<
-  const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  const AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
-  value: NameMatcher<SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>>,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
-  return ({ span }, { input: { scope } }) => {
+  value: NameMatcher<
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
+  >,
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+  return ({ span }, { input: { relatedTo } }) => {
     if (typeof value === 'string') return span.name === value
     if (value instanceof RegExp) return value.test(span.name)
-    return value(span.name, scope)
+    return value(span.name, relatedTo)
   }
 }
 // DRAFT TODO: make test case if one doesnt exist yet
-// withName((name, scope) => !scope ? false : name === `OmniLog/${scope.ticketId}`)
+// withName((name, relatedTo) => !relatedTo ? false : name === `OmniLog/${relatedTo.ticketId}`)
 
 export function withLabel<
-  const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  const AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
   value: string,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   return ({ annotation }) => annotation.labels?.includes(value) ?? false
 }
 
@@ -82,38 +95,38 @@ export function withLabel<
  * The PerformanceEntry.name of the entry to match. Can be a string, RegExp, or function.
  */
 export function withPerformanceEntryName<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
-  value: NameMatcher<AllPossibleScopesT>,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
-  return ({ span }, { input: { scope } }) => {
+  value: NameMatcher<RelationSchemasT>,
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+  return ({ span }, { input: { relatedTo } }) => {
     const entryName = span.performanceEntry?.name
     if (!entryName) return false
     if (typeof value === 'string') return entryName === value
     if (value instanceof RegExp) return value.test(entryName)
-    return value(entryName, scope)
+    return value(entryName, relatedTo)
   }
 }
 
 export function withType<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
   value: SpanType,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   return ({ span }) => span.type === value
 }
 
 export function withStatus<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
   value: SpanStatus,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   return ({ span }) => span.status === value
 }
 
@@ -121,12 +134,12 @@ export function withStatus<
  * The subset of attributes (metadata) to match against the span.
  */
 export function withAttributes<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  const VariantsT extends string,
 >(
   attrs: Attributes,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   return ({ span }) => {
     if (!span.attributes) return false
     return Object.entries(attrs).every(
@@ -136,29 +149,31 @@ export function withAttributes<
 }
 
 /**
- * A list of scope keys to match against the span.
+ * A list of relatedTo keys to match against the span.
  */
-export function withMatchingScopes<
-  const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  const AllPossibleScopesT,
-  const VariantT extends string,
+export function withTraceRelations<
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
-  keys: readonly NoInfer<TracerScopeKeysT>[] | true = true,
-): SpanMatcherFn<
-  TracerScopeKeysT & KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT
-> {
-  return ({ span }, { input: { scope }, definition: { scopes } }) => {
-    // DRAFT TODO: add test case when scope is missing
-    // if the scope isn't set on the trace yet, we can't match against it, so we return early
-    // similarly, if the span doesn't have any scope set
-    if (!span.scope || !scope) return false
-    const spanScope = span.scope as AllPossibleScopesT & object
-    const resolvedKeys = typeof keys === 'boolean' && keys ? scopes : keys
+  keys: NoInfer<SelectedRelationTupleT[number]>[] | true = true,
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+  return ({ span }, { input: { relatedTo: r }, definition: { relations } }) => {
+    // DRAFT TODO: add test case when relatedTo is missing
+    // if the relatedTo isn't set on the trace yet, we can't match against it, so we return early
+    // similarly, if the span doesn't have any relatedTo set
+    const relatedToInput: Record<string, unknown> | undefined = r
+    if (!span.relatedTo || !relatedToInput) return false
+    const spanScope: Record<string, unknown> = span.relatedTo
+    const resolvedKeys =
+      typeof keys === 'boolean' && keys
+        ? (relations as SelectedRelationTupleT[number][])
+        : keys
     if (!resolvedKeys) return false
+    // @ts-expect-error "Type instantiation is excessively deep and possibly infinite"
     return resolvedKeys.every(
-      (key) => key in spanScope && spanScope[key] === scope[key],
+      (key: string) =>
+        key in spanScope && spanScope[key] === relatedToInput[key],
     )
   }
 }
@@ -167,12 +182,12 @@ export function withMatchingScopes<
  * The occurrence of the span with the same name within the operation.
  */
 export function withOccurrence<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
   value: number | ((occurrence: number) => boolean),
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   return ({ annotation }) => {
     if (typeof value === 'number') return annotation.occurrence === value
     return value(annotation.occurrence)
@@ -180,13 +195,13 @@ export function withOccurrence<
 }
 
 export function withComponentRenderCount<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
   name: string,
   renderCount: number,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   return ({ span }) => {
     if (!('renderCount' in span)) return false
     return span.name === name && span.renderCount === renderCount
@@ -197,14 +212,16 @@ export function withComponentRenderCount<
  * only applicable for component-lifecycle entries
  */
 export function whenIdle<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
->(value = true): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
+>(
+  value = true,
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   const matcherFn: SpanMatcherFn<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   > = ({ span }) => ('isIdle' in span ? span.isIdle === value : false)
   return Object.assign(
     matcherFn,
@@ -216,72 +233,83 @@ export function whenIdle<
 // logical combinators:
 // AND
 export function withAllConditions<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
-  ...matchers: SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>[]
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+  ...matchers: SpanMatcherFn<
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
+  >[]
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
   }
   const matcherFn: SpanMatcherFn<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
+    // @ts-expect-error error TS2589: Type instantiation is excessively deep and possibly infinite
   > = (...args) => matchers.every((matcher) => matcher(...args))
   return Object.assign(matcherFn, tags)
 }
 
 // OR
 export function withOneOfConditions<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
-  ...matchers: SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>[]
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+  ...matchers: SpanMatcherFn<
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
+  >[]
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
   }
   const matcherFn: SpanMatcherFn<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   > = (...args) => matchers.some((matcher) => matcher(...args))
   return Object.assign(matcherFn, tags)
 }
 
 export function not<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
-  matcher: SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+  matcher: SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   // since not is a negation, we don't carry over tags
   return (...args) => !matcher(...args)
 }
 
 export function fromDefinition<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
-  definition: SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+  definition: SpanMatchDefinition<SelectedRelationTupleT, RelationSchemasT>,
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   const matchers: SpanMatcherFn<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >[] = []
   if (definition.name) {
     matchers.push(
-      withName<TracerScopeKeysT, AllPossibleScopesT, VariantT>(definition.name),
+      withName<SelectedRelationTupleT, RelationSchemasT, VariantsT>(
+        definition.name,
+      ),
     )
   }
   if (definition.performanceEntryName) {
@@ -296,8 +324,8 @@ export function fromDefinition<
   if (definition.attributes) {
     matchers.push(withAttributes(definition.attributes))
   }
-  if (definition.matchScopes) {
-    matchers.push(withMatchingScopes(definition.matchScopes))
+  if (definition.withTraceRelations) {
+    matchers.push(withTraceRelations(definition.withTraceRelations))
   }
   if (definition.occurrence) {
     matchers.push(withOccurrence(definition.occurrence))
