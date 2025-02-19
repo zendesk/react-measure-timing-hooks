@@ -140,6 +140,7 @@ export interface TraceManagerUtilities<RelationSchemasT>
   cleanupActiveTrace: (
     traceToCleanUp: AllPossibleActiveTraces<RelationSchemasT>,
   ) => void
+  // TODO: should this be called currentTrace instead, since it might return a draft? or is draft simply a type of active trace, since it's already buffering recorded spans?
   getActiveTrace: () => AllPossibleActiveTraces<RelationSchemasT> | undefined
 }
 
