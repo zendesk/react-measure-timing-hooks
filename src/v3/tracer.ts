@@ -88,8 +88,50 @@ export class Tracer<
     return id
   }
 
-  cancelDraft = () => {
-    this.traceUtilities.cancelDraftTrace()
+  interrupt = ({ error }: { error?: Error } = {}) => {
+    const activeTrace = this.traceUtilities.getActiveTrace() as
+      | ActiveTrace<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+      | undefined
+
+    if (!activeTrace) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `No currently active trace when canceling a draft. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
+        ),
+      )
+      return
+    }
+
+    // verify that activeTrace is the same definition as the Tracer's definition
+    if (activeTrace.sourceDefinition !== this.definition) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `You are trying to cancel a draft that is not the same definition as the Tracer's definition.`,
+        ),
+      )
+      return
+    }
+
+    if (error) {
+      activeTrace.processSpan({
+        name: error.name,
+        startTime: ensureTimestamp(),
+        // TODO: use a dedicated error type
+        type: 'mark',
+        attributes: {},
+        duration: 0,
+        error,
+      })
+      activeTrace.interrupt('aborted')
+      return
+    }
+
+    if (activeTrace.isDraft) {
+      activeTrace.interrupt('draft-cancelled')
+      return
+    }
+
+    activeTrace.interrupt('aborted')
   }
 
   // can have config changed until we move into active
@@ -103,11 +145,14 @@ export class Tracer<
       VariantsT
     >,
   ): void => {
-    const activeTrace = this.traceUtilities.getActiveTrace()
+    const activeTrace = this.traceUtilities.getActiveTrace() as
+      | ActiveTrace<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+      | undefined
+
     if (!activeTrace) {
       this.traceUtilities.reportErrorFn(
         new Error(
-          `No currently active trace when initializing a trace. Call tracer.startTrace(...) or tracer.provisionalStartTrace(...) beforehand.`,
+          `No currently active trace when initializing a trace. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
         ),
       )
       return
@@ -115,7 +160,7 @@ export class Tracer<
 
     // this is an already initialized active trace, do nothing:
     if (!activeTrace.isDraft) {
-      this.traceUtilities.reportErrorFn(
+      this.traceUtilities.reportWarningFn(
         new Error(
           `You are trying to initialize a trace that has already been initialized before (${activeTrace.definition.name}).`,
         ),
@@ -123,13 +168,17 @@ export class Tracer<
       return
     }
 
-    const typedActiveTrace = activeTrace as unknown as ActiveTrace<
-      SelectedRelationTupleT,
-      RelationSchemasT,
-      VariantsT
-    >
+    // verify that activeTrace is the same definition as the Tracer's definition
+    if (activeTrace.sourceDefinition !== this.definition) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `You are trying to initialize a trace that is not the same definition as the Tracer's definition is different.`,
+        ),
+      )
+      return
+    }
 
-    typedActiveTrace.transitionDraftToActive(inputAndDefinitionModifications)
+    activeTrace.transitionDraftToActive(inputAndDefinitionModifications)
   }
 
   defineComputedSpan = (

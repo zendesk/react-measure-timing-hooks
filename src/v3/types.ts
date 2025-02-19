@@ -60,15 +60,26 @@ export type TraceType = 'operation'
 
 export type TraceStatus = SpanStatus | 'interrupted'
 
-export type TraceInterruptionReason =
-  | 'timeout'
+export const INVALID_INTERRUPTION_REASONS = [
+  'timeout',
+  'draft-cancelled',
+  'invalid-state-transition',
+] as const
+
+export type TraceInterruptionReasonForInvalidTraces =
+  (typeof INVALID_INTERRUPTION_REASONS)[number]
+
+export type TraceInterruptionReasonForValidTraces =
   | 'waiting-for-interactive-timeout'
   | 'another-trace-started'
-  | 'manually-aborted'
+  | 'aborted'
   | 'idle-component-no-longer-idle'
   | 'matched-on-interrupt'
-  | 'invalid-state-transition'
-  | 'draft-cancelled'
+  | 'required-span-errored' // TODO: implement
+
+export type TraceInterruptionReason =
+  | TraceInterruptionReasonForInvalidTraces
+  | TraceInterruptionReasonForValidTraces
 
 export type SingleTraceReportFn<
   SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
@@ -115,10 +126,14 @@ export interface TraceManagerConfig<RelationSchemasT> {
   >
 
   reportErrorFn: (error: Error) => void
+  reportWarningFn: (warning: Error) => void
 }
 
 export interface TraceManagerUtilities<RelationSchemasT>
   extends TraceManagerConfig<RelationSchemasT> {
+  /**
+   * interrupts the active trace (if any) and replaces it with a new one
+   */
   replaceActiveTrace: (
     newTrace: AllPossibleActiveTraces<RelationSchemasT>,
   ) => void
@@ -126,7 +141,6 @@ export interface TraceManagerUtilities<RelationSchemasT>
     traceToCleanUp: AllPossibleActiveTraces<RelationSchemasT>,
   ) => void
   getActiveTrace: () => AllPossibleActiveTraces<RelationSchemasT> | undefined
-  cancelDraftTrace: () => void
 }
 
 export interface TraceModificationsBase<

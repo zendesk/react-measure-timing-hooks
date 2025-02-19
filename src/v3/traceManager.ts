@@ -39,8 +39,15 @@ export class TraceManager<
     }
   }
 
-  constructor(configInput: TraceManagerConfig<RelationSchemasT>) {
+  constructor(
+    configInput: Omit<
+      TraceManagerConfig<RelationSchemasT>,
+      'reportWarningFn'
+    > & { reportWarningFn?: (warning: Error) => void },
+  ) {
     this.utilities = {
+      // by default noop for warnings
+      reportWarningFn: () => {},
       ...configInput,
       replaceActiveTrace: (
         newTrace: AllPossibleActiveTraces<RelationSchemasT>,
@@ -60,7 +67,6 @@ export class TraceManager<
         // warn on miss?
       },
       getActiveTrace: () => this.activeTrace,
-      cancelDraftTrace: () => this.activeTrace?.interrupt('draft-cancelled'),
     }
   }
 

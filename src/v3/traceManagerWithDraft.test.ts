@@ -8,13 +8,7 @@ import {
   vitest as jest,
 } from 'vitest'
 import * as matchSpan from './matchSpan'
-import {
-  type TicketIdRelationSchema,
-  UserIdRelationSchema,
-} from './testUtility/fixtures/relationSchemas'
-import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
-import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
-import { ticketActivationDefinition } from './testUtility/fixtures/ticket.activation'
+import { type TicketIdRelationSchema } from './testUtility/fixtures/relationSchemas'
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './traceManager'
@@ -24,6 +18,8 @@ describe('TraceManager', () => {
   let reportFn: jest.Mock
   let generateId: jest.Mock
   let reportErrorFn: jest.Mock
+  let reportWarningFn: jest.Mock
+
   const DEFAULT_COLDBOOT_TIMEOUT_DURATION = 45_000
   jest.useFakeTimers({
     now: 0,
@@ -34,6 +30,7 @@ describe('TraceManager', () => {
       jest.fn<ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>>()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
+    reportWarningFn = jest.fn()
   })
 
   afterEach(() => {
@@ -47,6 +44,7 @@ describe('TraceManager', () => {
       reportFn,
       generateId,
       reportErrorFn,
+      reportWarningFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.basic-operation',
@@ -98,6 +96,7 @@ describe('TraceManager', () => {
       reportFn,
       generateId,
       reportErrorFn,
+      reportWarningFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.interrupt-on-basic-operation',
@@ -140,6 +139,7 @@ describe('TraceManager', () => {
       reportFn,
       generateId,
       reportErrorFn,
+      reportWarningFn,
     })
     const tracer = traceManager.createTracer({
       name: 'ticket.timeout-operation',
@@ -194,6 +194,7 @@ describe('TraceManager', () => {
       reportFn,
       generateId,
       reportErrorFn,
+      reportWarningFn,
     })
 
     const tracer = traceManager.createTracer({
@@ -217,12 +218,13 @@ describe('TraceManager', () => {
     )
   })
 
-  it('reports error when calling `transitionDraftToActive` again after a trace is active', () => {
+  it('reports warning when calling `transitionDraftToActive` again after a trace is active', () => {
     const traceManager = new TraceManager({
       relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
+      reportWarningFn,
     })
 
     const tracer = traceManager.createTracer({
@@ -242,7 +244,7 @@ describe('TraceManager', () => {
     tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
     tracer.transitionDraftToActive({ relatedTo: { ticketId: '2' } })
 
-    expect(reportErrorFn).toHaveBeenCalledWith(
+    expect(reportWarningFn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(
           'trace that has already been initialized',
@@ -251,5 +253,188 @@ describe('TraceManager', () => {
     )
   })
 
-  it('process events in bufffer and does not interrupt trace')
+  it('interrupts a draft trace when interrupt() is called with error', () => {
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
+      reportFn,
+      generateId,
+      reportErrorFn,
+      reportWarningFn,
+    })
+    const tracer = traceManager.createTracer({
+      name: 'ticket.basic-operation',
+      type: 'operation',
+      relations: ['ticketId'],
+      requiredSpans: [{ name: 'end' }],
+      variants: {
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+      },
+    })
+    tracer.createDraft({
+      variant: 'cold_boot',
+    })
+
+    // prettier-ignore
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      Events: ${Render('start', 0)}-----${Render('middle', 0)}
+      Time:   ${0}                      ${50}
+    `
+    processSpans(spans, traceManager)
+
+    const error = new Error('Test error')
+    tracer.interrupt({ error })
+
+    expect(reportFn).toHaveBeenCalled()
+    const report = reportFn.mock.calls[0][0]
+    expect(report.entries.length).toBe(3) // start, middle, and error mark
+    expect(report.status).toBe('interrupted')
+    expect(report.interruptionReason).toBe('aborted')
+    // Last entry should be the error mark
+    expect(report.entries[report.entries.length - 1].span.error).toBe(error)
+  })
+
+  it('interrupts a draft trace when interrupt() is called without error', () => {
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
+      reportFn,
+      generateId,
+      reportErrorFn,
+      reportWarningFn,
+    })
+    const tracer = traceManager.createTracer({
+      name: 'ticket.basic-operation',
+      type: 'operation',
+      relations: ['ticketId'],
+      requiredSpans: [{ name: 'end' }],
+      variants: {
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+      },
+    })
+    tracer.createDraft({
+      variant: 'cold_boot',
+    })
+
+    // prettier-ignore
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      Events: ${Render('start', 0)}-----${Render('middle', 0)}
+      Time:   ${0}                      ${50}
+    `
+    processSpans(spans, traceManager)
+
+    tracer.interrupt()
+
+    expect(reportFn).toHaveBeenCalled()
+    const report = reportFn.mock.calls[0][0]
+    expect(report.status).toBe('interrupted')
+    expect(report.entries.length).toBe(0)
+    expect(report.interruptionReason).toBe('draft-cancelled')
+  })
+
+  it('interrupts an active trace when interrupt() is called with error', () => {
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
+      reportFn,
+      generateId,
+      reportErrorFn,
+      reportWarningFn,
+    })
+    const tracer = traceManager.createTracer({
+      name: 'ticket.basic-operation',
+      type: 'operation',
+      relations: ['ticketId'],
+      requiredSpans: [{ name: 'end' }],
+      variants: {
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+      },
+    })
+    tracer.createDraft({
+      variant: 'cold_boot',
+    })
+    tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
+
+    // prettier-ignore
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      Events: ${Render('start', 0)}-----${Render('middle', 0)}
+      Time:   ${0}                      ${50}
+    `
+    processSpans(spans, traceManager)
+
+    const error = new Error('Test error')
+    tracer.interrupt({ error })
+
+    expect(reportFn).toHaveBeenCalled()
+    const report = reportFn.mock.calls[0][0]
+    expect(report.entries.length).toBe(3) // start, middle, and error mark
+    expect(report.status).toBe('interrupted')
+    expect(report.interruptionReason).toBe('aborted')
+    // Last entry should be the error mark
+    expect(report.entries[report.entries.length - 1].span.error).toBe(error)
+  })
+
+  it('interrupts an active trace when interrupt() is called without error', () => {
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
+      reportFn,
+      generateId,
+      reportErrorFn,
+      reportWarningFn,
+    })
+    const tracer = traceManager.createTracer({
+      name: 'ticket.basic-operation',
+      type: 'operation',
+      relations: ['ticketId'],
+      requiredSpans: [{ name: 'end' }],
+      variants: {
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+      },
+    })
+    tracer.createDraft({
+      variant: 'cold_boot',
+    })
+    tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
+
+    // prettier-ignore
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      Events: ${Render('start', 0)}-----${Render('middle', 0)}
+      Time:   ${0}                      ${50}
+    `
+    processSpans(spans, traceManager)
+
+    tracer.interrupt()
+
+    expect(reportFn).toHaveBeenCalled()
+    const report = reportFn.mock.calls[0][0]
+    expect(report.status).toBe('interrupted')
+    expect(report.entries.length).toBe(2) // start, middle
+    expect(report.interruptionReason).toBe('aborted')
+  })
+
+  it('reports warning when interrupting a non-existent trace', () => {
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
+      reportFn,
+      generateId,
+      reportErrorFn,
+      reportWarningFn,
+    })
+    const tracer = traceManager.createTracer({
+      name: 'ticket.basic-operation',
+      type: 'operation',
+      relations: ['ticketId'],
+      requiredSpans: [{ name: 'end' }],
+      variants: {
+        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+      },
+    })
+
+    tracer.interrupt({})
+
+    expect(reportWarningFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'No currently active trace when canceling a draft',
+        ),
+      }),
+    )
+  })
 })

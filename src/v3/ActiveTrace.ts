@@ -23,20 +23,29 @@ import type { ActiveTraceConfig, DraftTraceInput, Span } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
+  DraftTraceContext,
   SelectRelationSchemaByKeysTuple,
   SingleTraceReportFn,
   TraceInterruptionReason,
+  TraceInterruptionReasonForInvalidTraces,
   TraceManagerUtilities,
   TraceModifications,
   TraceModificationsBase,
 } from './types'
-import { DraftTraceContext } from './types'
+import { INVALID_INTERRUPTION_REASONS } from './types'
 import type {
   DistributiveOmit,
   KeysOfRelationSchemaToTuples,
   MergedStateHandlerMethods,
   StateHandlerPayloads,
 } from './typeUtils'
+
+const isInvalidInterruptionReason = (
+  reason: TraceInterruptionReason,
+): reason is TraceInterruptionReasonForInvalidTraces =>
+  (INVALID_INTERRUPTION_REASONS as readonly TraceInterruptionReason[]).includes(
+    reason,
+  )
 
 export interface FinalState<RelationSchemaT> {
   transitionFromState: NonTerminalTraceStates
@@ -323,7 +332,7 @@ export class TraceStateMachine<
           }
         }
 
-        // else, add into array buffer
+        // else, add into span buffer
         this.#provisionalBuffer.push(spanAndAnnotation)
         return undefined
       },
@@ -793,6 +802,18 @@ export class TraceStateMachine<
     // terminal states:
     interrupted: {
       onEnterState: (transition: OnEnterInterrupted) => {
+        // depending on the reason, if we're coming from draft, we want to flush the provisional buffer:
+        if (
+          transition.transitionFromState === 'draft' &&
+          !isInvalidInterruptionReason(transition.interruptionReason)
+        ) {
+          let span: SpanAndAnnotation<RelationSchemasT> | undefined
+          // eslint-disable-next-line no-cond-assign
+          while ((span = this.#provisionalBuffer.shift())) {
+            this.sideEffectFns.addSpanToRecording(span)
+          }
+        }
+
         // terminal state
         this.clearDeadline()
         this.sideEffectFns.prepareAndEmitRecording({
