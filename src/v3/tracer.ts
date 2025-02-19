@@ -218,8 +218,8 @@ export class Tracer<
     definition: ComputedValueDefinitionInput<
       SelectedRelationTupleT,
       RelationSchemasT,
-      MatchersT,
-      VariantsT
+      VariantsT,
+      MatchersT
     >,
   ): void => {
     this.definition.computedValueDefinitions.push({

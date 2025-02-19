@@ -2,15 +2,13 @@ import { AllPossibleActiveTraces } from './ActiveTrace'
 import {
   convertLabelMatchersToFns,
   convertMatchersToFns,
+  ensureMatcherFn,
 } from './ensureMatcherFn'
-import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
 import { Tracer } from './tracer'
 import type {
   CompleteTraceDefinition,
-  ComputedSpanDefinition,
-  ComputedValueDefinition,
   RelationSchemaValue,
   SpanDeduplicationStrategy,
   TraceDefinition,
@@ -82,17 +80,36 @@ export class TraceManager<
       VariantsT
     >,
   ): Tracer<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
-    const computedSpanDefinitions: ComputedSpanDefinition<
-      SelectedRelationTupleT,
-      RelationSchemasT,
-      VariantsT
-    >[] = []
-    const computedValueDefinitions: ComputedValueDefinition<
-      SelectedRelationTupleT,
-      RelationSchemasT,
-      VariantsT,
-      SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>[]
-    >[] = []
+    const computedSpanDefinitions =
+      traceDefinition.computedSpanDefinitions?.map((def) => ({
+        ...def,
+        startSpan:
+          typeof def.startSpan === 'string'
+            ? def.startSpan
+            : ensureMatcherFn<
+                SelectedRelationTupleT,
+                RelationSchemasT,
+                VariantsT
+              >(def.startSpan),
+        endSpan:
+          typeof def.endSpan === 'string'
+            ? def.endSpan
+            : ensureMatcherFn<
+                SelectedRelationTupleT,
+                RelationSchemasT,
+                VariantsT
+              >(def.endSpan),
+      })) ?? []
+
+    const computedValueDefinitions =
+      traceDefinition.computedValueDefinitions?.map((def) => ({
+        ...def,
+        matches: def.matches.map((m) =>
+          ensureMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>(
+            m,
+          ),
+        ),
+      })) ?? []
 
     const requiredSpans = convertMatchersToFns<
       SelectedRelationTupleT,

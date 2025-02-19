@@ -318,6 +318,31 @@ export interface TraceDefinition<
     RelationSchemasT,
     VariantsT
   >[]
+
+  /**
+   * A list of computed span definitions that will be converted to their final form.
+   * You can add more computed spans later using tracer.defineComputedSpan().
+   */
+  computedSpanDefinitions?: ComputedSpanDefinitionInput<
+    NoInfer<SelectedRelationTupleT>,
+    RelationSchemasT,
+    VariantsT
+  >[]
+
+  /**
+   * A list of computed value definitions that will be converted to their final form.
+   * You can add more computed values later using tracer.defineComputedValue().
+   */
+  computedValueDefinitions?: ComputedValueDefinitionInput<
+    NoInfer<SelectedRelationTupleT>,
+    RelationSchemasT,
+    VariantsT,
+    SpanMatcherFn<
+      NoInfer<SelectedRelationTupleT>,
+      RelationSchemasT,
+      VariantsT
+    >[]
+  >[]
 }
 
 /**
@@ -328,7 +353,10 @@ export interface CompleteTraceDefinition<
   SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
   RelationSchemasT,
   VariantsT extends string,
-> extends TraceDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+> extends Omit<
+    TraceDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
+    'computedSpanDefinitions' | 'computedValueDefinitions'
+  > {
   computedSpanDefinitions: ComputedSpanDefinition<
     NoInfer<SelectedRelationTupleT>,
     RelationSchemasT,
@@ -485,12 +513,12 @@ export interface ComputedSpanDefinitionInput<
 export interface ComputedValueDefinitionInput<
   SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
   RelationSchemasT,
+  VariantsT extends string,
   MatchersT extends SpanMatch<
     SelectedRelationTupleT,
     RelationSchemasT,
     VariantsT
   >[],
-  VariantsT extends string,
 > {
   name: string
   matches: [...MatchersT]
