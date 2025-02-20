@@ -19,8 +19,8 @@ describe('recordingComputeUtils', () => {
       name: 'test-trace',
       relations: [],
       requiredSpans: [() => true],
-      computedSpanDefinitions: [],
-      computedValueDefinitions: [],
+      computedSpanDefinitions: {},
+      computedValueDefinitions: {},
       variants: {
         origin: { timeout: 45_000 },
       },
@@ -150,14 +150,13 @@ describe('recordingComputeUtils', () => {
       name: 'test-trace',
       relations: [],
       requiredSpans: [() => true],
-      computedSpanDefinitions: [
-        {
-          name: 'test-computed-span',
+      computedSpanDefinitions: {
+        'test-computed-span': {
           startSpan: ({ span }) => span.name === 'start-span',
           endSpan: ({ span }) => span.name === 'end-span',
         },
-      ],
-      computedValueDefinitions: [],
+      },
+      computedValueDefinitions: {},
       variants: {
         origin: { timeout: 45_000 },
       },
@@ -193,13 +192,12 @@ describe('recordingComputeUtils', () => {
     it('should handle operation-start and operation-end special matchers', () => {
       const definition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
         ...baseDefinition,
-        computedSpanDefinitions: [
-          {
-            name: 'operation-span',
+        computedSpanDefinitions: {
+          'operation-span': {
             startSpan: 'operation-start',
             endSpan: 'operation-end',
           },
-        ],
+        },
       }
 
       const markedCompleteSpan = createMockSpanAndAnnotation(200, {
@@ -231,14 +229,13 @@ describe('recordingComputeUtils', () => {
       name: 'test-trace',
       relations: [],
       requiredSpans: [() => true],
-      computedSpanDefinitions: [],
-      computedValueDefinitions: [
-        {
-          name: 'error-count',
+      computedSpanDefinitions: {},
+      computedValueDefinitions: {
+        'error-count': {
           matches: [({ span }) => span.status === 'error'],
           computeValueFromMatches: (matches) => matches.length,
         },
-      ],
+      },
       variants: {
         origin: { timeout: 45_000 },
       },
@@ -262,6 +259,40 @@ describe('recordingComputeUtils', () => {
       })
 
       expect(result['error-count']).toBe(2)
+    })
+
+    it('should handle multiple matches in computeValueFromMatches', () => {
+      const definition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
+        ...baseDefinition,
+        computedValueDefinitions: {
+          'status-counts': {
+            matches: [
+              ({ span }) => span.status === 'error',
+              ({ span }) => span.status === 'ok',
+            ],
+            computeValueFromMatches: (errors, oks) =>
+              errors.length + oks.length,
+          },
+        },
+      }
+
+      const result = getComputedValues({
+        definition,
+        recordedItems: [
+          createMockSpanAndAnnotation(100, { status: 'error' }),
+          createMockSpanAndAnnotation(200, { status: 'ok' }),
+          createMockSpanAndAnnotation(300, { status: 'error' }),
+        ],
+        input: {
+          id: 'test',
+          startTime: createTimestamp(0),
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          relatedTo: {} as never,
+          variant: 'origin',
+        },
+      })
+
+      expect(result['status-counts']).toEqual(3)
     })
   })
 
@@ -293,8 +324,8 @@ describe('recordingComputeUtils', () => {
             name: 'test-trace',
             relations: [],
             requiredSpans: [() => true],
-            computedSpanDefinitions: [],
-            computedValueDefinitions: [],
+            computedSpanDefinitions: {},
+            computedValueDefinitions: {},
             variants: {
               origin: { timeout: 45_000 },
             },

@@ -4,11 +4,13 @@ import {
   convertMatchersToFns,
   ensureMatcherFn,
 } from './ensureMatcherFn'
+import type { SpanMatch } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
 import { Tracer } from './tracer'
 import type {
   CompleteTraceDefinition,
+  ComputedValueDefinitionInput,
   RelationSchemaValue,
   SpanDeduplicationStrategy,
   TraceDefinition,
@@ -73,43 +75,78 @@ export class TraceManager<
   createTracer<
     const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
     const VariantsT extends string,
+    const ComputedValueTuplesT extends {
+      [K in keyof ComputedValueTuplesT]: SpanMatch<
+        NoInfer<SelectedRelationTupleT>,
+        RelationSchemasT,
+        NoInfer<VariantsT>
+      >[]
+    },
   >(
     traceDefinition: TraceDefinition<
       SelectedRelationTupleT,
       RelationSchemasT,
-      VariantsT
+      VariantsT,
+      {
+        [K in keyof ComputedValueTuplesT]: ComputedValueDefinitionInput<
+          NoInfer<SelectedRelationTupleT>,
+          RelationSchemasT,
+          NoInfer<VariantsT>,
+          ComputedValueTuplesT[K]
+        >
+      }
     >,
   ): Tracer<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
-    const computedSpanDefinitions =
-      traceDefinition.computedSpanDefinitions?.map((def) => ({
-        ...def,
-        startSpan:
-          typeof def.startSpan === 'string'
-            ? def.startSpan
-            : ensureMatcherFn<
-                SelectedRelationTupleT,
-                RelationSchemasT,
-                VariantsT
-              >(def.startSpan),
-        endSpan:
-          typeof def.endSpan === 'string'
-            ? def.endSpan
-            : ensureMatcherFn<
-                SelectedRelationTupleT,
-                RelationSchemasT,
-                VariantsT
-              >(def.endSpan),
-      })) ?? []
+    const computedSpanDefinitions = Object.fromEntries(
+      Object.entries(traceDefinition.computedSpanDefinitions ?? {}).map(
+        ([name, def]) => [
+          name,
+          {
+            startSpan:
+              typeof def.startSpan === 'string'
+                ? def.startSpan
+                : ensureMatcherFn<
+                    SelectedRelationTupleT,
+                    RelationSchemasT,
+                    VariantsT
+                  >(def.startSpan),
+            endSpan:
+              typeof def.endSpan === 'string'
+                ? def.endSpan
+                : ensureMatcherFn<
+                    SelectedRelationTupleT,
+                    RelationSchemasT,
+                    VariantsT
+                  >(def.endSpan),
+          } as const,
+        ],
+      ),
+    )
 
-    const computedValueDefinitions =
-      traceDefinition.computedValueDefinitions?.map((def) => ({
-        ...def,
-        matches: def.matches.map((m) =>
-          ensureMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>(
-            m,
+    const computedValueDefinitionsInputEntries = Object.entries<
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ComputedValueDefinitionInput<any, any, any, any>
+    >(traceDefinition.computedValueDefinitions ?? {})
+
+    const computedValueDefinitions = Object.fromEntries(
+      computedValueDefinitionsInputEntries.map(([name, def]) => [
+        name,
+        {
+          ...def,
+          matches: def.matches.map(
+            (
+              m: SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
+            ) =>
+              ensureMatcherFn<
+                SelectedRelationTupleT,
+                RelationSchemasT,
+                VariantsT
+              >(m),
           ),
-        ),
-      })) ?? []
+          computeValueFromMatches: def.computeValueFromMatches,
+        } as const,
+      ]),
+    )
 
     const requiredSpans = convertMatchersToFns<
       SelectedRelationTupleT,

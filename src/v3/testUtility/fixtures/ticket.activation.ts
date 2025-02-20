@@ -7,7 +7,8 @@ const TICKET_NAVIGATED_AWAY_EVENT_NAME = `ticket.navigated-away`
 export const ticketActivationDefinition: TraceDefinition<
   ['ticketId'],
   FixtureAllPossibleRelationSchemas,
-  'cold_boot'
+  'cold_boot',
+  {}
 > = {
   name: 'ticket.activation',
   type: 'operation',

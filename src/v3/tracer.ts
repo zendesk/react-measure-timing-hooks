@@ -1,12 +1,12 @@
 import { ActiveTrace, AllPossibleActiveTraces } from './ActiveTrace'
 import { ensureMatcherFn } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
-import type { SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
+import type { SpanMatch, SpanMatcherFn } from './matchSpan'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
 import {
   CompleteTraceDefinition,
   ComputedSpanDefinitionInput,
-  ComputedValueDefinition,
   ComputedValueDefinitionInput,
   RelationSchemaValue,
   SelectRelationSchemaByKeysTuple,
@@ -186,10 +186,9 @@ export class Tracer<
       SelectedRelationTupleT,
       RelationSchemasT,
       VariantsT
-    >,
+    > & { name: string },
   ): void => {
-    this.definition.computedSpanDefinitions.push({
-      ...definition,
+    this.definition.computedSpanDefinitions[definition.name] = {
       startSpan:
         typeof definition.startSpan === 'string'
           ? definition.startSpan
@@ -206,27 +205,32 @@ export class Tracer<
               RelationSchemasT,
               VariantsT
             >(definition.endSpan),
-    })
+    }
   }
 
   defineComputedValue = <
-    MatchersT extends (
-      | SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
-      | SpanMatchDefinition<SelectedRelationTupleT, RelationSchemasT>
-    )[],
+    const MatchersT extends SpanMatch<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >[],
   >(
     definition: ComputedValueDefinitionInput<
       SelectedRelationTupleT,
       RelationSchemasT,
       VariantsT,
       MatchersT
-    >,
+    > & { name: string },
   ): void => {
-    this.definition.computedValueDefinitions.push({
-      ...definition,
-      matches: definition.matches.map<
-        SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
-      >((m) => ensureMatcherFn(m)),
-    } as ComputedValueDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT>)
+    const convertedMatches = definition.matches.map<
+      SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+    >((m) => ensureMatcherFn(m))
+
+    this.definition.computedValueDefinitions[definition.name] = {
+      matches: convertedMatches,
+      computeValueFromMatches: definition.computeValueFromMatches as (
+        ...matches: (readonly SpanAndAnnotation<RelationSchemasT>[])[]
+      ) => number | string | boolean | undefined,
+    }
   }
 }

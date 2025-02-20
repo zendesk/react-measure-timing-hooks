@@ -214,7 +214,7 @@ export type MergedStateHandlerMethods<
 }
 export type ArrayWithAtLeastOneElement<T> = readonly [T, ...T[]]
 export type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
-  [Index in keyof KeysTuple]: MapToValue // T[KeysTuple[Index]]
+  [Index in keyof KeysTuple]: MapToValue
 }
 
 /** Convert a union of values U into a single tuple type (in an arbitrary order). */

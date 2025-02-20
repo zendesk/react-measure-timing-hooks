@@ -125,6 +125,7 @@ export interface TraceManagerConfig<RelationSchemasT> {
     Partial<RelationSchemasT>
   >
 
+  // TODO: add definition? as 2nd arg
   reportErrorFn: (error: Error) => void
   reportWarningFn: (warning: Error) => void
 }
@@ -226,6 +227,15 @@ export interface TraceDefinition<
   SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
   RelationSchemasT,
   VariantsT extends string,
+  ComputedValueDefinitionsT extends {
+    [K in keyof ComputedValueDefinitionsT]: ComputedValueDefinitionInput<
+      NoInfer<SelectedRelationTupleT>,
+      RelationSchemasT,
+      NoInfer<VariantsT>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    >
+  },
 > {
   /**
    * The name of the trace.
@@ -320,29 +330,23 @@ export interface TraceDefinition<
   >[]
 
   /**
-   * A list of computed span definitions that will be converted to their final form.
-   * You can add more computed spans later using tracer.defineComputedSpan().
+   * A record of computed span definitions that will be converted to their final form.
+   * The key is the name of the computed span. You can add more computed spans later using tracer.defineComputedSpan().
    */
-  computedSpanDefinitions?: ComputedSpanDefinitionInput<
-    NoInfer<SelectedRelationTupleT>,
-    RelationSchemasT,
-    VariantsT
-  >[]
-
-  /**
-   * A list of computed value definitions that will be converted to their final form.
-   * You can add more computed values later using tracer.defineComputedValue().
-   */
-  computedValueDefinitions?: ComputedValueDefinitionInput<
-    NoInfer<SelectedRelationTupleT>,
-    RelationSchemasT,
-    VariantsT,
-    SpanMatcherFn<
+  computedSpanDefinitions?: Record<
+    string,
+    ComputedSpanDefinitionInput<
       NoInfer<SelectedRelationTupleT>,
       RelationSchemasT,
       VariantsT
-    >[]
-  >[]
+    >
+  >
+
+  /**
+   * A record of computed value definitions that will be converted to their final form.
+   * The key is the name of the computed value. You can add more computed values later using tracer.defineComputedValue().
+   */
+  computedValueDefinitions?: ComputedValueDefinitionsT
 }
 
 /**
@@ -354,24 +358,25 @@ export interface CompleteTraceDefinition<
   RelationSchemasT,
   VariantsT extends string,
 > extends Omit<
-    TraceDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
+    TraceDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT, {}>,
     'computedSpanDefinitions' | 'computedValueDefinitions'
   > {
-  computedSpanDefinitions: ComputedSpanDefinition<
-    NoInfer<SelectedRelationTupleT>,
-    RelationSchemasT,
-    VariantsT
-  >[]
-  computedValueDefinitions: ComputedValueDefinition<
-    NoInfer<SelectedRelationTupleT>,
-    RelationSchemasT,
-    VariantsT,
-    SpanMatcherFn<
+  computedSpanDefinitions: Record<
+    string,
+    ComputedSpanDefinition<
       NoInfer<SelectedRelationTupleT>,
       RelationSchemasT,
       VariantsT
-    >[]
-  >[]
+    >
+  >
+  computedValueDefinitions: Record<
+    string,
+    ComputedValueDefinition<
+      NoInfer<SelectedRelationTupleT>,
+      RelationSchemasT,
+      VariantsT
+    >
+  >
 
   labelMatching?: LabelMatchingFnsRecord<
     NoInfer<SelectedRelationTupleT>,
@@ -439,7 +444,6 @@ export interface ComputedSpanDefinition<
   RelationSchemasT,
   VariantsT extends string,
 > {
-  name: string
   /**
    * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
    */
@@ -468,19 +472,14 @@ export interface ComputedValueDefinition<
   SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
   RelationSchemasT,
   VariantsT extends string,
-  MatchersT extends SpanMatcherFn<
-    SelectedRelationTupleT,
-    RelationSchemasT,
-    VariantsT
-  >[] = SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>[],
 > {
-  name: string
-  matches: [...MatchersT]
+  matches: SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>[]
   /** if returns undefined, will not report the computed value */
-  computeValueFromMatches: (
-    // as many matches as match of type Span<ScopeT>
-    ...matches: MapTuple<MatchersT, SpanAndAnnotation<RelationSchemasT>[]>
-  ) => number | string | boolean | undefined
+  computeValueFromMatches: NoInfer<
+    (
+      ...matchers: (readonly SpanAndAnnotation<RelationSchemasT>[])[]
+    ) => number | string | boolean | undefined
+  >
 
   /**
    * If true, we will attempt to compute the span even if the trace was interrupted.
@@ -497,7 +496,6 @@ export interface ComputedSpanDefinitionInput<
   RelationSchemasT,
   VariantsT extends string,
 > {
-  name: string
   startSpan:
     | SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>
     | 'operation-start'
@@ -514,17 +512,19 @@ export interface ComputedValueDefinitionInput<
   SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
   RelationSchemasT,
   VariantsT extends string,
-  MatchersT extends SpanMatch<
-    SelectedRelationTupleT,
-    RelationSchemasT,
-    VariantsT
+  MatchersT extends NoInfer<
+    SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>
   >[],
 > {
-  name: string
   matches: [...MatchersT]
-  computeValueFromMatches: (
-    ...matches: MapTuple<MatchersT, SpanAndAnnotation<RelationSchemasT>[]>
-  ) => number | string | boolean | undefined
+  computeValueFromMatches: NoInfer<
+    (
+      ...matches: MapTuple<
+        MatchersT,
+        readonly SpanAndAnnotation<RelationSchemasT>[]
+      >
+    ) => number | string | boolean | undefined
+  >
 }
 
 // export type SelectRelationSchemaByKeysTuple<

@@ -421,4 +421,38 @@ describe('type tests', () => {
       readonly d: 'union' | 'of' | 'things' | 2
     }>({} as MappedTest)
   })
+
+  it('maps computedValueDefinitions', () => {
+    const tracer = traceManager.createTracer({
+      name: 'ticket.multiple-computed-values',
+      type: 'operation',
+      relations: [],
+      requiredSpans: [{ name: 'end' }],
+      variants: {
+        cold_boot: { timeout: 10_000 },
+      },
+      computedValueDefinitions: {
+        'valid-feature-count': {
+          matches: [{ name: 'feature' }, { name: 'feature-2' }],
+          computeValueFromMatches: (feature, feature2) =>
+            feature.length + feature2.length,
+        },
+        'invalid-feature-count': {
+          matches: [{ name: 'feature' }, { name: 'feature-2' }],
+          // @ts-expect-error invalid number of arguments
+          computeValueFromMatches: (feature, feature2, invalid) => 0,
+        },
+        'error-count': {
+          matches: [{ name: (name) => name.startsWith('error') }],
+          computeValueFromMatches: (errors) => errors.length,
+        },
+        another: {
+          matches: [(name) => name.span.name.startsWith('error')],
+          computeValueFromMatches: (errors) => errors.length,
+        },
+        // TODO: adding a function breaks the type for some odd reason
+        // https://github.com/microsoft/TypeScript/issues/61228
+      },
+    })
+  })
 })

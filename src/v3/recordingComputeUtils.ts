@@ -53,8 +53,10 @@ export function getComputedValues<
     RelationSchemasT
   >['computedValues'] = {}
 
-  for (const definition of traceDefinition.computedValueDefinitions) {
-    const { name, matches, computeValueFromMatches } = definition
+  for (const [name, definition] of Object.entries(
+    traceDefinition.computedValueDefinitions,
+  )) {
+    const { matches, computeValueFromMatches } = definition
 
     // Initialize arrays to hold matches for each matcher
     const matchingEntriesByMatcher: SpanAndAnnotation<RelationSchemasT>[][] =
@@ -104,8 +106,10 @@ export function getComputedSpans<
     RelationSchemasT
   >['computedSpans'] = {}
 
-  for (const definition of traceDefinition.computedSpanDefinitions) {
-    const { startSpan: startSpanMatcher, endSpan, name } = definition
+  for (const [name, definition] of Object.entries(
+    traceDefinition.computedSpanDefinitions,
+  )) {
+    const { startSpan: startSpanMatcher, endSpan } = definition
 
     const matchingStartEntry =
       typeof startSpanMatcher === 'function'

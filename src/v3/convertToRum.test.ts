@@ -20,8 +20,8 @@ describe('convertTraceToRUM', () => {
       name: 'test-trace',
       relations: ['ticketId'],
       requiredSpans: [() => true],
-      computedSpanDefinitions: [],
-      computedValueDefinitions: [],
+      computedSpanDefinitions: {},
+      computedValueDefinitions: {},
       variants: {
         origin: { timeout: 45_000 },
       },

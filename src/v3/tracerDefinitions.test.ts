@@ -48,14 +48,13 @@ describe('Trace Definitions', () => {
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
-        // Define computed span in the initial definition
-        computedSpanDefinitions: [
-          {
-            name: computedSpanName,
+        // Define computed span in the initial definition as a Record
+        computedSpanDefinitions: {
+          [computedSpanName]: {
             startSpan: matchSpan.withName('render-1'),
             endSpan: matchSpan.withName('render-3'),
           },
-        ],
+        },
       })
 
       const traceId = tracer.start({
@@ -99,18 +98,16 @@ describe('Trace Definitions', () => {
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
-        computedSpanDefinitions: [
-          {
-            name: 'first-to-second',
+        computedSpanDefinitions: {
+          'first-to-second': {
             startSpan: matchSpan.withName('render-1'),
             endSpan: matchSpan.withName('render-2'),
           },
-          {
-            name: 'second-to-third',
+          'second-to-third': {
             startSpan: matchSpan.withName('render-2'),
             endSpan: matchSpan.withName('render-3'),
           },
-        ],
+        },
       })
 
       tracer.start({
@@ -152,14 +149,13 @@ describe('Trace Definitions', () => {
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
-        // Define computed value in the initial definition
-        computedValueDefinitions: [
-          {
-            name: 'feature',
-            matches: [matchSpan.withName('feature')],
+        // Define computed value in the initial definition as a Record
+        computedValueDefinitions: {
+          feature: {
+            matches: [{ name: 'feature' }],
             computeValueFromMatches: (feature) => feature.length,
           },
-        ],
+        },
       })
 
       tracer.start({
@@ -198,18 +194,23 @@ describe('Trace Definitions', () => {
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
-        computedValueDefinitions: [
-          {
-            name: 'feature-count',
-            matches: [matchSpan.withName('feature')],
-            computeValueFromMatches: (feature) => feature.length,
+        computedValueDefinitions: {
+          'feature-count': {
+            matches: [
+              matchSpan.withName('feature'),
+              matchSpan.withName('feature-2'),
+            ],
+            computeValueFromMatches: (feature, feature2) =>
+              // @ts-expect-error unexpected TS error
+              // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+              feature.length + feature2.length,
           },
-          {
-            name: 'error-count',
+          'error-count': {
             matches: [matchSpan.withName((name) => name.startsWith('error'))],
+            // @ts-expect-error unexpected TS error
             computeValueFromMatches: (errors) => errors.length,
           },
-        ],
+        },
       })
 
       tracer.start({

@@ -60,6 +60,8 @@ export type SpanMatch<
   | SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
   | SpanMatchDefinition<SelectedRelationTupleT, RelationSchemasT>
 
+// Span<RelationSchemasT>
+
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.
  */
@@ -78,6 +80,7 @@ export function withName<
     return value(span.name, relatedTo)
   }
 }
+
 // DRAFT TODO: make test case if one doesnt exist yet
 // withName((name, relatedTo) => !relatedTo ? false : name === `OmniLog/${relatedTo.ticketId}`)
 

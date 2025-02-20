@@ -998,8 +998,8 @@ export class ActiveTrace<
       labelMatching: { ...definition.labelMatching },
 
       requiredSpans: [...definition.requiredSpans],
-      computedSpanDefinitions: [...definition.computedSpanDefinitions],
-      computedValueDefinitions: [...definition.computedValueDefinitions],
+      computedSpanDefinitions: { ...definition.computedSpanDefinitions },
+      computedValueDefinitions: { ...definition.computedValueDefinitions },
 
       interruptOnSpans: definition.interruptOnSpans
         ? [...definition.interruptOnSpans]

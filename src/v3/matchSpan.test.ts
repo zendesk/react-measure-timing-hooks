@@ -78,8 +78,8 @@ const mockContext = {
     type: 'operation',
     relations: ['ticketId'] as never,
     requiredSpans: [() => true],
-    computedSpanDefinitions: [],
-    computedValueDefinitions: [],
+    computedSpanDefinitions: {},
+    computedValueDefinitions: {},
     variants: {
       origin: { timeout: 10_000 },
     },
