@@ -1,22 +1,25 @@
 import { fromDefinition, type SpanMatch, type SpanMatcherFn } from './matchSpan'
 import type { LabelMatchingFnsRecord, LabelMatchingInputRecord } from './types'
-import type { ArrayWithAtLeastOneElement, KeysOfUnion } from './typeUtils'
+import type {
+  ArrayWithAtLeastOneElement,
+  KeysOfRelationSchemaToTuples,
+} from './typeUtils'
 
 export function ensureMatcherFn<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
-  MatcherInputT extends SpanMatch<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
-  > = SpanMatch<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
+  const MatcherInputT extends SpanMatch<
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
+  > = SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
 >(
   matcherFnOrDefinition: MatcherInputT,
-): SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   return typeof matcherFnOrDefinition === 'function'
     ? matcherFnOrDefinition
-    : fromDefinition<TracerScopeKeysT, AllPossibleScopesT, VariantT>(
+    : fromDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT>(
         matcherFnOrDefinition,
       )
 }
@@ -28,23 +31,22 @@ function arrayHasAtLeastOneElement<T>(
 }
 
 export function convertMatchersToFns<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
   matchers:
-    | readonly SpanMatch<TracerScopeKeysT, AllPossibleScopesT, VariantT>[]
+    | readonly SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>[]
     | undefined,
 ):
   | ArrayWithAtLeastOneElement<
-      SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
+      SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
     >
   | undefined {
-  const mapped:
-    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>[]
-    | undefined = matchers?.map((m) =>
-    ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(m),
-  )
+  const mapped = matchers?.map<
+    SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+  >((m) => ensureMatcherFn(m))
+
   if (mapped && arrayHasAtLeastOneElement(mapped)) {
     return mapped
   }
@@ -52,28 +54,28 @@ export function convertMatchersToFns<
 }
 
 export function convertLabelMatchersToFns<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 >(
   definitionLabelMatchers: LabelMatchingInputRecord<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >,
-): LabelMatchingFnsRecord<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+): LabelMatchingFnsRecord<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
   const matchers: LabelMatchingFnsRecord<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   > = {}
   for (const key in definitionLabelMatchers) {
     // eslint-disable-next-line no-continue
     if (!definitionLabelMatchers?.[key]) continue
     matchers[key] = ensureMatcherFn<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >(definitionLabelMatchers[key])
   }
   return matchers

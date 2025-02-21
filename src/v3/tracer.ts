@@ -1,42 +1,44 @@
 import { ActiveTrace, AllPossibleActiveTraces } from './ActiveTrace'
 import { ensureMatcherFn } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
-import type { SpanMatchDefinition, SpanMatcherFn } from './matchSpan'
+import type { SpanMatch, SpanMatcherFn } from './matchSpan'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
 import {
   CompleteTraceDefinition,
   ComputedSpanDefinitionInput,
-  ComputedValueDefinition,
   ComputedValueDefinitionInput,
-  ScopeValue,
-  SelectScopeByKey,
+  RelationSchemaValue,
+  SelectRelationSchemaByKeysTuple,
   type TraceManagerUtilities,
   TraceModifications,
 } from './types'
-import type { KeysOfUnion } from './typeUtils'
+import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 
 /**
  * Tracer can create draft traces and start traces
  */
 export class Tracer<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
-  VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT extends {
+    [K in keyof RelationSchemasT]: RelationSchemaValue
+  },
+  const VariantsT extends string,
 > {
   definition: CompleteTraceDefinition<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >
-  traceUtilities: TraceManagerUtilities<AllPossibleScopesT>
+  traceUtilities: TraceManagerUtilities<RelationSchemasT>
 
   constructor(
     definition: CompleteTraceDefinition<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
-    traceUtilities: TraceManagerUtilities<AllPossibleScopesT>,
+    traceUtilities: TraceManagerUtilities<RelationSchemasT>,
   ) {
     this.definition = definition
     this.traceUtilities = traceUtilities
@@ -47,30 +49,32 @@ export class Tracer<
    */
   start = (
     input: StartTraceConfig<
-      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-      VariantT
+      SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
+      VariantsT
     >,
   ): string | undefined => {
     const traceId = this.createDraft(input)
     if (!traceId) return undefined
 
-    this.transitionDraftToActive({ scope: input.scope })
+    this.transitionDraftToActive({ relatedTo: input.relatedTo })
     return traceId
   }
 
-  createDraft = (input: BaseStartTraceConfig<VariantT>): string | undefined => {
+  createDraft = (
+    input: BaseStartTraceConfig<VariantsT>,
+  ): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
 
     const activeTrace = new ActiveTrace<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >(
       this.definition,
       {
         ...input,
-        // scope will be overwritten later during initialization of the trace
-        scope: undefined,
+        // relatedTo will be overwritten later during initialization of the trace
+        relatedTo: undefined,
         startTime: ensureTimestamp(input.startTime),
         id,
       },
@@ -78,32 +82,77 @@ export class Tracer<
     )
 
     this.traceUtilities.replaceActiveTrace(
-      activeTrace as unknown as AllPossibleActiveTraces<AllPossibleScopesT>,
+      activeTrace as unknown as AllPossibleActiveTraces<RelationSchemasT>,
     )
 
     return id
   }
 
-  cancelDraft = () => {
-    this.traceUtilities.cancelDraftTrace()
+  interrupt = ({ error }: { error?: Error } = {}) => {
+    const activeTrace = this.traceUtilities.getActiveTrace() as
+      | ActiveTrace<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+      | undefined
+
+    if (!activeTrace) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `No currently active trace when canceling a draft. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
+        ),
+      )
+      return
+    }
+
+    // verify that activeTrace is the same definition as the Tracer's definition
+    if (activeTrace.sourceDefinition !== this.definition) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `You are trying to cancel a draft that is not the same definition as the Tracer's definition.`,
+        ),
+      )
+      return
+    }
+
+    if (error) {
+      activeTrace.processSpan({
+        name: error.name,
+        startTime: ensureTimestamp(),
+        // TODO: use a dedicated error type
+        type: 'mark',
+        attributes: {},
+        duration: 0,
+        error,
+      })
+      activeTrace.interrupt('aborted')
+      return
+    }
+
+    if (activeTrace.isDraft) {
+      activeTrace.interrupt('draft-cancelled')
+      return
+    }
+
+    activeTrace.interrupt('aborted')
   }
 
   // can have config changed until we move into active
-  // from input: scope (required), attributes (optional, merge into)
+  // from input: relatedTo (required), attributes (optional, merge into)
   // from definition, can add items to: requiredSpans (additionalRequiredSpans), debounceOnSpans (additionalDebounceOnSpans)
   // documentation: interruption still works and all the other events are buffered
   transitionDraftToActive = (
     inputAndDefinitionModifications: TraceModifications<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
   ): void => {
-    const activeTrace = this.traceUtilities.getActiveTrace()
+    const activeTrace = this.traceUtilities.getActiveTrace() as
+      | ActiveTrace<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+      | undefined
+
     if (!activeTrace) {
       this.traceUtilities.reportErrorFn(
         new Error(
-          `No currently active trace when initializing a trace. Call tracer.startTrace(...) or tracer.provisionalStartTrace(...) beforehand.`,
+          `No currently active trace when initializing a trace. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
         ),
       )
       return
@@ -111,7 +160,7 @@ export class Tracer<
 
     // this is an already initialized active trace, do nothing:
     if (!activeTrace.isDraft) {
-      this.traceUtilities.reportErrorFn(
+      this.traceUtilities.reportWarningFn(
         new Error(
           `You are trying to initialize a trace that has already been initialized before (${activeTrace.definition.name}).`,
         ),
@@ -119,57 +168,69 @@ export class Tracer<
       return
     }
 
-    const typedActiveTrace = activeTrace as unknown as ActiveTrace<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
-    >
+    // verify that activeTrace is the same definition as the Tracer's definition
+    if (activeTrace.sourceDefinition !== this.definition) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `You are trying to initialize a trace that is not the same definition as the Tracer's definition is different.`,
+        ),
+      )
+      return
+    }
 
-    typedActiveTrace.transitionDraftToActive(inputAndDefinitionModifications)
+    activeTrace.transitionDraftToActive(inputAndDefinitionModifications)
   }
 
   defineComputedSpan = (
     definition: ComputedSpanDefinitionInput<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
-    >,
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    > & { name: string },
   ): void => {
-    this.definition.computedSpanDefinitions.push({
-      ...definition,
+    this.definition.computedSpanDefinitions[definition.name] = {
       startSpan:
         typeof definition.startSpan === 'string'
           ? definition.startSpan
-          : ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(
-              definition.startSpan,
-            ),
+          : ensureMatcherFn<
+              SelectedRelationTupleT,
+              RelationSchemasT,
+              VariantsT
+            >(definition.startSpan),
       endSpan:
         typeof definition.endSpan === 'string'
           ? definition.endSpan
-          : ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(
-              definition.endSpan,
-            ),
-    })
+          : ensureMatcherFn<
+              SelectedRelationTupleT,
+              RelationSchemasT,
+              VariantsT
+            >(definition.endSpan),
+    }
   }
 
   defineComputedValue = <
-    MatchersT extends (
-      | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
-      | SpanMatchDefinition<TracerScopeKeysT, AllPossibleScopesT>
-    )[],
+    const MatchersT extends SpanMatch<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >[],
   >(
     definition: ComputedValueDefinitionInput<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      MatchersT,
-      VariantT
-    >,
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT,
+      MatchersT
+    > & { name: string },
   ): void => {
-    this.definition.computedValueDefinitions.push({
-      ...definition,
-      matches: definition.matches.map((m) =>
-        ensureMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>(m),
-      ),
-    } as ComputedValueDefinition<TracerScopeKeysT, AllPossibleScopesT, VariantT>)
+    const convertedMatches = definition.matches.map<
+      SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+    >((m) => ensureMatcherFn(m))
+
+    this.definition.computedValueDefinitions[definition.name] = {
+      matches: convertedMatches,
+      computeValueFromMatches: definition.computeValueFromMatches as (
+        ...matches: (readonly SpanAndAnnotation<RelationSchemasT>[])[]
+      ) => number | string | boolean | undefined,
+    }
   }
 }

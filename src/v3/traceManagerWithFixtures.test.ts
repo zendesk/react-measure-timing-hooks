@@ -7,12 +7,10 @@ import {
   it,
   vitest as jest,
 } from 'vitest'
+import { type TicketIdRelationSchema } from './testUtility/fixtures/relationSchemas'
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
-import {
-  ticketActivationDefinition,
-  type TicketIdScope,
-} from './testUtility/fixtures/ticket.activation'
+import { ticketActivationDefinition } from './testUtility/fixtures/ticket.activation'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
 
@@ -41,21 +39,24 @@ describe('TraceManager with Fixtures', () => {
   })
 
   it('should complete with interactive time without interruption', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
     })
     const fixtureEntries = shouldCompleteAndHaveInteractiveTime
 
-    const scopeEntry = fixtureEntries.find((entry) => 'scope' in entry.span)!
-    const scope = {
-      ticketId: scopeEntry.span.scope!.ticketId!,
+    const scopeEntry = fixtureEntries.find(
+      (entry) => 'relatedTo' in entry.span,
+    )!
+    const relatedTo = {
+      ticketId: scopeEntry.span.relatedTo!.ticketId!,
     }
 
     const tracer = traceManager.createTracer(ticketActivationDefinition)
     tracer.start({
-      scope,
+      relatedTo,
       startTime: fixtureEntries[0]!.span.startTime,
       variant: 'cold_boot',
     })
@@ -68,7 +69,7 @@ describe('TraceManager with Fixtures', () => {
     const {
       entries,
       ...report
-    }: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
+    }: Parameters<ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>>[0] =
       reportFn.mock.calls[0][0]
 
     expect(report).toMatchInlineSnapshot(`
@@ -111,7 +112,7 @@ describe('TraceManager with Fixtures', () => {
         "id": "trace-id",
         "interruptionReason": undefined,
         "name": "ticket.activation",
-        "scope": {
+        "relatedTo": {
           "ticketId": "74",
         },
         "startTime": {
@@ -128,19 +129,22 @@ describe('TraceManager with Fixtures', () => {
   })
 
   it('should not end with interruption', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
     })
     const fixtureEntries = shouldNotEndWithInteractiveTimeout
-    const scopeEntry = fixtureEntries.find((entry) => 'scope' in entry.span)!
-    const scope = {
-      ticketId: scopeEntry.span.scope!.ticketId!,
+    const scopeEntry = fixtureEntries.find(
+      (entry) => 'relatedTo' in entry.span,
+    )!
+    const relatedTo = {
+      ticketId: scopeEntry.span.relatedTo!.ticketId!,
     }
     const tracer = traceManager.createTracer(ticketActivationDefinition)
     tracer.start({
-      scope,
+      relatedTo,
       startTime: {
         ...fixtureEntries[0]!.span.startTime,
         now:
@@ -158,7 +162,7 @@ describe('TraceManager with Fixtures', () => {
     const {
       entries,
       ...report
-    }: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
+    }: Parameters<ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>>[0] =
       reportFn.mock.calls[0][0]
 
     expect(report).toMatchInlineSnapshot(`
@@ -201,7 +205,7 @@ describe('TraceManager with Fixtures', () => {
         "id": "trace-id",
         "interruptionReason": undefined,
         "name": "ticket.activation",
-        "scope": {
+        "relatedTo": {
           "ticketId": "74",
         },
         "startTime": {

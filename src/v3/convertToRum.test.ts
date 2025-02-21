@@ -3,29 +3,37 @@ import { convertTraceToRUM } from './convertToRum'
 import { createTraceRecording } from './recordingComputeUtils'
 import { ActiveTraceInput } from './spanTypes'
 import {
-  AnyScope,
   createMockSpanAndAnnotation,
   createTimestamp,
 } from './testUtility/createMockFactory'
+import type { TicketIdRelationSchema } from './testUtility/fixtures/relationSchemas'
 import type { CompleteTraceDefinition } from './types'
+import type { MapTypesToSchema } from './typeUtils'
 
 describe('convertTraceToRUM', () => {
   it('should round all numeric values in the trace recording', () => {
-    const definition: CompleteTraceDefinition<never, AnyScope, 'origin'> = {
+    const definition: CompleteTraceDefinition<
+      ['ticketId'],
+      TicketIdRelationSchema,
+      'origin'
+    > = {
       name: 'test-trace',
-      scopes: [],
+      relations: ['ticketId'],
       requiredSpans: [() => true],
-      computedSpanDefinitions: [],
-      computedValueDefinitions: [],
+      computedSpanDefinitions: {},
+      computedValueDefinitions: {},
       variants: {
         origin: { timeout: 45_000 },
       },
     }
 
-    const input: ActiveTraceInput<{}, 'origin'> = {
+    const input: ActiveTraceInput<
+      MapTypesToSchema<TicketIdRelationSchema>,
+      'origin'
+    > = {
       id: 'test',
       startTime: createTimestamp(0),
-      scope: {},
+      relatedTo: { ticketId: '74' },
       variant: 'origin',
     }
 
@@ -36,7 +44,7 @@ describe('convertTraceToRUM', () => {
           createMockSpanAndAnnotation(100.501, {
             name: 'test-component',
             type: 'component-render',
-            scope: {},
+            relatedTo: {},
             duration: 50.499,
             isIdle: false,
             renderCount: 1,
@@ -47,7 +55,7 @@ describe('convertTraceToRUM', () => {
             {
               name: 'test-component',
               type: 'component-render',
-              scope: {},
+              relatedTo: {},
               duration: 50.999,
               isIdle: true,
               renderCount: 2,
@@ -59,7 +67,7 @@ describe('convertTraceToRUM', () => {
         input: {
           id: 'test',
           startTime: createTimestamp(0),
-          scope: { ticketId: '74' },
+          relatedTo: { ticketId: '74' },
           variant: 'origin',
         },
       },

@@ -31,12 +31,12 @@ const ticketOperationTracer = traceManager.createTracer({
   requiredSpans: [
     {
       name: 'TicketView',
-      matchScopes: ['ticketId'],
+      withTraceRelations: ['ticketId'],
       type: 'component-render',
       isIdle: true,
     },
   ],
-  scopes: ['ticketId'],
+  relations: ['ticketId'],
   variants: {
     click: { timeout: 45_000 },
   },
@@ -44,13 +44,13 @@ const ticketOperationTracer = traceManager.createTracer({
   debounceOnSpans: [
     {
       name: 'TicketView',
-      matchScopes: ['ticketId'],
+      withTraceRelations: ['ticketId'],
     },
   ],
   interruptOnSpans: [
     {
       name: 'TicketView',
-      matchScopes: ['ticketId'],
+      withTraceRelations: ['ticketId'],
       type: 'component-unmount',
     },
   ],
@@ -97,7 +97,7 @@ export const App: React.FC = () => {
     //   interruptSelf: true,
     // })
     ticketOperationTracer.start({
-      scope: { ticketId: id },
+      relatedTo: { ticketId: id },
       variant: 'click',
     })
 

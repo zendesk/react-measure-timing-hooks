@@ -1,5 +1,4 @@
 import type { Span } from './spanTypes'
 
-export const getSpanKey = <AllPossibleScopesT>(
-  span: Span<AllPossibleScopesT>,
-) => `${span.type}|${span.name}`
+export const getSpanKey = <RelationSchemasT>(span: Span<RelationSchemasT>) =>
+  `${span.type}|${span.name}`

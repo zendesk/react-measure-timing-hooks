@@ -7,18 +7,18 @@ import {
   PerformanceEntrySpan,
   ResourceSpan,
 } from './spanTypes'
-import { DeriveScopeFromPerformanceEntryFn, Timestamp } from './types'
+import { DeriveRelationsFromPerformanceEntryFn, Timestamp } from './types'
 
 /**
  * Maps Performance Entry to a Span
  * @returns The span.
  */
-export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
+export function getSpanFromPerformanceEntry<RelationSchemasT>(
   inputEntry: PerformanceEntry,
-  deriveScopeFromPerformanceEntry?: DeriveScopeFromPerformanceEntryFn<AllPossibleScopesT>,
+  deriveScopeFromPerformanceEntry?: DeriveRelationsFromPerformanceEntryFn<RelationSchemasT>,
 ):
-  | PerformanceEntrySpan<AllPossibleScopesT>
-  | ResourceSpan<AllPossibleScopesT>
+  | PerformanceEntrySpan<RelationSchemasT>
+  | ResourceSpan<RelationSchemasT>
   | undefined {
   // react in dev mode generates hundreds of these marks, ignore them
   if (inputEntry.entryType === 'mark' && inputEntry.name.startsWith('--')) {
@@ -33,7 +33,7 @@ export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
       : {}
 
   const type = inputEntry.entryType as NativePerformanceEntryType
-  const scope = deriveScopeFromPerformanceEntry?.(inputEntry)
+  const relatedTo = deriveScopeFromPerformanceEntry?.(inputEntry)
   let { name } = inputEntry
 
   if (type === 'resource' || type === 'navigation') {
@@ -57,7 +57,7 @@ export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
           query,
           hash,
         },
-        scope,
+        relatedTo,
       }
     }
   } else if (type !== 'mark' && type !== 'measure') {
@@ -75,7 +75,7 @@ export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
     now: inputEntry.startTime,
   }
 
-  const traceEntry: PerformanceEntrySpan<AllPossibleScopesT> = {
+  const traceEntry: PerformanceEntrySpan<RelationSchemasT> = {
     type,
     name,
     startTime: ensureTimestamp(timestamp),
@@ -83,7 +83,7 @@ export function getSpanFromPerformanceEntry<AllPossibleScopesT>(
     duration: inputEntry.duration,
     // status,
     performanceEntry: inputEntry,
-    scope,
+    relatedTo,
   }
 
   return traceEntry

@@ -12,17 +12,17 @@ import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './traceManager'
 import type { ReportFn } from './types'
 
-interface TestScope {
-  id: string
+interface TestRelationSchema {
+  id: StringConstructor
 }
 
 describe('Tracer', () => {
-  let reportFn: Mock<ReportFn<TestScope>>
+  let reportFn: Mock<ReportFn<TestRelationSchema>>
   let generateId: Mock
   let reportErrorFn: Mock
 
   beforeEach(() => {
-    reportFn = jest.fn<ReportFn<TestScope>>()
+    reportFn = jest.fn<ReportFn<TestRelationSchema>>()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
     jest.useFakeTimers({ now: 0 })
@@ -30,7 +30,8 @@ describe('Tracer', () => {
 
   describe('variants', () => {
     it('uses additional required spans from variant', () => {
-      const traceManager = new TraceManager<TestScope>({
+      const traceManager = new TraceManager({
+        relationSchemas: [{ id: String }],
         reportFn,
         generateId,
         reportErrorFn,
@@ -39,7 +40,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        scopes: ['id'],
+        relations: ['id'],
         requiredSpans: [{ name: 'base-required' }],
         variants: {
           variant_a: {
@@ -54,14 +55,14 @@ describe('Tracer', () => {
 
       // Start trace with variant_a - should require both spans
       tracer.start({
-        scope: { id: '1' },
+        relatedTo: { id: '1' },
         variant: 'variant_a',
       })
 
       // Only see base-required span - should not complete
 
       // prettier-ignore
-      const { spans: firstSpans } = getSpansFromTimeline<TestScope>`
+      const { spans: firstSpans } = getSpansFromTimeline<TestRelationSchema>`
         Events: ${Render('start', 0)}-----${Render('base-required', 0)}-----${Check}
         Time:   ${0}                      ${50}                            ${100}
       `
@@ -70,7 +71,7 @@ describe('Tracer', () => {
 
       // See both required spans - should complete
       // prettier-ignore
-      const { spans: secondSpans } = getSpansFromTimeline<TestScope>`
+      const { spans: secondSpans } = getSpansFromTimeline<TestRelationSchema>`
         Events: ${Render('base-required', 0)}-----${Render('extra-required', 0)}
         Time:   ${150}                            ${200}
       `
@@ -83,7 +84,8 @@ describe('Tracer', () => {
     })
 
     it('uses additional debounce spans from variant', () => {
-      const traceManager = new TraceManager<TestScope>({
+      const traceManager = new TraceManager<TestRelationSchema>({
+        relationSchemas: [{ id: String }],
         reportFn,
         generateId,
         reportErrorFn,
@@ -92,7 +94,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        scopes: ['id'],
+        relations: ['id'],
         requiredSpans: [{ name: 'required' }],
         debounceOnSpans: [{ name: 'base-debounce' }],
         debounceWindow: 100,
@@ -105,12 +107,12 @@ describe('Tracer', () => {
       })
 
       tracer.start({
-        scope: { id: '1' },
+        relatedTo: { id: '1' },
         variant: 'variant_a',
       })
 
       // prettier-ignore
-      const { spans } = getSpansFromTimeline<TestScope>`
+      const { spans } = getSpansFromTimeline<TestRelationSchema>`
         Events: ${Render('required', 0)}---${Render('base-debounce', 0)}---${Render('extra-debounce', 0)}---${Check}
         Time:   ${0}                       ${50}                           ${100}                           ${250}
       `
@@ -123,7 +125,8 @@ describe('Tracer', () => {
     })
 
     it('different variants can have different additional spans', () => {
-      const traceManager = new TraceManager<TestScope>({
+      const traceManager = new TraceManager<TestRelationSchema>({
+        relationSchemas: [{ id: String }],
         reportFn,
         generateId,
         reportErrorFn,
@@ -132,7 +135,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        scopes: ['id'],
+        relations: ['id'],
         requiredSpans: [{ name: 'base-required' }],
         variants: {
           variant_a: {
@@ -148,13 +151,13 @@ describe('Tracer', () => {
 
       // Start trace with variant_a
       tracer.start({
-        scope: { id: '1' },
+        relatedTo: { id: '1' },
         variant: 'variant_a',
       })
 
       // Complete variant_a requirements
       // prettier-ignore
-      const { spans: variantASpans } = getSpansFromTimeline<TestScope>`
+      const { spans: variantASpans } = getSpansFromTimeline<TestRelationSchema>`
         Events: ${Render('base-required', 0)}-----${Render('extra-required-a', 0)}
         Time:   ${0}                              ${50}
       `
@@ -166,13 +169,13 @@ describe('Tracer', () => {
 
       // Start new trace with variant_b
       tracer.start({
-        scope: { id: '1' },
+        relatedTo: { id: '1' },
         variant: 'variant_b',
       })
 
       // Complete variant_b requirements
       // prettier-ignore
-      const { spans: variantBSpans } = getSpansFromTimeline<TestScope>`
+      const { spans: variantBSpans } = getSpansFromTimeline<TestRelationSchema>`
         Events: ${Render('base-required', 0)}-----${Render('extra-required-b', 0)}
         Time:   ${100}                            ${150}
       `

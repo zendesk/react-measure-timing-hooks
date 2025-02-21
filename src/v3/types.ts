@@ -12,9 +12,10 @@ import type {
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   ArrayWithAtLeastOneElement,
-  KeysOfUnion,
+  KeysOfRelationSchemaToTuples,
   MapTuple,
-  Prettify,
+  RemoveAllUndefinedProperties,
+  SelectByAllKeys,
   UnionToIntersection,
 } from './typeUtils'
 
@@ -25,12 +26,31 @@ export interface Timestamp {
   now: number
 }
 
-export type ScopeValue = string | number | boolean
-export type PossibleScopeObject = Record<string, ScopeValue>
+export type RelationSchemaValue =
+  | StringConstructor
+  | NumberConstructor
+  | BooleanConstructor
+  | readonly (string | number | boolean)[]
 
-// a span can have any combination of scopes
-export type ScopeOnASpan<AllPossibleScopesT> = Prettify<
-  UnionToIntersection<Partial<AllPossibleScopesT>>
+export type MapSchemaToTypesBase<T> = {
+  [K in keyof T]: T[K] extends StringConstructor
+    ? string
+    : T[K] extends NumberConstructor
+    ? number
+    : T[K] extends BooleanConstructor
+    ? boolean
+    : T[K] extends readonly (infer U)[]
+    ? U
+    : never
+}
+
+export type MapSchemaToTypes<T> = RemoveAllUndefinedProperties<
+  MapSchemaToTypesBase<T>
+>
+
+// a span can have any combination of relations
+export type RelationsOnASpan<RelationSchemasT> = Partial<
+  UnionToIntersection<MapSchemaToTypes<RelationSchemasT>>
 >
 
 /**
@@ -40,43 +60,57 @@ export type TraceType = 'operation'
 
 export type TraceStatus = SpanStatus | 'interrupted'
 
-export type TraceInterruptionReason =
-  | 'timeout'
+export const INVALID_INTERRUPTION_REASONS = [
+  'timeout',
+  'draft-cancelled',
+  'invalid-state-transition',
+] as const
+
+export type TraceInterruptionReasonForInvalidTraces =
+  (typeof INVALID_INTERRUPTION_REASONS)[number]
+
+export type TraceInterruptionReasonForValidTraces =
   | 'waiting-for-interactive-timeout'
   | 'another-trace-started'
-  | 'manually-aborted'
+  | 'aborted'
   | 'idle-component-no-longer-idle'
   | 'matched-on-interrupt'
-  | 'invalid-state-transition'
-  | 'draft-cancelled'
+  | 'required-span-errored' // TODO: implement
+
+export type TraceInterruptionReason =
+  | TraceInterruptionReasonForInvalidTraces
+  | TraceInterruptionReasonForValidTraces
 
 export type SingleTraceReportFn<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > = (
-  trace: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
+  trace: TraceRecording<SelectedRelationTupleT, RelationSchemasT>,
+  context: TraceContext<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
 ) => void
 
 export type ReportFn<
-  ForEachPossibleScopeT,
-  AllPossibleScopesT extends ForEachPossibleScopeT = ForEachPossibleScopeT,
-  VariantT extends string = string,
+  ForEachRelationSchemaT,
+  RelationSchemasT extends ForEachRelationSchemaT = ForEachRelationSchemaT,
+  VariantsT extends string = string,
 > = UnionToIntersection<
-  ForEachPossibleScopeT extends ForEachPossibleScopeT
+  ForEachRelationSchemaT extends ForEachRelationSchemaT
     ? SingleTraceReportFn<
-        KeysOfUnion<ForEachPossibleScopeT> & KeysOfUnion<AllPossibleScopesT>,
-        AllPossibleScopesT,
-        VariantT
+        KeysOfRelationSchemaToTuples<ForEachRelationSchemaT> &
+          KeysOfRelationSchemaToTuples<RelationSchemasT>,
+        RelationSchemasT,
+        VariantsT
       >
     : never
 >
 
-export interface TraceManagerConfig<AllPossibleScopesT> {
-  reportFn: ReportFn<AllPossibleScopesT, AllPossibleScopesT, string>
+export interface TraceManagerConfig<RelationSchemasT> {
+  reportFn: ReportFn<RelationSchemasT, RelationSchemasT, string>
 
   generateId: () => string
+
+  relationSchemas: RelationSchemasT[]
 
   /**
    * IMPLEMENTATION TODO: The span types that should be omitted from the trace report. Or maybe a more general way to filter spans?
@@ -88,51 +122,58 @@ export interface TraceManagerConfig<AllPossibleScopesT> {
    * If not provided, no deduplication will be performed.
    */
   performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<
-    Partial<AllPossibleScopesT>
+    Partial<RelationSchemasT>
   >
 
+  // TODO: add definition? as 2nd arg
   reportErrorFn: (error: Error) => void
+  reportWarningFn: (warning: Error) => void
 }
 
-export interface TraceManagerUtilities<AllPossibleScopesT>
-  extends TraceManagerConfig<AllPossibleScopesT> {
+export interface TraceManagerUtilities<RelationSchemasT>
+  extends TraceManagerConfig<RelationSchemasT> {
+  /**
+   * interrupts the active trace (if any) and replaces it with a new one
+   */
   replaceActiveTrace: (
-    newTrace: AllPossibleActiveTraces<AllPossibleScopesT>,
+    newTrace: AllPossibleActiveTraces<RelationSchemasT>,
   ) => void
   cleanupActiveTrace: (
-    traceToCleanUp: AllPossibleActiveTraces<AllPossibleScopesT>,
+    traceToCleanUp: AllPossibleActiveTraces<RelationSchemasT>,
   ) => void
-  getActiveTrace: () => AllPossibleActiveTraces<AllPossibleScopesT> | undefined
-  cancelDraftTrace: () => void
+  // TODO: should this be called currentTrace instead, since it might return a draft? or is draft simply a type of active trace, since it's already buffering recorded spans?
+  getActiveTrace: () => AllPossibleActiveTraces<RelationSchemasT> | undefined
 }
 
 export interface TraceModificationsBase<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > {
   additionalRequiredSpans?: SpanMatch<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >[]
   additionalDebounceOnSpans?: SpanMatch<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >[]
 }
 
 export interface TraceModifications<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > extends TraceModificationsBase<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   > {
-  scope: SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+  relatedTo: MapSchemaToTypes<
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
+  >
   attributes?: Attributes
 }
 
@@ -144,28 +185,31 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
 }
 
 export type LabelMatchingInputRecord<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
-> = Record<string, SpanMatch<TracerScopeKeysT, AllPossibleScopesT, VariantT>>
-
-export type LabelMatchingFnsRecord<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > = Record<
   string,
-  SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
+  SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+>
+
+export type LabelMatchingFnsRecord<
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
+> = Record<
+  string,
+  SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
 >
 
 export interface TraceVariant<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > extends TraceModificationsBase<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   > {
   /**
    * How long before we give up and cancel the trace if the required spans have not been seen
@@ -180,9 +224,18 @@ export interface TraceVariant<
  * converting all matchers into functions.
  */
 export interface TraceDefinition<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
+  ComputedValueDefinitionsT extends {
+    [K in keyof ComputedValueDefinitionsT]: ComputedValueDefinitionInput<
+      NoInfer<SelectedRelationTupleT>,
+      RelationSchemasT,
+      NoInfer<VariantsT>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    >
+  },
 > {
   /**
    * The name of the trace.
@@ -191,13 +244,13 @@ export interface TraceDefinition<
 
   type?: TraceType
 
-  scopes: readonly TracerScopeKeysT[]
+  relations: SelectedRelationTupleT
 
   // TypeScript TODO: typing this so that the span labels are inferred?
   labelMatching?: LabelMatchingInputRecord<
-    NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT,
-    VariantT
+    NoInfer<SelectedRelationTupleT>,
+    RelationSchemasT,
+    VariantsT
   >
 
   /**
@@ -209,13 +262,13 @@ export interface TraceDefinition<
    * which parts of the product are "critical" or most important
    */
   requiredSpans: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
+    SpanMatch<NoInfer<SelectedRelationTupleT>, RelationSchemasT, VariantsT>
   >
   debounceOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
+    SpanMatch<NoInfer<SelectedRelationTupleT>, RelationSchemasT, VariantsT>
   >
   interruptOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
+    SpanMatch<NoInfer<SelectedRelationTupleT>, RelationSchemasT, VariantsT>
   >
 
   /**
@@ -251,10 +304,10 @@ export interface TraceDefinition<
    * - `on_search_till_results`
    */
   variants: {
-    [VariantName in VariantT]: TraceVariant<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+    [VariantName in VariantsT]: TraceVariant<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >
   }
 
@@ -270,11 +323,30 @@ export interface TraceDefinition<
    * If a span with `status: error` matches any of these matchers,
    * its error status will not affect the overall trace status.
    */
-  suppressErrorStatusPropagationOn?: readonly SpanMatch<
-    NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT,
-    VariantT
+  suppressErrorStatusPropagationOnSpans?: readonly SpanMatch<
+    NoInfer<SelectedRelationTupleT>,
+    RelationSchemasT,
+    VariantsT
   >[]
+
+  /**
+   * A record of computed span definitions that will be converted to their final form.
+   * The key is the name of the computed span. You can add more computed spans later using tracer.defineComputedSpan().
+   */
+  computedSpanDefinitions?: Record<
+    string,
+    ComputedSpanDefinitionInput<
+      NoInfer<SelectedRelationTupleT>,
+      RelationSchemasT,
+      VariantsT
+    >
+  >
+
+  /**
+   * A record of computed value definitions that will be converted to their final form.
+   * The key is the name of the computed value. You can add more computed values later using tracer.defineComputedValue().
+   */
+  computedValueDefinitions?: ComputedValueDefinitionsT
 }
 
 /**
@@ -282,71 +354,75 @@ export interface TraceDefinition<
  * Used internally by the TraceManager.
  */
 export interface CompleteTraceDefinition<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
-> extends TraceDefinition<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
-  computedSpanDefinitions: ComputedSpanDefinition<
-    NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT,
-    VariantT
-  >[]
-  computedValueDefinitions: ComputedValueDefinition<
-    NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT,
-    VariantT,
-    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>[]
-  >[]
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
+> extends Omit<
+    TraceDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT, {}>,
+    'computedSpanDefinitions' | 'computedValueDefinitions'
+  > {
+  computedSpanDefinitions: Record<
+    string,
+    ComputedSpanDefinition<
+      NoInfer<SelectedRelationTupleT>,
+      RelationSchemasT,
+      VariantsT
+    >
+  >
+  computedValueDefinitions: Record<
+    string,
+    ComputedValueDefinition<
+      NoInfer<SelectedRelationTupleT>,
+      RelationSchemasT,
+      VariantsT
+    >
+  >
 
   labelMatching?: LabelMatchingFnsRecord<
-    NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT,
-    VariantT
+    NoInfer<SelectedRelationTupleT>,
+    RelationSchemasT,
+    VariantsT
   >
 
   requiredSpans: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
+    SpanMatcherFn<NoInfer<SelectedRelationTupleT>, RelationSchemasT, VariantsT>
   >
   debounceOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
+    SpanMatcherFn<NoInfer<SelectedRelationTupleT>, RelationSchemasT, VariantsT>
   >
   interruptOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<TracerScopeKeysT>, AllPossibleScopesT, VariantT>
+    SpanMatcherFn<NoInfer<SelectedRelationTupleT>, RelationSchemasT, VariantsT>
   >
 
-  /**
-   * A list of span matchers that will suppress error status propagation to the trace level.
-   * If a span matches any of these matchers, its error status will not affect the trace status.
-   */
-  suppressErrorStatusPropagationOn?: readonly SpanMatcherFn<
-    NoInfer<TracerScopeKeysT>,
-    AllPossibleScopesT,
-    VariantT
+  suppressErrorStatusPropagationOnSpans?: readonly SpanMatcherFn<
+    NoInfer<SelectedRelationTupleT>,
+    RelationSchemasT,
+    VariantsT
   >[]
 }
 
 /**
  * Strategy for deduplicating performance entries
  */
-export interface SpanDeduplicationStrategy<AllPossibleScopesT> {
+export interface SpanDeduplicationStrategy<RelationSchemasT> {
   /**
    * Returns an existing span annotation if the span should be considered a duplicate
    */
   findDuplicate: (
-    span: Span<AllPossibleScopesT>,
-    recordedItems: Set<SpanAndAnnotation<AllPossibleScopesT>>,
-  ) => SpanAndAnnotation<AllPossibleScopesT> | undefined
+    span: Span<RelationSchemasT>,
+    recordedItems: Set<SpanAndAnnotation<RelationSchemasT>>,
+  ) => SpanAndAnnotation<RelationSchemasT> | undefined
 
   /**
    * Called when a span is recorded to update deduplication state
    */
   recordSpan: (
-    span: Span<AllPossibleScopesT>,
-    spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+    span: Span<RelationSchemasT>,
+    spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
   ) => void
 
   /**
-   * Called when trace recording is complete to clean up any state
+   * Called when trace recording is complete to clean up any deduplication state
    */
   reset: () => void
 
@@ -355,31 +431,30 @@ export interface SpanDeduplicationStrategy<AllPossibleScopesT> {
    * @returns the span that should be used in the annotation
    */
   selectPreferredSpan: (
-    existingSpan: Span<AllPossibleScopesT>,
-    newSpan: Span<AllPossibleScopesT>,
-  ) => Span<AllPossibleScopesT>
+    existingSpan: Span<RelationSchemasT>,
+    newSpan: Span<RelationSchemasT>,
+  ) => Span<RelationSchemasT>
 }
 
 /**
  * Definition of custom spans
  */
 export interface ComputedSpanDefinition<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > {
-  name: string
   /**
    * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
    */
   startSpan:
-    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
+    | SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
     | 'operation-start'
   /**
    * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
    */
   endSpan:
-    | SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>
+    | SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
     | 'operation-end'
     | 'interactive'
 
@@ -394,22 +469,17 @@ export interface ComputedSpanDefinition<
  * Definition of custom values
  */
 export interface ComputedValueDefinition<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
-  MatchersT extends SpanMatcherFn<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
-  >[] = SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>[],
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > {
-  name: string
-  matches: [...MatchersT]
+  matches: SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>[]
   /** if returns undefined, will not report the computed value */
-  computeValueFromMatches: (
-    // as many matches as match of type Span<ScopeT>
-    ...matches: MapTuple<MatchersT, SpanAndAnnotation<AllPossibleScopesT>[]>
-  ) => number | string | boolean | undefined
+  computeValueFromMatches: NoInfer<
+    (
+      ...matchers: (readonly SpanAndAnnotation<RelationSchemasT>[])[]
+    ) => number | string | boolean | undefined
+  >
 
   /**
    * If true, we will attempt to compute the span even if the trace was interrupted.
@@ -422,16 +492,15 @@ export interface ComputedValueDefinition<
  * Definition of custom spans input
  */
 export interface ComputedSpanDefinitionInput<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > {
-  name: string
   startSpan:
-    | SpanMatch<TracerScopeKeysT, AllPossibleScopesT, VariantT>
+    | SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>
     | 'operation-start'
   endSpan:
-    | SpanMatch<TracerScopeKeysT, AllPossibleScopesT, VariantT>
+    | SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>
     | 'operation-end'
     | 'interactive'
 }
@@ -440,62 +509,95 @@ export interface ComputedSpanDefinitionInput<
  * Definition of custom values input
  */
 export interface ComputedValueDefinitionInput<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  MatchersT extends SpanMatch<TracerScopeKeysT, AllPossibleScopesT, VariantT>[],
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
+  MatchersT extends NoInfer<
+    SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+  >[],
 > {
-  name: string
   matches: [...MatchersT]
-  computeValueFromMatches: (
-    ...matches: MapTuple<MatchersT, SpanAndAnnotation<AllPossibleScopesT>[]>
-  ) => number | string | boolean | undefined
+  computeValueFromMatches: NoInfer<
+    (
+      ...matches: MapTuple<
+        MatchersT,
+        readonly SpanAndAnnotation<RelationSchemasT>[]
+      >
+    ) => number | string | boolean | undefined
+  >
 }
 
-export type SelectScopeByKey<
-  SelectScopeKeyT extends keyof ScopesT,
-  ScopesT,
-> = Prettify<
-  ScopesT extends { [AnyKey in SelectScopeKeyT]: ScopeValue } ? ScopesT : never
+// export type SelectRelationSchemaByKeysTuple<
+//   RelationSchemaKeysT extends readonly PropertyKey[], // readonly (keyof RelationSchemasT)[],
+//   RelationSchemasT,
+// > = SelectByAllKeysUnion<RelationSchemaKeysT, RemoveAllOptionalProperties<RelationSchemasT>>
+
+export type SelectRelationSchemaByKeysTuple<
+  RelationSchemaTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+> = RelationSchemasT extends RelationSchemasT
+  ? RelationSchemaTupleT extends KeysOfRelationSchemaToTuples<
+      RemoveAllUndefinedProperties<RelationSchemasT>
+    >
+    ? RelationSchemasT
+    : never
+  : never
+
+// type TestAbove = SelectRelationSchemaByKeysTuple<['a'], {a: string, b?: undefined} | {a: string, b: string}>
+// type TestAbove2 = SelectRelationSchemaByKeysTuple<['a', 'b'], {a: string, b: number} | {a: string, b?: undefined}>
+// type TestAbove3 = SelectRelationSchemaByKeysTuple<['c'], {c: boolean} | {c: boolean, d: number}>
+
+export type SelectExactRelationSchemaByKeys<
+  RelationSchemaKeysT extends keyof RelationSchemasT,
+  RelationSchemasT,
+> = SelectByAllKeys<
+  RelationSchemaKeysT,
+  RemoveAllUndefinedProperties<RelationSchemasT>
 >
 
-export type DeriveScopeFromPerformanceEntryFn<AllPossibleScopesT> = (
+export type DeriveRelationsFromPerformanceEntryFn<RelationSchemasT> = (
   entry: PerformanceEntry,
-) => ScopeOnASpan<AllPossibleScopesT> | undefined
+) => RelationsOnASpan<RelationSchemasT> | undefined
 
 export interface DraftTraceContext<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > {
   readonly definition: CompleteTraceDefinition<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >
   readonly input: DraftTraceInput<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-    VariantT
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
+    VariantsT
   >
 }
 
 export interface TraceContext<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
 > {
   readonly definition: CompleteTraceDefinition<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >
   readonly input:
     | ActiveTraceInput<
-        SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-        VariantT
+        SelectRelationSchemaByKeysTuple<
+          SelectedRelationTupleT,
+          RelationSchemasT
+        >,
+        VariantsT
       >
     | DraftTraceInput<
-        SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-        VariantT
+        SelectRelationSchemaByKeysTuple<
+          SelectedRelationTupleT,
+          RelationSchemasT
+        >,
+        VariantsT
       >
 }

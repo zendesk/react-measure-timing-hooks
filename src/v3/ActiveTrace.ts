@@ -23,27 +23,36 @@ import type { ActiveTraceConfig, DraftTraceInput, Span } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
-  SelectScopeByKey,
+  DraftTraceContext,
+  SelectRelationSchemaByKeysTuple,
   SingleTraceReportFn,
   TraceInterruptionReason,
+  TraceInterruptionReasonForInvalidTraces,
   TraceManagerUtilities,
   TraceModifications,
   TraceModificationsBase,
 } from './types'
-import { DraftTraceContext } from './types'
+import { INVALID_INTERRUPTION_REASONS } from './types'
 import type {
   DistributiveOmit,
-  KeysOfUnion,
+  KeysOfRelationSchemaToTuples,
   MergedStateHandlerMethods,
   StateHandlerPayloads,
 } from './typeUtils'
 
-export interface FinalState<TracerScopeT> {
+const isInvalidInterruptionReason = (
+  reason: TraceInterruptionReason,
+): reason is TraceInterruptionReasonForInvalidTraces =>
+  (INVALID_INTERRUPTION_REASONS as readonly TraceInterruptionReason[]).includes(
+    reason,
+  )
+
+export interface FinalState<RelationSchemaT> {
   transitionFromState: NonTerminalTraceStates
   interruptionReason?: TraceInterruptionReason
-  cpuIdleSpanAndAnnotation?: SpanAndAnnotation<TracerScopeT>
-  completeSpanAndAnnotation?: SpanAndAnnotation<TracerScopeT>
-  lastRequiredSpanAndAnnotation?: SpanAndAnnotation<TracerScopeT>
+  cpuIdleSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
+  completeSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
+  lastRequiredSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
 }
 
 const INITIAL_STATE = 'draft'
@@ -67,8 +76,8 @@ interface OnEnterInterrupted {
   interruptionReason: TraceInterruptionReason
 }
 
-interface OnEnterComplete<AllPossibleScopesT>
-  extends FinalState<AllPossibleScopesT> {
+interface OnEnterComplete<RelationSchemasT>
+  extends FinalState<RelationSchemasT> {
   transitionToState: 'complete'
 }
 
@@ -82,83 +91,91 @@ interface OnEnterDebouncing {
   transitionFromState: NonTerminalTraceStates
 }
 
-type OnEnterStatePayload<AllPossibleScopesT> =
+type OnEnterStatePayload<RelationSchemasT> =
   | OnEnterActive
   | OnEnterInterrupted
-  | OnEnterComplete<AllPossibleScopesT>
+  | OnEnterComplete<RelationSchemasT>
   | OnEnterDebouncing
   | OnEnterWaitingForInteractive
 
-export type Transition<AllPossibleScopesT> = DistributiveOmit<
-  OnEnterStatePayload<AllPossibleScopesT>,
+export type Transition<RelationSchemasT> = DistributiveOmit<
+  OnEnterStatePayload<RelationSchemasT>,
   'transitionFromState'
 >
 
-type FinalizeFn<TracerScopeT> = (config: FinalState<TracerScopeT>) => void
+type FinalizeFn<RelationSchemaT> = (config: FinalState<RelationSchemaT>) => void
 
 export type States<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
-> = TraceStateMachine<TracerScopeKeysT, AllPossibleScopesT, VariantT>['states']
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
+> = TraceStateMachine<
+  SelectedRelationTupleT,
+  RelationSchemasT,
+  VariantsT
+>['states']
 
-interface StateHandlersBase<AllPossibleScopesT> {
+interface StateHandlersBase<RelationSchemasT> {
   [handler: string]: (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     payload: any,
   ) =>
     | void
     | undefined
-    | (Transition<AllPossibleScopesT> & { transitionFromState?: never })
+    | (Transition<RelationSchemasT> & { transitionFromState?: never })
 }
 
-type StatesBase<AllPossibleScopesT> = Record<
+type StatesBase<RelationSchemasT> = Record<
   TraceStates,
-  StateHandlersBase<AllPossibleScopesT>
+  StateHandlersBase<RelationSchemasT>
 >
 
 interface TraceStateMachineSideEffectHandlers<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
 > {
   readonly storeFinalizeState: FinalizeFn<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
   >
   readonly addSpanToRecording: (
-    spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+    spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
   ) => void
   readonly prepareAndEmitRecording: (
-    options: PrepareAndEmitRecordingOptions<AllPossibleScopesT>,
+    options: PrepareAndEmitRecordingOptions<RelationSchemasT>,
   ) => void
 }
 
-type EntryType<AllPossibleScopesT> = PerformanceEntryLike & {
-  entry: SpanAndAnnotation<AllPossibleScopesT>
+type EntryType<RelationSchemasT> = PerformanceEntryLike & {
+  entry: SpanAndAnnotation<RelationSchemasT>
 }
 
 interface StateMachineContext<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  VariantT extends string,
-> extends DraftTraceContext<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  VariantsT extends string,
+> extends DraftTraceContext<
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
+  > {
   sideEffectFns: TraceStateMachineSideEffectHandlers<
-    TracerScopeKeysT,
-    AllPossibleScopesT
+    SelectedRelationTupleT,
+    RelationSchemasT
   >
 }
 
 type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
 
 export class TraceStateMachine<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  const VariantsT extends string,
 > {
   constructor(
     context: StateMachineContext<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
   ) {
     this.context = context
@@ -171,21 +188,21 @@ export class TraceStateMachine<
   readonly requiredSpansIndexChecklist: Set<number>
 
   readonly context: StateMachineContext<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >
   get sideEffectFns() {
     return this.context.sideEffectFns
   }
   currentState: TraceStates = INITIAL_STATE
   /** the span that ended at the furthest point in time */
-  lastRelevant: SpanAndAnnotation<AllPossibleScopesT> | undefined
-  lastRequiredSpan: SpanAndAnnotation<AllPossibleScopesT> | undefined
+  lastRelevant: SpanAndAnnotation<RelationSchemasT> | undefined
+  lastRequiredSpan: SpanAndAnnotation<RelationSchemasT> | undefined
   /** it is set once the LRS value is established */
-  completeSpan: SpanAndAnnotation<AllPossibleScopesT> | undefined
+  completeSpan: SpanAndAnnotation<RelationSchemasT> | undefined
   cpuIdleLongTaskProcessor:
-    | CPUIdleLongTaskProcessor<EntryType<AllPossibleScopesT>>
+    | CPUIdleLongTaskProcessor<EntryType<RelationSchemasT>>
     | undefined
   #debounceDeadline: number = Number.POSITIVE_INFINITY
   #interactiveDeadline: number = Number.POSITIVE_INFINITY
@@ -253,13 +270,13 @@ export class TraceStateMachine<
    *
    * if we have long tasks before FMP, we want to use them as a potential grouping post FMP.
    */
-  debouncingSpanBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
-  #provisionalBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
+  debouncingSpanBuffer: SpanAndAnnotation<RelationSchemasT>[] = []
+  #provisionalBuffer: SpanAndAnnotation<RelationSchemasT>[] = []
 
   // eslint-disable-next-line consistent-return
-  #processProvisionalBuffer(): Transition<AllPossibleScopesT> | void {
-    // process items in the buffer (stick the scope in the entries) (if its empty, well we can skip this!)
-    let span: SpanAndAnnotation<AllPossibleScopesT> | undefined
+  #processProvisionalBuffer(): Transition<RelationSchemasT> | void {
+    // process items in the buffer (stick the relatedTo in the entries) (if its empty, well we can skip this!)
+    let span: SpanAndAnnotation<RelationSchemasT> | undefined
     // eslint-disable-next-line no-cond-assign
     while ((span = this.#provisionalBuffer.shift())) {
       const transition = this.emit('onProcessSpan', span)
@@ -282,7 +299,7 @@ export class TraceStateMachine<
       }),
 
       onProcessSpan: (
-        spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+        spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
       ) => {
         const spanEndTimeEpoch =
           spanAndAnnotation.span.startTime.epoch +
@@ -315,7 +332,7 @@ export class TraceStateMachine<
           }
         }
 
-        // else, add into array buffer
+        // else, add into span buffer
         this.#provisionalBuffer.push(spanAndAnnotation)
         return undefined
       },
@@ -345,7 +362,7 @@ export class TraceStateMachine<
       },
 
       onProcessSpan: (
-        spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+        spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
       ) => {
         const spanEndTimeEpoch =
           spanAndAnnotation.span.startTime.epoch +
@@ -474,7 +491,7 @@ export class TraceStateMachine<
       },
 
       onProcessSpan: (
-        spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+        spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
       ) => {
         const spanEndTimeEpoch =
           spanAndAnnotation.span.startTime.epoch +
@@ -598,7 +615,7 @@ export class TraceStateMachine<
         )
 
         this.cpuIdleLongTaskProcessor = createCPUIdleProcessor<
-          EntryType<AllPossibleScopesT>
+          EntryType<RelationSchemasT>
         >(
           {
             entryType: this.completeSpan.span.type,
@@ -624,7 +641,7 @@ export class TraceStateMachine<
             'onProcessSpan',
             span,
             // below cast is necessary due to circular type reference
-          ) as Transition<AllPossibleScopesT> | undefined
+          ) as Transition<RelationSchemasT> | undefined
           if (transition) {
             return transition
           }
@@ -691,7 +708,7 @@ export class TraceStateMachine<
       },
 
       onProcessSpan: (
-        spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+        spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
       ) => {
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
@@ -785,6 +802,18 @@ export class TraceStateMachine<
     // terminal states:
     interrupted: {
       onEnterState: (transition: OnEnterInterrupted) => {
+        // depending on the reason, if we're coming from draft, we want to flush the provisional buffer:
+        if (
+          transition.transitionFromState === 'draft' &&
+          !isInvalidInterruptionReason(transition.interruptionReason)
+        ) {
+          let span: SpanAndAnnotation<RelationSchemasT> | undefined
+          // eslint-disable-next-line no-cond-assign
+          while ((span = this.#provisionalBuffer.shift())) {
+            this.sideEffectFns.addSpanToRecording(span)
+          }
+        }
+
         // terminal state
         this.clearDeadline()
         this.sideEffectFns.prepareAndEmitRecording({
@@ -795,7 +824,7 @@ export class TraceStateMachine<
     },
 
     complete: {
-      onEnterState: (transition: OnEnterComplete<AllPossibleScopesT>) => {
+      onEnterState: (transition: OnEnterComplete<RelationSchemasT>) => {
         // terminal state
 
         this.clearDeadline()
@@ -819,33 +848,37 @@ export class TraceStateMachine<
         })
       },
     },
-  } satisfies StatesBase<AllPossibleScopesT>
+  } satisfies StatesBase<RelationSchemasT>
 
   /**
    * @returns the last OnEnterState event if a transition was made
    */
   emit<
     EventName extends keyof StateHandlerPayloads<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
   >(
     event: EventName,
     payload: StateHandlerPayloads<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >[EventName],
-  ): OnEnterStatePayload<AllPossibleScopesT> | undefined {
+  ): OnEnterStatePayload<RelationSchemasT> | undefined {
     const currentStateHandlers = this.states[this.currentState] as Partial<
-      MergedStateHandlerMethods<TracerScopeKeysT, AllPossibleScopesT, VariantT>
+      MergedStateHandlerMethods<
+        SelectedRelationTupleT,
+        RelationSchemasT,
+        VariantsT
+      >
     >
     const transitionPayload = currentStateHandlers[event]?.(payload)
     if (transitionPayload) {
       const transitionFromState = this.currentState as NonTerminalTraceStates
       this.currentState = transitionPayload.transitionToState
-      const onEnterStateEvent: OnEnterStatePayload<AllPossibleScopesT> = {
+      const onEnterStateEvent: OnEnterStatePayload<RelationSchemasT> = {
         ...transitionPayload,
         transitionFromState,
       }
@@ -855,86 +888,93 @@ export class TraceStateMachine<
   }
 }
 
-interface PrepareAndEmitRecordingOptions<AllPossibleScopesT> {
-  transition: OnEnterStatePayload<AllPossibleScopesT>
-  lastRelevantSpanAndAnnotation:
-    | SpanAndAnnotation<AllPossibleScopesT>
-    | undefined
+interface PrepareAndEmitRecordingOptions<RelationSchemasT> {
+  transition: OnEnterStatePayload<RelationSchemasT>
+  lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
 }
 
 export class ActiveTrace<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
 > {
   readonly sourceDefinition: CompleteTraceDefinition<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >
   /** the final, mutable definition of this specific trace */
   definition: CompleteTraceDefinition<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >
   get activeInput(): ActiveTraceConfig<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   > {
-    if (!this.input.scope) {
-      throw new Error('tried to access input without scope')
+    if (!this.input.relatedTo) {
+      throw new Error('tried to access input without relatedTo')
     }
     return this.input as ActiveTraceConfig<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >
   }
   set activeInput(
-    value: ActiveTraceConfig<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
+    value: ActiveTraceConfig<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >,
   ) {
     this.input = value
   }
 
   input: DraftTraceInput<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-    VariantT
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
+    VariantsT
   >
-  private readonly traceUtilities: TraceManagerUtilities<AllPossibleScopesT>
+  private readonly traceUtilities: TraceManagerUtilities<RelationSchemasT>
 
   get isDraft() {
     return this.stateMachine.currentState === INITIAL_STATE
   }
 
-  recordedItems: Set<SpanAndAnnotation<AllPossibleScopesT>> = new Set()
+  recordedItems: Set<SpanAndAnnotation<RelationSchemasT>> = new Set()
   stateMachine: TraceStateMachine<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   >
   occurrenceCounters = new Map<string, number>()
   processedPerformanceEntries: WeakMap<
     PerformanceEntry,
-    SpanAndAnnotation<AllPossibleScopesT>
+    SpanAndAnnotation<RelationSchemasT>
   > = new WeakMap()
 
   finalState:
-    | FinalState<SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>>
+    | FinalState<
+        SelectRelationSchemaByKeysTuple<
+          SelectedRelationTupleT,
+          RelationSchemasT
+        >
+      >
     | undefined
 
   constructor(
     definition: CompleteTraceDefinition<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
     input: DraftTraceInput<
-      SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>,
-      VariantT
+      SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
+      VariantsT
     >,
-    traceUtilities: TraceManagerUtilities<AllPossibleScopesT>,
+    traceUtilities: TraceManagerUtilities<RelationSchemasT>,
   ) {
     // Verify that the variant value is valid
     const variant = definition.variants[input.variant]
@@ -952,14 +992,14 @@ export class ActiveTrace<
     this.definition = {
       name: definition.name,
       type: definition.type,
-      scopes: [...definition.scopes],
+      relations: [...definition.relations],
       variants: { ...definition.variants },
 
       labelMatching: { ...definition.labelMatching },
 
       requiredSpans: [...definition.requiredSpans],
-      computedSpanDefinitions: [...definition.computedSpanDefinitions],
-      computedValueDefinitions: [...definition.computedValueDefinitions],
+      computedSpanDefinitions: { ...definition.computedSpanDefinitions },
+      computedValueDefinitions: { ...definition.computedValueDefinitions },
 
       interruptOnSpans: definition.interruptOnSpans
         ? [...definition.interruptOnSpans]
@@ -973,9 +1013,9 @@ export class ActiveTrace<
           ? definition.captureInteractive
           : { ...definition.captureInteractive }
         : undefined,
-      suppressErrorStatusPropagationOn:
-        definition.suppressErrorStatusPropagationOn
-          ? [...definition.suppressErrorStatusPropagationOn]
+      suppressErrorStatusPropagationOnSpans:
+        definition.suppressErrorStatusPropagationOnSpans
+          ? [...definition.suppressErrorStatusPropagationOnSpans]
           : undefined,
     }
 
@@ -990,8 +1030,8 @@ export class ActiveTrace<
   }
 
   sideEffectFns: TraceStateMachineSideEffectHandlers<
-    TracerScopeKeysT,
-    AllPossibleScopesT
+    SelectedRelationTupleT,
+    RelationSchemasT
   > = {
     storeFinalizeState: (config) => {
       this.finalState = config
@@ -1043,15 +1083,15 @@ export class ActiveTrace<
   }
 
   onEnd(
-    traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
+    traceRecording: TraceRecording<SelectedRelationTupleT, RelationSchemasT>,
   ): void {
     // @ts-expect-error TS isn't smart enough to disambiguate this situation yet; maybe in the future this will work OOTB
     this.traceUtilities.cleanupActiveTrace(this)
     ;(
       this.traceUtilities.reportFn as SingleTraceReportFn<
-        TracerScopeKeysT,
-        AllPossibleScopesT,
-        VariantT
+        SelectedRelationTupleT,
+        RelationSchemasT,
+        VariantsT
       >
     )(traceRecording, this)
   }
@@ -1063,16 +1103,16 @@ export class ActiveTrace<
 
   transitionDraftToActive(
     inputAndDefinitionModifications: TraceModifications<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
   ) {
     const { attributes } = this.input
 
     this.activeInput = {
       ...this.input,
-      scope: inputAndDefinitionModifications.scope,
+      relatedTo: inputAndDefinitionModifications.relatedTo,
       attributes: {
         ...this.input.attributes,
         ...attributes,
@@ -1090,22 +1130,22 @@ export class ActiveTrace<
    */
   private applyDefinitionModifications(
     definitionModifications: TraceModificationsBase<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >,
   ) {
     const { definition } = this
     const additionalRequiredSpans = convertMatchersToFns<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >(definitionModifications.additionalRequiredSpans)
 
     const additionalDebounceOnSpans = convertMatchersToFns<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >(definitionModifications.additionalDebounceOnSpans)
 
     if (additionalRequiredSpans?.length) {
@@ -1122,9 +1162,7 @@ export class ActiveTrace<
     }
   }
 
-  processSpan(
-    span: Span<AllPossibleScopesT>,
-  ): SpanAnnotationRecord | undefined {
+  processSpan(span: Span<RelationSchemasT>): SpanAnnotationRecord | undefined {
     const spanEndTime = span.startTime.now + span.duration
     // check if valid for this trace:
     if (spanEndTime < this.input.startTime.now) {
@@ -1150,7 +1188,7 @@ export class ActiveTrace<
         this.recordedItems,
       )
 
-    let spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>
+    let spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>
 
     if (existingAnnotation) {
       spanAndAnnotation = existingAnnotation
@@ -1209,7 +1247,7 @@ export class ActiveTrace<
     return undefined
   }
 
-  private getSpanLabels(span: SpanAndAnnotation<AllPossibleScopesT>): string[] {
+  private getSpanLabels(span: SpanAndAnnotation<RelationSchemasT>): string[] {
     const labels: string[] = []
     const context = { definition: this.definition, input: this.input }
     if (!this.definition.labelMatching) return labels
@@ -1227,12 +1265,13 @@ export class ActiveTrace<
 }
 
 export type AllPossibleActiveTraces<
-  ForEachPossibleScopeT,
-  AllPossibleScopesT = ForEachPossibleScopeT,
-> = ForEachPossibleScopeT extends ForEachPossibleScopeT
+  ForEachRelationSchemaT,
+  RelationSchemasT = ForEachRelationSchemaT,
+> = ForEachRelationSchemaT extends ForEachRelationSchemaT
   ? ActiveTrace<
-      KeysOfUnion<ForEachPossibleScopeT> & KeysOfUnion<AllPossibleScopesT>,
-      AllPossibleScopesT,
+      KeysOfRelationSchemaToTuples<ForEachRelationSchemaT> &
+        KeysOfRelationSchemaToTuples<RelationSchemasT>,
+      RelationSchemasT,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       any
     >

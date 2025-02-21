@@ -8,18 +8,18 @@ import type {
 } from './hooksTypes'
 import type { ComponentRenderSpan } from './spanTypes'
 import type { TraceManager } from './traceManager'
-import type { ScopeValue, Timestamp } from './types'
+import type { RelationSchemaValue, Timestamp } from './types'
 
-type MakeEntryInput<AllPossibleScopesT> = Omit<
-  ComponentRenderSpan<AllPossibleScopesT>,
+type MakeEntryInput<RelationSchemasT> = Omit<
+  ComponentRenderSpan<RelationSchemasT>,
   'startTime'
 > & {
   startTime?: Timestamp
 }
 
-const makeEntry = <AllPossibleScopesT>(
-  inp: MakeEntryInput<AllPossibleScopesT>,
-): ComponentRenderSpan<AllPossibleScopesT> => ({
+const makeEntry = <RelationSchemasT>(
+  inp: MakeEntryInput<RelationSchemasT>,
+): ComponentRenderSpan<RelationSchemasT> => ({
   ...inp,
   startTime: ensureTimestamp(inp.startTime),
 })
@@ -30,14 +30,16 @@ const makeEntry = <AllPossibleScopesT>(
  */
 export const generateUseBeacon =
   <
-    AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
+    RelationSchemasT extends {
+      [K in keyof RelationSchemasT]: RelationSchemaValue
+    },
     RequiredAttributesT = {},
   >(
-    traceManager: TraceManager<AllPossibleScopesT>,
-  ): UseBeacon<AllPossibleScopesT, RequiredAttributesT> =>
+    traceManager: TraceManager<RelationSchemasT>,
+  ): UseBeacon<RelationSchemasT, RequiredAttributesT> =>
   (
     config: BeaconConfig<
-      GetScopeTFromTraceManager<TraceManager<AllPossibleScopesT>>,
+      GetScopeTFromTraceManager<TraceManager<RelationSchemasT>>,
       RequiredAttributesT
     >,
   ) => {
@@ -52,7 +54,7 @@ export const generateUseBeacon =
       config.isIdle ??
       (renderedOutput === 'content' || renderedOutput === 'error')
 
-    const renderStartTaskEntry: ComponentRenderSpan<AllPossibleScopesT> =
+    const renderStartTaskEntry: ComponentRenderSpan<RelationSchemasT> =
       makeEntry({
         ...config,
         type: 'component-render-start',

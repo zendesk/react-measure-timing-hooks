@@ -2,31 +2,33 @@ import { AllPossibleActiveTraces } from './ActiveTrace'
 import {
   convertLabelMatchersToFns,
   convertMatchersToFns,
+  ensureMatcherFn,
 } from './ensureMatcherFn'
-import { type SpanMatcherFn } from './matchSpan'
+import type { SpanMatch } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
 import { Tracer } from './tracer'
 import type {
   CompleteTraceDefinition,
-  ComputedSpanDefinition,
-  ComputedValueDefinition,
-  ScopeValue,
+  ComputedValueDefinitionInput,
+  RelationSchemaValue,
   SpanDeduplicationStrategy,
   TraceDefinition,
   TraceManagerConfig,
   TraceManagerUtilities,
 } from './types'
-import type { KeysOfUnion } from './typeUtils'
+import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 
 /**
  * Class representing the centralized trace performance manager.
  */
 export class TraceManager<
-  AllPossibleScopesT extends { [K in keyof AllPossibleScopesT]: ScopeValue },
+  const RelationSchemasT extends {
+    [K in keyof RelationSchemasT]: RelationSchemaValue
+  },
 > {
-  readonly performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<AllPossibleScopesT>
-  private activeTrace: AllPossibleActiveTraces<AllPossibleScopesT> | undefined =
+  readonly performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<RelationSchemasT>
+  private activeTrace: AllPossibleActiveTraces<RelationSchemasT> | undefined =
     undefined
 
   get activeTracerContext() {
@@ -37,11 +39,18 @@ export class TraceManager<
     }
   }
 
-  constructor(configInput: TraceManagerConfig<AllPossibleScopesT>) {
+  constructor(
+    configInput: Omit<
+      TraceManagerConfig<RelationSchemasT>,
+      'reportWarningFn'
+    > & { reportWarningFn?: (warning: Error) => void },
+  ) {
     this.utilities = {
+      // by default noop for warnings
+      reportWarningFn: () => {},
       ...configInput,
       replaceActiveTrace: (
-        newTrace: AllPossibleActiveTraces<AllPossibleScopesT>,
+        newTrace: AllPossibleActiveTraces<RelationSchemasT>,
       ) => {
         if (this.activeTrace) {
           this.activeTrace.interrupt('another-trace-started')
@@ -50,7 +59,7 @@ export class TraceManager<
         this.activeTrace = newTrace
       },
       cleanupActiveTrace: (
-        traceToCleanUp: AllPossibleActiveTraces<AllPossibleScopesT>,
+        traceToCleanUp: AllPossibleActiveTraces<RelationSchemasT>,
       ) => {
         if (traceToCleanUp === this.activeTrace) {
           this.activeTrace = undefined
@@ -58,38 +67,91 @@ export class TraceManager<
         // warn on miss?
       },
       getActiveTrace: () => this.activeTrace,
-      cancelDraftTrace: () => this.activeTrace?.interrupt('draft-cancelled'),
     }
   }
 
-  private utilities: TraceManagerUtilities<AllPossibleScopesT>
+  private utilities: TraceManagerUtilities<RelationSchemasT>
 
   createTracer<
-    const TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-    const VariantT extends string,
+    const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+    const VariantsT extends string,
+    const ComputedValueTuplesT extends {
+      [K in keyof ComputedValueTuplesT]: SpanMatch<
+        NoInfer<SelectedRelationTupleT>,
+        RelationSchemasT,
+        NoInfer<VariantsT>
+      >[]
+    },
   >(
     traceDefinition: TraceDefinition<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT,
+      {
+        [K in keyof ComputedValueTuplesT]: ComputedValueDefinitionInput<
+          NoInfer<SelectedRelationTupleT>,
+          RelationSchemasT,
+          NoInfer<VariantsT>,
+          ComputedValueTuplesT[K]
+        >
+      }
     >,
-  ): Tracer<TracerScopeKeysT, AllPossibleScopesT, VariantT> {
-    const computedSpanDefinitions: ComputedSpanDefinition<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
-    >[] = []
-    const computedValueDefinitions: ComputedValueDefinition<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT,
-      SpanMatcherFn<TracerScopeKeysT, AllPossibleScopesT, VariantT>[]
-    >[] = []
+  ): Tracer<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+    const computedSpanDefinitions = Object.fromEntries(
+      Object.entries(traceDefinition.computedSpanDefinitions ?? {}).map(
+        ([name, def]) => [
+          name,
+          {
+            startSpan:
+              typeof def.startSpan === 'string'
+                ? def.startSpan
+                : ensureMatcherFn<
+                    SelectedRelationTupleT,
+                    RelationSchemasT,
+                    VariantsT
+                  >(def.startSpan),
+            endSpan:
+              typeof def.endSpan === 'string'
+                ? def.endSpan
+                : ensureMatcherFn<
+                    SelectedRelationTupleT,
+                    RelationSchemasT,
+                    VariantsT
+                  >(def.endSpan),
+          } as const,
+        ],
+      ),
+    )
+
+    const computedValueDefinitionsInputEntries = Object.entries<
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ComputedValueDefinitionInput<any, any, any, any>
+    >(traceDefinition.computedValueDefinitions ?? {})
+
+    const computedValueDefinitions = Object.fromEntries(
+      computedValueDefinitionsInputEntries.map(([name, def]) => [
+        name,
+        {
+          ...def,
+          matches: def.matches.map(
+            (
+              m: SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
+            ) =>
+              ensureMatcherFn<
+                SelectedRelationTupleT,
+                RelationSchemasT,
+                VariantsT
+              >(m),
+          ),
+          computeValueFromMatches: def.computeValueFromMatches,
+        } as const,
+      ]),
+    )
 
     const requiredSpans = convertMatchersToFns<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >(traceDefinition.requiredSpans)
 
     if (!requiredSpans) {
@@ -103,32 +165,32 @@ export class TraceManager<
       : undefined
 
     const debounceOnSpans = convertMatchersToFns<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >(traceDefinition.debounceOnSpans)
     const interruptOnSpans = convertMatchersToFns<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     >(traceDefinition.interruptOnSpans)
 
-    const suppressErrorStatusPropagationOn = convertMatchersToFns<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
-    >(traceDefinition.suppressErrorStatusPropagationOn)
+    const suppressErrorStatusPropagationOnSpans = convertMatchersToFns<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >(traceDefinition.suppressErrorStatusPropagationOnSpans)
 
     const completeTraceDefinition: CompleteTraceDefinition<
-      TracerScopeKeysT,
-      AllPossibleScopesT,
-      VariantT
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
     > = {
       ...traceDefinition,
       requiredSpans,
       debounceOnSpans,
       interruptOnSpans,
-      suppressErrorStatusPropagationOn,
+      suppressErrorStatusPropagationOnSpans,
       computedSpanDefinitions,
       computedValueDefinitions,
       labelMatching,
@@ -137,9 +199,7 @@ export class TraceManager<
     return new Tracer(completeTraceDefinition, this.utilities)
   }
 
-  processSpan(
-    span: Span<AllPossibleScopesT>,
-  ): SpanAnnotationRecord | undefined {
+  processSpan(span: Span<RelationSchemasT>): SpanAnnotationRecord | undefined {
     return this.activeTrace?.processSpan(span)
   }
 }

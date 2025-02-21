@@ -2,13 +2,14 @@
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes } from './spanTypes'
 import type {
-  SelectScopeByKey,
+  MapSchemaToTypes,
+  SelectRelationSchemaByKeysTuple,
   Timestamp,
   TraceInterruptionReason,
   TraceStatus,
   TraceType,
 } from './types'
-import type { KeysOfUnion } from './typeUtils'
+import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 
 export interface ComputedSpan {
   // time relative to beginning of the trace
@@ -31,7 +32,7 @@ export interface ComputedRenderSpan {
   sumOfRenderDurations: number
 }
 
-export interface TraceRecordingBase<TracerScopeT> {
+export interface TraceRecordingBase<RelationSchemaT> {
   /**
    * random generated unique value or provided by the user at start
    */
@@ -43,7 +44,7 @@ export interface TraceRecordingBase<TracerScopeT> {
   name: string
 
   startTime: Timestamp
-  scope: TracerScopeT | undefined
+  relatedTo: MapSchemaToTypes<RelationSchemaT> | undefined
 
   type: TraceType
 
@@ -82,10 +83,10 @@ export interface TraceRecordingBase<TracerScopeT> {
 }
 
 export interface TraceRecording<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
 > extends TraceRecordingBase<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
   > {
-  entries: SpanAndAnnotation<AllPossibleScopesT>[]
+  entries: SpanAndAnnotation<RelationSchemasT>[]
 }

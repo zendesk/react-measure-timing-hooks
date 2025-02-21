@@ -129,11 +129,11 @@ export function makeEntries(events: Stub[]): {
   return { entries, fmpTime }
 }
 
-export function getSpansFromTimeline<AllPossibleScopesT>(
+export function getSpansFromTimeline<RelationSchemasT>(
   _: TemplateStringsArray,
   ...exprs: (Stub | number)[]
-): { spans: Span<AllPossibleScopesT>[]; fmpTime: number | null } {
-  const spans: Span<AllPossibleScopesT>[] = []
+): { spans: Span<RelationSchemasT>[]; fmpTime: number | null } {
+  const spans: Span<RelationSchemasT>[] = []
   let fmpTime: number | null = null
 
   const stubs = exprs.filter((expr) => typeof expr !== 'number')
@@ -196,7 +196,7 @@ export function getSpansFromTimeline<AllPossibleScopesT>(
           'startTime' in stub ? stub.startTime ?? currentTime : currentTime,
         toJSON: () => {},
       },
-    } as Span<AllPossibleScopesT>)
+    } as Span<RelationSchemasT>)
   }
 
   return { spans, fmpTime }

@@ -447,7 +447,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -492,7 +492,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -525,7 +525,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -570,7 +570,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -604,7 +604,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -632,7 +632,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -677,7 +677,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -711,7 +711,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -739,7 +739,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -784,7 +784,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -818,7 +818,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -846,7 +846,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -891,7 +891,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -925,7 +925,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -953,7 +953,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -998,7 +998,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -1032,7 +1032,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -2458,7 +2458,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -2503,7 +2503,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -2537,7 +2537,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -2565,7 +2565,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -2610,7 +2610,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -2644,7 +2644,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -3033,7 +3033,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -3078,7 +3078,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -3112,7 +3112,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -3139,7 +3139,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -3173,7 +3173,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: false,
         renderedOutput: 'null',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -3201,7 +3201,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -3248,7 +3248,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -3278,7 +3278,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -3308,7 +3308,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -3982,7 +3982,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -4027,7 +4027,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -4061,7 +4061,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4089,7 +4089,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -4123,7 +4123,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4152,7 +4152,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -4198,7 +4198,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -4243,7 +4243,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -4277,7 +4277,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4305,7 +4305,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -4339,7 +4339,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4367,7 +4367,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -4401,7 +4401,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4430,7 +4430,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'loading',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: false,
@@ -4475,7 +4475,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -4509,7 +4509,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4537,7 +4537,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'loading',
@@ -4571,7 +4571,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4600,7 +4600,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: true,
@@ -4645,7 +4645,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',
@@ -4682,7 +4682,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4710,7 +4710,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',
@@ -4747,7 +4747,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -4776,7 +4776,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: true,
@@ -4823,7 +4823,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: true,
@@ -4868,7 +4868,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',
@@ -4905,7 +4905,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -6226,7 +6226,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',
@@ -6263,7 +6263,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -6291,7 +6291,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',
@@ -6328,7 +6328,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -6358,7 +6358,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -6388,7 +6388,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -6418,7 +6418,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -6949,7 +6949,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: true,
@@ -6996,7 +6996,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -7026,7 +7026,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
         name: 'OmniComposer',
         isIdle: true,
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         attributes: {
@@ -7055,7 +7055,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
       span: {
         name: 'ConversationPane',
         renderedOutput: 'content',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         isIdle: true,
@@ -9161,7 +9161,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',
@@ -9196,7 +9196,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',
@@ -9354,7 +9354,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',
@@ -9389,7 +9389,7 @@ export const shouldNotEndWithInterruption: SpanAndAnnotation<TicketIdScope>[] =
     {
       span: {
         name: 'OmniLog',
-        scope: {
+        relatedTo: {
           ticketId: '75',
         },
         renderedOutput: 'content',

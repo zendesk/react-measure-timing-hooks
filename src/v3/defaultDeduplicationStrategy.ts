@@ -4,21 +4,21 @@ import type { Span } from './spanTypes'
 import type { SpanDeduplicationStrategy } from './types'
 
 export function createDefaultPerformanceEntryDeduplicationStrategy<
-  AllPossibleScopesT,
->(): SpanDeduplicationStrategy<AllPossibleScopesT> {
+  RelationSchemasT,
+>(): SpanDeduplicationStrategy<RelationSchemasT> {
   let processedPerformanceEntries = new WeakMap<
     PerformanceEntry,
-    SpanAndAnnotation<AllPossibleScopesT>
+    SpanAndAnnotation<RelationSchemasT>
   >()
   const processedPerformanceEntriesByHash = new Map<
     string,
-    SpanAndAnnotation<AllPossibleScopesT>
+    SpanAndAnnotation<RelationSchemasT>
   >()
 
   return {
     findDuplicate(
-      span: Span<AllPossibleScopesT>,
-    ): SpanAndAnnotation<AllPossibleScopesT> | undefined {
+      span: Span<RelationSchemasT>,
+    ): SpanAndAnnotation<RelationSchemasT> | undefined {
       if (!span.performanceEntry) {
         return undefined
       }
@@ -37,8 +37,8 @@ export function createDefaultPerformanceEntryDeduplicationStrategy<
     },
 
     recordSpan(
-      span: Span<AllPossibleScopesT>,
-      spanAndAnnotation: SpanAndAnnotation<AllPossibleScopesT>,
+      span: Span<RelationSchemasT>,
+      spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
     ): void {
       if (!span.performanceEntry) {
         return
@@ -58,9 +58,9 @@ export function createDefaultPerformanceEntryDeduplicationStrategy<
     },
 
     selectPreferredSpan(
-      existingSpan: Span<AllPossibleScopesT>,
-      newSpan: Span<AllPossibleScopesT>,
-    ): Span<AllPossibleScopesT> {
+      existingSpan: Span<RelationSchemasT>,
+      newSpan: Span<RelationSchemasT>,
+    ): Span<RelationSchemasT> {
       // Default behavior: use the new span
       return newSpan
     },

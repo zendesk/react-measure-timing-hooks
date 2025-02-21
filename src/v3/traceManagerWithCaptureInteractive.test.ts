@@ -10,7 +10,7 @@ import {
 import { DEFAULT_INTERACTIVE_TIMEOUT_DURATION } from './constants'
 import { createQuietWindowDurationCalculator } from './getDynamicQuietWindowDuration'
 import * as matchSpan from './matchSpan'
-import { type TicketIdScope } from './testUtility/fixtures/ticket.activation'
+import { type TicketIdRelationSchema } from './testUtility/fixtures/relationSchemas'
 import {
   Check,
   getSpansFromTimeline,
@@ -31,10 +31,6 @@ const cpuIdleProcessorOptions = {
   heavyClusterThreshold: GOOGLES_HEAVY_CLUSTER_THRESHOLD,
 }
 
-interface TicketScope {
-  ticketId: string
-}
-
 describe('TraceManager with Capture Interactivity', () => {
   let reportFn: jest.Mock
   let generateId: jest.Mock
@@ -46,7 +42,7 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<ReportFn<TicketScope, TicketScope>>()
+    reportFn = jest.fn<ReportFn<TicketIdRelationSchema>>()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
   })
@@ -57,7 +53,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('correctly captures trace while waiting the long tasks to settle', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -65,7 +62,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -76,20 +73,21 @@ describe('TraceManager with Capture Interactivity', () => {
     })
 
     tracer.start({
-      scope: { ticketId: '1' },
+      relatedTo: { ticketId: '1' },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(50)}------<===5s===>---------${Check}
       Time:   ${0}                      ${2_000}                ${2_001}                                ${2_001 + DEFAULT_INTERACTIVE_TIMEOUT_DURATION}
     `
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -107,7 +105,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('completes the trace with waiting-for-interactive-timeout', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -116,7 +115,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: {
         ...cpuIdleProcessorOptions,
@@ -129,22 +128,23 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(interactiveTimeout)}
       Time:   ${0}                      ${2_000}                ${2_050}
       `
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -162,7 +162,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('completes the trace when interrupted during waiting for capture interactive to finish', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -170,7 +171,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.interrupt-during-long-task-operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [matchSpan.withName('end')],
       interruptOnSpans: [matchSpan.withName('interrupt')],
       captureInteractive: cpuIdleProcessorOptions,
@@ -181,14 +182,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}---------${Render('end', 0)}---------${Render('interrupt', 0)}--${LongTask(100)}--${Check}
       Time:   ${0}                          ${200}                      ${201}                     ${300}            ${5_000}
       `
@@ -196,8 +197,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -215,7 +217,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('timeouts the trace while deboucing AND the last span is past the timeout duration', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -223,7 +226,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.debounce-then-interrupted-operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       debounceOnSpans: [{ name: 'debounce' }],
       captureInteractive: cpuIdleProcessorOptions,
@@ -235,22 +238,23 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${Render('debounce', 0)}------${Check}
       Time:   ${0}                      ${50}                   ${100}                        ${DEFAULT_COLDBOOT_TIMEOUT_DURATION + 100}
       `
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -268,7 +272,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('completes the trace when debouncing is done AND is waiting for capture interactive to finish', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -277,7 +282,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.debounce-then-interrupted-operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       debounceOnSpans: [{ name: 'debounce' }],
       captureInteractive: {
@@ -292,22 +297,23 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}---------------------${Render('debounce', 100)}------------------${Check}
       Time:   ${0}                      ${DEFAULT_COLDBOOT_TIMEOUT_DURATION - 500}       ${DEFAULT_COLDBOOT_TIMEOUT_DURATION - 499}           ${DEFAULT_COLDBOOT_TIMEOUT_DURATION + 1}
       `
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -325,7 +331,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('uses getQuietWindowDuration from capture interactive config', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -338,7 +345,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: {
         ...cpuIdleProcessorOptions,
@@ -352,22 +359,23 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(5)}------------${LongTask(5)}-----${Check}
       Time:   ${0}                      ${TRACE_DURATION}       ${1_001}                  ${1_050}           ${1_200}
       `
 
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
 
     expect(
       report.entries.map(
@@ -388,7 +396,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('uses createQuietWindowDurationCalculator for getQuietWindowDuration in capture interactive config', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -398,7 +407,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: {
         ...cpuIdleProcessorOptions,
@@ -412,22 +421,23 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----------${LongTask(5)}----------------${LongTask(50)}---${Check}
       Time:   ${0}                      ${TRACE_DURATION}             ${1_001}                      ${1_945}          ${2_001}
       `
 
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
 
     expect(
       report.entries.map(
@@ -446,7 +456,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('No long tasks after FMP, FirstCPUIdle immediately after FMP + quiet window', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -454,7 +465,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -464,14 +475,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}----------${LongTask(400)}-----${Check}
       Time:   ${0}                      ${200}                       ${4_600}             ${5_000}
       `
@@ -479,8 +490,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -499,7 +511,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('One light cluster after FMP, FirstCPUIdle at FMP', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -507,7 +520,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -517,14 +530,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}----------${LongTask(50)}------${LongTask(50)}-----${LongTask(50)}---------${Check}
       Time:   ${0}                      ${200}                       ${300}               ${400}              ${450}                  ${3_050}
       `
@@ -532,8 +545,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -552,7 +566,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('One heavy cluster after FMP, FirstCPUIdle after the cluster', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -560,7 +575,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -570,14 +585,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}--${LongTask(50)}}-${LongTask(200)}-----${LongTask(50)}-----------${Check}
       Time:   ${0}                      ${200}               ${300}           ${400}                ${650}                   ${3_200}
       `
@@ -585,8 +600,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -607,7 +623,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('Multiple heavy clusters, FirstCPUIdle updated to end of last cluster', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -615,7 +632,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -625,14 +642,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(200)}-----${LongTask(200)}-----${LongTask(200)}-----${Check}
       Time:   ${0}                      ${200}                 ${300}              ${900}              ${1_500}             ${3_800}
       `
@@ -640,8 +657,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -663,7 +681,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('Checking before the quiet window has passed - no long tasks processed, FirstCPUIdle not found', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -671,7 +690,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -681,14 +700,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${Check}
       Time:   ${0}                      ${200}                  ${2_400}
       `
@@ -696,8 +715,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -716,7 +736,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('completes the trace with one heavy cluster followed by two light clusters, value is after 1st heavy cluster', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -724,7 +745,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -734,14 +755,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(200)}-----${LongTask(100)}-----${LongTask(200)}-----${LongTask(200)}-----${Check}
       Time:   ${0}                      ${200}                  ${300}               ${600}               ${1_700}             ${2_900}             ${4_650}
         }
@@ -750,8 +771,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -774,7 +796,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('completes the trace with continuous heavy clusters', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -782,7 +805,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -792,14 +815,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${LongTask(300)}-----${Check}
       Time:   ${0}                      ${200}                  ${550}               ${900}               ${1_250}             ${1_600}             ${1_950}             ${2_300}             ${2_650}             ${3_000}             ${3_350}             ${3_700}             ${4_050}             ${4_400}             ${4_750}             ${5_100}             ${7_450}
       `
@@ -807,8 +830,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -828,7 +852,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('completes the trace with a light cluster followed by a heavy cluster a second later, FirstCPUIdle updated', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -836,7 +861,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -846,14 +871,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}-----${Render('end', 0)}-----${LongTask(50)}----------${LongTask(50)}----------${LongTask(50)}--------${LongTask(50)}---------${LongTask(200)}-------${LongTask(200)}--------${Check}
       Time:   ${0}                      ${200}                 ${300}                    ${350}                   ${1_450}               ${1_550}                ${1_650}               ${1_900}                ${4_150}
       `
@@ -861,8 +886,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
@@ -885,7 +911,8 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   it('completes the trace with a long task overlapping FMP, FirstCPUIdle after the long task', () => {
-    const traceManager = new TraceManager<TicketIdScope>({
+    const traceManager = new TraceManager({
+      relationSchemas: [{ ticketId: String }],
       reportFn,
       generateId,
       reportErrorFn,
@@ -893,7 +920,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      scopes: [],
+      relations: [],
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -903,14 +930,14 @@ describe('TraceManager with Capture Interactivity', () => {
       },
     })
     tracer.start({
-      scope: {
+      relatedTo: {
         ticketId: '1',
       },
       variant: 'cold_boot',
     })
 
     // prettier-ignore
-    const { spans } = getSpansFromTimeline<TicketIdScope>`
+    const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
       Events: ${Render('start', 0)}----------${LongTask(110, { start: 150 })}----${Render('end', 0)}-----${Check}
       Time:   ${0}                           ${150}                              ${200}                  ${2_500}
       `
@@ -918,8 +945,9 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
 
-    const report: Parameters<ReportFn<TicketIdScope, TicketIdScope>>[0] =
-      reportFn.mock.calls[0][0]
+    const report: Parameters<
+      ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>
+    >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
         (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,

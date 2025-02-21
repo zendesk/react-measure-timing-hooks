@@ -4,8 +4,8 @@ import type { SpanMatcherFn } from './matchSpan'
 import { SpanAndAnnotation } from './spanAnnotationTypes'
 import { ComponentRenderSpan, Span } from './spanTypes'
 import { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
-import type { SelectScopeByKey, TraceContext } from './types'
-import type { KeysOfUnion } from './typeUtils'
+import type { SelectRelationSchemaByKeysTuple, TraceContext } from './types'
+import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 
 export interface EmbeddedEntry {
   count: number
@@ -23,8 +23,8 @@ export interface SpanSummaryAttributes {
   }
 }
 
-export interface RumTraceRecording<TracerScopeT>
-  extends TraceRecordingBase<TracerScopeT> {
+export interface RumTraceRecording<RelationSchemaT>
+  extends TraceRecordingBase<RelationSchemaT> {
   // spans that don't exist as separate spans in the DB
   // useful for things like renders, which can repeat tens of times
   // during the same operation
@@ -102,8 +102,8 @@ export const defaultEmbedSpanSelector = <ScopeT>(
   return isRenderEntry(span)
 }
 
-export function getSpanSummaryAttributes<AllPossibleScopesT>(
-  recordedItems: SpanAndAnnotation<AllPossibleScopesT>[],
+export function getSpanSummaryAttributes<RelationSchemasT>(
+  recordedItems: SpanAndAnnotation<RelationSchemasT>[],
 ): SpanSummaryAttributes {
   // loop through recorded items, create a entry based on the name
   const spanAttributes: SpanSummaryAttributes = {}
@@ -150,20 +150,22 @@ function recursivelyRoundValues<T extends object>(
 }
 
 export function convertTraceToRUM<
-  TracerScopeKeysT extends KeysOfUnion<AllPossibleScopesT>,
-  AllPossibleScopesT,
-  const VariantT extends string,
+  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  RelationSchemasT,
+  const VariantsT extends string,
 >(
-  traceRecording: TraceRecording<TracerScopeKeysT, AllPossibleScopesT>,
-  context: TraceContext<TracerScopeKeysT, AllPossibleScopesT, VariantT>,
+  traceRecording: TraceRecording<SelectedRelationTupleT, RelationSchemasT>,
+  context: TraceContext<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
   embedSpanSelector: SpanMatcherFn<
-    TracerScopeKeysT,
-    AllPossibleScopesT,
-    VariantT
+    SelectedRelationTupleT,
+    RelationSchemasT,
+    VariantsT
   > = defaultEmbedSpanSelector,
-): RumTraceRecording<SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>> {
+): RumTraceRecording<
+  SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
+> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording
-  const embeddedEntries: SpanAndAnnotation<AllPossibleScopesT>[] = []
+  const embeddedEntries: SpanAndAnnotation<RelationSchemasT>[] = []
   const nonEmbeddedSpans = new Set<string>()
   const spanAttributes = getSpanSummaryAttributes(traceRecording.entries)
 
@@ -200,7 +202,7 @@ export function convertTraceToRUM<
   }
 
   const result: RumTraceRecording<
-    SelectScopeByKey<TracerScopeKeysT, AllPossibleScopesT>
+    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
   > = {
     ...otherTraceRecordingAttributes,
     embeddedSpans: Object.fromEntries(embeddedSpans),
