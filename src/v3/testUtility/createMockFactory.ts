@@ -1,5 +1,5 @@
-import { SpanAndAnnotation, SpanAnnotation } from '../spanAnnotationTypes'
-import { Span } from '../spanTypes'
+import type { SpanAndAnnotation, SpanAnnotation } from '../spanAnnotationTypes'
+import type { Span } from '../spanTypes'
 import type { Timestamp } from '../types'
 
 const EPOCH_START = 1_000

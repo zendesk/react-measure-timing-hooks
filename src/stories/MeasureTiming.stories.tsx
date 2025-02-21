@@ -9,7 +9,6 @@
 import { useEffect, useState } from 'react'
 import * as React from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
-import { startOperation } from '../2024/operationTracking'
 import { onActionAddedCallback, useVisualizer } from '../lazyVisualizer'
 import { DEFAULT_STAGES, generateReport, generateTimingHooks } from '../main'
 import type { ReportFnV1 } from '../types'
@@ -126,15 +125,6 @@ const VisualizerExample = ({ mounted, ...props }: IArgs) => {
   const { content, visualizer } = props
 
   useVisualizer({ enabled: visualizer, initialPosition: { x: 50, y: 300 } })
-  useEffect(() => {
-    startOperation({
-      name: 'story',
-      requiredMeasureNames: ['useTiming: story/takes-a-while/tti'],
-      metadata: {
-        storyId: 'example',
-      },
-    })
-  }, [])
 
   const renderProps = { ...props }
   const render =

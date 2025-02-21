@@ -1,6 +1,6 @@
-import { adjustTimestampBy } from '../../v3/ensureTimestamp'
+import { adjustTimestampBy } from '../ensureTimestamp'
 import type { SupportedSpanTypes } from './constants'
-import { MappedSpanAndAnnotation, type RecordingInputFile } from './types'
+import type { MappedSpanAndAnnotation, RecordingInputFile } from './types'
 
 const orderArray = [
   'longtask',

@@ -1,6 +1,6 @@
-import { Span } from '../spanTypes'
+import type { Span } from '../spanTypes'
 import { TraceManager } from '../traceManager'
-import { RelationSchemaValue } from '../types'
+import type { RelationSchemaValue } from '../types'
 
 export function processSpans<
   const RelationSchemasT extends {

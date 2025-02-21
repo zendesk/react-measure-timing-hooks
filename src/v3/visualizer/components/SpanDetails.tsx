@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Sheet } from '@zendeskgarden/react-chrome'
 import { getColor } from '@zendeskgarden/react-theming'
 import { DETAILS_PANEL_WIDTH } from '../constants'
-import { MappedSpanAndAnnotation } from '../types'
+import type { MappedSpanAndAnnotation } from '../types'
 
 const PANEL_WIDTH_ADJ = 20
 const DetailsContainer = styled.div`

@@ -10,11 +10,11 @@ import type { BarProps } from '@visx/shape/lib/shapes/Bar'
 import type { LineProps } from '@visx/shape/lib/shapes/Line'
 import type { AddSVGProps } from '@visx/shape/lib/types'
 import { Text } from '@visx/text'
-import { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
+import type { WithTooltipProvidedProps } from '@visx/tooltip/lib/enhancers/withTooltip'
 import type { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale'
 import { getColor } from '@zendeskgarden/react-theming'
 import { BAR_FILL_COLOR } from '../constants'
-import { MappedSpanAndAnnotation } from '../types'
+import type { MappedSpanAndAnnotation } from '../types'
 
 const interactiveStyles = `
   cursor: pointer;

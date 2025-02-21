@@ -17,8 +17,8 @@ import {
   MARKER,
   OBSERVER_SOURCE,
 } from './constants'
-import type { DebounceOptionsRef } from './debounce'
-import { debounce, FlushReason, TimeoutReason } from './debounce'
+import type { DebounceOptionsRef, FlushReason } from './debounce'
+import { debounce, TimeoutReason } from './debounce'
 import { performanceMark, performanceMeasure } from './performanceMark'
 import type {
   Action,

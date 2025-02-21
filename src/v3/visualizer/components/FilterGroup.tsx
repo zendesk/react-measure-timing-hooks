@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { ToggleButton } from '@zendeskgarden/react-buttons'
 import { Grid } from '@zendeskgarden/react-grid'
 import { Tooltip } from '@zendeskgarden/react-tooltips'
-import { FILTER_OPTIONS, FilterOption } from '../constants'
+import { FILTER_OPTIONS, type FilterOption } from '../constants'
 import { Card, CardContent } from './styled/Card'
 
 const FilterContainer = styled(Card)`

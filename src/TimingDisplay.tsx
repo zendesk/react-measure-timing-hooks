@@ -21,7 +21,7 @@ import { restrictToWindowEdges } from '@dnd-kit/modifiers'
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {
   ChartBar,
-  ChartBarProps,
+  type ChartBarProps,
   ChartBullet,
   ChartBulletComparativeWarningMeasure,
   ChartBulletPrimarySegmentedMeasure,
@@ -41,10 +41,10 @@ import { generateReport } from './generateReport'
 import {
   clearObservedTimings,
   getObservedTimings,
-  Position,
+  type Position,
   setObservedTimingsUpdater,
-  Size,
-  VisualizerProps,
+  type Size,
+  type VisualizerProps,
 } from './lazyVisualizer'
 import { throttle } from './throttle'
 import type {

@@ -1,4 +1,4 @@
-import type { SpanType } from '../../v3/spanTypes'
+import type { SpanType } from '../spanTypes'
 
 export const RESOURCES_TEXT = 'Show Resources'
 export const MEASURES_TEXT = 'Show Measures'

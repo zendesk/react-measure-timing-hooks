@@ -1,17 +1,17 @@
-import { ActiveTrace, AllPossibleActiveTraces } from './ActiveTrace'
+import { ActiveTrace, type AllPossibleActiveTraces } from './ActiveTrace'
 import { ensureMatcherFn } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import type { SpanMatch, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
 import {
-  CompleteTraceDefinition,
-  ComputedSpanDefinitionInput,
-  ComputedValueDefinitionInput,
-  RelationSchemaValue,
-  SelectRelationSchemaByKeysTuple,
+  type CompleteTraceDefinition,
+  type ComputedSpanDefinitionInput,
+  type ComputedValueDefinitionInput,
+  type RelationSchemaValue,
+  type SelectRelationSchemaByKeysTuple,
   type TraceManagerUtilities,
-  TraceModifications,
+  type TraceModifications,
 } from './types'
 import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 

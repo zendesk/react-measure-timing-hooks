@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 import { getSpanKey } from './getSpanKey'
 import type { SpanMatcherFn } from './matchSpan'
-import { SpanAndAnnotation } from './spanAnnotationTypes'
-import { ComponentRenderSpan, Span } from './spanTypes'
-import { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
+import type { ComponentRenderSpan, Span } from './spanTypes'
+import type { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
 import type { SelectRelationSchemaByKeysTuple, TraceContext } from './types'
 import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 

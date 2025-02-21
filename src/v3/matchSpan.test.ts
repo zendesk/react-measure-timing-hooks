@@ -40,7 +40,6 @@ const mockPerformanceEntry = {
     startTime: 0,
     duration: 0,
     toJSON: () => ({}),
-    detail: () => ({}),
   },
 } as const satisfies SpanBase<TicketIdRelationSchema>
 

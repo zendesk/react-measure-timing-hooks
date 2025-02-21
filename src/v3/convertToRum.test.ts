@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { convertTraceToRUM } from './convertToRum'
 import { createTraceRecording } from './recordingComputeUtils'
-import { ActiveTraceInput } from './spanTypes'
+import type { ActiveTraceInput } from './spanTypes'
 import {
   createMockSpanAndAnnotation,
   createTimestamp,

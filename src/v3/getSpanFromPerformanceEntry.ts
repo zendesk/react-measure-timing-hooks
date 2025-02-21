@@ -1,13 +1,13 @@
 import { ensureTimestamp } from './ensureTimestamp'
 import { getCommonUrlForTracing } from './getCommonUrlForTracing'
-import {
+import type {
   Attributes,
   InitiatorType,
   NativePerformanceEntryType,
   PerformanceEntrySpan,
   ResourceSpan,
 } from './spanTypes'
-import { DeriveRelationsFromPerformanceEntryFn, Timestamp } from './types'
+import type { DeriveRelationsFromPerformanceEntryFn, Timestamp } from './types'
 
 /**
  * Maps Performance Entry to a Span

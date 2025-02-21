@@ -1,4 +1,4 @@
-import { AllPossibleActiveTraces } from './ActiveTrace'
+import type { AllPossibleActiveTraces } from './ActiveTrace'
 import {
   convertLabelMatchersToFns,
   convertMatchersToFns,
