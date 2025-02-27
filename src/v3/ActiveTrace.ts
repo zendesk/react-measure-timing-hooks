@@ -324,7 +324,9 @@ export class TraceStateMachine<
             if (doesSpanMatch(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'complete',
-                interruptionReason: 'matched-on-interrupt',
+                interruptionReason: doesSpanMatch.requiredSpan
+                  ? 'matched-on-required-span-with-error'
+                  : 'matched-on-interrupt',
                 lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
                 completeSpanAndAnnotation: this.completeSpan,
               }
@@ -381,11 +383,14 @@ export class TraceStateMachine<
 
         // does span satisfy any of the "interruptOnSpans" definitions
         if (this.context.definition.interruptOnSpans) {
-          for (const match of this.context.definition.interruptOnSpans) {
-            if (match(spanAndAnnotation, this.context)) {
+          for (const doesSpanMatch of this.context.definition
+            .interruptOnSpans) {
+            if (doesSpanMatch(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'interrupted',
-                interruptionReason: 'matched-on-interrupt',
+                interruptionReason: doesSpanMatch.requiredSpan
+                  ? 'matched-on-required-span-with-error'
+                  : 'matched-on-interrupt',
               }
             }
           }
@@ -531,7 +536,7 @@ export class TraceStateMachine<
           for (const doesSpanMatch of this.context.definition.requiredSpans) {
             if (
               doesSpanMatch(idleRegressionCheckSpan, this.context) &&
-              doesSpanMatch.isIdle
+              doesSpanMatch.idleCheck
             ) {
               // check if we regressed on "isIdle", and if so, transition to interrupted with reason
               return {
@@ -772,7 +777,9 @@ export class TraceStateMachine<
             if (doesSpanMatch(spanAndAnnotation, this.context)) {
               return {
                 transitionToState: 'complete',
-                interruptionReason: 'matched-on-interrupt',
+                interruptionReason: doesSpanMatch.requiredSpan
+                  ? 'matched-on-required-span-with-error'
+                  : 'matched-on-interrupt',
                 lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
                 completeSpanAndAnnotation: this.completeSpan,
               }

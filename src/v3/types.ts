@@ -75,7 +75,7 @@ export type TraceInterruptionReasonForValidTraces =
   | 'aborted'
   | 'idle-component-no-longer-idle'
   | 'matched-on-interrupt'
-  | 'required-span-errored' // TODO: implement
+  | 'matched-on-required-span-with-error'
 
 export type TraceInterruptionReason =
   | TraceInterruptionReasonForInvalidTraces

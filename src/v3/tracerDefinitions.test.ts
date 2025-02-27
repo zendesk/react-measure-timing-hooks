@@ -7,7 +7,7 @@ import {
   type Mock,
   vitest as jest,
 } from 'vitest'
-import * as matchSpan from './matchSpan'
+import * as match from './matchSpan'
 import type { TicketIdRelationSchema } from './testUtility/fixtures/relationSchemas'
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
@@ -51,8 +51,8 @@ describe('Trace Definitions', () => {
         // Define computed span in the initial definition as a Record
         computedSpanDefinitions: {
           [computedSpanName]: {
-            startSpan: matchSpan.withName('render-1'),
-            endSpan: matchSpan.withName('render-3'),
+            startSpan: match.withName('render-1'),
+            endSpan: match.withName('render-3'),
           },
         },
       })
@@ -100,12 +100,12 @@ describe('Trace Definitions', () => {
         },
         computedSpanDefinitions: {
           'first-to-second': {
-            startSpan: matchSpan.withName('render-1'),
-            endSpan: matchSpan.withName('render-2'),
+            startSpan: match.withName('render-1'),
+            endSpan: match.withName('render-2'),
           },
           'second-to-third': {
-            startSpan: matchSpan.withName('render-2'),
-            endSpan: matchSpan.withName('render-3'),
+            startSpan: match.withName('render-2'),
+            endSpan: match.withName('render-3'),
           },
         },
       })
@@ -129,6 +129,128 @@ describe('Trace Definitions', () => {
       expect(report.computedSpans['first-to-second']?.duration).toBe(100)
       expect(report.computedSpans['second-to-third']?.startOffset).toBe(100)
       expect(report.computedSpans['second-to-third']?.duration).toBe(100)
+    })
+  })
+
+  describe('requiredSpans error behavior', () => {
+    it('interrupts trace when a required span has an error status', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: [{ ticketId: String }],
+        reportFn,
+        generateId,
+        reportErrorFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'ticket.required-span-error',
+        type: 'operation',
+        relations: [],
+        requiredSpans: [{ name: 'feature' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
+
+      tracer.start({
+        relatedTo: { ticketId: '1' },
+        variant: 'cold_boot',
+      })
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      Events: ${Render('start', 0)}--${Render('feature', 50, { status: 'error' })}
+      Time:   ${0}                   ${50}
+      `
+
+      processSpans(spans, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report = reportFn.mock.calls[0]![0]
+      expect(report.status).toBe('interrupted')
+      expect(report.interruptionReason).toBe(
+        'matched-on-required-span-with-error',
+      )
+    })
+
+    it('does not interrupt trace when required span error is explicitly ignored', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: [{ ticketId: String }],
+        reportFn,
+        generateId,
+        reportErrorFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'ticket.required-span-error-ignored',
+        type: 'operation',
+        relations: [],
+        requiredSpans: [
+          match.withAllConditions(
+            match.withName('feature'),
+            match.continueWithErrorStatus(),
+          ),
+        ],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
+
+      tracer.start({
+        relatedTo: { ticketId: '1' },
+        variant: 'cold_boot',
+      })
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      Events: ${Render('start', 0)}--${Render('feature', 50, { status: 'error' })}--${Render('end', 0)}
+      Time:   ${0}                   ${50}                                          ${100}
+      `
+
+      processSpans(spans, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report = reportFn.mock.calls[0]![0]
+      expect(report.status).toBe('error')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('interrupts trace when one of multiple required spans has an error', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: [{ ticketId: String }],
+        reportFn,
+        generateId,
+        reportErrorFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'ticket.multiple-required-spans-error',
+        type: 'operation',
+        relations: [],
+        requiredSpans: [{ name: 'feature-1' }, { name: 'feature-2' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
+
+      tracer.start({
+        relatedTo: { ticketId: '1' },
+        variant: 'cold_boot',
+      })
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      Events: ${Render('start', 0)}--${Render('feature-1', 50)}--${Render('feature-2', 50, { status: 'error' })}
+      Time:   ${0}                   ${50}                       ${100}
+      `
+
+      processSpans(spans, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report = reportFn.mock.calls[0]![0]
+      expect(report.status).toBe('interrupted')
+      expect(report.interruptionReason).toBe(
+        'matched-on-required-span-with-error',
+      )
     })
   })
 
@@ -196,17 +318,16 @@ describe('Trace Definitions', () => {
         },
         computedValueDefinitions: {
           'feature-count': {
-            matches: [
-              matchSpan.withName('feature'),
-              matchSpan.withName('feature-2'),
-            ],
+            // @ts-expect-error TODO: broken inference
+            matches: [match.withName('feature'), match.withName('feature-2')],
             computeValueFromMatches: (feature, feature2) =>
               // @ts-expect-error unexpected TS error
               // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
               feature.length + feature2.length,
           },
           'error-count': {
-            matches: [matchSpan.withName((name) => name.startsWith('error'))],
+            // @ts-expect-error TODO: broken inference
+            matches: [match.withName((name) => name.startsWith('error'))],
             // @ts-expect-error unexpected TS error
             computeValueFromMatches: (errors) => errors.length,
           },

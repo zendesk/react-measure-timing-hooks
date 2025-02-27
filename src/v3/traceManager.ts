@@ -4,7 +4,8 @@ import {
   convertMatchersToFns,
   ensureMatcherFn,
 } from './ensureMatcherFn'
-import type { SpanMatch } from './matchSpan'
+import { type SpanMatch, withAllConditions, withStatus } from './matchSpan'
+import { requiredSpanWithErrorStatus } from './requiredSpanWithErrorStatus'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
 import { Tracer } from './tracer'
@@ -97,6 +98,65 @@ export class TraceManager<
       }
     >,
   ): Tracer<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+    const requiredSpans = convertMatchersToFns<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >(traceDefinition.requiredSpans)
+
+    if (!requiredSpans) {
+      throw new Error(
+        'requiredSpans must be defined, as a trace will never end otherwise',
+      )
+    }
+
+    const labelMatching = traceDefinition.labelMatching
+      ? convertLabelMatchersToFns(traceDefinition.labelMatching)
+      : undefined
+
+    const debounceOnSpans = convertMatchersToFns<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >(traceDefinition.debounceOnSpans)
+
+    const manuallyDefinedInterruptOnSpans = convertMatchersToFns<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >(traceDefinition.interruptOnSpans)
+
+    // all requiredSpans implicitly interrupt the trace if they error, unless explicitly ignored
+    const interruptOnRequiredErrored = requiredSpans.flatMap<
+      (typeof requiredSpans)[number]
+    >((matcher) =>
+      matcher.continueWithErrorStatus
+        ? []
+        : withAllConditions<
+            SelectedRelationTupleT,
+            RelationSchemasT,
+            VariantsT
+          >(
+            matcher,
+            requiredSpanWithErrorStatus<
+              SelectedRelationTupleT,
+              RelationSchemasT,
+              VariantsT
+            >(),
+          ),
+    )
+
+    const interruptOnSpans = [
+      ...(manuallyDefinedInterruptOnSpans ?? []),
+      ...interruptOnRequiredErrored,
+    ] as typeof manuallyDefinedInterruptOnSpans
+
+    const suppressErrorStatusPropagationOnSpans = convertMatchersToFns<
+      SelectedRelationTupleT,
+      RelationSchemasT,
+      VariantsT
+    >(traceDefinition.suppressErrorStatusPropagationOnSpans)
+
     const computedSpanDefinitions = Object.fromEntries(
       Object.entries(traceDefinition.computedSpanDefinitions ?? {}).map(
         ([name, def]) => [
@@ -147,39 +207,6 @@ export class TraceManager<
         } as const,
       ]),
     )
-
-    const requiredSpans = convertMatchersToFns<
-      SelectedRelationTupleT,
-      RelationSchemasT,
-      VariantsT
-    >(traceDefinition.requiredSpans)
-
-    if (!requiredSpans) {
-      throw new Error(
-        'requiredSpans must be defined, as a trace will never end otherwise',
-      )
-    }
-
-    const labelMatching = traceDefinition.labelMatching
-      ? convertLabelMatchersToFns(traceDefinition.labelMatching)
-      : undefined
-
-    const debounceOnSpans = convertMatchersToFns<
-      SelectedRelationTupleT,
-      RelationSchemasT,
-      VariantsT
-    >(traceDefinition.debounceOnSpans)
-    const interruptOnSpans = convertMatchersToFns<
-      SelectedRelationTupleT,
-      RelationSchemasT,
-      VariantsT
-    >(traceDefinition.interruptOnSpans)
-
-    const suppressErrorStatusPropagationOnSpans = convertMatchersToFns<
-      SelectedRelationTupleT,
-      RelationSchemasT,
-      VariantsT
-    >(traceDefinition.suppressErrorStatusPropagationOnSpans)
 
     const completeTraceDefinition: CompleteTraceDefinition<
       SelectedRelationTupleT,

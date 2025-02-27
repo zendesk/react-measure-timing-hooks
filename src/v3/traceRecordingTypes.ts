@@ -48,8 +48,11 @@ export interface TraceRecordingBase<RelationSchemaT> {
 
   type: TraceType
 
-  // set to 'error' if any span with status: 'error' was part of the actual trace
-  // (except if it happened while in the waiting-for-interactive state)
+  // if trace was completed:
+  // it's set to 'error' if any span with status: 'error' was part
+  // of the actual trace (not while waiting-for-interactive, as that's considered the addition).
+  // if the trace was interrupted, it's set to 'interrupted'
+  // otherwise it's 'ok'
   status: TraceStatus
 
   // STRICTER TYPE TODO: separate out trace recording into a union of trace recording and interrupted trace recording (fields that will be different: interruption reason,duration, and status)

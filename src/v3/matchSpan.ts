@@ -8,7 +8,9 @@ import type {
 import type { KeysOfRelationSchemaToTuples, Prettify } from './typeUtils'
 
 export interface SpanMatcherTags {
-  isIdle?: boolean
+  idleCheck?: boolean
+  continueWithErrorStatus?: boolean
+  requiredSpan?: boolean
 }
 
 /**
@@ -229,7 +231,23 @@ export function whenIdle<
   return Object.assign(
     matcherFn,
     // add a tag to the function if set to true
-    value ? { isIdle: value } : {},
+    value ? ({ idleCheck: value } satisfies SpanMatcherTags) : {},
+  )
+}
+
+/**
+ * Only applicable for 'requiredSpans' list: it will opt-out of the default behavior,
+ * which interrupts the trace if the requiredSpan has an error status.
+ */
+export function continueWithErrorStatus<
+  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const RelationSchemasT,
+  const VariantsT extends string,
+>(): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+  return Object.assign(
+    () => true,
+    // add a tag to the function if set to true
+    { continueWithErrorStatus: true } satisfies SpanMatcherTags,
   )
 }
 
