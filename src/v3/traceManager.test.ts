@@ -15,7 +15,7 @@ import type {
 } from './testUtility/fixtures/relationSchemas'
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
-import { TraceManager } from './traceManager'
+import { TraceManager } from './TraceManager'
 import type { ReportFn } from './types'
 
 describe('TraceManager', () => {
@@ -166,7 +166,7 @@ describe('TraceManager', () => {
     // Define a computed value
     tracer.defineComputedValue({
       name: 'feature',
-      matches: [matchSpan.withName('feature')],
+      matches: [{ name: 'feature' }],
       computeValueFromMatches: (feature) => feature.length,
     })
 

@@ -7,7 +7,7 @@ import type {
   UseBeacon,
 } from './hooksTypes'
 import type { ComponentRenderSpan } from './spanTypes'
-import type { TraceManager } from './traceManager'
+import type { TraceManager } from './TraceManager'
 import type { RelationSchemaValue, Timestamp } from './types'
 
 type MakeEntryInput<RelationSchemasT> = Omit<

@@ -900,7 +900,7 @@ interface PrepareAndEmitRecordingOptions<RelationSchemasT> {
   lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
 }
 
-export class ActiveTrace<
+export class Trace<
   const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
   const RelationSchemasT,
   const VariantsT extends string,
@@ -922,7 +922,7 @@ export class ActiveTrace<
     VariantsT
   > {
     if (!this.input.relatedTo) {
-      throw new Error('tried to access input without relatedTo')
+      throw new Error("Tried to access active trace's input without relatedTo")
     }
     return this.input as ActiveTraceConfig<
       SelectedRelationTupleT,
@@ -1080,7 +1080,7 @@ export class ActiveTrace<
         )
         this.onEnd(traceRecording)
 
-        // memory clean-up in case something retains the ActiveTrace instance
+        // memory clean-up in case something retains the Trace instance
         this.recordedItems.clear()
         this.occurrenceCounters.clear()
         this.processedPerformanceEntries = new WeakMap()
@@ -1093,7 +1093,7 @@ export class ActiveTrace<
     traceRecording: TraceRecording<SelectedRelationTupleT, RelationSchemasT>,
   ): void {
     // @ts-expect-error TS isn't smart enough to disambiguate this situation yet; maybe in the future this will work OOTB
-    this.traceUtilities.cleanupActiveTrace(this)
+    this.traceUtilities.cleanupCurrentTrace(this)
     ;(
       this.traceUtilities.reportFn as SingleTraceReportFn<
         SelectedRelationTupleT,
@@ -1271,11 +1271,11 @@ export class ActiveTrace<
   }
 }
 
-export type AllPossibleActiveTraces<
+export type AllPossibleTraces<
   ForEachRelationSchemaT,
   RelationSchemasT = ForEachRelationSchemaT,
 > = ForEachRelationSchemaT extends ForEachRelationSchemaT
-  ? ActiveTrace<
+  ? Trace<
       KeysOfRelationSchemaToTuples<ForEachRelationSchemaT> &
         KeysOfRelationSchemaToTuples<RelationSchemasT>,
       RelationSchemasT,

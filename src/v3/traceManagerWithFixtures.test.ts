@@ -11,7 +11,7 @@ import { type TicketIdRelationSchema } from './testUtility/fixtures/relationSche
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import { ticketActivationDefinition } from './testUtility/fixtures/ticket.activation'
-import { TraceManager } from './traceManager'
+import { TraceManager } from './TraceManager'
 import type { ReportFn } from './types'
 
 interface TicketScope {

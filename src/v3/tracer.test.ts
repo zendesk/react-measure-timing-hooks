@@ -9,7 +9,7 @@ import {
 } from 'vitest'
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
-import { TraceManager } from './traceManager'
+import { TraceManager } from './TraceManager'
 import type { ReportFn } from './types'
 
 interface TestRelationSchema {

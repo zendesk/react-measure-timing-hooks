@@ -1,14 +1,14 @@
-import type { AllPossibleActiveTraces } from './ActiveTrace'
 import {
   convertLabelMatchersToFns,
   convertMatchersToFns,
   ensureMatcherFn,
 } from './ensureMatcherFn'
-import { type SpanMatch, withAllConditions, withStatus } from './matchSpan'
+import { type SpanMatch, withAllConditions } from './matchSpan'
 import { requiredSpanWithErrorStatus } from './requiredSpanWithErrorStatus'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
-import { Tracer } from './tracer'
+import type { AllPossibleTraces } from './Trace'
+import { Tracer } from './Tracer'
 import type {
   CompleteTraceDefinition,
   ComputedValueDefinitionInput,
@@ -29,14 +29,14 @@ export class TraceManager<
   },
 > {
   readonly performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<RelationSchemasT>
-  private activeTrace: AllPossibleActiveTraces<RelationSchemasT> | undefined =
+  private currentTrace: AllPossibleTraces<RelationSchemasT> | undefined =
     undefined
 
-  get activeTracerContext() {
-    if (!this.activeTrace) return undefined
+  get currentTracerContext() {
+    if (!this.currentTrace) return undefined
     return {
-      definition: this.activeTrace.definition,
-      input: this.activeTrace.input,
+      definition: this.currentTrace.definition,
+      input: this.currentTrace.input,
     }
   }
 
@@ -50,24 +50,22 @@ export class TraceManager<
       // by default noop for warnings
       reportWarningFn: () => {},
       ...configInput,
-      replaceActiveTrace: (
-        newTrace: AllPossibleActiveTraces<RelationSchemasT>,
-      ) => {
-        if (this.activeTrace) {
-          this.activeTrace.interrupt('another-trace-started')
-          this.activeTrace = undefined
+      replaceCurrentTrace: (newTrace: AllPossibleTraces<RelationSchemasT>) => {
+        if (this.currentTrace) {
+          this.currentTrace.interrupt('another-trace-started')
+          this.currentTrace = undefined
         }
-        this.activeTrace = newTrace
+        this.currentTrace = newTrace
       },
-      cleanupActiveTrace: (
-        traceToCleanUp: AllPossibleActiveTraces<RelationSchemasT>,
+      cleanupCurrentTrace: (
+        traceToCleanUp: AllPossibleTraces<RelationSchemasT>,
       ) => {
-        if (traceToCleanUp === this.activeTrace) {
-          this.activeTrace = undefined
+        if (traceToCleanUp === this.currentTrace) {
+          this.currentTrace = undefined
         }
         // warn on miss?
       },
-      getActiveTrace: () => this.activeTrace,
+      getCurrentTrace: () => this.currentTrace,
     }
   }
 
@@ -227,6 +225,6 @@ export class TraceManager<
   }
 
   processSpan(span: Span<RelationSchemasT>): SpanAnnotationRecord | undefined {
-    return this.activeTrace?.processSpan(span)
+    return this.currentTrace?.processSpan(span)
   }
 }

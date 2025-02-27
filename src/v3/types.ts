@@ -1,4 +1,3 @@
-import type { AllPossibleActiveTraces } from './ActiveTrace'
 import type { CPUIdleProcessorOptions } from './firstCPUIdle'
 import type { SpanMatch, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
@@ -9,6 +8,7 @@ import type {
   Span,
   SpanStatus,
 } from './spanTypes'
+import type { AllPossibleTraces } from './Trace'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
   ArrayWithAtLeastOneElement,
@@ -135,14 +135,12 @@ export interface TraceManagerUtilities<RelationSchemasT>
   /**
    * interrupts the active trace (if any) and replaces it with a new one
    */
-  replaceActiveTrace: (
-    newTrace: AllPossibleActiveTraces<RelationSchemasT>,
-  ) => void
-  cleanupActiveTrace: (
-    traceToCleanUp: AllPossibleActiveTraces<RelationSchemasT>,
+  replaceCurrentTrace: (newTrace: AllPossibleTraces<RelationSchemasT>) => void
+  cleanupCurrentTrace: (
+    traceToCleanUp: AllPossibleTraces<RelationSchemasT>,
   ) => void
   // TODO: should this be called currentTrace instead, since it might return a draft? or is draft simply a type of active trace, since it's already buffering recorded spans?
-  getActiveTrace: () => AllPossibleActiveTraces<RelationSchemasT> | undefined
+  getCurrentTrace: () => AllPossibleTraces<RelationSchemasT> | undefined
 }
 
 export interface TraceModificationsBase<

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
-import type { NonTerminalTraceStates } from './ActiveTrace'
+import type { NonTerminalTraceStates } from './Trace'
 import type { Span } from './spanTypes'
 
 export interface SpanAnnotation {

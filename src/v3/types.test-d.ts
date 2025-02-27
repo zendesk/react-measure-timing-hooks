@@ -2,7 +2,7 @@ import { assertType, describe, expect, it } from 'vitest'
 import { generateUseBeacon } from './hooks'
 import type { GetScopeTFromTraceManager } from './hooksTypes'
 import * as match from './matchSpan'
-import { TraceManager } from './traceManager'
+import { TraceManager } from './TraceManager'
 import type { MapSchemaToTypes } from './types'
 
 const mockSpanWithoutScope = {

@@ -1,7 +1,7 @@
 /* eslint-disable no-continue */
-import type { FinalState } from './ActiveTrace'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
+import type { FinalState } from './Trace'
 import type { TraceRecording } from './traceRecordingTypes'
 import type { SelectRelationSchemaByKeysTuple, TraceContext } from './types'
 import type { KeysOfRelationSchemaToTuples } from './typeUtils'

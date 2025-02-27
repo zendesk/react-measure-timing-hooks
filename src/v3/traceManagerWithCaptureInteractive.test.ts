@@ -18,7 +18,7 @@ import {
   Render,
 } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
-import { TraceManager } from './traceManager'
+import { TraceManager } from './TraceManager'
 import type { ReportFn } from './types'
 
 const GOOGLES_QUIET_WINDOW_DURATION = 2_000

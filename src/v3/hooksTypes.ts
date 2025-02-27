@@ -1,5 +1,5 @@
 import type { Attributes } from './spanTypes'
-import type { TraceManager } from './traceManager'
+import type { TraceManager } from './TraceManager'
 import type { RelationsOnASpan } from './types'
 
 export type RenderedOutput = 'null' | 'loading' | 'content' | 'error'

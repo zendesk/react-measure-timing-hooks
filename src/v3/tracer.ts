@@ -1,9 +1,9 @@
-import { ActiveTrace, type AllPossibleActiveTraces } from './ActiveTrace'
 import { ensureMatcherFn } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import type { SpanMatch, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
+import { type AllPossibleTraces, Trace } from './Trace'
 import {
   type CompleteTraceDefinition,
   type ComputedSpanDefinitionInput,
@@ -65,7 +65,7 @@ export class Tracer<
   ): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
 
-    const activeTrace = new ActiveTrace<
+    const trace = new Trace<
       SelectedRelationTupleT,
       RelationSchemasT,
       VariantsT
@@ -81,19 +81,19 @@ export class Tracer<
       this.traceUtilities,
     )
 
-    this.traceUtilities.replaceActiveTrace(
-      activeTrace as unknown as AllPossibleActiveTraces<RelationSchemasT>,
+    this.traceUtilities.replaceCurrentTrace(
+      trace as unknown as AllPossibleTraces<RelationSchemasT>,
     )
 
     return id
   }
 
   interrupt = ({ error }: { error?: Error } = {}) => {
-    const activeTrace = this.traceUtilities.getActiveTrace() as
-      | ActiveTrace<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+    const trace = this.traceUtilities.getCurrentTrace() as
+      | Trace<SelectedRelationTupleT, RelationSchemasT, VariantsT>
       | undefined
 
-    if (!activeTrace) {
+    if (!trace) {
       this.traceUtilities.reportWarningFn(
         new Error(
           `No currently active trace when canceling a draft. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
@@ -102,8 +102,8 @@ export class Tracer<
       return
     }
 
-    // verify that activeTrace is the same definition as the Tracer's definition
-    if (activeTrace.sourceDefinition !== this.definition) {
+    // verify that trace is the same definition as the Tracer's definition
+    if (trace.sourceDefinition !== this.definition) {
       this.traceUtilities.reportWarningFn(
         new Error(
           `You are trying to cancel a draft that is not the same definition as the Tracer's definition.`,
@@ -113,7 +113,7 @@ export class Tracer<
     }
 
     if (error) {
-      activeTrace.processSpan({
+      trace.processSpan({
         name: error.name,
         startTime: ensureTimestamp(),
         // TODO: use a dedicated error type
@@ -122,16 +122,16 @@ export class Tracer<
         duration: 0,
         error,
       })
-      activeTrace.interrupt('aborted')
+      trace.interrupt('aborted')
       return
     }
 
-    if (activeTrace.isDraft) {
-      activeTrace.interrupt('draft-cancelled')
+    if (trace.isDraft) {
+      trace.interrupt('draft-cancelled')
       return
     }
 
-    activeTrace.interrupt('aborted')
+    trace.interrupt('aborted')
   }
 
   // can have config changed until we move into active
@@ -145,11 +145,11 @@ export class Tracer<
       VariantsT
     >,
   ): void => {
-    const activeTrace = this.traceUtilities.getActiveTrace() as
-      | ActiveTrace<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+    const trace = this.traceUtilities.getCurrentTrace() as
+      | Trace<SelectedRelationTupleT, RelationSchemasT, VariantsT>
       | undefined
 
-    if (!activeTrace) {
+    if (!trace) {
       this.traceUtilities.reportErrorFn(
         new Error(
           `No currently active trace when initializing a trace. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
@@ -159,17 +159,17 @@ export class Tracer<
     }
 
     // this is an already initialized active trace, do nothing:
-    if (!activeTrace.isDraft) {
+    if (!trace.isDraft) {
       this.traceUtilities.reportWarningFn(
         new Error(
-          `You are trying to initialize a trace that has already been initialized before (${activeTrace.definition.name}).`,
+          `You are trying to initialize a trace that has already been initialized before (${trace.definition.name}).`,
         ),
       )
       return
     }
 
-    // verify that activeTrace is the same definition as the Tracer's definition
-    if (activeTrace.sourceDefinition !== this.definition) {
+    // verify that trace is the same definition as the Tracer's definition
+    if (trace.sourceDefinition !== this.definition) {
       this.traceUtilities.reportWarningFn(
         new Error(
           `You are trying to initialize a trace that is not the same definition as the Tracer's definition is different.`,
@@ -178,7 +178,7 @@ export class Tracer<
       return
     }
 
-    activeTrace.transitionDraftToActive(inputAndDefinitionModifications)
+    trace.transitionDraftToActive(inputAndDefinitionModifications)
   }
 
   defineComputedSpan = (

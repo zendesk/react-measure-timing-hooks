@@ -1,6 +1,6 @@
 import { generateUseBeacon } from '../../v3/hooks'
 import { observePerformanceWithTraceManager } from '../../v3/observePerformanceWithTraceManager'
-import { TraceManager } from '../../v3/traceManager'
+import { TraceManager } from '../../v3/TraceManager'
 
 export const traceManager = new TraceManager({
   relationSchemas: [{ ticketId: Number }],

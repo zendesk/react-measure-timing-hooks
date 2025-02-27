@@ -1,6 +1,6 @@
 import { getSpanFromPerformanceEntry } from './getSpanFromPerformanceEntry'
 import type { NativePerformanceEntryType } from './spanTypes'
-import type { TraceManager } from './traceManager'
+import type { TraceManager } from './TraceManager'
 import type {
   DeriveRelationsFromPerformanceEntryFn,
   RelationSchemaValue,

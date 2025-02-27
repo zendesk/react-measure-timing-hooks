@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { States, TraceStates } from './ActiveTrace'
+import type { States, TraceStates } from './Trace'
 
 export type DistributiveOmit<T, K extends keyof any> = T extends T
   ? Omit<T, K>
