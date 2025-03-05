@@ -3,13 +3,11 @@ import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { Attributes } from './spanTypes'
 import type {
   MapSchemaToTypes,
-  SelectRelationSchemaByKeysTuple,
   Timestamp,
   TraceInterruptionReason,
   TraceStatus,
   TraceType,
 } from './types'
-import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 
 export interface ComputedSpan {
   // time relative to beginning of the trace
@@ -86,10 +84,8 @@ export interface TraceRecordingBase<RelationSchemaT> {
 }
 
 export interface TraceRecording<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
-> extends TraceRecordingBase<
-    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
-  > {
+> extends TraceRecordingBase<RelationSchemasT[SelectedRelationKeyT]> {
   entries: SpanAndAnnotation<RelationSchemasT>[]
 }

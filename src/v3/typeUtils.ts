@@ -9,21 +9,6 @@ export type Prettify<T> = {
   [K in keyof T]: T[K]
 } & {}
 
-/**
- * For each object type T in union U, produce a union of
- * *every possible permutation* of its keys as a tuple.
- * Adds an empty tuple and handles the case of records with a string index signature.
- */
-export type KeysOfRelationSchemaToTuples<T> =
-  | (T extends unknown
-      ? PropertyKey extends T
-        ? readonly [string]
-        : string extends keyof T
-        ? readonly string[]
-        : UnionToTuplePermutations<keyof RemoveAllUndefinedProperties<T>>
-      : never)
-  | readonly []
-
 // type Example = KeysOfRelationSchemaToTuples<{ a: string; b: number; c: number } | { a: number }>;
 // type TestAbove = KeysOfRelationSchemaToTuples<{}>
 
@@ -125,21 +110,6 @@ export type SelectBySomeKeysUnion<
 // type TestAbove = SelectBySomeKeysUnion<['a'], { a: string; b: number } | { a: string; c: number }>;
 // type TestAbove2 = SelectBySomeKeysUnion<['b'], { a: string; b: number } | { a: string; c: number }>;
 
-/**
- * Permutations<U> returns a union of *all* possible permutations
- * of the keys in U as tuples.
- *
- * Example:
- *   Permutations<"a" | "b">  // => ["a","b"] | ["b","a"]
- *   Permutations<"a">        // => ["a"]
- *   Permutations<never>      // => [] (empty array)
- */
-type UnionToTuplePermutations<U extends PropertyKey> = [U] extends [never]
-  ? []
-  : {
-      [K in U]: readonly [K, ...UnionToTuplePermutations<Exclude<U, K>>]
-    }[U]
-
 export type UnionToIntersection<U> = (
   U extends U ? (x: U) => void : never
 ) extends (x: infer I) => void
@@ -147,24 +117,24 @@ export type UnionToIntersection<U> = (
   : never
 
 type HandlerToPayloadTuples<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
   State extends TraceStates = TraceStates,
 > = State extends State
   ? {
       [K in keyof States<
-        SelectedRelationTupleT,
+        SelectedRelationKeyT,
         RelationSchemasT,
         VariantsT
       >[State]]: States<
-        SelectedRelationTupleT,
+        SelectedRelationKeyT,
         RelationSchemasT,
         VariantsT
       >[State][K] extends (...args: infer ArgsT) => infer ReturnT
         ? [K, ArgsT[0], ReturnT]
         : never
-    }[keyof States<SelectedRelationTupleT, RelationSchemasT, VariantsT>[State]]
+    }[keyof States<SelectedRelationKeyT, RelationSchemasT, VariantsT>[State]]
   : never
 
 type TupleToObject<T extends [PropertyKey, any, any]> = Prettify<{
@@ -176,38 +146,38 @@ type TupleToObject2<T extends [PropertyKey, any, any]> = Prettify<{
 }>
 
 export type StateHandlerPayloads<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = TupleToObject<
-  HandlerToPayloadTuples<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+  HandlerToPayloadTuples<SelectedRelationKeyT, RelationSchemasT, VariantsT>
 >
 
 export type StateHandlerReturnTypes<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = TupleToObject2<
-  HandlerToPayloadTuples<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+  HandlerToPayloadTuples<SelectedRelationKeyT, RelationSchemasT, VariantsT>
 >
 
 export type MergedStateHandlerMethods<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = {
   [K in keyof StateHandlerPayloads<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   >]: (
     payload: StateHandlerPayloads<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >[K],
   ) => StateHandlerReturnTypes<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   >[K]

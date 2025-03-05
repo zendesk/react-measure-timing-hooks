@@ -1,18 +1,18 @@
 import type { TraceDefinition } from '../../types'
-import type { FixtureAllPossibleRelationSchemas } from './relationSchemas'
+import type { TicketAndUserAndGlobalRelationSchemasFixture } from './relationSchemas'
 
 const TICKET_DISPOSE_EVENT_NAME = `ticket.dispose`
 const TICKET_NAVIGATED_AWAY_EVENT_NAME = `ticket.navigated-away`
 
 export const ticketActivationDefinition: TraceDefinition<
-  ['ticketId'],
-  FixtureAllPossibleRelationSchemas,
+  'ticket',
+  TicketAndUserAndGlobalRelationSchemasFixture,
   'cold_boot',
   {}
 > = {
   name: 'ticket.activation',
   type: 'operation',
-  relations: ['ticketId'],
+  relations: 'ticket',
   variants: {
     cold_boot: { timeout: 60_000 },
   },

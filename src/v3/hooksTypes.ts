@@ -1,12 +1,12 @@
 import type { Attributes } from './spanTypes'
 import type { TraceManager } from './TraceManager'
-import type { RelationsOnASpan } from './types'
+import type { RelatedTo } from './types'
 
 export type RenderedOutput = 'null' | 'loading' | 'content' | 'error'
 
 export type BeaconConfig<RelationSchemasT, RequiredAttributesT = {}> = {
   name: string
-  relatedTo: RelationsOnASpan<RelationSchemasT>
+  relatedTo: RelatedTo<RelationSchemasT>
   renderedOutput: RenderedOutput
   isIdle?: boolean
   error?: Error

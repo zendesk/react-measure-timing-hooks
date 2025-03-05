@@ -24,7 +24,6 @@ import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
   DraftTraceContext,
-  SelectRelationSchemaByKeysTuple,
   SingleTraceReportFn,
   TraceInterruptionReason,
   TraceInterruptionReasonForInvalidTraces,
@@ -35,7 +34,6 @@ import type {
 import { INVALID_INTERRUPTION_REASONS } from './types'
 import type {
   DistributiveOmit,
-  KeysOfRelationSchemaToTuples,
   MergedStateHandlerMethods,
   StateHandlerPayloads,
 } from './typeUtils'
@@ -106,11 +104,11 @@ export type Transition<RelationSchemasT> = DistributiveOmit<
 type FinalizeFn<RelationSchemaT> = (config: FinalState<RelationSchemaT>) => void
 
 export type States<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = TraceStateMachine<
-  SelectedRelationTupleT,
+  SelectedRelationKeyT,
   RelationSchemasT,
   VariantsT
 >['states']
@@ -131,11 +129,11 @@ type StatesBase<RelationSchemasT> = Record<
 >
 
 interface TraceStateMachineSideEffectHandlers<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
 > {
   readonly storeFinalizeState: FinalizeFn<
-    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
+    RelationSchemasT[SelectedRelationKeyT]
   >
   readonly addSpanToRecording: (
     spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
@@ -150,16 +148,12 @@ type EntryType<RelationSchemasT> = PerformanceEntryLike & {
 }
 
 interface StateMachineContext<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
-> extends DraftTraceContext<
-    SelectedRelationTupleT,
-    RelationSchemasT,
-    VariantsT
-  > {
+> extends DraftTraceContext<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
   sideEffectFns: TraceStateMachineSideEffectHandlers<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT
   >
 }
@@ -167,13 +161,13 @@ interface StateMachineContext<
 type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
 
 export class TraceStateMachine<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
 > {
   constructor(
     context: StateMachineContext<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >,
@@ -188,7 +182,7 @@ export class TraceStateMachine<
   readonly requiredSpansIndexChecklist: Set<number>
 
   readonly context: StateMachineContext<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   >
@@ -862,21 +856,21 @@ export class TraceStateMachine<
    */
   emit<
     EventName extends keyof StateHandlerPayloads<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >,
   >(
     event: EventName,
     payload: StateHandlerPayloads<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >[EventName],
   ): OnEnterStatePayload<RelationSchemasT> | undefined {
     const currentStateHandlers = this.states[this.currentState] as Partial<
       MergedStateHandlerMethods<
-        SelectedRelationTupleT,
+        SelectedRelationKeyT,
         RelationSchemasT,
         VariantsT
       >
@@ -901,23 +895,23 @@ interface PrepareAndEmitRecordingOptions<RelationSchemasT> {
 }
 
 export class Trace<
-  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const SelectedRelationKeyT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 > {
   readonly sourceDefinition: CompleteTraceDefinition<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   >
   /** the final, mutable definition of this specific trace */
   definition: CompleteTraceDefinition<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   >
   get activeInput(): ActiveTraceConfig<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   > {
@@ -925,25 +919,18 @@ export class Trace<
       throw new Error("Tried to access active trace's input without relatedTo")
     }
     return this.input as ActiveTraceConfig<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >
   }
   set activeInput(
-    value: ActiveTraceConfig<
-      SelectedRelationTupleT,
-      RelationSchemasT,
-      VariantsT
-    >,
+    value: ActiveTraceConfig<SelectedRelationKeyT, RelationSchemasT, VariantsT>,
   ) {
     this.input = value
   }
 
-  input: DraftTraceInput<
-    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
-    VariantsT
-  >
+  input: DraftTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT>
   private readonly traceUtilities: TraceManagerUtilities<RelationSchemasT>
 
   get isDraft() {
@@ -952,7 +939,7 @@ export class Trace<
 
   recordedItems: Set<SpanAndAnnotation<RelationSchemasT>> = new Set()
   stateMachine: TraceStateMachine<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   >
@@ -962,25 +949,15 @@ export class Trace<
     SpanAndAnnotation<RelationSchemasT>
   > = new WeakMap()
 
-  finalState:
-    | FinalState<
-        SelectRelationSchemaByKeysTuple<
-          SelectedRelationTupleT,
-          RelationSchemasT
-        >
-      >
-    | undefined
+  finalState: FinalState<RelationSchemasT[SelectedRelationKeyT]> | undefined
 
   constructor(
     definition: CompleteTraceDefinition<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >,
-    input: DraftTraceInput<
-      SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
-      VariantsT
-    >,
+    input: DraftTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT>,
     traceUtilities: TraceManagerUtilities<RelationSchemasT>,
   ) {
     // Verify that the variant value is valid
@@ -999,7 +976,9 @@ export class Trace<
     this.definition = {
       name: definition.name,
       type: definition.type,
-      relations: [...definition.relations],
+      relations: definition.relations,
+      selectedRelationSchema: definition.selectedRelationSchema,
+
       variants: { ...definition.variants },
 
       labelMatching: { ...definition.labelMatching },
@@ -1037,7 +1016,7 @@ export class Trace<
   }
 
   sideEffectFns: TraceStateMachineSideEffectHandlers<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT
   > = {
     storeFinalizeState: (config) => {
@@ -1090,13 +1069,13 @@ export class Trace<
   }
 
   onEnd(
-    traceRecording: TraceRecording<SelectedRelationTupleT, RelationSchemasT>,
+    traceRecording: TraceRecording<SelectedRelationKeyT, RelationSchemasT>,
   ): void {
     // @ts-expect-error TS isn't smart enough to disambiguate this situation yet; maybe in the future this will work OOTB
     this.traceUtilities.cleanupCurrentTrace(this)
     ;(
       this.traceUtilities.reportFn as SingleTraceReportFn<
-        SelectedRelationTupleT,
+        SelectedRelationKeyT,
         RelationSchemasT,
         VariantsT
       >
@@ -1110,7 +1089,7 @@ export class Trace<
 
   transitionDraftToActive(
     inputAndDefinitionModifications: TraceModifications<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >,
@@ -1137,20 +1116,20 @@ export class Trace<
    */
   private applyDefinitionModifications(
     definitionModifications: TraceModificationsBase<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >,
   ) {
     const { definition } = this
     const additionalRequiredSpans = convertMatchersToFns<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >(definitionModifications.additionalRequiredSpans)
 
     const additionalDebounceOnSpans = convertMatchersToFns<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >(definitionModifications.additionalDebounceOnSpans)
@@ -1276,8 +1255,7 @@ export type AllPossibleTraces<
   RelationSchemasT = ForEachRelationSchemaT,
 > = ForEachRelationSchemaT extends ForEachRelationSchemaT
   ? Trace<
-      KeysOfRelationSchemaToTuples<ForEachRelationSchemaT> &
-        KeysOfRelationSchemaToTuples<RelationSchemasT>,
+      keyof ForEachRelationSchemaT & keyof RelationSchemasT,
       RelationSchemasT,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       any

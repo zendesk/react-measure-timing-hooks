@@ -1,25 +1,22 @@
 import { fromDefinition, type SpanMatch, type SpanMatcherFn } from './matchSpan'
 import type { LabelMatchingFnsRecord, LabelMatchingInputRecord } from './types'
-import type {
-  ArrayWithAtLeastOneElement,
-  KeysOfRelationSchemaToTuples,
-} from './typeUtils'
+import type { ArrayWithAtLeastOneElement } from './typeUtils'
 
 export function ensureMatcherFn<
-  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const SelectedRelationKeyT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
   const MatcherInputT extends SpanMatch<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
-  > = SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
+  > = SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>,
 >(
   matcherFnOrDefinition: MatcherInputT,
-): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
   return typeof matcherFnOrDefinition === 'function'
     ? matcherFnOrDefinition
-    : fromDefinition<SelectedRelationTupleT, RelationSchemasT, VariantsT>(
+    : fromDefinition<SelectedRelationKeyT, RelationSchemasT, VariantsT>(
         matcherFnOrDefinition,
       )
 }
@@ -31,20 +28,20 @@ function arrayHasAtLeastOneElement<T>(
 }
 
 export function convertMatchersToFns<
-  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const SelectedRelationKeyT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   matchers:
-    | readonly SpanMatch<SelectedRelationTupleT, RelationSchemasT, VariantsT>[]
+    | readonly SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>[]
     | undefined,
 ):
   | ArrayWithAtLeastOneElement<
-      SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+      SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
     >
   | undefined {
   const mapped = matchers?.map<
-    SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT>
+    SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
   >((m) => ensureMatcherFn(m))
 
   if (mapped && arrayHasAtLeastOneElement(mapped)) {
@@ -54,18 +51,18 @@ export function convertMatchersToFns<
 }
 
 export function convertLabelMatchersToFns<
-  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const SelectedRelationKeyT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   definitionLabelMatchers: LabelMatchingInputRecord<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   >,
-): LabelMatchingFnsRecord<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+): LabelMatchingFnsRecord<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
   const matchers: LabelMatchingFnsRecord<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   > = {}
@@ -73,7 +70,7 @@ export function convertLabelMatchersToFns<
     // eslint-disable-next-line no-continue
     if (!definitionLabelMatchers?.[key]) continue
     matchers[key] = ensureMatcherFn<
-      SelectedRelationTupleT,
+      SelectedRelationKeyT,
       RelationSchemasT,
       VariantsT
     >(definitionLabelMatchers[key])

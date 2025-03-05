@@ -6,19 +6,20 @@ import {
   createMockSpanAndAnnotation,
   createTimestamp,
 } from './testUtility/createMockFactory'
-import type { TicketIdRelationSchema } from './testUtility/fixtures/relationSchemas'
+import type { TicketIdRelationSchemasFixture } from './testUtility/fixtures/relationSchemas'
 import type { CompleteTraceDefinition } from './types'
 import type { MapTypesToSchema } from './typeUtils'
 
 describe('convertTraceToRUM', () => {
   it('should round all numeric values in the trace recording', () => {
     const definition: CompleteTraceDefinition<
-      ['ticketId'],
-      TicketIdRelationSchema,
+      'ticket',
+      TicketIdRelationSchemasFixture,
       'origin'
     > = {
       name: 'test-trace',
-      relations: ['ticketId'],
+      relations: 'ticket',
+      selectedRelationSchema: { ticketId: String },
       requiredSpans: [() => true],
       computedSpanDefinitions: {},
       computedValueDefinitions: {},
@@ -28,7 +29,7 @@ describe('convertTraceToRUM', () => {
     }
 
     const input: ActiveTraceInput<
-      MapTypesToSchema<TicketIdRelationSchema>,
+      MapTypesToSchema<TicketIdRelationSchemasFixture['ticket']>,
       'origin'
     > = {
       id: 'test',

@@ -8,14 +8,17 @@ import {
   vitest as jest,
 } from 'vitest'
 import * as match from './matchSpan'
-import type { TicketIdRelationSchema } from './testUtility/fixtures/relationSchemas'
+import {
+  type TicketAndUserAndGlobalRelationSchemasFixture,
+  ticketAndUserAndGlobalRelationSchemasFixture as relationSchemas,
+} from './testUtility/fixtures/relationSchemas'
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './TraceManager'
 import type { ReportFn } from './types'
 
 describe('Trace Definitions', () => {
-  let reportFn: Mock<ReportFn<TicketIdRelationSchema>>
+  let reportFn: Mock<ReportFn<TicketAndUserAndGlobalRelationSchemasFixture>>
   let generateId: Mock
   let reportErrorFn: Mock
   const DEFAULT_COLDBOOT_TIMEOUT_DURATION = 45_000
@@ -25,7 +28,7 @@ describe('Trace Definitions', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<ReportFn<TicketIdRelationSchema>>()
+    reportFn = jest.fn()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
   })
@@ -33,7 +36,7 @@ describe('Trace Definitions', () => {
   describe('computedSpanDefinitions', () => {
     it('correctly calculates a computed span provided in definition', () => {
       const traceManager = new TraceManager({
-        relationSchemas: [{ ticketId: String }],
+        relationSchemas,
         reportFn,
         generateId,
         reportErrorFn,
@@ -43,7 +46,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.computed-span-operation',
         type: 'operation',
-        relations: [],
+        relations: 'ticket',
         requiredSpans: [{ name: 'end' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -65,7 +68,7 @@ describe('Trace Definitions', () => {
       expect(traceId).toBe('trace-id')
 
       // prettier-ignore
-      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
       Events: ${Render('start', 0)}---${Render('render-1', 50)}----${Render('render-2', 50)}----${Render('render-3', 50)}--------${Render('end', 0)}
       Time:   ${0}                    ${50}                        ${100}                       ${150}                           ${200}
       `
@@ -84,7 +87,7 @@ describe('Trace Definitions', () => {
 
     it('correctly calculates multiple computed spans in definition', () => {
       const traceManager = new TraceManager({
-        relationSchemas: [{ ticketId: String }],
+        relationSchemas,
         reportFn,
         generateId,
         reportErrorFn,
@@ -93,7 +96,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.multiple-computed-spans',
         type: 'operation',
-        relations: [],
+        relations: 'global',
         requiredSpans: [{ name: 'end' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -116,7 +119,7 @@ describe('Trace Definitions', () => {
       })
 
       // prettier-ignore
-      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
       Events: ${Render('start', 0)}---${Render('render-1', 50)}----${Render('render-2', 50)}----${Render('render-3', 50)}--------${Render('end', 0)}
       Time:   ${0}                    ${50}                        ${100}                       ${150}                           ${200}
       `
@@ -135,7 +138,7 @@ describe('Trace Definitions', () => {
   describe('requiredSpans error behavior', () => {
     it('interrupts trace when a required span has an error status', () => {
       const traceManager = new TraceManager({
-        relationSchemas: [{ ticketId: String }],
+        relationSchemas,
         reportFn,
         generateId,
         reportErrorFn,
@@ -144,7 +147,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.required-span-error',
         type: 'operation',
-        relations: [],
+        relations: 'global',
         requiredSpans: [{ name: 'feature' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -157,7 +160,7 @@ describe('Trace Definitions', () => {
       })
 
       // prettier-ignore
-      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
       Events: ${Render('start', 0)}--${Render('feature', 50, { status: 'error' })}
       Time:   ${0}                   ${50}
       `
@@ -174,7 +177,7 @@ describe('Trace Definitions', () => {
 
     it('does not interrupt trace when required span error is explicitly ignored', () => {
       const traceManager = new TraceManager({
-        relationSchemas: [{ ticketId: String }],
+        relationSchemas,
         reportFn,
         generateId,
         reportErrorFn,
@@ -183,7 +186,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.required-span-error-ignored',
         type: 'operation',
-        relations: [],
+        relations: 'global',
         requiredSpans: [
           match.withAllConditions(
             match.withName('feature'),
@@ -201,7 +204,7 @@ describe('Trace Definitions', () => {
       })
 
       // prettier-ignore
-      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
       Events: ${Render('start', 0)}--${Render('feature', 50, { status: 'error' })}--${Render('end', 0)}
       Time:   ${0}                   ${50}                                          ${100}
       `
@@ -216,7 +219,7 @@ describe('Trace Definitions', () => {
 
     it('interrupts trace when one of multiple required spans has an error', () => {
       const traceManager = new TraceManager({
-        relationSchemas: [{ ticketId: String }],
+        relationSchemas,
         reportFn,
         generateId,
         reportErrorFn,
@@ -225,7 +228,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.multiple-required-spans-error',
         type: 'operation',
-        relations: [],
+        relations: 'global',
         requiredSpans: [{ name: 'feature-1' }, { name: 'feature-2' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -238,7 +241,7 @@ describe('Trace Definitions', () => {
       })
 
       // prettier-ignore
-      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
       Events: ${Render('start', 0)}--${Render('feature-1', 50)}--${Render('feature-2', 50, { status: 'error' })}
       Time:   ${0}                   ${50}                       ${100}
       `
@@ -257,7 +260,7 @@ describe('Trace Definitions', () => {
   describe('computedValueDefinitions', () => {
     it('correctly calculates a computed value provided in definition', () => {
       const traceManager = new TraceManager({
-        relationSchemas: [{ ticketId: String }],
+        relationSchemas,
         reportFn,
         generateId,
         reportErrorFn,
@@ -266,7 +269,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.computed-value-operation',
         type: 'operation',
-        relations: [],
+        relations: 'global',
         requiredSpans: [{ name: 'end' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -286,7 +289,7 @@ describe('Trace Definitions', () => {
       })
 
       // prettier-ignore
-      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
       Events: ${Render('start', 0)}--${Render('feature', 50)}--${Render('feature', 50)}-${Render('end', 0)}
       Time:   ${0}                   ${50}                     ${100}                    ${150}
       `
@@ -302,7 +305,7 @@ describe('Trace Definitions', () => {
 
     it('correctly calculates multiple computed values with different matchers', () => {
       const traceManager = new TraceManager({
-        relationSchemas: [{ ticketId: String }],
+        relationSchemas,
         reportFn,
         generateId,
         reportErrorFn,
@@ -311,7 +314,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.multiple-computed-values',
         type: 'operation',
-        relations: [],
+        relations: 'global',
         requiredSpans: [{ name: 'end' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -340,7 +343,7 @@ describe('Trace Definitions', () => {
       })
 
       // prettier-ignore
-      const { spans } = getSpansFromTimeline<TicketIdRelationSchema>`
+      const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
       Events: ${Render('start', 0)}--${Render('feature', 50)}--${Render('error-1', 50)}--${Render('feature', 50)}--${Render('error-2', 50)}--${Render('end', 0)}
       Time:   ${0}                   ${50}                     ${100}                    ${150}                    ${200}                    ${250}
       `

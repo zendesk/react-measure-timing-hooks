@@ -11,25 +11,32 @@ import {
 } from './testUtility/createMockFactory'
 import type { CompleteTraceDefinition } from './types'
 
-type AnyScope = Record<string, unknown>
+interface AnyScope {
+  global: {}
+}
+
+const baseDefinitionFixture: CompleteTraceDefinition<
+  'global',
+  AnyScope,
+  'origin'
+> = {
+  name: 'test-trace',
+  relations: 'global',
+  selectedRelationSchema: { global: {} },
+  requiredSpans: [() => true],
+  computedSpanDefinitions: {},
+  computedValueDefinitions: {},
+  variants: {
+    origin: { timeout: 45_000 },
+  },
+}
 
 describe('recordingComputeUtils', () => {
   describe('error status propagation', () => {
-    const baseDefinition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
-      name: 'test-trace',
-      relations: [],
-      requiredSpans: [() => true],
-      computedSpanDefinitions: {},
-      computedValueDefinitions: {},
-      variants: {
-        origin: { timeout: 45_000 },
-      },
-    }
-
     it('should mark trace as error if any non-suppressed span has error status', () => {
       const recording = createTraceRecording(
         {
-          definition: baseDefinition,
+          definition: baseDefinitionFixture,
           recordedItems: [
             createMockSpanAndAnnotation(100, {
               status: 'error',
@@ -57,7 +64,7 @@ describe('recordingComputeUtils', () => {
       const recording = createTraceRecording(
         {
           definition: {
-            ...baseDefinition,
+            ...baseDefinitionFixture,
             suppressErrorStatusPropagationOnSpans: [
               ({ span }) => span.name === 'suppressed-error-span',
             ],
@@ -87,7 +94,7 @@ describe('recordingComputeUtils', () => {
       const recording = createTraceRecording(
         {
           definition: {
-            ...baseDefinition,
+            ...baseDefinitionFixture,
             suppressErrorStatusPropagationOnSpans: [
               ({ span }) => span.name === 'suppressed-error-span',
             ],
@@ -120,7 +127,7 @@ describe('recordingComputeUtils', () => {
     it('should prioritize interrupted status over error status', () => {
       const recording = createTraceRecording(
         {
-          definition: baseDefinition,
+          definition: baseDefinitionFixture,
           recordedItems: [
             createMockSpanAndAnnotation(100, {
               status: 'error',
@@ -146,19 +153,17 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedSpans', () => {
-    const baseDefinition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
-      name: 'test-trace',
-      relations: [],
-      requiredSpans: [() => true],
+    const baseDefinition: CompleteTraceDefinition<
+      'global',
+      AnyScope,
+      'origin'
+    > = {
+      ...baseDefinitionFixture,
       computedSpanDefinitions: {
         'test-computed-span': {
           startSpan: ({ span }) => span.name === 'start-span',
           endSpan: ({ span }) => span.name === 'end-span',
         },
-      },
-      computedValueDefinitions: {},
-      variants: {
-        origin: { timeout: 45_000 },
       },
     }
 
@@ -190,15 +195,16 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle operation-start and operation-end special matchers', () => {
-      const definition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
-        ...baseDefinition,
-        computedSpanDefinitions: {
-          'operation-span': {
-            startSpan: 'operation-start',
-            endSpan: 'operation-end',
+      const definition: CompleteTraceDefinition<'global', AnyScope, 'origin'> =
+        {
+          ...baseDefinition,
+          computedSpanDefinitions: {
+            'operation-span': {
+              startSpan: 'operation-start',
+              endSpan: 'operation-end',
+            },
           },
-        },
-      }
+        }
 
       const markedCompleteSpan = createMockSpanAndAnnotation(200, {
         name: 'end-span',
@@ -225,19 +231,17 @@ describe('recordingComputeUtils', () => {
   })
 
   describe('getComputedValues', () => {
-    const baseDefinition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
-      name: 'test-trace',
-      relations: [],
-      requiredSpans: [() => true],
-      computedSpanDefinitions: {},
+    const baseDefinition: CompleteTraceDefinition<
+      'global',
+      AnyScope,
+      'origin'
+    > = {
+      ...baseDefinitionFixture,
       computedValueDefinitions: {
         'error-count': {
           matches: [({ span }) => span.status === 'error'],
           computeValueFromMatches: (matches) => matches.length,
         },
-      },
-      variants: {
-        origin: { timeout: 45_000 },
       },
     }
 
@@ -262,19 +266,20 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle multiple matches in computeValueFromMatches', () => {
-      const definition: CompleteTraceDefinition<[], AnyScope, 'origin'> = {
-        ...baseDefinition,
-        computedValueDefinitions: {
-          'status-counts': {
-            matches: [
-              ({ span }) => span.status === 'error',
-              ({ span }) => span.status === 'ok',
-            ],
-            computeValueFromMatches: (errors, oks) =>
-              errors.length + oks.length,
+      const definition: CompleteTraceDefinition<'global', AnyScope, 'origin'> =
+        {
+          ...baseDefinition,
+          computedValueDefinitions: {
+            'status-counts': {
+              matches: [
+                ({ span }) => span.status === 'error',
+                ({ span }) => span.status === 'ok',
+              ],
+              computeValueFromMatches: (errors, oks) =>
+                errors.length + oks.length,
+            },
           },
-        },
-      }
+        }
 
       const result = getComputedValues({
         definition,
@@ -320,16 +325,7 @@ describe('recordingComputeUtils', () => {
     it('should compute render beacon metrics correctly', () => {
       const recording = createTraceRecording(
         {
-          definition: {
-            name: 'test-trace',
-            relations: [],
-            requiredSpans: [() => true],
-            computedSpanDefinitions: {},
-            computedValueDefinitions: {},
-            variants: {
-              origin: { timeout: 45_000 },
-            },
-          },
+          definition: baseDefinitionFixture,
           recordedItems: [
             createMockSpanAndAnnotation(100, {
               name: 'test-component',

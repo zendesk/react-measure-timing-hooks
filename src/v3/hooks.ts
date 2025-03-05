@@ -31,7 +31,9 @@ const makeEntry = <RelationSchemasT>(
 export const generateUseBeacon =
   <
     RelationSchemasT extends {
-      [K in keyof RelationSchemasT]: RelationSchemaValue
+      [SchemaNameT in keyof RelationSchemasT]: {
+        [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
+      }
     },
     RequiredAttributesT = {},
   >(

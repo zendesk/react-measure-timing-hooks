@@ -1,13 +1,12 @@
 import type { SpanMatcherFn, SpanMatcherTags } from './matchSpan'
-import type { KeysOfRelationSchemaToTuples } from './typeUtils'
 
 export function requiredSpanWithErrorStatus<
-  const SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  const SelectedRelationKeyT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
->(): SpanMatcherFn<SelectedRelationTupleT, RelationSchemasT, VariantsT> {
+>(): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
   const matcherFn: SpanMatcherFn<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   > = ({ span }) => span.status === 'error'

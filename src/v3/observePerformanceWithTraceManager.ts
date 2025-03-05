@@ -30,7 +30,9 @@ export const getBestSupportedEntryTypes = (): NativePerformanceEntryType[] =>
 
 export const observePerformanceWithTraceManager = <
   RelationSchemasT extends {
-    [K in keyof RelationSchemasT]: RelationSchemaValue
+    [SchemaNameT in keyof RelationSchemasT]: {
+      [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
+    }
   },
 >({
   traceManager,

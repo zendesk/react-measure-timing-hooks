@@ -7,7 +7,10 @@ import {
   it,
   vitest as jest,
 } from 'vitest'
-import { type TicketIdRelationSchema } from './testUtility/fixtures/relationSchemas'
+import {
+  ticketAndUserAndGlobalRelationSchemasFixture,
+  type TicketIdRelationSchemasFixture,
+} from './testUtility/fixtures/relationSchemas'
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import { ticketActivationDefinition } from './testUtility/fixtures/ticket.activation'
@@ -40,7 +43,7 @@ describe('TraceManager with Fixtures', () => {
 
   it('should complete with interactive time without interruption', () => {
     const traceManager = new TraceManager({
-      relationSchemas: [{ ticketId: String }],
+      relationSchemas: ticketAndUserAndGlobalRelationSchemasFixture,
       reportFn,
       generateId,
       reportErrorFn,
@@ -69,8 +72,9 @@ describe('TraceManager with Fixtures', () => {
     const {
       entries,
       ...report
-    }: Parameters<ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>>[0] =
-      reportFn.mock.calls[0][0]
+    }: Parameters<
+      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+    >[0] = reportFn.mock.calls[0][0]
 
     expect(report).toMatchInlineSnapshot(`
       {
@@ -130,7 +134,7 @@ describe('TraceManager with Fixtures', () => {
 
   it('should not end with interruption', () => {
     const traceManager = new TraceManager({
-      relationSchemas: [{ ticketId: String }],
+      relationSchemas: ticketAndUserAndGlobalRelationSchemasFixture,
       reportFn,
       generateId,
       reportErrorFn,
@@ -162,8 +166,9 @@ describe('TraceManager with Fixtures', () => {
     const {
       entries,
       ...report
-    }: Parameters<ReportFn<TicketIdRelationSchema, TicketIdRelationSchema>>[0] =
-      reportFn.mock.calls[0][0]
+    }: Parameters<
+      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+    >[0] = reportFn.mock.calls[0][0]
 
     expect(report).toMatchInlineSnapshot(`
       {

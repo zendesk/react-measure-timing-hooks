@@ -3,7 +3,7 @@ import { observePerformanceWithTraceManager } from '../../v3/observePerformanceW
 import { TraceManager } from '../../v3/TraceManager'
 
 export const traceManager = new TraceManager({
-  relationSchemas: [{ ticketId: Number }],
+  relationSchemas: { ticket: { ticketId: Number } },
   reportFn: (trace) => {
     // eslint-disable-next-line no-console
     console.log('# on End', trace, trace.entries, trace.duration)

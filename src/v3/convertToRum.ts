@@ -4,8 +4,7 @@ import type { SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ComponentRenderSpan, Span } from './spanTypes'
 import type { TraceRecording, TraceRecordingBase } from './traceRecordingTypes'
-import type { SelectRelationSchemaByKeysTuple, TraceContext } from './types'
-import type { KeysOfRelationSchemaToTuples } from './typeUtils'
+import type { TraceContext } from './types'
 
 export interface EmbeddedEntry {
   count: number
@@ -150,20 +149,18 @@ function recursivelyRoundValues<T extends object>(
 }
 
 export function convertTraceToRUM<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
 >(
-  traceRecording: TraceRecording<SelectedRelationTupleT, RelationSchemasT>,
-  context: TraceContext<SelectedRelationTupleT, RelationSchemasT, VariantsT>,
+  traceRecording: TraceRecording<SelectedRelationKeyT, RelationSchemasT>,
+  context: TraceContext<SelectedRelationKeyT, RelationSchemasT, VariantsT>,
   embedSpanSelector: SpanMatcherFn<
-    SelectedRelationTupleT,
+    SelectedRelationKeyT,
     RelationSchemasT,
     VariantsT
   > = defaultEmbedSpanSelector,
-): RumTraceRecording<
-  SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
-> {
+): RumTraceRecording<RelationSchemasT[SelectedRelationKeyT]> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording
   const embeddedEntries: SpanAndAnnotation<RelationSchemasT>[] = []
   const nonEmbeddedSpans = new Set<string>()
@@ -201,9 +198,7 @@ export function convertTraceToRUM<
     }
   }
 
-  const result: RumTraceRecording<
-    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
-  > = {
+  const result: RumTraceRecording<RelationSchemasT[SelectedRelationKeyT]> = {
     ...otherTraceRecordingAttributes,
     embeddedSpans: Object.fromEntries(embeddedSpans),
     nonEmbeddedSpans: [...nonEmbeddedSpans],

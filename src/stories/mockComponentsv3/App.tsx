@@ -27,7 +27,6 @@ import { traceManager } from './traceManager'
 const ticketOperationTracer = traceManager.createTracer({
   name: `ticket-activation`,
   type: 'operation',
-  // requiredScopeKeys: TicketIdScope,
   requiredSpans: [
     {
       name: 'TicketView',
@@ -36,7 +35,7 @@ const ticketOperationTracer = traceManager.createTracer({
       isIdle: true,
     },
   ],
-  relations: ['ticketId'],
+  relations: 'ticket',
   variants: {
     click: { timeout: 45_000 },
   },

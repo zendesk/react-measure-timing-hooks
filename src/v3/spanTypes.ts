@@ -1,12 +1,6 @@
 import type { ErrorInfo } from 'react'
 import type { BeaconConfig } from './hooksTypes'
-import type {
-  MapSchemaToTypes,
-  RelationsOnASpan,
-  SelectRelationSchemaByKeysTuple,
-  Timestamp,
-} from './types'
-import type { KeysOfRelationSchemaToTuples } from './typeUtils'
+import type { MapSchemaToTypes, RelationsOnASpan, Timestamp } from './types'
 
 export type NativePerformanceEntryType =
   | 'element'
@@ -63,16 +57,11 @@ export interface ActiveTraceInput<RelationSchemaT, VariantsT extends string>
 }
 
 export interface ActiveTraceConfig<
-  SelectedRelationTupleT extends KeysOfRelationSchemaToTuples<RelationSchemasT>,
+  SelectedRelationKeyT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
-> extends DraftTraceInput<
-    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>,
-    VariantsT
-  > {
-  relatedTo: MapSchemaToTypes<
-    SelectRelationSchemaByKeysTuple<SelectedRelationTupleT, RelationSchemasT>
-  >
+> extends DraftTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT> {
+  relatedTo: MapSchemaToTypes<RelationSchemasT[SelectedRelationKeyT]>
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
@@ -123,8 +112,10 @@ export interface SpanBase<RelationSchemasT> {
 }
 
 export interface ComponentRenderSpan<RelationSchemasT>
-  extends Omit<SpanBase<RelationSchemasT>, 'relatedTo' | 'attributes'>,
-    BeaconConfig<RelationSchemasT> {
+  // it would be more correct to use 'relatedTo' from BeaconConfig,
+  // but we'd need to solve some type issues
+  extends Omit<SpanBase<RelationSchemasT>, 'attributes'>,
+    Omit<BeaconConfig<RelationSchemasT>, 'relatedTo'> {
   type: ComponentLifecycleSpanType
   isIdle: boolean
   errorInfo?: ErrorInfo

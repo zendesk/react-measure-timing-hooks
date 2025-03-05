@@ -1,9 +1,9 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import type { SpanAndAnnotation } from '../../spanAnnotationTypes'
-import type { TicketIdRelationSchema } from './relationSchemas'
+import type { TicketAndUserAndGlobalRelationSchemasFixture } from './relationSchemas'
 
-export const shouldCompleteAndHaveInteractiveTime: SpanAndAnnotation<TicketIdRelationSchema>[] =
+export const shouldCompleteAndHaveInteractiveTime: SpanAndAnnotation<TicketAndUserAndGlobalRelationSchemasFixture>[] =
   [
     {
       span: {

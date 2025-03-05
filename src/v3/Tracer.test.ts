@@ -13,7 +13,9 @@ import { TraceManager } from './TraceManager'
 import type { ReportFn } from './types'
 
 interface TestRelationSchema {
-  id: StringConstructor
+  test: {
+    id: StringConstructor
+  }
 }
 
 describe('Tracer', () => {
@@ -31,7 +33,7 @@ describe('Tracer', () => {
   describe('variants', () => {
     it('uses additional required spans from variant', () => {
       const traceManager = new TraceManager({
-        relationSchemas: [{ id: String }],
+        relationSchemas: { test: { id: String } },
         reportFn,
         generateId,
         reportErrorFn,
@@ -40,7 +42,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        relations: ['id'],
+        relations: 'test',
         requiredSpans: [{ name: 'base-required' }],
         variants: {
           variant_a: {
@@ -85,7 +87,7 @@ describe('Tracer', () => {
 
     it('uses additional debounce spans from variant', () => {
       const traceManager = new TraceManager<TestRelationSchema>({
-        relationSchemas: [{ id: String }],
+        relationSchemas: { test: { id: String } },
         reportFn,
         generateId,
         reportErrorFn,
@@ -94,7 +96,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        relations: ['id'],
+        relations: 'test',
         requiredSpans: [{ name: 'required' }],
         debounceOnSpans: [{ name: 'base-debounce' }],
         debounceWindow: 100,
@@ -126,7 +128,7 @@ describe('Tracer', () => {
 
     it('different variants can have different additional spans', () => {
       const traceManager = new TraceManager<TestRelationSchema>({
-        relationSchemas: [{ id: String }],
+        relationSchemas: { test: { id: String } },
         reportFn,
         generateId,
         reportErrorFn,
@@ -135,7 +137,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        relations: ['id'],
+        relations: 'test',
         requiredSpans: [{ name: 'base-required' }],
         variants: {
           variant_a: {

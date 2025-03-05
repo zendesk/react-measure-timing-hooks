@@ -4,7 +4,9 @@ import type { RelationSchemaValue } from '../types'
 
 export function processSpans<
   const RelationSchemasT extends {
-    [K in keyof RelationSchemasT]: RelationSchemaValue
+    [SchemaNameT in keyof RelationSchemasT]: {
+      [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
+    }
   },
 >(
   spans: Span<RelationSchemasT>[],
