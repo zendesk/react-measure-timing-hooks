@@ -9,9 +9,6 @@ export type Prettify<T> = {
   [K in keyof T]: T[K]
 } & {}
 
-// type Example = KeysOfRelationSchemaToTuples<{ a: string; b: number; c: number } | { a: number }>;
-// type TestAbove = KeysOfRelationSchemaToTuples<{}>
-
 export type RemoveAllUndefinedProperties<T> = Prettify<{
   [K in keyof T as T[K] extends undefined ? never : K]: T[K]
 }>
@@ -117,24 +114,24 @@ export type UnionToIntersection<U> = (
   : never
 
 type HandlerToPayloadTuples<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
   State extends TraceStates = TraceStates,
 > = State extends State
   ? {
       [K in keyof States<
-        SelectedRelationKeyT,
+        SelectedRelationNameT,
         RelationSchemasT,
         VariantsT
       >[State]]: States<
-        SelectedRelationKeyT,
+        SelectedRelationNameT,
         RelationSchemasT,
         VariantsT
       >[State][K] extends (...args: infer ArgsT) => infer ReturnT
         ? [K, ArgsT[0], ReturnT]
         : never
-    }[keyof States<SelectedRelationKeyT, RelationSchemasT, VariantsT>[State]]
+    }[keyof States<SelectedRelationNameT, RelationSchemasT, VariantsT>[State]]
   : never
 
 type TupleToObject<T extends [PropertyKey, any, any]> = Prettify<{
@@ -146,38 +143,38 @@ type TupleToObject2<T extends [PropertyKey, any, any]> = Prettify<{
 }>
 
 export type StateHandlerPayloads<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = TupleToObject<
-  HandlerToPayloadTuples<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+  HandlerToPayloadTuples<SelectedRelationNameT, RelationSchemasT, VariantsT>
 >
 
 export type StateHandlerReturnTypes<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = TupleToObject2<
-  HandlerToPayloadTuples<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+  HandlerToPayloadTuples<SelectedRelationNameT, RelationSchemasT, VariantsT>
 >
 
 export type MergedStateHandlerMethods<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = {
   [K in keyof StateHandlerPayloads<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >]: (
     payload: StateHandlerPayloads<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >[K],
   ) => StateHandlerReturnTypes<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >[K]
@@ -188,7 +185,7 @@ export type MapTuple<KeysTuple extends readonly unknown[], MapToValue> = {
 }
 
 /** Convert a union of values U into a single tuple type (in an arbitrary order). */
-type UnionToTuple<U, R extends any[] = []> = [U] extends [never]
+export type UnionToTuple<U, R extends any[] = []> = [U] extends [never]
   ? R
   : UnionToTuple<Exclude<U, LastOf<U>>, [LastOf<U>, ...R]>
 
@@ -197,25 +194,3 @@ type LastOf<U> = UnionToIntersection<
 > extends (x: infer L) => void
   ? L
   : never
-
-/**
- * Reverse of MapSchemaToTypes:
- *   - boolean => BooleanConstructor
- *   - string => StringConstructor (if it's the wide string)
- *   - number => NumberConstructor (if it's the wide number)
- *   - union of string/number *literals* => a readonly tuple of those literals
- *   - otherwise => never
- */
-export type MapTypesToSchema<T> = {
-  [K in keyof T]: T[K] extends boolean // 1) If it's (wide) boolean or effectively boolean => BooleanConstructor
-    ? BooleanConstructor
-    : T[K] extends string | number | boolean
-    ? string extends T[K]
-      ? StringConstructor
-      : number extends T[K]
-      ? NumberConstructor
-      : boolean extends T[K]
-      ? BooleanConstructor
-      : readonly [...UnionToTuple<T[K]>]
-    : never
-}

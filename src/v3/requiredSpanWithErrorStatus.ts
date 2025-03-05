@@ -1,12 +1,12 @@
 import type { SpanMatcherFn, SpanMatcherTags } from './matchSpan'
 
 export function requiredSpanWithErrorStatus<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
->(): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+>(): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   const matcherFn: SpanMatcherFn<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > = ({ span }) => span.status === 'error'

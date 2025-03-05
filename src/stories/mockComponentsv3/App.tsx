@@ -30,12 +30,12 @@ const ticketOperationTracer = traceManager.createTracer({
   requiredSpans: [
     {
       name: 'TicketView',
-      withTraceRelations: ['ticketId'],
+      matchingRelations: ['ticketId'],
       type: 'component-render',
       isIdle: true,
     },
   ],
-  relations: 'ticket',
+  relationSchemaName: 'ticket',
   variants: {
     click: { timeout: 45_000 },
   },
@@ -43,13 +43,13 @@ const ticketOperationTracer = traceManager.createTracer({
   debounceOnSpans: [
     {
       name: 'TicketView',
-      withTraceRelations: ['ticketId'],
+      matchingRelations: ['ticketId'],
     },
   ],
   interruptOnSpans: [
     {
       name: 'TicketView',
-      withTraceRelations: ['ticketId'],
+      matchingRelations: ['ticketId'],
       type: 'component-unmount',
     },
   ],

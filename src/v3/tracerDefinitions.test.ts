@@ -46,7 +46,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.computed-span-operation',
         type: 'operation',
-        relations: 'ticket',
+        relationSchemaName: 'ticket',
         requiredSpans: [{ name: 'end' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -96,7 +96,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.multiple-computed-spans',
         type: 'operation',
-        relations: 'global',
+        relationSchemaName: 'global',
         requiredSpans: [{ name: 'end' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -147,7 +147,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.required-span-error',
         type: 'operation',
-        relations: 'global',
+        relationSchemaName: 'global',
         requiredSpans: [{ name: 'feature' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -186,7 +186,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.required-span-error-ignored',
         type: 'operation',
-        relations: 'global',
+        relationSchemaName: 'global',
         requiredSpans: [
           match.withAllConditions(
             match.withName('feature'),
@@ -228,7 +228,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.multiple-required-spans-error',
         type: 'operation',
-        relations: 'global',
+        relationSchemaName: 'global',
         requiredSpans: [{ name: 'feature-1' }, { name: 'feature-2' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -269,7 +269,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.computed-value-operation',
         type: 'operation',
-        relations: 'global',
+        relationSchemaName: 'global',
         requiredSpans: [{ name: 'end' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -314,7 +314,7 @@ describe('Trace Definitions', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.multiple-computed-values',
         type: 'operation',
-        relations: 'global',
+        relationSchemaName: 'global',
         requiredSpans: [{ name: 'end' }],
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },

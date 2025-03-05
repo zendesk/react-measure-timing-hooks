@@ -13,14 +13,14 @@ export interface SpanMatcherTags {
  * Function type for matching performance entries.
  */
 export interface SpanMatcherFn<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > extends SpanMatcherTags {
   (
     spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
     context: DraftTraceContext<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >,
@@ -36,16 +36,16 @@ export type NameMatcher<RelationSchemaT> =
     ) => boolean)
 
 export interface SpanMatchDefinition<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
 > {
-  name?: NameMatcher<RelationSchemasT[SelectedRelationKeyT]>
-  performanceEntryName?: NameMatcher<RelationSchemasT[SelectedRelationKeyT]>
+  name?: NameMatcher<RelationSchemasT[SelectedRelationNameT]>
+  performanceEntryName?: NameMatcher<RelationSchemasT[SelectedRelationNameT]>
   type?: SpanType
   status?: SpanStatus
   attributes?: Attributes
-  withTraceRelations?:
-    | (keyof UnionToIntersection<RelationSchemasT[SelectedRelationKeyT]>)[]
+  matchingRelations?:
+    | (keyof UnionToIntersection<RelationSchemasT[SelectedRelationNameT]>)[]
     | boolean
   occurrence?: number | ((occurrence: number) => boolean)
   isIdle?: boolean
@@ -53,12 +53,12 @@ export interface SpanMatchDefinition<
 }
 
 export type SpanMatch<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > =
-  | SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
-  | SpanMatchDefinition<SelectedRelationKeyT, RelationSchemasT>
+  | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  | SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT>
 
 // Span<RelationSchemasT>
 
@@ -66,12 +66,12 @@ export type SpanMatch<
  * The common name of the span to match. Can be a string, RegExp, or function.
  */
 export function withName<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
-  value: NameMatcher<RelationSchemasT[SelectedRelationKeyT]>,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+  value: NameMatcher<RelationSchemasT[SelectedRelationNameT]>,
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return ({ span }, { input: { relatedTo } }) => {
     if (typeof value === 'string') return span.name === value
     if (value instanceof RegExp) return value.test(span.name)
@@ -83,12 +83,12 @@ export function withName<
 // withName((name, relatedTo) => !relatedTo ? false : name === `OmniLog/${relatedTo.ticketId}`)
 
 export function withLabel<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   value: string,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return ({ annotation }) => annotation.labels?.includes(value) ?? false
 }
 
@@ -96,12 +96,12 @@ export function withLabel<
  * The PerformanceEntry.name of the entry to match. Can be a string, RegExp, or function.
  */
 export function withPerformanceEntryName<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
-  value: NameMatcher<RelationSchemasT[SelectedRelationKeyT]>,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+  value: NameMatcher<RelationSchemasT[SelectedRelationNameT]>,
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return ({ span }, { input: { relatedTo } }) => {
     const entryName = span.performanceEntry?.name
     if (!entryName) return false
@@ -112,22 +112,22 @@ export function withPerformanceEntryName<
 }
 
 export function withType<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   value: SpanType,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return ({ span }) => span.type === value
 }
 
 export function withStatus<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   value: SpanStatus,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return ({ span }) => span.status === value
 }
 
@@ -135,12 +135,12 @@ export function withStatus<
  * The subset of attributes (metadata) to match against the span.
  */
 export function withAttributes<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
 >(
   attrs: Attributes,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return ({ span }) => {
     if (!span.attributes) return false
     return Object.entries(attrs).every(
@@ -150,22 +150,22 @@ export function withAttributes<
 }
 
 /**
- * A list of relatedTo keys to match against the span.
+ * A list of keys of trace's relations to match against the span's.
  */
-export function withTraceRelations<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+export function withMatchingRelations<
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   keys:
     | NoInfer<
-        keyof UnionToIntersection<RelationSchemasT[SelectedRelationKeyT]>
+        keyof UnionToIntersection<RelationSchemasT[SelectedRelationNameT]>
       >[]
     | true = true,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return (
     { span },
-    { input: { relatedTo: r }, definition: { selectedRelationSchema } },
+    { input: { relatedTo: r }, definition: { relationSchema } },
   ) => {
     // DRAFT TODO: add test case when relatedTo is missing
     // if the relatedTo isn't set on the trace yet, we can't match against it, so we return early
@@ -175,7 +175,7 @@ export function withTraceRelations<
     const spanScope: Record<string, unknown> = span.relatedTo
     const resolvedKeys =
       typeof keys === 'boolean' && keys
-        ? Object.keys(selectedRelationSchema as object)
+        ? Object.keys(relationSchema as object)
         : (keys as string[])
 
     if (!resolvedKeys) return false
@@ -189,12 +189,12 @@ export function withTraceRelations<
  * The occurrence of the span with the same name within the operation.
  */
 export function withOccurrence<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   value: number | ((occurrence: number) => boolean),
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return ({ annotation }) => {
     if (typeof value === 'number') return annotation.occurrence === value
     return value(annotation.occurrence)
@@ -202,13 +202,13 @@ export function withOccurrence<
 }
 
 export function withComponentRenderCount<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   name: string,
   renderCount: number,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return ({ span }) => {
     if (!('renderCount' in span)) return false
     return span.name === name && span.renderCount === renderCount
@@ -219,14 +219,14 @@ export function withComponentRenderCount<
  * only applicable for component-lifecycle entries
  */
 export function whenIdle<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   value = true,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   const matcherFn: SpanMatcherFn<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > = ({ span }) => ('isIdle' in span ? span.isIdle === value : false)
@@ -242,10 +242,10 @@ export function whenIdle<
  * which interrupts the trace if the requiredSpan has an error status.
  */
 export function continueWithErrorStatus<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
->(): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+>(): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return Object.assign(
     () => true,
     // add a tag to the function if set to true
@@ -256,23 +256,23 @@ export function continueWithErrorStatus<
 // logical combinators:
 // AND
 export function withAllConditions<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   ...matchers: SpanMatcherFn<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >[]
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
   }
   const matcherFn: SpanMatcherFn<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > = (...args) => matchers.every((matcher) => matcher(...args))
@@ -281,23 +281,23 @@ export function withAllConditions<
 
 // OR
 export function withOneOfConditions<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   ...matchers: SpanMatcherFn<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >[]
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   const tags: SpanMatcherTags = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
   }
   const matcherFn: SpanMatcherFn<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > = (...args) => matchers.some((matcher) => matcher(...args))
@@ -305,31 +305,31 @@ export function withOneOfConditions<
 }
 
 export function not<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
-  matcher: SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+  matcher: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   // since not is a negation, we don't carry over tags
   return (...args) => !matcher(...args)
 }
 
 export function fromDefinition<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
-  definition: SpanMatchDefinition<SelectedRelationKeyT, RelationSchemasT>,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+  definition: SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT>,
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   const matchers: SpanMatcherFn<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >[] = []
   if (definition.name) {
     matchers.push(
-      withName<SelectedRelationKeyT, RelationSchemasT, VariantsT>(
+      withName<SelectedRelationNameT, RelationSchemasT, VariantsT>(
         definition.name,
       ),
     )
@@ -346,8 +346,8 @@ export function fromDefinition<
   if (definition.attributes) {
     matchers.push(withAttributes(definition.attributes))
   }
-  if (definition.withTraceRelations) {
-    matchers.push(withTraceRelations(definition.withTraceRelations))
+  if (definition.matchingRelations) {
+    matchers.push(withMatchingRelations(definition.matchingRelations))
   }
   if (definition.occurrence) {
     matchers.push(withOccurrence(definition.occurrence))

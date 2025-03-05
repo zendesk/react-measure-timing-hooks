@@ -21,8 +21,8 @@ const baseDefinitionFixture: CompleteTraceDefinition<
   'origin'
 > = {
   name: 'test-trace',
-  relations: 'global',
-  selectedRelationSchema: { global: {} },
+  relationSchemaName: 'global',
+  relationSchema: { global: {} },
   requiredSpans: [() => true],
   computedSpanDefinitions: {},
   computedValueDefinitions: {},

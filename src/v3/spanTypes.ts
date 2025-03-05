@@ -57,11 +57,11 @@ export interface ActiveTraceInput<RelationSchemaT, VariantsT extends string>
 }
 
 export interface ActiveTraceConfig<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
-> extends DraftTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT> {
-  relatedTo: MapSchemaToTypes<RelationSchemasT[SelectedRelationKeyT]>
+> extends DraftTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT> {
+  relatedTo: MapSchemaToTypes<RelationSchemasT[SelectedRelationNameT]>
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style

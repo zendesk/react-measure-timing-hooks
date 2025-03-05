@@ -14,6 +14,7 @@ import type {
   ArrayWithAtLeastOneElement,
   MapTuple,
   UnionToIntersection,
+  UnionToTuple,
 } from './typeUtils'
 
 export interface Timestamp {
@@ -29,13 +30,8 @@ export type RelationSchemaValue =
   | BooleanConstructor
   | readonly (string | number | boolean)[]
 
-const emptyTag = Symbol('_')
-interface EmptyType {
-  [emptyTag]?: never
-}
-
-export type MapSchemaToTypesBase<T> = [keyof T] extends [never]
-  ? EmptyType
+export type MapSchemaToTypesBase<T> = keyof T extends never
+  ? Record<string, never>
   : {
       [K in keyof T]: T[K] extends StringConstructor
         ? string
@@ -53,7 +49,6 @@ export type MapSchemaToTypes<RelationSchemasT> =
     ? MapSchemaToTypesBase<RelationSchemasT>
     : never
 
-// UnionToIntersection<
 // a span can have any combination of relations
 export type RelationsOnASpan<RelationSchemasT> = Partial<
   MapSchemaToTypes<
@@ -61,24 +56,31 @@ export type RelationsOnASpan<RelationSchemasT> = Partial<
   >
 >
 
-// export interface RelationsOnASpan<RelationSchemasT> {
-//   hello: string
-// }
-
-const schemaEx = {
-  ticketId: String,
-}
-type Union = {} | typeof schemaEx
-type SchemaEx = MapSchemaToTypes<typeof schemaEx>
-type SchemaEx2 = MapSchemaToTypes<Union>
-
 export type RelatedTo<RelationSchemasT> = MapSchemaToTypes<
   RelationSchemasT[keyof RelationSchemasT]
 >
-// export type RelatedTo<RelationSchemasT> =
-//   RelationSchemasT extends RelationSchemasT
-//     ? MapSchemaToTypes<RelationSchemasT[keyof RelationSchemasT]>
-//     : never
+
+/**
+ * Reverse of MapSchemaToTypes:
+ *   - boolean => BooleanConstructor
+ *   - string => StringConstructor (if it's the wide string)
+ *   - number => NumberConstructor (if it's the wide number)
+ *   - union of string/number *literals* => a readonly tuple of those literals
+ *   - otherwise => never
+ */
+export type MapTypesToSchema<T> = {
+  [K in keyof T]: T[K] extends boolean // 1) If it's (wide) boolean or effectively boolean => BooleanConstructor
+    ? BooleanConstructor
+    : T[K] extends string | number | boolean
+    ? string extends T[K]
+      ? StringConstructor
+      : number extends T[K]
+      ? NumberConstructor
+      : boolean extends T[K]
+      ? BooleanConstructor
+      : readonly [...UnionToTuple<T[K]>]
+    : never
+}
 
 /**
  * for now this is always 'operation', but in the future we could also implement tracing 'process' types
@@ -109,12 +111,12 @@ export type TraceInterruptionReason =
   | TraceInterruptionReasonForValidTraces
 
 export type SingleTraceReportFn<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = (
-  trace: TraceRecording<SelectedRelationKeyT, RelationSchemasT>,
-  context: TraceContext<SelectedRelationKeyT, RelationSchemasT, VariantsT>,
+  trace: TraceRecording<SelectedRelationNameT, RelationSchemasT>,
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
 ) => void
 
 export type ReportFn<
@@ -168,32 +170,32 @@ export interface TraceManagerUtilities<RelationSchemasT>
 }
 
 export interface TraceModificationsBase<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > {
   additionalRequiredSpans?: SpanMatch<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >[]
   additionalDebounceOnSpans?: SpanMatch<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >[]
 }
 
 export interface TraceModifications<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > extends TraceModificationsBase<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > {
-  relatedTo: MapSchemaToTypes<RelationSchemasT[SelectedRelationKeyT]>
+  relatedTo: MapSchemaToTypes<RelationSchemasT[SelectedRelationNameT]>
   attributes?: Attributes
 }
 
@@ -205,26 +207,29 @@ export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
 }
 
 export type LabelMatchingInputRecord<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
-  RelationSchemasT,
-  VariantsT extends string,
-> = Record<string, SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>>
-
-export type LabelMatchingFnsRecord<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > = Record<
   string,
-  SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+  SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>
+>
+
+export type LabelMatchingFnsRecord<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+> = Record<
+  string,
+  SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
 >
 
 export interface TraceVariant<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > extends TraceModificationsBase<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > {
@@ -241,12 +246,12 @@ export interface TraceVariant<
  * converting all matchers into functions.
  */
 export interface TraceDefinition<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
   ComputedValueDefinitionsT extends {
     [K in keyof ComputedValueDefinitionsT]: ComputedValueDefinitionInput<
-      NoInfer<SelectedRelationKeyT>,
+      NoInfer<SelectedRelationNameT>,
       RelationSchemasT,
       NoInfer<VariantsT>,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -261,11 +266,11 @@ export interface TraceDefinition<
 
   type?: TraceType
 
-  relations: SelectedRelationKeyT
+  relationSchemaName: SelectedRelationNameT
 
   // TypeScript TODO: typing this so that the span labels are inferred?
   labelMatching?: LabelMatchingInputRecord<
-    NoInfer<SelectedRelationKeyT>,
+    NoInfer<SelectedRelationNameT>,
     RelationSchemasT,
     VariantsT
   >
@@ -279,13 +284,13 @@ export interface TraceDefinition<
    * which parts of the product are "critical" or most important
    */
   requiredSpans: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<SelectedRelationKeyT>, RelationSchemasT, VariantsT>
+    SpanMatch<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
   >
   debounceOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<SelectedRelationKeyT>, RelationSchemasT, VariantsT>
+    SpanMatch<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
   >
   interruptOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatch<NoInfer<SelectedRelationKeyT>, RelationSchemasT, VariantsT>
+    SpanMatch<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
   >
 
   /**
@@ -322,7 +327,7 @@ export interface TraceDefinition<
    */
   variants: {
     [VariantName in VariantsT]: TraceVariant<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >
@@ -341,7 +346,7 @@ export interface TraceDefinition<
    * its error status will not affect the overall trace status.
    */
   suppressErrorStatusPropagationOnSpans?: readonly SpanMatch<
-    NoInfer<SelectedRelationKeyT>,
+    NoInfer<SelectedRelationNameT>,
     RelationSchemasT,
     VariantsT
   >[]
@@ -353,7 +358,7 @@ export interface TraceDefinition<
   computedSpanDefinitions?: Record<
     string,
     ComputedSpanDefinitionInput<
-      NoInfer<SelectedRelationKeyT>,
+      NoInfer<SelectedRelationNameT>,
       RelationSchemasT,
       VariantsT
     >
@@ -371,17 +376,17 @@ export interface TraceDefinition<
  * Used internally by the TraceManager.
  */
 export interface CompleteTraceDefinition<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > extends Omit<
-    TraceDefinition<SelectedRelationKeyT, RelationSchemasT, VariantsT, {}>,
+    TraceDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT, {}>,
     'computedSpanDefinitions' | 'computedValueDefinitions'
   > {
   computedSpanDefinitions: Record<
     string,
     ComputedSpanDefinition<
-      NoInfer<SelectedRelationKeyT>,
+      NoInfer<SelectedRelationNameT>,
       RelationSchemasT,
       VariantsT
     >
@@ -389,32 +394,32 @@ export interface CompleteTraceDefinition<
   computedValueDefinitions: Record<
     string,
     ComputedValueDefinition<
-      NoInfer<SelectedRelationKeyT>,
+      NoInfer<SelectedRelationNameT>,
       RelationSchemasT,
       VariantsT
     >
   >
 
-  selectedRelationSchema: NoInfer<RelationSchemasT[SelectedRelationKeyT]>
+  relationSchema: NoInfer<RelationSchemasT[SelectedRelationNameT]>
 
   labelMatching?: LabelMatchingFnsRecord<
-    NoInfer<SelectedRelationKeyT>,
+    NoInfer<SelectedRelationNameT>,
     RelationSchemasT,
     VariantsT
   >
 
   requiredSpans: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<SelectedRelationKeyT>, RelationSchemasT, VariantsT>
+    SpanMatcherFn<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
   >
   debounceOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<SelectedRelationKeyT>, RelationSchemasT, VariantsT>
+    SpanMatcherFn<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
   >
   interruptOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<SelectedRelationKeyT>, RelationSchemasT, VariantsT>
+    SpanMatcherFn<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
   >
 
   suppressErrorStatusPropagationOnSpans?: readonly SpanMatcherFn<
-    NoInfer<SelectedRelationKeyT>,
+    NoInfer<SelectedRelationNameT>,
     RelationSchemasT,
     VariantsT
   >[]
@@ -459,7 +464,7 @@ export interface SpanDeduplicationStrategy<RelationSchemasT> {
  * Definition of custom spans
  */
 export interface ComputedSpanDefinition<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > {
@@ -467,13 +472,13 @@ export interface ComputedSpanDefinition<
    * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
    */
   startSpan:
-    | SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+    | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
     | 'operation-start'
   /**
    * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
    */
   endSpan:
-    | SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+    | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
     | 'operation-end'
     | 'interactive'
 
@@ -488,11 +493,11 @@ export interface ComputedSpanDefinition<
  * Definition of custom values
  */
 export interface ComputedValueDefinition<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > {
-  matches: SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>[]
+  matches: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>[]
   /** if returns undefined, will not report the computed value */
   computeValueFromMatches: NoInfer<
     (
@@ -511,15 +516,15 @@ export interface ComputedValueDefinition<
  * Definition of custom spans input
  */
 export interface ComputedSpanDefinitionInput<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > {
   startSpan:
-    | SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+    | SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>
     | 'operation-start'
   endSpan:
-    | SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+    | SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>
     | 'operation-end'
     | 'interactive'
 }
@@ -528,11 +533,11 @@ export interface ComputedSpanDefinitionInput<
  * Definition of custom values input
  */
 export interface ComputedValueDefinitionInput<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
   MatchersT extends NoInfer<
-    SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+    SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>
   >[],
 > {
   matches: [...MatchersT]
@@ -551,32 +556,32 @@ export type DeriveRelationsFromPerformanceEntryFn<RelationSchemasT> = (
 ) => RelationsOnASpan<RelationSchemasT> | undefined
 
 export interface DraftTraceContext<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > {
   readonly definition: CompleteTraceDefinition<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >
   readonly input: DraftTraceInput<
-    RelationSchemasT[SelectedRelationKeyT],
+    RelationSchemasT[SelectedRelationNameT],
     VariantsT
   >
 }
 
 export interface TraceContext<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
 > {
   readonly definition: CompleteTraceDefinition<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >
   readonly input:
-    | ActiveTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT>
-    | DraftTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT>
+    | ActiveTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>
+    | DraftTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>
 }

@@ -3,20 +3,20 @@ import type { LabelMatchingFnsRecord, LabelMatchingInputRecord } from './types'
 import type { ArrayWithAtLeastOneElement } from './typeUtils'
 
 export function ensureMatcherFn<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
   const MatcherInputT extends SpanMatch<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
-  > = SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>,
+  > = SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>,
 >(
   matcherFnOrDefinition: MatcherInputT,
-): SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   return typeof matcherFnOrDefinition === 'function'
     ? matcherFnOrDefinition
-    : fromDefinition<SelectedRelationKeyT, RelationSchemasT, VariantsT>(
+    : fromDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>(
         matcherFnOrDefinition,
       )
 }
@@ -28,20 +28,20 @@ function arrayHasAtLeastOneElement<T>(
 }
 
 export function convertMatchersToFns<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   matchers:
-    | readonly SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>[]
+    | readonly SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>[]
     | undefined,
 ):
   | ArrayWithAtLeastOneElement<
-      SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+      SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
     >
   | undefined {
   const mapped = matchers?.map<
-    SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+    SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
   >((m) => ensureMatcherFn(m))
 
   if (mapped && arrayHasAtLeastOneElement(mapped)) {
@@ -51,18 +51,18 @@ export function convertMatchersToFns<
 }
 
 export function convertLabelMatchersToFns<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
   definitionLabelMatchers: LabelMatchingInputRecord<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >,
-): LabelMatchingFnsRecord<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+): LabelMatchingFnsRecord<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   const matchers: LabelMatchingFnsRecord<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > = {}
@@ -70,7 +70,7 @@ export function convertLabelMatchersToFns<
     // eslint-disable-next-line no-continue
     if (!definitionLabelMatchers?.[key]) continue
     matchers[key] = ensureMatcherFn<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >(definitionLabelMatchers[key])

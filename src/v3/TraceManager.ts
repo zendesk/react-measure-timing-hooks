@@ -73,32 +73,32 @@ export class TraceManager<
   private utilities: TraceManagerUtilities<RelationSchemasT>
 
   createTracer<
-    const SelectedRelationKeyT extends keyof RelationSchemasT,
+    const SelectedRelationNameT extends keyof RelationSchemasT,
     const VariantsT extends string,
     const ComputedValueTuplesT extends {
       [K in keyof ComputedValueTuplesT]: SpanMatch<
-        NoInfer<SelectedRelationKeyT>,
+        NoInfer<SelectedRelationNameT>,
         RelationSchemasT,
         NoInfer<VariantsT>
       >[]
     },
   >(
     traceDefinition: TraceDefinition<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT,
       {
         [K in keyof ComputedValueTuplesT]: ComputedValueDefinitionInput<
-          NoInfer<SelectedRelationKeyT>,
+          NoInfer<SelectedRelationNameT>,
           RelationSchemasT,
           NoInfer<VariantsT>,
           ComputedValueTuplesT[K]
         >
       }
     >,
-  ): Tracer<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+  ): Tracer<SelectedRelationNameT, RelationSchemasT, VariantsT> {
     const requiredSpans = convertMatchersToFns<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >(traceDefinition.requiredSpans)
@@ -114,13 +114,13 @@ export class TraceManager<
       : undefined
 
     const debounceOnSpans = convertMatchersToFns<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >(traceDefinition.debounceOnSpans)
 
     const manuallyDefinedInterruptOnSpans = convertMatchersToFns<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >(traceDefinition.interruptOnSpans)
@@ -131,10 +131,10 @@ export class TraceManager<
     >((matcher) =>
       matcher.continueWithErrorStatus
         ? []
-        : withAllConditions<SelectedRelationKeyT, RelationSchemasT, VariantsT>(
+        : withAllConditions<SelectedRelationNameT, RelationSchemasT, VariantsT>(
             matcher,
             requiredSpanWithErrorStatus<
-              SelectedRelationKeyT,
+              SelectedRelationNameT,
               RelationSchemasT,
               VariantsT
             >(),
@@ -147,7 +147,7 @@ export class TraceManager<
     ] as typeof manuallyDefinedInterruptOnSpans
 
     const suppressErrorStatusPropagationOnSpans = convertMatchersToFns<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >(traceDefinition.suppressErrorStatusPropagationOnSpans)
@@ -161,7 +161,7 @@ export class TraceManager<
               typeof def.startSpan === 'string'
                 ? def.startSpan
                 : ensureMatcherFn<
-                    SelectedRelationKeyT,
+                    SelectedRelationNameT,
                     RelationSchemasT,
                     VariantsT
                   >(def.startSpan),
@@ -169,7 +169,7 @@ export class TraceManager<
               typeof def.endSpan === 'string'
                 ? def.endSpan
                 : ensureMatcherFn<
-                    SelectedRelationKeyT,
+                    SelectedRelationNameT,
                     RelationSchemasT,
                     VariantsT
                   >(def.endSpan),
@@ -189,9 +189,11 @@ export class TraceManager<
         {
           ...def,
           matches: def.matches.map(
-            (m: SpanMatch<SelectedRelationKeyT, RelationSchemasT, VariantsT>) =>
+            (
+              m: SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+            ) =>
               ensureMatcherFn<
-                SelectedRelationKeyT,
+                SelectedRelationNameT,
                 RelationSchemasT,
                 VariantsT
               >(m),
@@ -202,7 +204,7 @@ export class TraceManager<
     )
 
     const completeTraceDefinition: CompleteTraceDefinition<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     > = {
@@ -214,8 +216,8 @@ export class TraceManager<
       computedSpanDefinitions,
       computedValueDefinitions,
       labelMatching,
-      selectedRelationSchema:
-        this.utilities.relationSchemas[traceDefinition.relations],
+      relationSchema:
+        this.utilities.relationSchemas[traceDefinition.relationSchemaName],
     }
 
     return new Tracer(completeTraceDefinition, this.utilities)

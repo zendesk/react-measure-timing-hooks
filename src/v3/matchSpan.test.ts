@@ -81,8 +81,8 @@ const mockContext = {
   definition: {
     name: 'test',
     type: 'operation',
-    relations: 'ticket',
-    selectedRelationSchema: { ticketId: String },
+    relationSchemaName: 'ticket',
+    relationSchema: { ticketId: String },
     requiredSpans: [() => true],
     computedSpanDefinitions: {},
     computedValueDefinitions: {},
@@ -343,7 +343,7 @@ describe('matchSpan', () => {
         MockOrigin
       >(
         matchSpan.withName('testEntry'),
-        matchSpan.withTraceRelations(['ticketId']),
+        matchSpan.withMatchingRelations(['ticketId']),
       )
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
@@ -359,7 +359,7 @@ describe('matchSpan', () => {
         MockOrigin
       >(
         matchSpan.withName('testEntry'),
-        matchSpan.withTraceRelations(['ticketId', 'userId']),
+        matchSpan.withMatchingRelations(['ticketId', 'userId']),
       )
       const mockSpanAndAnnotation = {
         span: mockEntryBase,
@@ -415,7 +415,7 @@ describe('matchSpan', () => {
         matchSpan.withName('testEntry'),
         matchSpan.withPerformanceEntryName('testEntry'),
         matchSpan.withAttributes({ attr1: 'value1' }),
-        matchSpan.withTraceRelations(['ticketId']),
+        matchSpan.withMatchingRelations(['ticketId']),
         matchSpan.withStatus('ok'),
         matchSpan.withType('element'),
       )
@@ -435,7 +435,7 @@ describe('matchSpan', () => {
         matchSpan.withName('testEntries'), // does not match
         matchSpan.withPerformanceEntryName('testEntry'),
         matchSpan.withAttributes({ attr1: 'value1' }),
-        matchSpan.withTraceRelations(['ticketId']),
+        matchSpan.withMatchingRelations(['ticketId']),
         matchSpan.withStatus('ok'),
         matchSpan.withType('element'),
       )

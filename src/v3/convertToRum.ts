@@ -149,18 +149,18 @@ function recursivelyRoundValues<T extends object>(
 }
 
 export function convertTraceToRUM<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
 >(
-  traceRecording: TraceRecording<SelectedRelationKeyT, RelationSchemasT>,
-  context: TraceContext<SelectedRelationKeyT, RelationSchemasT, VariantsT>,
+  traceRecording: TraceRecording<SelectedRelationNameT, RelationSchemasT>,
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
   embedSpanSelector: SpanMatcherFn<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > = defaultEmbedSpanSelector,
-): RumTraceRecording<RelationSchemasT[SelectedRelationKeyT]> {
+): RumTraceRecording<RelationSchemasT[SelectedRelationNameT]> {
   const { entries, ...otherTraceRecordingAttributes } = traceRecording
   const embeddedEntries: SpanAndAnnotation<RelationSchemasT>[] = []
   const nonEmbeddedSpans = new Set<string>()
@@ -198,7 +198,7 @@ export function convertTraceToRUM<
     }
   }
 
-  const result: RumTraceRecording<RelationSchemasT[SelectedRelationKeyT]> = {
+  const result: RumTraceRecording<RelationSchemasT[SelectedRelationNameT]> = {
     ...otherTraceRecordingAttributes,
     embeddedSpans: Object.fromEntries(embeddedSpans),
     nonEmbeddedSpans: [...nonEmbeddedSpans],

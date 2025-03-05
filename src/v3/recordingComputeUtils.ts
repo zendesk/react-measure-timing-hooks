@@ -27,15 +27,15 @@ import { findLast } from './utils'
  */
 
 export interface ComputeRecordingData<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
-> extends TraceContext<SelectedRelationKeyT, RelationSchemasT, VariantsT> {
+> extends TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   recordedItems: SpanAndAnnotation<RelationSchemasT>[]
 }
 
 export function getComputedValues<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
 >({
@@ -43,12 +43,12 @@ export function getComputedValues<
   recordedItems,
   input,
 }: ComputeRecordingData<
-  SelectedRelationKeyT,
+  SelectedRelationNameT,
   RelationSchemasT,
   VariantsT
->): TraceRecording<SelectedRelationKeyT, RelationSchemasT>['computedValues'] {
+>): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedValues'] {
   const computedValues: TraceRecording<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT
   >['computedValues'] = {}
 
@@ -87,7 +87,7 @@ const markedInteractive = <RelationSchemasT>(
 ) => spanAndAnnotation.annotation.markedPageInteractive
 
 export function getComputedSpans<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
 >({
@@ -95,13 +95,13 @@ export function getComputedSpans<
   recordedItems,
   input,
 }: ComputeRecordingData<
-  SelectedRelationKeyT,
+  SelectedRelationNameT,
   RelationSchemasT,
   VariantsT
->): TraceRecording<SelectedRelationKeyT, RelationSchemasT>['computedSpans'] {
+>): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedSpans'] {
   // loop through the computed span definitions, check for entries that match in recorded items, then calculate the startOffset and duration
   const computedSpans: TraceRecording<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT
   >['computedSpans'] = {}
 
@@ -169,14 +169,14 @@ export function getComputedSpans<
 }
 
 function getComputedRenderBeaconSpans<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
 >(
   recordedItems: SpanAndAnnotation<RelationSchemasT>[],
-  input: ActiveTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT>,
+  input: ActiveTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>,
 ): TraceRecording<
-  SelectedRelationKeyT,
+  SelectedRelationNameT,
   RelationSchemasT
 >['computedRenderBeaconSpans'] {
   const renderSpansByBeacon = new Map<
@@ -282,7 +282,7 @@ function getComputedRenderBeaconSpans<
   }
 
   const computedRenderBeaconSpans: TraceRecording<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT
   >['computedRenderBeaconSpans'] = {}
 
@@ -308,26 +308,30 @@ function getComputedRenderBeaconSpans<
 }
 
 function isActiveTraceInput<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
 >(
   input:
-    | DraftTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT>
-    | ActiveTraceInput<RelationSchemasT[SelectedRelationKeyT], VariantsT>,
+    | DraftTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>
+    | ActiveTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>,
 ): input is ActiveTraceInput<
-  RelationSchemasT[SelectedRelationKeyT],
+  RelationSchemasT[SelectedRelationNameT],
   VariantsT
 > {
   return Boolean(input.relatedTo)
 }
 
 export function createTraceRecording<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,
   const VariantsT extends string,
 >(
-  data: ComputeRecordingData<SelectedRelationKeyT, RelationSchemasT, VariantsT>,
+  data: ComputeRecordingData<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >,
   {
     transitionFromState,
     interruptionReason,
@@ -335,7 +339,7 @@ export function createTraceRecording<
     completeSpanAndAnnotation,
     lastRequiredSpanAndAnnotation,
   }: FinalState<RelationSchemasT>,
-): TraceRecording<SelectedRelationKeyT, RelationSchemasT> {
+): TraceRecording<SelectedRelationNameT, RelationSchemasT> {
   const { definition, recordedItems, input } = data
   const { id, relatedTo } = input
   const { name } = definition

@@ -12,7 +12,7 @@ export const ticketActivationDefinition: TraceDefinition<
 > = {
   name: 'ticket.activation',
   type: 'operation',
-  relations: 'ticket',
+  relationSchemaName: 'ticket',
   variants: {
     cold_boot: { timeout: 60_000 },
   },
@@ -21,7 +21,7 @@ export const ticketActivationDefinition: TraceDefinition<
     {
       type: 'component-render',
       name: 'OmniLog',
-      withTraceRelations: ['ticketId'],
+      matchingRelations: ['ticketId'],
       isIdle: true,
     },
   ],
@@ -29,17 +29,17 @@ export const ticketActivationDefinition: TraceDefinition<
     {
       type: 'mark',
       name: TICKET_DISPOSE_EVENT_NAME,
-      withTraceRelations: ['ticketId'],
+      matchingRelations: ['ticketId'],
     },
     {
       type: 'mark',
       name: TICKET_NAVIGATED_AWAY_EVENT_NAME,
-      withTraceRelations: ['ticketId'],
+      matchingRelations: ['ticketId'],
     },
   ],
   debounceOnSpans: [
     // debounce on anything that has matching ticketId relatedTo:
-    { withTraceRelations: ['ticketId'] },
+    { matchingRelations: ['ticketId'] },
     // TODO: { type: 'measure', name: (name, relatedTo) => `ticket/${relatedTo.ticketId}/open` },
     // metric from ember: ticket_workspace.module.js
     ({ span }) =>

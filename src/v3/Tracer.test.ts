@@ -42,7 +42,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        relations: 'test',
+        relationSchemaName: 'test',
         requiredSpans: [{ name: 'base-required' }],
         variants: {
           variant_a: {
@@ -96,7 +96,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        relations: 'test',
+        relationSchemaName: 'test',
         requiredSpans: [{ name: 'required' }],
         debounceOnSpans: [{ name: 'base-debounce' }],
         debounceWindow: 100,
@@ -137,7 +137,7 @@ describe('Tracer', () => {
       const tracer = traceManager.createTracer({
         name: 'test.operation',
         type: 'operation',
-        relations: 'test',
+        relationSchemaName: 'test',
         requiredSpans: [{ name: 'base-required' }],
         variants: {
           variant_a: {

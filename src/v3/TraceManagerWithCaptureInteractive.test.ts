@@ -62,7 +62,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -115,7 +115,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: {
         ...cpuIdleProcessorOptions,
@@ -171,7 +171,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.interrupt-during-long-task-operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [matchSpan.withName('end')],
       interruptOnSpans: [matchSpan.withName('interrupt')],
       captureInteractive: cpuIdleProcessorOptions,
@@ -226,7 +226,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.debounce-then-interrupted-operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       debounceOnSpans: [{ name: 'debounce' }],
       captureInteractive: cpuIdleProcessorOptions,
@@ -282,7 +282,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.debounce-then-interrupted-operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       debounceOnSpans: [{ name: 'debounce' }],
       captureInteractive: {
@@ -345,7 +345,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: {
         ...cpuIdleProcessorOptions,
@@ -407,7 +407,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: {
         ...cpuIdleProcessorOptions,
@@ -465,7 +465,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -520,7 +520,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -575,7 +575,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -632,7 +632,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -690,7 +690,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -745,7 +745,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -805,7 +805,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -861,7 +861,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {
@@ -920,7 +920,7 @@ describe('TraceManager with Capture Interactivity', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       captureInteractive: cpuIdleProcessorOptions,
       variants: {

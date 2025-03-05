@@ -51,7 +51,7 @@ describe('TraceManager', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.basic-operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       variants: {
         cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -98,7 +98,7 @@ describe('TraceManager', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.computed-span-operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       variants: {
         cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -158,7 +158,7 @@ describe('TraceManager', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.computed-value-operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'end' }],
       variants: {
         cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -218,7 +218,7 @@ describe('TraceManager', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.computedRenderBeaconSpans',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       requiredSpans: [{ name: 'Component', isIdle: true }],
       variants: {
         cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
@@ -278,8 +278,8 @@ describe('TraceManager', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.relatedTo-operation',
       type: 'operation',
-      relations: 'ticket',
-      requiredSpans: [{ name: 'end', withTraceRelations: true }],
+      relationSchemaName: 'ticket',
+      requiredSpans: [{ name: 'end', matchingRelations: true }],
       variants: {
         cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
       },
@@ -330,7 +330,7 @@ describe('TraceManager', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.operation',
         type: 'operation',
-        relations: 'ticket',
+        relationSchemaName: 'ticket',
         requiredSpans: [{ name: 'end' }],
         debounceOnSpans: [{ name: 'debounce' }],
         variants: {
@@ -381,7 +381,7 @@ describe('TraceManager', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.debounce-operation',
         type: 'operation',
-        relations: 'ticket',
+        relationSchemaName: 'ticket',
         requiredSpans: [matchSpan.withName('end')],
         debounceOnSpans: [
           matchSpan.withName((n: string) => n.endsWith('debounce')),
@@ -438,7 +438,7 @@ describe('TraceManager', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.interrupt-on-basic-operation',
         type: 'operation',
-        relations: 'ticket',
+        relationSchemaName: 'ticket',
         requiredSpans: [matchSpan.withName('end')],
         interruptOnSpans: [matchSpan.withName('interrupt')],
         variants: {
@@ -490,7 +490,7 @@ describe('TraceManager', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.interrupt-itself-operation',
         type: 'operation',
-        relations: 'ticket',
+        relationSchemaName: 'ticket',
         requiredSpans: [{ name: 'end' }],
         debounceOnSpans: [{ name: 'debounce' }],
         variants: {
@@ -551,7 +551,7 @@ describe('TraceManager', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.interrupt-on-basic-operation',
         type: 'operation',
-        relations: 'ticket',
+        relationSchemaName: 'ticket',
         requiredSpans: [{ name: 'end', isIdle: true }],
         debounceOnSpans: [{ name: 'end' }],
         variants: {
@@ -605,7 +605,7 @@ describe('TraceManager', () => {
         const tracer = traceManager.createTracer({
           name: 'ticket.timeout-operation',
           type: 'operation',
-          relations: 'ticket',
+          relationSchemaName: 'ticket',
           requiredSpans: [{ name: 'timed-out-render' }],
           variants: { cold_boot: { timeout: 500 } },
         })
@@ -664,7 +664,7 @@ describe('TraceManager', () => {
         const tracer = traceManager.createTracer({
           name: 'ticket.timeout-operation',
           type: 'operation',
-          relations: 'ticket',
+          relationSchemaName: 'ticket',
           requiredSpans: [{ name: 'timed-out-render' }],
           variants: {
             cold_boot: { timeout: CUSTOM_TIMEOUT_DURATION },
@@ -721,7 +721,7 @@ describe('TraceManager', () => {
         const tracer = traceManager.createTracer({
           name: 'ticket.timeout-operation',
           type: 'operation',
-          relations: 'ticket',
+          relationSchemaName: 'ticket',
           requiredSpans: [{ name: 'end' }],
           debounceOnSpans: [{ name: 'debounce' }],
           variants: {

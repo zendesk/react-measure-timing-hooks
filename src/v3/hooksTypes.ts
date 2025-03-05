@@ -18,7 +18,9 @@ export type UseBeacon<ScopeT, RequiredAttributesT> = (
   beaconConfig: BeaconConfig<ScopeT, RequiredAttributesT>,
 ) => void
 
-export type GetScopeTFromTraceManager<
+export type GetRelationSchemasTFromTraceManager<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TraceManagerT extends TraceManager<any>,
-> = TraceManagerT extends TraceManager<infer ScopeT> ? ScopeT : never
+> = TraceManagerT extends TraceManager<infer RelationSchemasT>
+  ? RelationSchemasT
+  : never

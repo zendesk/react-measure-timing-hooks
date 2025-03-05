@@ -84,8 +84,8 @@ export interface TraceRecordingBase<RelationSchemaT> {
 }
 
 export interface TraceRecording<
-  SelectedRelationKeyT extends keyof RelationSchemasT,
+  SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
-> extends TraceRecordingBase<RelationSchemasT[SelectedRelationKeyT]> {
+> extends TraceRecordingBase<RelationSchemasT[SelectedRelationNameT]> {
   entries: SpanAndAnnotation<RelationSchemasT>[]
 }

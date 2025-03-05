@@ -17,7 +17,7 @@ import {
  * Tracer can create draft traces and start traces
  */
 export class Tracer<
-  const SelectedRelationKeyT extends keyof RelationSchemasT,
+  const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT extends {
     [SchemaNameT in keyof RelationSchemasT]: {
       [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
@@ -26,7 +26,7 @@ export class Tracer<
   const VariantsT extends string,
 > {
   definition: CompleteTraceDefinition<
-    SelectedRelationKeyT,
+    SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >
@@ -34,7 +34,7 @@ export class Tracer<
 
   constructor(
     definition: CompleteTraceDefinition<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >,
@@ -48,7 +48,7 @@ export class Tracer<
    * @returns The ID of the trace.
    */
   start = (
-    input: StartTraceConfig<RelationSchemasT[SelectedRelationKeyT], VariantsT>,
+    input: StartTraceConfig<RelationSchemasT[SelectedRelationNameT], VariantsT>,
   ): string | undefined => {
     const traceId = this.createDraft(input)
     if (!traceId) return undefined
@@ -62,7 +62,7 @@ export class Tracer<
   ): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
 
-    const trace = new Trace<SelectedRelationKeyT, RelationSchemasT, VariantsT>(
+    const trace = new Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>(
       this.definition,
       {
         ...input,
@@ -83,7 +83,7 @@ export class Tracer<
 
   interrupt = ({ error }: { error?: Error } = {}) => {
     const trace = this.traceUtilities.getCurrentTrace() as
-      | Trace<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+      | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
       | undefined
 
     if (!trace) {
@@ -133,13 +133,13 @@ export class Tracer<
   // documentation: interruption still works and all the other events are buffered
   transitionDraftToActive = (
     inputAndDefinitionModifications: TraceModifications<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >,
   ): void => {
     const trace = this.traceUtilities.getCurrentTrace() as
-      | Trace<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+      | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
       | undefined
 
     if (!trace) {
@@ -176,7 +176,7 @@ export class Tracer<
 
   defineComputedSpan = (
     definition: ComputedSpanDefinitionInput<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     > & { name: string },
@@ -185,13 +185,13 @@ export class Tracer<
       startSpan:
         typeof definition.startSpan === 'string'
           ? definition.startSpan
-          : ensureMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>(
+          : ensureMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>(
               definition.startSpan,
             ),
       endSpan:
         typeof definition.endSpan === 'string'
           ? definition.endSpan
-          : ensureMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>(
+          : ensureMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>(
               definition.endSpan,
             ),
     }
@@ -199,20 +199,20 @@ export class Tracer<
 
   defineComputedValue = <
     const MatchersT extends SpanMatch<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >[],
   >(
     definition: ComputedValueDefinitionInput<
-      SelectedRelationKeyT,
+      SelectedRelationNameT,
       RelationSchemasT,
       VariantsT,
       MatchersT
     > & { name: string },
   ): void => {
     const convertedMatches = definition.matches.map<
-      SpanMatcherFn<SelectedRelationKeyT, RelationSchemasT, VariantsT>
+      SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
     >((m) => ensureMatcherFn(m))
 
     this.definition.computedValueDefinitions[definition.name] = {

@@ -7,8 +7,7 @@ import {
   createTimestamp,
 } from './testUtility/createMockFactory'
 import type { TicketIdRelationSchemasFixture } from './testUtility/fixtures/relationSchemas'
-import type { CompleteTraceDefinition } from './types'
-import type { MapTypesToSchema } from './typeUtils'
+import type { CompleteTraceDefinition, MapTypesToSchema } from './types'
 
 describe('convertTraceToRUM', () => {
   it('should round all numeric values in the trace recording', () => {
@@ -18,8 +17,8 @@ describe('convertTraceToRUM', () => {
       'origin'
     > = {
       name: 'test-trace',
-      relations: 'ticket',
-      selectedRelationSchema: { ticketId: String },
+      relationSchemaName: 'ticket',
+      relationSchema: { ticketId: String },
       requiredSpans: [() => true],
       computedSpanDefinitions: {},
       computedValueDefinitions: {},

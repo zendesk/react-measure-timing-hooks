@@ -1,6 +1,6 @@
 import { assertType, describe, expect, it } from 'vitest'
 import { generateUseBeacon } from './hooks'
-import type { GetScopeTFromTraceManager } from './hooksTypes'
+import type { GetRelationSchemasTFromTraceManager } from './hooksTypes'
 import * as match from './matchSpan'
 import { TraceManager } from './TraceManager'
 import type { MapSchemaToTypes } from './types'
@@ -60,26 +60,23 @@ describe('type tests', () => {
     team: string
   }
   const useBeacon = generateUseBeacon(traceManager)
-  type Schema = GetScopeTFromTraceManager<typeof traceManager>
+  type Schema = GetRelationSchemasTFromTraceManager<typeof traceManager>
   const useBeaconWithRequiredAttributes = generateUseBeacon<
     Schema,
     RequiredBeaconAttributes
   >(traceManager)
 
   it('works', () => {
-    // invalid because in the matcher functions, we cannot compare objects (due to object equality comparison)
-    interface InvalidScope {
-      something: { blah: string }
-    }
-
     // invalid:
-    // @ts-expect-error invalid relatedTo
-    const invalidTraceManager = new TraceManager<InvalidScope>({
+    const invalidTraceManager = new TraceManager({
       generateId: () => 'id',
       reportFn: () => {},
+      reportErrorFn: () => {},
+      relationSchemas: {
+        // @ts-expect-error because in the matcher functions, we cannot compare objects (due to object equality comparison)
+        something: { blah: { test: String } },
+      },
     })
-
-    assertType(invalidTraceManager)
 
     // valid beacon
     useBeacon({
@@ -139,17 +136,17 @@ describe('type tests', () => {
     // valid definition
     const ticketActivationTracer = traceManager.createTracer({
       name: 'ticket.activation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       variants: {
         origin: { timeout: 5_000 },
         another_origin: { timeout: 10_000 },
       },
-      requiredSpans: [{ withTraceRelations: ['ticketId'] }],
+      requiredSpans: [{ matchingRelations: ['ticketId'] }],
     })
 
     const ticketActivationTracer2 = traceManager.createTracer({
       name: 'ticket.activation',
-      relations: 'custom',
+      relationSchemaName: 'custom',
       variants: {
         origin: { timeout: 5_000 },
       },
@@ -159,36 +156,36 @@ describe('type tests', () => {
             (name, relations) => name === `${relations?.customId}.end`,
           ),
           match.withName('end'),
-          match.withTraceRelations(['customId']),
+          match.withMatchingRelations(['customId']),
         ),
         match.withName(
           (name, relatedTo) => name === `${relatedTo?.customId}.end`,
         ),
         match.withName('customFieldId'),
-        match.withTraceRelations(['customId']),
+        match.withMatchingRelations(['customId']),
         // @ts-expect-error invalid relatedTo
-        match.withTraceRelations(['typoId']),
+        match.withMatchingRelations(['typoId']),
       ],
     })
 
     // valid definition
     const userPageTracer = traceManager.createTracer({
       name: 'user.activation',
-      relations: 'user',
+      relationSchemaName: 'user',
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ withTraceRelations: ['userId'] }],
+      requiredSpans: [{ matchingRelations: ['userId'] }],
     })
 
     // valid definition
     const customFieldDropdownTracer = traceManager.createTracer({
       name: 'ticket.custom_field',
-      relations: 'tickedField',
+      relationSchemaName: 'tickedField',
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ withTraceRelations: ['ticketId'] }],
+      requiredSpans: [{ matchingRelations: ['ticketId'] }],
     })
 
     // invalid definition. relatedTo match but not included in AllPossibleScopes
@@ -198,11 +195,11 @@ describe('type tests', () => {
         origin: { timeout: 5_000 },
       },
       // @ts-expect-error invalid relatedTo
-      relations: ['invalid'],
+      relationSchemaName: ['invalid'],
       requiredSpans: [
         {
           // @ts-expect-error invalid relatedTo
-          withTraceRelations: ['invalid'],
+          matchingRelations: ['invalid'],
         },
       ],
     })
@@ -210,14 +207,14 @@ describe('type tests', () => {
     // invalid definition. userId given in requiredSpans isn't one of the relatedTo the tracer says it can have
     const shouldErrorTrace = traceManager.createTracer({
       name: 'ticket.should_error',
-      relations: 'tickedField',
+      relationSchemaName: 'tickedField',
       variants: {
         origin: { timeout: 5_000 },
       },
       requiredSpans: [
         {
           // @ts-expect-error invalid relatedTo
-          withTraceRelations: ['userId'],
+          matchingRelations: ['userId'],
         },
       ],
     })
@@ -225,12 +222,12 @@ describe('type tests', () => {
     // valid definition
     const ticketActivationWithFnTracer = traceManager.createTracer({
       name: 'ticket.activation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       variants: {
         origin: { timeout: 5_000 },
       },
       requiredSpans: [
-        { withTraceRelations: ['ticketId'] },
+        { matchingRelations: ['ticketId'] },
         ({ span }) => span.relatedTo?.ticketId === '123',
       ],
     })
@@ -310,11 +307,11 @@ describe('type tests', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.relatedTo-operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ name: 'end', withTraceRelations: true }],
+      requiredSpans: [{ name: 'end', matchingRelations: true }],
     })
     const traceId = tracer.start({
       relatedTo: {
@@ -330,8 +327,8 @@ describe('type tests', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.relatedTo-operation',
       type: 'operation',
-      relations: 'tickedField',
-      requiredSpans: [{ name: 'end', withTraceRelations: true }],
+      relationSchemaName: 'tickedField',
+      requiredSpans: [{ name: 'end', matchingRelations: true }],
       variants: { default: { timeout: 5_000 } },
     })
     const traceId = tracer.start({
@@ -347,12 +344,12 @@ describe('type tests', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.event.redacted',
       type: 'operation',
-      relations: 'ticketEvent',
+      relationSchemaName: 'ticketEvent',
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ name: 'OmniLogEvent', withTraceRelations: true }],
-      debounceOnSpans: [{ name: 'OmniLog', withTraceRelations: ['ticketId'] }],
+      requiredSpans: [{ name: 'OmniLogEvent', matchingRelations: true }],
+      debounceOnSpans: [{ name: 'OmniLog', matchingRelations: ['ticketId'] }],
     })
     const traceId = tracer.start({
       relatedTo: {
@@ -369,19 +366,19 @@ describe('type tests', () => {
       name: 'ticket.event.redacted',
       type: 'operation',
       // @ts-expect-error enforce a complete set of keys of a given relatedTo
-      relations: ['eventId'],
+      relationSchemaName: ['eventId'],
       timeout: 5_000,
-      requiredSpans: [{ name: 'OmniLogEvent', withTraceRelations: true }],
+      requiredSpans: [{ name: 'OmniLogEvent', matchingRelations: true }],
     })
 
     const correctTracer = traceManager.createTracer({
       name: 'ticket.event.redacted',
       type: 'operation',
-      relations: 'ticketEvent',
+      relationSchemaName: 'ticketEvent',
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ name: 'OmniLogEvent', withTraceRelations: true }],
+      requiredSpans: [{ name: 'OmniLogEvent', matchingRelations: true }],
     })
     const traceId = correctTracer.start({
       relatedTo: {
@@ -397,11 +394,11 @@ describe('type tests', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.relatedTo-operation',
       type: 'operation',
-      relations: 'ticket',
+      relationSchemaName: 'ticket',
       variants: {
         origin: { timeout: 5_000 },
       },
-      requiredSpans: [{ name: 'end', withTraceRelations: true }],
+      requiredSpans: [{ name: 'end', matchingRelations: true }],
     })
     const traceId = tracer.start({
       variant: 'origin',
@@ -435,7 +432,7 @@ describe('type tests', () => {
     const tracer = traceManager.createTracer({
       name: 'ticket.multiple-computed-values',
       type: 'operation',
-      relations: 'global',
+      relationSchemaName: 'global',
       requiredSpans: [{ name: 'end' }],
       variants: {
         cold_boot: { timeout: 10_000 },
