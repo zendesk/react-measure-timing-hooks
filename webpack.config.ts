@@ -118,7 +118,7 @@ export default ({
                 transpileOnly: true,
                 compilerOptions: {
                   module: 'esnext',
-                  target: 'es2015',
+                  target: 'es2022',
                   esModuleInterop: false,
                   sourceMap: true,
                 },

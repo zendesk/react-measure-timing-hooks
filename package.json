@@ -168,7 +168,7 @@
     "husky": "^9.1.7",
     "lodash.debounce": "^4.0.8",
     "prettier-2": "npm:prettier@^2",
-    "re-resizable": "^6.11.2",
+    "re-resizable": "6.10.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-test-renderer": "^18.0.0",
@@ -194,7 +194,7 @@
     "@swc/core": "1.5.24",
     "typescript": "5.8.1-rc"
   },
-  "packageManager": "yarn@4.6.0",
+  "packageManager": "yarn@4.7.0",
   "publishConfig": {
     "access": "public"
   },

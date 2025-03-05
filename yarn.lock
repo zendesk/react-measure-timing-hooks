@@ -7996,7 +7996,7 @@ __metadata:
     husky: "npm:^9.1.7"
     lodash.debounce: "npm:^4.0.8"
     prettier-2: "npm:prettier@^2"
-    re-resizable: "npm:^6.11.2"
+    re-resizable: "npm:6.10.3"
     react: "npm:^18.0.0"
     react-dom: "npm:^18.0.0"
     react-test-renderer: "npm:^18.0.0"
@@ -18168,13 +18168,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"re-resizable@npm:^6.11.2":
-  version: 6.11.2
-  resolution: "re-resizable@npm:6.11.2"
+"re-resizable@npm:6.10.3":
+  version: 6.10.3
+  resolution: "re-resizable@npm:6.10.3"
   peerDependencies:
     react: ^16.13.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
     react-dom: ^16.13.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: 10/3b814c61b77af294862bd36382b6f2e7f9a90a86f3696fd93780d39d2534c1fcbab68f63b088fc1e1935b1b9dba6c1ab8f61f4f4e6e5d16e86e5805bae40cfb6
+  checksum: 10/23c69efa9a5b5827b7e3873077e2047cda584825f43fea924d6f3ecbee683c959b69461461d93ec1302eafa5603f4e7a2afef35839a31ecf2e9f849940bc0a83
   languageName: node
   linkType: hard
 
