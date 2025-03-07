@@ -95,14 +95,14 @@ export type TraceType = 'operation'
 
 export type TraceStatus = SpanStatus | 'interrupted'
 
-export const INVALID_INTERRUPTION_REASONS = [
+export const INVALID_TRACE_INTERRUPTION_REASONS = [
   'timeout',
   'draft-cancelled',
   'invalid-state-transition',
 ] as const
 
 export type TraceInterruptionReasonForInvalidTraces =
-  (typeof INVALID_INTERRUPTION_REASONS)[number]
+  (typeof INVALID_TRACE_INTERRUPTION_REASONS)[number]
 
 export type TraceInterruptionReasonForValidTraces =
   | 'waiting-for-interactive-timeout'

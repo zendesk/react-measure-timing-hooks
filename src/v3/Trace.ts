@@ -31,19 +31,19 @@ import type {
   TraceModifications,
   TraceModificationsBase,
 } from './types'
-import { INVALID_INTERRUPTION_REASONS } from './types'
+import { INVALID_TRACE_INTERRUPTION_REASONS } from './types'
 import type {
   DistributiveOmit,
   MergedStateHandlerMethods,
   StateHandlerPayloads,
 } from './typeUtils'
 
-const isInvalidInterruptionReason = (
+const isInvalidTraceInterruptionReason = (
   reason: TraceInterruptionReason,
 ): reason is TraceInterruptionReasonForInvalidTraces =>
-  (INVALID_INTERRUPTION_REASONS as readonly TraceInterruptionReason[]).includes(
-    reason,
-  )
+  (
+    INVALID_TRACE_INTERRUPTION_REASONS as readonly TraceInterruptionReason[]
+  ).includes(reason)
 
 export interface FinalState<RelationSchemaT> {
   transitionFromState: NonTerminalTraceStates
@@ -810,7 +810,7 @@ export class TraceStateMachine<
         // depending on the reason, if we're coming from draft, we want to flush the provisional buffer:
         if (
           transition.transitionFromState === 'draft' &&
-          !isInvalidInterruptionReason(transition.interruptionReason)
+          !isInvalidTraceInterruptionReason(transition.interruptionReason)
         ) {
           let span: SpanAndAnnotation<RelationSchemasT> | undefined
           // eslint-disable-next-line no-cond-assign
