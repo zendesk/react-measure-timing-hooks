@@ -12,7 +12,7 @@ import { type TicketIdRelationSchemasFixture } from './testUtility/fixtures/rela
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './TraceManager'
-import type { ReportFn } from './types'
+import type { AnyPossibleReportFn } from './types'
 
 describe('TraceManager', () => {
   let reportFn: jest.Mock
@@ -26,10 +26,7 @@ describe('TraceManager', () => {
   })
 
   beforeEach(() => {
-    reportFn =
-      jest.fn<
-        ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
-      >()
+    reportFn = jest.fn<AnyPossibleReportFn<TicketIdRelationSchemasFixture>>()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
     reportWarningFn = jest.fn()
@@ -75,7 +72,7 @@ describe('TraceManager', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -124,7 +121,7 @@ describe('TraceManager', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
 
     // there are NO entries in the report because this trace was interrupted before transitioning from draft to active
@@ -168,7 +165,7 @@ describe('TraceManager', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
 
     expect(

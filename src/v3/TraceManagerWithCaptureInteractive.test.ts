@@ -19,7 +19,7 @@ import {
 } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './TraceManager'
-import type { ReportFn } from './types'
+import type { AnyPossibleReportFn } from './types'
 
 const GOOGLES_QUIET_WINDOW_DURATION = 2_000
 const GOOGLES_CLUSTER_PADDING = 1_000
@@ -42,7 +42,7 @@ describe('TraceManager with Capture Interactivity', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<ReportFn<TicketIdRelationSchemasFixture>>()
+    reportFn = jest.fn<AnyPossibleReportFn<TicketIdRelationSchemasFixture>>()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
   })
@@ -86,7 +86,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -143,7 +143,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -198,7 +198,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -253,7 +253,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -312,7 +312,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -374,7 +374,7 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
 
     expect(
@@ -436,7 +436,7 @@ describe('TraceManager with Capture Interactivity', () => {
     processSpans(spans, traceManager)
     expect(reportFn).toHaveBeenCalled()
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
 
     expect(
@@ -491,7 +491,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -546,7 +546,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -601,7 +601,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -658,7 +658,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -716,7 +716,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -772,7 +772,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -831,7 +831,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -887,7 +887,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(
@@ -946,7 +946,7 @@ describe('TraceManager with Capture Interactivity', () => {
     expect(reportFn).toHaveBeenCalled()
 
     const report: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+      AnyPossibleReportFn<TicketIdRelationSchemasFixture>
     >[0] = reportFn.mock.calls[0][0]
     expect(
       report.entries.map(

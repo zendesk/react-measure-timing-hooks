@@ -4,7 +4,7 @@ import { ensureTimestamp } from './ensureTimestamp'
 import type { BeaconConfig, UseBeacon } from './hooksTypes'
 import type { ComponentRenderSpan } from './spanTypes'
 import type { TraceManager } from './TraceManager'
-import type { RelationSchemaValue, RelationsOnASpan, Timestamp } from './types'
+import type { RelationSchemasBase, RelationsOnASpan, Timestamp } from './types'
 
 type MakeEntryInput<RelationSchemasT> = Omit<
   ComponentRenderSpan<RelationSchemasT>,
@@ -26,11 +26,7 @@ const makeEntry = <RelationSchemasT>(
  */
 export const generateUseBeacon =
   <
-    RelationSchemasT extends {
-      [SchemaNameT in keyof RelationSchemasT]: {
-        [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
-      }
-    },
+    RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
     RequiredAttributesT = {},
   >(
     traceManager: TraceManager<RelationSchemasT>,

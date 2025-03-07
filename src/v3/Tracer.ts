@@ -3,12 +3,12 @@ import { ensureTimestamp } from './ensureTimestamp'
 import type { SpanMatch, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
-import { type AllPossibleTraces, Trace } from './Trace'
+import { Trace } from './Trace'
 import {
   type CompleteTraceDefinition,
   type ComputedSpanDefinitionInput,
   type ComputedValueDefinitionInput,
-  type RelationSchemaValue,
+  type RelationSchemasBase,
   type TraceManagerUtilities,
   type TraceModifications,
 } from './types'
@@ -18,11 +18,7 @@ import {
  */
 export class Tracer<
   const SelectedRelationNameT extends keyof RelationSchemasT,
-  const RelationSchemasT extends {
-    [SchemaNameT in keyof RelationSchemasT]: {
-      [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
-    }
-  },
+  const RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
   const VariantsT extends string,
 > {
   definition: CompleteTraceDefinition<
@@ -62,7 +58,9 @@ export class Tracer<
   ): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
 
-    const trace = new Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>(
+    // don't specify the SelectedRelationNameT type here because traceUtilities can be run on any trace, hence the 'any'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const trace = new Trace<any, RelationSchemasT, VariantsT>(
       this.definition,
       {
         ...input,
@@ -74,17 +72,15 @@ export class Tracer<
       this.traceUtilities,
     )
 
-    this.traceUtilities.replaceCurrentTrace(
-      trace as unknown as AllPossibleTraces<RelationSchemasT>,
-    )
+    this.traceUtilities.replaceCurrentTrace(trace)
 
     return id
   }
 
   interrupt = ({ error }: { error?: Error } = {}) => {
-    const trace = this.traceUtilities.getCurrentTrace() as
+    const trace:
       | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
-      | undefined
+      | undefined = this.traceUtilities.getCurrentTrace()
 
     if (!trace) {
       this.traceUtilities.reportWarningFn(
@@ -138,9 +134,9 @@ export class Tracer<
       VariantsT
     >,
   ): void => {
-    const trace = this.traceUtilities.getCurrentTrace() as
+    const trace:
       | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
-      | undefined
+      | undefined = this.traceUtilities.getCurrentTrace()
 
     if (!trace) {
       this.traceUtilities.reportErrorFn(

@@ -13,15 +13,17 @@ import {
   type TicketAndUserAndGlobalRelationSchemasFixture,
   ticketAndUserAndGlobalRelationSchemasFixture,
   type TicketIdRelationSchemasFixture,
-  type UserIdRelationSchemasFixture,
 } from './testUtility/fixtures/relationSchemas'
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './TraceManager'
-import type { ReportFn } from './types'
+import type { AnyPossibleReportFn } from './types'
 
 describe('TraceManager', () => {
-  let reportFn: Mock<ReportFn<TicketIdRelationSchemasFixture>>
+  let reportFn: Mock<AnyPossibleReportFn<TicketIdRelationSchemasFixture>>
+  // TS doesn't like that reportFn is wrapped in Mock<> type
+  const getReportFn = () =>
+    reportFn as AnyPossibleReportFn<TicketIdRelationSchemasFixture>
   let generateId: Mock
   let reportErrorFn: Mock
   const DEFAULT_COLDBOOT_TIMEOUT_DURATION = 45_000
@@ -44,7 +46,7 @@ describe('TraceManager', () => {
   it('tracks trace with minimal requirements', () => {
     const traceManager = new TraceManager({
       relationSchemas: { ticket: { ticketId: String } },
-      reportFn,
+      reportFn: getReportFn(),
       generateId,
       reportErrorFn,
     })
@@ -91,7 +93,7 @@ describe('TraceManager', () => {
   it('correctly calculates a computed span', () => {
     const traceManager = new TraceManager({
       relationSchemas: { ticket: { ticketId: String } },
-      reportFn,
+      reportFn: getReportFn(),
       generateId,
       reportErrorFn,
     })
@@ -151,7 +153,7 @@ describe('TraceManager', () => {
   it('correctly calculates a computed value', () => {
     const traceManager = new TraceManager({
       relationSchemas: { ticket: { ticketId: String } },
-      reportFn,
+      reportFn: getReportFn(),
       generateId,
       reportErrorFn,
     })
@@ -211,7 +213,7 @@ describe('TraceManager', () => {
   it('correctly calculates computedRenderBeaconSpans, adjusting the render start based on the first render-start', () => {
     const traceManager = new TraceManager({
       relationSchemas: { ticket: { ticketId: String } },
-      reportFn,
+      reportFn: getReportFn(),
       generateId,
       reportErrorFn,
     })
@@ -271,7 +273,7 @@ describe('TraceManager', () => {
     const traceManager = new TraceManager({
       relationSchemas: ticketAndUserAndGlobalRelationSchemasFixture,
       reportFn:
-        reportFn as unknown as ReportFn<TicketAndUserAndGlobalRelationSchemasFixture>,
+        reportFn as unknown as AnyPossibleReportFn<TicketAndUserAndGlobalRelationSchemasFixture>,
       generateId,
       reportErrorFn,
     })
@@ -323,7 +325,7 @@ describe('TraceManager', () => {
     it('tracks trace when debouncedOn is defined but no debounce events', () => {
       const traceManager = new TraceManager({
         relationSchemas: { ticket: { ticketId: String } },
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -354,7 +356,7 @@ describe('TraceManager', () => {
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<
-        ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+        AnyPossibleReportFn<TicketIdRelationSchemasFixture>
       >[0] = reportFn.mock.calls[0]![0]
       expect(
         report.entries.map(
@@ -374,7 +376,7 @@ describe('TraceManager', () => {
     it('tracks trace correctly when debounced entries are seen', () => {
       const traceManager = new TraceManager({
         relationSchemas: { ticket: { ticketId: String } },
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -407,7 +409,7 @@ describe('TraceManager', () => {
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<
-        ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+        AnyPossibleReportFn<TicketIdRelationSchemasFixture>
       >[0] = reportFn.mock.calls[0]![0]
       expect(
         report.entries.map(
@@ -431,7 +433,7 @@ describe('TraceManager', () => {
     it('interrupts a basic trace when interruptOnSpans criteria is met', () => {
       const traceManager = new TraceManager({
         relationSchemas: { ticket: { ticketId: String } },
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -463,7 +465,7 @@ describe('TraceManager', () => {
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<
-        ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+        AnyPossibleReportFn<TicketIdRelationSchemasFixture>
       >[0] = reportFn.mock.calls[0]![0]
       expect(
         report.entries.map(
@@ -483,7 +485,7 @@ describe('TraceManager', () => {
     it('interrupts itself when another trace is started', () => {
       const traceManager = new TraceManager({
         relationSchemas: { ticket: { ticketId: String } },
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -523,7 +525,7 @@ describe('TraceManager', () => {
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<
-        ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+        AnyPossibleReportFn<TicketIdRelationSchemasFixture>
       >[0] = reportFn.mock.calls[0]![0]
       expect(
         report.entries.map(
@@ -544,7 +546,7 @@ describe('TraceManager', () => {
     it('tracks a regression: interrupts a trace when a component is no longer idle', () => {
       const traceManager = new TraceManager({
         relationSchemas: { ticket: { ticketId: String } },
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -576,7 +578,7 @@ describe('TraceManager', () => {
       expect(reportFn).toHaveBeenCalled()
 
       const report: Parameters<
-        ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
+        AnyPossibleReportFn<TicketIdRelationSchemasFixture>
       >[0] = reportFn.mock.calls[0]![0]
       expect(
         report.entries.map(
@@ -598,7 +600,7 @@ describe('TraceManager', () => {
       it('timeouts when the basic trace when the default timeout duration is reached', () => {
         const traceManager = new TraceManager({
           relationSchemas: { ticket: { ticketId: String } },
-          reportFn,
+          reportFn: getReportFn(),
           generateId,
           reportErrorFn,
         })
@@ -628,10 +630,7 @@ describe('TraceManager', () => {
         expect(reportFn).toHaveBeenCalled()
 
         const report: Parameters<
-          ReportFn<
-            TicketIdRelationSchemasFixture,
-            TicketIdRelationSchemasFixture
-          >
+          AnyPossibleReportFn<TicketIdRelationSchemasFixture>
         >[0] = reportFn.mock.calls[0]![0]
 
         expect(
@@ -656,7 +655,7 @@ describe('TraceManager', () => {
       it('timeouts when the basic trace when a custom timeout duration is reached', () => {
         const traceManager = new TraceManager({
           relationSchemas: { ticket: { ticketId: String } },
-          reportFn,
+          reportFn: getReportFn(),
           generateId,
           reportErrorFn,
         })
@@ -689,10 +688,7 @@ describe('TraceManager', () => {
         expect(reportFn).toHaveBeenCalled()
 
         const report: Parameters<
-          ReportFn<
-            TicketIdRelationSchemasFixture,
-            TicketIdRelationSchemasFixture
-          >
+          AnyPossibleReportFn<TicketIdRelationSchemasFixture>
         >[0] = reportFn.mock.calls[0]![0]
 
         expect(report.status).toBe('interrupted')
@@ -713,7 +709,7 @@ describe('TraceManager', () => {
       it('transitions from debouncing to timeout', () => {
         const traceManager = new TraceManager({
           relationSchemas: { ticket: { ticketId: String } },
-          reportFn,
+          reportFn: getReportFn(),
           generateId,
           reportErrorFn,
         })
@@ -747,10 +743,7 @@ describe('TraceManager', () => {
         expect(reportFn).toHaveBeenCalled()
 
         const report: Parameters<
-          ReportFn<
-            TicketIdRelationSchemasFixture,
-            TicketIdRelationSchemasFixture
-          >
+          AnyPossibleReportFn<TicketIdRelationSchemasFixture>
         >[0] = reportFn.mock.calls[0]![0]
         expect(
           report.entries.map(

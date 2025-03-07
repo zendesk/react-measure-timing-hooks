@@ -60,8 +60,6 @@ export type SpanMatch<
   | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
   | SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT>
 
-// Span<RelationSchemasT>
-
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.
  */

@@ -15,7 +15,7 @@ import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/sho
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import { ticketActivationDefinition } from './testUtility/fixtures/ticket.activation'
 import { TraceManager } from './TraceManager'
-import type { ReportFn } from './types'
+import type { AnyPossibleReportFn } from './types'
 
 interface TicketScope {
   ticketId: string
@@ -31,7 +31,7 @@ describe('TraceManager with Fixtures', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<ReportFn<TicketScope, TicketScope>>()
+    reportFn = jest.fn<AnyPossibleReportFn<TicketScope>>()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
   })
@@ -72,9 +72,8 @@ describe('TraceManager with Fixtures', () => {
     const {
       entries,
       ...report
-    }: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
-    >[0] = reportFn.mock.calls[0][0]
+    }: Parameters<AnyPossibleReportFn<TicketIdRelationSchemasFixture>>[0] =
+      reportFn.mock.calls[0][0]
 
     expect(report).toMatchInlineSnapshot(`
       {
@@ -166,9 +165,8 @@ describe('TraceManager with Fixtures', () => {
     const {
       entries,
       ...report
-    }: Parameters<
-      ReportFn<TicketIdRelationSchemasFixture, TicketIdRelationSchemasFixture>
-    >[0] = reportFn.mock.calls[0][0]
+    }: Parameters<AnyPossibleReportFn<TicketIdRelationSchemasFixture>>[0] =
+      reportFn.mock.calls[0][0]
 
     expect(report).toMatchInlineSnapshot(`
       {

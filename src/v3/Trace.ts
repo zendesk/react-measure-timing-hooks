@@ -24,7 +24,7 @@ import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
   DraftTraceContext,
-  SingleTraceReportFn,
+  RelationSchemasBase,
   TraceInterruptionReason,
   TraceInterruptionReasonForInvalidTraces,
   TraceManagerUtilities,
@@ -900,7 +900,7 @@ interface PrepareAndEmitRecordingOptions<RelationSchemasT> {
 
 export class Trace<
   const SelectedRelationNameT extends keyof RelationSchemasT,
-  const RelationSchemasT,
+  const RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
   const VariantsT extends string,
 > {
   readonly sourceDefinition: CompleteTraceDefinition<
@@ -1079,15 +1079,8 @@ export class Trace<
   onEnd(
     traceRecording: TraceRecording<SelectedRelationNameT, RelationSchemasT>,
   ): void {
-    // @ts-expect-error TS isn't smart enough to disambiguate this situation yet; maybe in the future this will work OOTB
     this.traceUtilities.cleanupCurrentTrace(this)
-    ;(
-      this.traceUtilities.reportFn as SingleTraceReportFn<
-        SelectedRelationNameT,
-        RelationSchemasT,
-        VariantsT
-      >
-    )(traceRecording, this)
+    this.traceUtilities.reportFn(traceRecording, this)
   }
 
   // this is public API only and should not be called internally
@@ -1259,13 +1252,20 @@ export class Trace<
 }
 
 export type AllPossibleTraces<
-  ForEachRelationSchemaT,
-  RelationSchemasT = ForEachRelationSchemaT,
-> = ForEachRelationSchemaT extends ForEachRelationSchemaT
-  ? Trace<
-      keyof ForEachRelationSchemaT & keyof RelationSchemasT,
-      RelationSchemasT,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      any
-    >
-  : never
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
+> = Trace<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  any,
+  RelationSchemasT,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  any
+>
+
+// TODO: if typescript gets smarter in the future, this would be a better representation of AllPossibleTraces:
+// {
+//   [SchemaNameT in keyof RelationSchemasT]: Trace<
+//     SchemaNameT,
+//     RelationSchemasT,
+//     VariantsT
+//   >
+// }[keyof RelationSchemasT]

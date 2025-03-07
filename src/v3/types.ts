@@ -82,6 +82,12 @@ export type MapTypesToSchema<T> = {
     : never
 }
 
+export type RelationSchemasBase<RelationSchemasT> = {
+  [SchemaNameT in keyof RelationSchemasT]: {
+    [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
+  }
+}
+
 /**
  * for now this is always 'operation', but in the future we could also implement tracing 'process' types
  */
@@ -119,22 +125,16 @@ export type SingleTraceReportFn<
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
 ) => void
 
-export type ReportFn<
-  ForEachRelationSchemaT,
-  RelationSchemasT extends ForEachRelationSchemaT = ForEachRelationSchemaT,
-  VariantsT extends string = string,
-> = UnionToIntersection<
-  ForEachRelationSchemaT extends ForEachRelationSchemaT
-    ? SingleTraceReportFn<
-        keyof ForEachRelationSchemaT & keyof RelationSchemasT,
-        RelationSchemasT,
-        VariantsT
-      >
-    : never
->
+export type AnyPossibleReportFn<RelationSchemasT> = <
+  SelectedRelationNameT extends keyof RelationSchemasT,
+>(
+  trace: TraceRecording<SelectedRelationNameT, RelationSchemasT>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, any>,
+) => void
 
 export interface TraceManagerConfig<RelationSchemasT> {
-  reportFn: ReportFn<RelationSchemasT, RelationSchemasT, string>
+  reportFn: AnyPossibleReportFn<RelationSchemasT>
 
   generateId: () => string
 
@@ -151,13 +151,14 @@ export interface TraceManagerConfig<RelationSchemasT> {
    */
   performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<RelationSchemasT>
 
-  // TODO: add definition? as 2nd arg
+  // TODO: add trace definition as 2nd arg
   reportErrorFn: (error: Error) => void
   reportWarningFn: (warning: Error) => void
 }
 
-export interface TraceManagerUtilities<RelationSchemasT>
-  extends TraceManagerConfig<RelationSchemasT> {
+export interface TraceManagerUtilities<
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
+> extends TraceManagerConfig<RelationSchemasT> {
   /**
    * interrupts the active trace (if any) and replaces it with a new one
    */
@@ -165,7 +166,6 @@ export interface TraceManagerUtilities<RelationSchemasT>
   cleanupCurrentTrace: (
     traceToCleanUp: AllPossibleTraces<RelationSchemasT>,
   ) => void
-  // TODO: should this be called currentTrace instead, since it might return a draft? or is draft simply a type of active trace, since it's already buffering recorded spans?
   getCurrentTrace: () => AllPossibleTraces<RelationSchemasT> | undefined
 }
 

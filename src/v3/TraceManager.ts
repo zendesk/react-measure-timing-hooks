@@ -12,7 +12,7 @@ import { Tracer } from './Tracer'
 import type {
   CompleteTraceDefinition,
   ComputedValueDefinitionInput,
-  RelationSchemaValue,
+  RelationSchemasBase,
   SpanDeduplicationStrategy,
   TraceDefinition,
   TraceManagerConfig,
@@ -23,11 +23,7 @@ import type {
  * Class representing the centralized trace performance manager.
  */
 export class TraceManager<
-  const RelationSchemasT extends {
-    [SchemaNameT in keyof RelationSchemasT]: {
-      [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
-    }
-  },
+  const RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
 > {
   readonly performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<RelationSchemasT>
   private currentTrace: AllPossibleTraces<RelationSchemasT> | undefined =

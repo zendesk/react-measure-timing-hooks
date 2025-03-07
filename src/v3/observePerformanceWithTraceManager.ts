@@ -3,7 +3,7 @@ import type { NativePerformanceEntryType } from './spanTypes'
 import type { TraceManager } from './TraceManager'
 import type {
   DeriveRelationsFromPerformanceEntryFn,
-  RelationSchemaValue,
+  RelationSchemasBase,
 } from './types'
 
 export const getBestSupportedEntryTypes = (): NativePerformanceEntryType[] =>
@@ -29,11 +29,7 @@ export const getBestSupportedEntryTypes = (): NativePerformanceEntryType[] =>
  */
 
 export const observePerformanceWithTraceManager = <
-  RelationSchemasT extends {
-    [SchemaNameT in keyof RelationSchemasT]: {
-      [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
-    }
-  },
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
 >({
   traceManager,
   deriveScopeFromPerformanceEntry,

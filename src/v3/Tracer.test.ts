@@ -10,7 +10,7 @@ import {
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './TraceManager'
-import type { ReportFn } from './types'
+import type { AnyPossibleReportFn } from './types'
 
 interface TestRelationSchema {
   test: {
@@ -19,12 +19,14 @@ interface TestRelationSchema {
 }
 
 describe('Tracer', () => {
-  let reportFn: Mock<ReportFn<TestRelationSchema>>
+  let reportFn: Mock<AnyPossibleReportFn<TestRelationSchema>>
+  // TS doesn't like that reportFn is wrapped in Mock<> type
+  const getReportFn = () => reportFn as AnyPossibleReportFn<TestRelationSchema>
   let generateId: Mock
   let reportErrorFn: Mock
 
   beforeEach(() => {
-    reportFn = jest.fn<ReportFn<TestRelationSchema>>()
+    reportFn = jest.fn<AnyPossibleReportFn<TestRelationSchema>>()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
     jest.useFakeTimers({ now: 0 })
@@ -34,7 +36,7 @@ describe('Tracer', () => {
     it('uses additional required spans from variant', () => {
       const traceManager = new TraceManager({
         relationSchemas: { test: { id: String } },
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -88,7 +90,7 @@ describe('Tracer', () => {
     it('uses additional debounce spans from variant', () => {
       const traceManager = new TraceManager<TestRelationSchema>({
         relationSchemas: { test: { id: String } },
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -129,7 +131,7 @@ describe('Tracer', () => {
     it('different variants can have different additional spans', () => {
       const traceManager = new TraceManager<TestRelationSchema>({
         relationSchemas: { test: { id: String } },
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })

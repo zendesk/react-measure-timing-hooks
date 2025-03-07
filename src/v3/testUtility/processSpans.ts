@@ -1,13 +1,9 @@
 import type { Span } from '../spanTypes'
 import { TraceManager } from '../TraceManager'
-import type { RelationSchemaValue } from '../types'
+import type { RelationSchemasBase } from '../types'
 
 export function processSpans<
-  const RelationSchemasT extends {
-    [SchemaNameT in keyof RelationSchemasT]: {
-      [K in keyof RelationSchemasT[SchemaNameT]]: RelationSchemaValue
-    }
-  },
+  const RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
 >(
   spans: Span<RelationSchemasT>[],
   traceManager: TraceManager<RelationSchemasT>,

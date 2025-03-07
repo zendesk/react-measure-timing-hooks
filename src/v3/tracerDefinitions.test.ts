@@ -15,10 +15,15 @@ import {
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
 import { processSpans } from './testUtility/processSpans'
 import { TraceManager } from './TraceManager'
-import type { ReportFn } from './types'
+import type { AnyPossibleReportFn } from './types'
 
 describe('Trace Definitions', () => {
-  let reportFn: Mock<ReportFn<TicketAndUserAndGlobalRelationSchemasFixture>>
+  let reportFn: Mock<
+    AnyPossibleReportFn<TicketAndUserAndGlobalRelationSchemasFixture>
+  >
+  // TS doesn't like that reportFn is wrapped in Mock<> type
+  const getReportFn = () =>
+    reportFn as AnyPossibleReportFn<TicketAndUserAndGlobalRelationSchemasFixture>
   let generateId: Mock
   let reportErrorFn: Mock
   const DEFAULT_COLDBOOT_TIMEOUT_DURATION = 45_000
@@ -37,7 +42,7 @@ describe('Trace Definitions', () => {
     it('correctly calculates a computed span provided in definition', () => {
       const traceManager = new TraceManager({
         relationSchemas,
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -88,7 +93,7 @@ describe('Trace Definitions', () => {
     it('correctly calculates multiple computed spans in definition', () => {
       const traceManager = new TraceManager({
         relationSchemas,
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -139,7 +144,7 @@ describe('Trace Definitions', () => {
     it('interrupts trace when a required span has an error status', () => {
       const traceManager = new TraceManager({
         relationSchemas,
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -178,7 +183,7 @@ describe('Trace Definitions', () => {
     it('does not interrupt trace when required span error is explicitly ignored', () => {
       const traceManager = new TraceManager({
         relationSchemas,
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -220,7 +225,7 @@ describe('Trace Definitions', () => {
     it('interrupts trace when one of multiple required spans has an error', () => {
       const traceManager = new TraceManager({
         relationSchemas,
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -261,7 +266,7 @@ describe('Trace Definitions', () => {
     it('correctly calculates a computed value provided in definition', () => {
       const traceManager = new TraceManager({
         relationSchemas,
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
@@ -306,7 +311,7 @@ describe('Trace Definitions', () => {
     it('correctly calculates multiple computed values with different matchers', () => {
       const traceManager = new TraceManager({
         relationSchemas,
-        reportFn,
+        reportFn: getReportFn(),
         generateId,
         reportErrorFn,
       })
