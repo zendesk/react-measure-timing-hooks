@@ -21,12 +21,12 @@ export class Tracer<
   const RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
   const VariantsT extends string,
 > {
-  definition: CompleteTraceDefinition<
+  private definition: CompleteTraceDefinition<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >
-  traceUtilities: TraceManagerUtilities<RelationSchemasT>
+  private traceUtilities: TraceManagerUtilities<RelationSchemasT>
 
   constructor(
     definition: CompleteTraceDefinition<
