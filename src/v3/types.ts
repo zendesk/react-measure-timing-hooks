@@ -104,13 +104,18 @@ export const INVALID_TRACE_INTERRUPTION_REASONS = [
 export type TraceInterruptionReasonForInvalidTraces =
   (typeof INVALID_TRACE_INTERRUPTION_REASONS)[number]
 
+export type TraceReplaceInterruptionReason =
+  | 'another-trace-started'
+  // if definition changes, we need to recreate the Trace instance and replay the spans
+  | 'definition-changed'
+
 export type TraceInterruptionReasonForValidTraces =
   | 'waiting-for-interactive-timeout'
-  | 'another-trace-started'
   | 'aborted'
   | 'idle-component-no-longer-idle'
   | 'matched-on-interrupt'
   | 'matched-on-required-span-with-error'
+  | TraceReplaceInterruptionReason
 
 export type TraceInterruptionReason =
   | TraceInterruptionReasonForInvalidTraces
@@ -162,14 +167,17 @@ export interface TraceManagerUtilities<
   /**
    * interrupts the active trace (if any) and replaces it with a new one
    */
-  replaceCurrentTrace: (newTrace: AllPossibleTraces<RelationSchemasT>) => void
+  replaceCurrentTrace: (
+    newTrace: AllPossibleTraces<RelationSchemasT>,
+    reason: TraceReplaceInterruptionReason,
+  ) => void
   cleanupCurrentTrace: (
     traceToCleanUp: AllPossibleTraces<RelationSchemasT>,
   ) => void
   getCurrentTrace: () => AllPossibleTraces<RelationSchemasT> | undefined
 }
 
-export interface TraceModificationsBase<
+export interface TraceDefinitionModifications<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
@@ -190,7 +198,7 @@ export interface TraceModifications<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
-> extends TraceModificationsBase<
+> extends TraceDefinitionModifications<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
@@ -228,7 +236,7 @@ export interface TraceVariant<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
-> extends TraceModificationsBase<
+> extends TraceDefinitionModifications<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT

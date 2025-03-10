@@ -13,7 +13,9 @@ import {
   type PerformanceEntryLike,
 } from './firstCPUIdle'
 import { getSpanKey } from './getSpanKey'
+import { withAllConditions } from './matchSpan'
 import { createTraceRecording } from './recordingComputeUtils'
+import { requiredSpanWithErrorStatus } from './requiredSpanWithErrorStatus'
 import type {
   SpanAndAnnotation,
   SpanAnnotation,
@@ -25,11 +27,11 @@ import type {
   CompleteTraceDefinition,
   DraftTraceContext,
   RelationSchemasBase,
+  TraceDefinitionModifications,
   TraceInterruptionReason,
   TraceInterruptionReasonForInvalidTraces,
   TraceManagerUtilities,
   TraceModifications,
-  TraceModificationsBase,
 } from './types'
 import { INVALID_TRACE_INTERRUPTION_REASONS } from './types'
 import type {
@@ -60,8 +62,12 @@ export type NonTerminalTraceStates =
   | 'active'
   | 'debouncing'
   | 'waiting-for-interactive'
-type TerminalTraceStates = 'interrupted' | 'complete'
+export const TERMINAL_STATES = ['interrupted', 'complete'] as const
+type TerminalTraceStates = (typeof TERMINAL_STATES)[number]
 export type TraceStates = NonTerminalTraceStates | TerminalTraceStates
+
+const isTerminalState = (state: TraceStates): state is TerminalTraceStates =>
+  (TERMINAL_STATES as readonly TraceStates[]).includes(state)
 
 interface OnEnterActive {
   transitionToState: 'active'
@@ -101,8 +107,6 @@ export type Transition<RelationSchemasT> = DistributiveOmit<
   'transitionFromState'
 >
 
-type FinalizeFn<RelationSchemaT> = (config: FinalState<RelationSchemaT>) => void
-
 export type States<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
@@ -128,13 +132,7 @@ type StatesBase<RelationSchemasT> = Record<
   StateHandlersBase<RelationSchemasT>
 >
 
-interface TraceStateMachineSideEffectHandlers<
-  SelectedRelationNameT extends keyof RelationSchemasT,
-  RelationSchemasT,
-> {
-  readonly storeFinalizeState: FinalizeFn<
-    RelationSchemasT[SelectedRelationNameT]
-  >
+interface TraceStateMachineSideEffectHandlers<RelationSchemasT> {
   readonly addSpanToRecording: (
     spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
   ) => void
@@ -156,10 +154,7 @@ interface StateMachineContext<
     RelationSchemasT,
     VariantsT
   > {
-  sideEffectFns: TraceStateMachineSideEffectHandlers<
-    SelectedRelationNameT,
-    RelationSchemasT
-  >
+  sideEffectFns: TraceStateMachineSideEffectHandlers<RelationSchemasT>
 }
 
 type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
@@ -177,13 +172,13 @@ export class TraceStateMachine<
     >,
   ) {
     this.context = context
-    this.requiredSpansIndexChecklist = new Set(
+    this.remainingRequiredSpanIndexes = new Set(
       context.definition.requiredSpans.map((_, i) => i),
     )
     this.emit('onEnterState', undefined)
   }
 
-  readonly requiredSpansIndexChecklist: Set<number>
+  readonly remainingRequiredSpanIndexes: Set<number>
 
   readonly context: StateMachineContext<
     SelectedRelationNameT,
@@ -292,7 +287,7 @@ export class TraceStateMachine<
         )
       },
 
-      onActive: () => ({
+      onMakeActive: () => ({
         transitionToState: 'active',
       }),
 
@@ -353,6 +348,7 @@ export class TraceStateMachine<
         return undefined
       },
     },
+
     active: {
       onEnterState: (_transition: OnEnterActive) => {
         const nextTransition = this.#processProvisionalBuffer()
@@ -395,7 +391,7 @@ export class TraceStateMachine<
         }
 
         for (let i = 0; i < this.context.definition.requiredSpans.length; i++) {
-          if (!this.requiredSpansIndexChecklist.has(i)) {
+          if (!this.remainingRequiredSpanIndexes.has(i)) {
             // we previously checked off this index
             // eslint-disable-next-line no-continue
             continue
@@ -404,7 +400,7 @@ export class TraceStateMachine<
           const doesSpanMatch = this.context.definition.requiredSpans[i]!
           if (doesSpanMatch(spanAndAnnotation, this.context)) {
             // remove the index of this definition from the list of requiredSpans
-            this.requiredSpansIndexChecklist.delete(i)
+            this.remainingRequiredSpanIndexes.delete(i)
 
             // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
             if (
@@ -419,7 +415,7 @@ export class TraceStateMachine<
 
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
-        if (this.requiredSpansIndexChecklist.size === 0) {
+        if (this.remainingRequiredSpanIndexes.size === 0) {
           return { transitionToState: 'debouncing' }
         }
         return undefined
@@ -821,6 +817,13 @@ export class TraceStateMachine<
 
         // terminal state
         this.clearDeadline()
+
+        if (transition.interruptionReason === 'definition-changed') {
+          // do not report if the definition changed
+          // this is a special case where the instance is being recreated
+          return
+        }
+
         this.sideEffectFns.prepareAndEmitRecording({
           transition,
           lastRelevantSpanAndAnnotation: undefined,
@@ -914,13 +917,16 @@ export class Trace<
     RelationSchemasT,
     VariantsT
   >
+  wasActivated = false
   get activeInput(): ActiveTraceConfig<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > {
     if (!this.input.relatedTo) {
-      throw new Error("Tried to access active trace's input without relatedTo")
+      throw new Error(
+        "Tried to access trace's activeInput, but the trace was never provided a 'relatedTo' input value",
+      )
     }
     return this.input as ActiveTraceConfig<
       SelectedRelationNameT,
@@ -939,58 +945,76 @@ export class Trace<
   }
 
   input: DraftTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>
-  private readonly traceUtilities: TraceManagerUtilities<RelationSchemasT>
+  readonly traceUtilities: TraceManagerUtilities<RelationSchemasT>
 
   get isDraft() {
     return this.stateMachine.currentState === INITIAL_STATE
   }
 
   recordedItems: Set<SpanAndAnnotation<RelationSchemasT>> = new Set()
-  stateMachine: TraceStateMachine<
-    SelectedRelationNameT,
-    RelationSchemasT,
-    VariantsT
-  >
   occurrenceCounters = new Map<string, number>()
   processedPerformanceEntries: WeakMap<
     PerformanceEntry,
     SpanAndAnnotation<RelationSchemasT>
   > = new WeakMap()
-
-  finalState: FinalState<RelationSchemasT[SelectedRelationNameT]> | undefined
-
-  constructor(
-    definition: CompleteTraceDefinition<
+  persistedDefinitionModifications: Set<
+    TraceDefinitionModifications<
       SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
-    >,
-    input: DraftTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>,
-    traceUtilities: TraceManagerUtilities<RelationSchemasT>,
+    >
+  > = new Set()
+
+  stateMachine: TraceStateMachine<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >
+
+  constructor(
+    data:
+      | {
+          definition: CompleteTraceDefinition<
+            SelectedRelationNameT,
+            RelationSchemasT,
+            VariantsT
+          >
+          input: DraftTraceInput<
+            RelationSchemasT[SelectedRelationNameT],
+            VariantsT
+          >
+          traceUtilities: TraceManagerUtilities<RelationSchemasT>
+        }
+      | {
+          definitionModifications: TraceDefinitionModifications<
+            SelectedRelationNameT,
+            RelationSchemasT,
+            VariantsT
+          >
+          importFrom: Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
+        },
   ) {
-    // Verify that the variant value is valid
-    const variant = definition.variants[input.variant]
-    if (!variant) {
-      traceUtilities.reportErrorFn(
-        new Error(
-          `Invalid variant value: ${
-            input.variant
-          }. Must be one of: ${Object.keys(definition.variants).join(', ')}`,
-        ),
-      )
-    }
+    const { input, traceUtilities, definition } =
+      'importFrom' in data
+        ? {
+            input: data.importFrom.input,
+            traceUtilities: data.importFrom.traceUtilities,
+            definition: data.importFrom.sourceDefinition,
+          }
+        : data
 
     this.sourceDefinition = definition
+
     this.definition = {
       name: definition.name,
       type: definition.type,
       relationSchemaName: definition.relationSchemaName,
       relationSchema: definition.relationSchema,
+      variants: definition.variants,
+      labelMatching: definition.labelMatching,
+      debounceWindow: definition.debounceWindow,
 
-      variants: { ...definition.variants },
-
-      labelMatching: { ...definition.labelMatching },
-
+      // below props are potentially mutable elements of the definition, let's make local copies:
       requiredSpans: [...definition.requiredSpans],
       computedSpanDefinitions: { ...definition.computedSpanDefinitions },
       computedValueDefinitions: { ...definition.computedValueDefinitions },
@@ -1001,7 +1025,6 @@ export class Trace<
       debounceOnSpans: definition.debounceOnSpans
         ? [...definition.debounceOnSpans]
         : undefined,
-      debounceWindow: definition.debounceWindow,
       captureInteractive: definition.captureInteractive
         ? typeof definition.captureInteractive === 'boolean'
           ? definition.captureInteractive
@@ -1013,23 +1036,76 @@ export class Trace<
           : undefined,
     }
 
-    this.applyDefinitionModifications(variant)
+    // Verify that the variant value is valid
+    const variant = definition.variants[input.variant]
+
+    if (variant) {
+      this.applyDefinitionModifications(variant)
+    } else {
+      traceUtilities.reportErrorFn(
+        new Error(
+          `Invalid variant value: ${
+            input.variant
+          }. Must be one of: ${Object.keys(definition.variants).join(', ')}`,
+        ),
+      )
+    }
 
     this.input = {
       ...input,
       startTime: ensureTimestamp(input.startTime),
     }
     this.traceUtilities = traceUtilities
+
+    if ('importFrom' in data) {
+      for (const mod of data.importFrom.persistedDefinitionModifications) {
+        // re-apply any previously done modifications (in case this isn't the first time we're importing)
+        this.applyDefinitionModifications(mod, { persist: true })
+      }
+      this.applyDefinitionModifications(data.definitionModifications, {
+        persist: true,
+      })
+    }
+
+    // all requiredSpans implicitly interrupt the trace if they error, unless explicitly ignored
+    const interruptOnRequiredErrored = this.definition.requiredSpans.flatMap<
+      (typeof definition.requiredSpans)[number]
+    >((matcher) =>
+      matcher.continueWithErrorStatus
+        ? []
+        : withAllConditions<SelectedRelationNameT, RelationSchemasT, VariantsT>(
+            matcher,
+            requiredSpanWithErrorStatus<
+              SelectedRelationNameT,
+              RelationSchemasT,
+              VariantsT
+            >(),
+          ),
+    )
+
+    this.definition.interruptOnSpans = [
+      ...(this.definition.interruptOnSpans ?? []),
+      ...interruptOnRequiredErrored,
+    ] as typeof definition.interruptOnSpans
+
+    // definition is now set, we can initialize the state machine
     this.stateMachine = new TraceStateMachine(this)
+
+    if ('importFrom' in data) {
+      if (data.importFrom.wasActivated) {
+        this.transitionDraftToActive({
+          relatedTo: data.importFrom.activeInput.relatedTo,
+        })
+      }
+      // replay the recorded items from the imported trace and copy over cache state
+      this.replayItems(data.importFrom.recordedItems)
+      this.occurrenceCounters = data.importFrom.occurrenceCounters
+      this.processedPerformanceEntries =
+        data.importFrom.processedPerformanceEntries
+    }
   }
 
-  sideEffectFns: TraceStateMachineSideEffectHandlers<
-    SelectedRelationNameT,
-    RelationSchemasT
-  > = {
-    storeFinalizeState: (config) => {
-      this.finalState = config
-    },
+  sideEffectFns: TraceStateMachineSideEffectHandlers<RelationSchemasT> = {
     addSpanToRecording: (spanAndAnnotation) => {
       if (!this.recordedItems.has(spanAndAnnotation)) {
         this.recordedItems.add(spanAndAnnotation)
@@ -1108,7 +1184,8 @@ export class Trace<
 
     this.applyDefinitionModifications(inputAndDefinitionModifications)
 
-    this.stateMachine.emit('onActive', undefined)
+    this.wasActivated = true
+    this.stateMachine.emit('onMakeActive', undefined)
   }
 
   /**
@@ -1116,12 +1193,17 @@ export class Trace<
    * @param definitionModifications
    */
   private applyDefinitionModifications(
-    definitionModifications: TraceModificationsBase<
+    definitionModifications: TraceDefinitionModifications<
       SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >,
+    { persist = false }: { persist?: boolean } = {},
   ) {
+    if (persist) {
+      this.persistedDefinitionModifications.add(definitionModifications)
+    }
+
     const { definition } = this
     const additionalRequiredSpans = convertMatchersToFns<
       SelectedRelationNameT,
@@ -1146,6 +1228,25 @@ export class Trace<
         ...(this.sourceDefinition.debounceOnSpans ?? []),
         ...additionalDebounceOnSpans,
       ] as (typeof definition)['debounceOnSpans']
+    }
+  }
+
+  /**
+   * This is used for importing spans when recreating a Trace from another Trace
+   * if the definition was modified
+   */
+  private replayItems(
+    spanAndAnnotations: Set<SpanAndAnnotation<RelationSchemasT>>,
+  ) {
+    // replay the spans in the order they were processed
+    for (const spanAndAnnotation of spanAndAnnotations) {
+      const transition = this.stateMachine.emit(
+        'onProcessSpan',
+        spanAndAnnotation,
+      )
+      if (transition && isTerminalState(transition.transitionToState)) {
+        return
+      }
     }
   }
 
@@ -1186,9 +1287,9 @@ export class Trace<
           span,
         ) ?? span
     } else {
-      const spanId = getSpanKey(span)
-      const occurrence = this.occurrenceCounters.get(spanId) ?? 1
-      this.occurrenceCounters.set(spanId, occurrence + 1)
+      const spanKey = getSpanKey(span)
+      const occurrence = this.occurrenceCounters.get(spanKey) ?? 1
+      this.occurrenceCounters.set(spanKey, occurrence + 1)
 
       const annotation: SpanAnnotation = {
         id: this.input.id,

@@ -9,6 +9,7 @@ import {
   type ComputedSpanDefinitionInput,
   type ComputedValueDefinitionInput,
   type RelationSchemasBase,
+  type TraceDefinitionModifications,
   type TraceManagerUtilities,
   type TraceModifications,
 } from './types'
@@ -60,19 +61,19 @@ export class Tracer<
 
     // don't specify the SelectedRelationNameT type here because traceUtilities can be run on any trace, hence the 'any'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const trace = new Trace<any, RelationSchemasT, VariantsT>(
-      this.definition,
-      {
+    const trace = new Trace<any, RelationSchemasT, VariantsT>({
+      definition: this.definition,
+      input: {
         ...input,
         // relatedTo will be overwritten later during initialization of the trace
         relatedTo: undefined,
         startTime: ensureTimestamp(input.startTime),
         id,
       },
-      this.traceUtilities,
-    )
+      traceUtilities: this.traceUtilities,
+    })
 
-    this.traceUtilities.replaceCurrentTrace(trace)
+    this.traceUtilities.replaceCurrentTrace(trace, 'another-trace-started')
 
     return id
   }
@@ -121,6 +122,54 @@ export class Tracer<
     }
 
     trace.interrupt('aborted')
+  }
+
+  /**
+   * Adds additional required spans or debounce spans to the current trace *only*.
+   * Note: This recreates the Trace instance with the modified definition and replays all the spans.
+   */
+  addRequirementsToCurrentTraceOnly = (
+    definitionModifications: TraceDefinitionModifications<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >,
+  ): void => {
+    const trace:
+      | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
+      | undefined = this.traceUtilities.getCurrentTrace()
+
+    if (!trace) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `No currently active trace when adding required spans. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
+        ),
+      )
+      return
+    }
+
+    // verify that trace is the same definition as the Tracer's definition
+    if (trace.sourceDefinition !== this.definition) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `You are trying to add required spans to a trace that is not the same definition as the Tracer's definition.`,
+        ),
+      )
+      return
+    }
+
+    // Create a new trace with the updated definition, importing state from the existing trace
+    const newTrace = new Trace<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >({
+      importFrom: trace,
+      definitionModifications,
+    })
+
+    // Replace the current trace with the new one
+    this.traceUtilities.replaceCurrentTrace(newTrace, 'definition-changed')
   }
 
   // can have config changed until we move into active

@@ -301,6 +301,12 @@ describe('type tests', () => {
         ticketId: 123,
       },
     })
+
+    ticketActivationTracer.addRequirementsToCurrentTraceOnly({
+      additionalRequiredSpans: [
+        { name: 'end', matchingRelations: ['ticketId'] },
+      ],
+    })
   })
 
   it('does not allow to include invalid relatedTo value', () => {
