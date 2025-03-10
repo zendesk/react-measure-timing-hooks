@@ -192,7 +192,7 @@ function getComputedRenderBeaconSpans<
     }
   >()
 
-  const scopeKeys = Object.keys(input.relatedTo)
+  const relatedToKey = Object.keys(input.relatedTo)
 
   // Group render spans by beacon and compute firstStart and lastEnd
   for (const entry of recordedItems) {
@@ -213,12 +213,12 @@ function getComputedRenderBeaconSpans<
     const relatedTo = r as Record<string, unknown> | undefined
     const inputRelatedTo: Record<string, unknown> = input.relatedTo
 
-    const scopeMatch = scopeKeys.every(
+    const relationMatch = relatedToKey.every(
       (key) =>
         relatedTo?.[key] === undefined ||
         inputRelatedTo[key] === relatedTo[key],
     )
-    if (!scopeMatch) continue
+    if (!relationMatch) continue
 
     const start = startTime.now
     const contentfulRenderEnd =

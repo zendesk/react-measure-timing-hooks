@@ -224,7 +224,7 @@ Valid state transitions:
 ## Datatypes
 
 ```ts
-interface TraceEntryInput<ScopeT extends object> {
+interface TraceEntryInput<RelationSchemasT extends object> {
   type:
     | NativePerformanceEntryType
     | 'component-render-start'
@@ -247,7 +247,7 @@ interface TraceEntryInput<ScopeT extends object> {
 
   status: 'ok' | 'error'
 
-  relatedTo: ScopeT
+  relatedTo: RelationSchemasT
 
   attributes: {
     [name: string]: unknown

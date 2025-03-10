@@ -9,10 +9,10 @@ export const createTimestamp = (now: number): Timestamp => ({
   now,
 })
 
-export type AnyScope = Record<string, unknown>
+export type AnyRelation = Record<string, unknown>
 
 export const createAnnotation = (
-  span: Span<AnyScope>,
+  span: Span<AnyRelation>,
   traceStartTime: Timestamp,
   partial: Partial<SpanAnnotation> = {},
 ): SpanAnnotation => ({
@@ -26,7 +26,7 @@ export const createAnnotation = (
   ...partial,
 })
 
-export const createMockSpan = <TSpan extends Span<AnyScope>>(
+export const createMockSpan = <TSpan extends Span<AnyRelation>>(
   startTimeNow: number,
   partial: Partial<TSpan>,
 ): TSpan =>
