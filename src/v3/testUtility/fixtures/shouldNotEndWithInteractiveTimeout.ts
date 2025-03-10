@@ -1,9 +1,9 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import type { SpanAndAnnotation } from '../spanAnnotationTypes'
-import type { TicketIdScope } from './fixtures/ticket.activation'
+import type { TicketAndUserAndGlobalRelationSchemasFixture } from './relationSchemas'
 
-export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketIdScope>[] =
+export const shouldNotEndWithInteractiveTimeout: SpanAndAnnotation<TicketAndUserAndGlobalRelationSchemasFixture>[] =
   [
     {
       span: {

@@ -11,13 +11,13 @@ import {
 } from './testUtility/createMockFactory'
 import type { CompleteTraceDefinition } from './types'
 
-interface AnyScope {
+interface AnyRelation {
   global: {}
 }
 
 const baseDefinitionFixture: CompleteTraceDefinition<
   'global',
-  AnyScope,
+  AnyRelation,
   'origin'
 > = {
   name: 'test-trace',
@@ -155,7 +155,7 @@ describe('recordingComputeUtils', () => {
   describe('getComputedSpans', () => {
     const baseDefinition: CompleteTraceDefinition<
       'global',
-      AnyScope,
+      AnyRelation,
       'origin'
     > = {
       ...baseDefinitionFixture,
@@ -195,16 +195,19 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle operation-start and operation-end special matchers', () => {
-      const definition: CompleteTraceDefinition<'global', AnyScope, 'origin'> =
-        {
-          ...baseDefinition,
-          computedSpanDefinitions: {
-            'operation-span': {
-              startSpan: 'operation-start',
-              endSpan: 'operation-end',
-            },
+      const definition: CompleteTraceDefinition<
+        'global',
+        AnyRelation,
+        'origin'
+      > = {
+        ...baseDefinition,
+        computedSpanDefinitions: {
+          'operation-span': {
+            startSpan: 'operation-start',
+            endSpan: 'operation-end',
           },
-        }
+        },
+      }
 
       const markedCompleteSpan = createMockSpanAndAnnotation(200, {
         name: 'end-span',
@@ -233,7 +236,7 @@ describe('recordingComputeUtils', () => {
   describe('getComputedValues', () => {
     const baseDefinition: CompleteTraceDefinition<
       'global',
-      AnyScope,
+      AnyRelation,
       'origin'
     > = {
       ...baseDefinitionFixture,
@@ -266,20 +269,23 @@ describe('recordingComputeUtils', () => {
     })
 
     it('should handle multiple matches in computeValueFromMatches', () => {
-      const definition: CompleteTraceDefinition<'global', AnyScope, 'origin'> =
-        {
-          ...baseDefinition,
-          computedValueDefinitions: {
-            'status-counts': {
-              matches: [
-                ({ span }) => span.status === 'error',
-                ({ span }) => span.status === 'ok',
-              ],
-              computeValueFromMatches: (errors, oks) =>
-                errors.length + oks.length,
-            },
+      const definition: CompleteTraceDefinition<
+        'global',
+        AnyRelation,
+        'origin'
+      > = {
+        ...baseDefinition,
+        computedValueDefinitions: {
+          'status-counts': {
+            matches: [
+              ({ span }) => span.status === 'error',
+              ({ span }) => span.status === 'ok',
+            ],
+            computeValueFromMatches: (errors, oks) =>
+              errors.length + oks.length,
           },
-        }
+        },
+      }
 
       const result = getComputedValues({
         definition,

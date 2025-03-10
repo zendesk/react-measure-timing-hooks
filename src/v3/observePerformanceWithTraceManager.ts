@@ -32,12 +32,12 @@ export const observePerformanceWithTraceManager = <
   RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
 >({
   traceManager,
-  deriveScopeFromPerformanceEntry,
+  deriveRelationFromPerformanceEntry,
   entryTypes = getBestSupportedEntryTypes(),
   keep,
 }: {
   traceManager: TraceManager<RelationSchemasT>
-  deriveScopeFromPerformanceEntry?: DeriveRelationsFromPerformanceEntryFn<RelationSchemasT>
+  deriveRelationFromPerformanceEntry?: DeriveRelationsFromPerformanceEntryFn<RelationSchemasT>
   entryTypes?: NativePerformanceEntryType[]
   keep?: (entry: PerformanceEntry) => boolean
 }) => {
@@ -48,7 +48,7 @@ export const observePerformanceWithTraceManager = <
       }
       const traceEntry = getSpanFromPerformanceEntry<RelationSchemasT>(
         entry,
-        deriveScopeFromPerformanceEntry,
+        deriveRelationFromPerformanceEntry,
       )
       if (traceEntry !== undefined) {
         traceManager.processSpan(traceEntry)

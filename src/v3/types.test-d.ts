@@ -5,7 +5,7 @@ import * as match from './matchSpan'
 import { TraceManager } from './TraceManager'
 import type { MapSchemaToTypes } from './types'
 
-const mockSpanWithoutScope = {
+const mockSpanWithoutRelation = {
   name: 'some-span',
   duration: 0,
   type: 'mark',
@@ -135,7 +135,7 @@ describe('type tests', () => {
 
     // valid definition
     const ticketActivationTracer = traceManager.createTracer({
-      name: 'ticket.activation',
+      name: 'ticket.activated',
       relationSchemaName: 'ticket',
       variants: {
         origin: { timeout: 5_000 },
@@ -145,7 +145,7 @@ describe('type tests', () => {
     })
 
     const ticketActivationTracer2 = traceManager.createTracer({
-      name: 'ticket.activation',
+      name: 'ticket.activated',
       relationSchemaName: 'custom',
       variants: {
         origin: { timeout: 5_000 },
@@ -190,7 +190,7 @@ describe('type tests', () => {
 
     // invalid definition. relatedTo match but not included in AllPossibleScopes
     const invalidTracer = traceManager.createTracer({
-      name: 'ticket.activation',
+      name: 'ticket.activated',
       variants: {
         origin: { timeout: 5_000 },
       },
@@ -221,7 +221,7 @@ describe('type tests', () => {
 
     // valid definition
     const ticketActivationWithFnTracer = traceManager.createTracer({
-      name: 'ticket.activation',
+      name: 'ticket.activated',
       relationSchemaName: 'ticket',
       variants: {
         origin: { timeout: 5_000 },
@@ -265,19 +265,19 @@ describe('type tests', () => {
 
     // valid - excess relatedTo
     traceManager.processSpan({
-      ...mockSpanWithoutScope,
+      ...mockSpanWithoutRelation,
       relatedTo: { ticketId: '123', customFieldId: '123', userId: '123' },
     })
 
     // valid
     traceManager.processSpan({
-      ...mockSpanWithoutScope,
+      ...mockSpanWithoutRelation,
       relatedTo: { ticketId: '123' },
     })
 
     // valid - multiple relatedTo simultaneously
     traceManager.processSpan({
-      ...mockSpanWithoutScope,
+      ...mockSpanWithoutRelation,
       relatedTo: {
         ticketId: '123',
         customFieldId: '123',
@@ -286,7 +286,7 @@ describe('type tests', () => {
 
     // invalid
     traceManager.processSpan({
-      ...mockSpanWithoutScope,
+      ...mockSpanWithoutRelation,
       relatedTo: {
         // @ts-expect-error bad relatedTo
         bad: '123',
@@ -295,7 +295,7 @@ describe('type tests', () => {
 
     // invalid
     traceManager.processSpan({
-      ...mockSpanWithoutScope,
+      ...mockSpanWithoutRelation,
       relatedTo: {
         // @ts-expect-error bad relatedTo
         ticketId: 123,

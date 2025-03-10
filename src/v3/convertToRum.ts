@@ -50,9 +50,9 @@ export interface RumTraceRecording<RelationSchemaT>
   [key: string]: unknown
 }
 
-export function isRenderEntry<ScopeT>(
-  entry: Span<ScopeT>,
-): entry is ComponentRenderSpan<ScopeT> {
+export function isRenderEntry<RelationSchemasT>(
+  entry: Span<RelationSchemasT>,
+): entry is ComponentRenderSpan<RelationSchemasT> {
   return (
     entry.type === 'component-render' ||
     entry.type === 'component-render-start' ||
@@ -60,9 +60,9 @@ export function isRenderEntry<ScopeT>(
   )
 }
 
-function updateEmbeddedEntry<ScopeT>(
+function updateEmbeddedEntry<RelationSchemasT>(
   embeddedEntry: EmbeddedEntry,
-  spanAndAnnotation: SpanAndAnnotation<ScopeT>,
+  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
 ): EmbeddedEntry {
   const { annotation, span } = spanAndAnnotation
   return {
@@ -78,10 +78,10 @@ function updateEmbeddedEntry<ScopeT>(
   }
 }
 
-function createEmbeddedEntry<ScopeT>({
+function createEmbeddedEntry<RelationSchemasT>({
   span,
   annotation,
-}: SpanAndAnnotation<ScopeT>): EmbeddedEntry {
+}: SpanAndAnnotation<RelationSchemasT>): EmbeddedEntry {
   return {
     count: 1,
     totalDuration: span.duration,
@@ -94,8 +94,8 @@ function createEmbeddedEntry<ScopeT>({
   }
 }
 
-export const defaultEmbedSpanSelector = <ScopeT>(
-  spanAndAnnotation: SpanAndAnnotation<ScopeT>,
+export const defaultEmbedSpanSelector = <RelationSchemasT>(
+  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
 ) => {
   const { span } = spanAndAnnotation
   return isRenderEntry(span)

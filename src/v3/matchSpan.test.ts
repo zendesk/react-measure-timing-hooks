@@ -335,7 +335,7 @@ describe('matchSpan', () => {
     })
   })
 
-  describe('scopeKeys', () => {
+  describe('matchingRelation', () => {
     it('should return true when relatedTo does match', () => {
       const matcher = matchSpan.withAllConditions<
         'ticket',

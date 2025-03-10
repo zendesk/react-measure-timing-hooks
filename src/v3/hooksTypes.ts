@@ -14,8 +14,8 @@ export type BeaconConfig<RelationSchemasT, RequiredAttributesT = {}> = {
   ? { attributes?: Attributes }
   : { attributes: RequiredAttributesT & Attributes })
 
-export type UseBeacon<ScopeT, RequiredAttributesT> = (
-  beaconConfig: BeaconConfig<ScopeT, RequiredAttributesT>,
+export type UseBeacon<RelationSchemasT, RequiredAttributesT> = (
+  beaconConfig: BeaconConfig<RelationSchemasT, RequiredAttributesT>,
 ) => void
 
 export type GetRelationSchemasTFromTraceManager<

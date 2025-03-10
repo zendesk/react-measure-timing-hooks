@@ -170,7 +170,7 @@ export function withMatchingRelations<
     // similarly, if the span doesn't have any relatedTo set
     const relatedToInput: Record<string, unknown> | undefined = r
     if (!span.relatedTo || !relatedToInput) return false
-    const spanScope: Record<string, unknown> = span.relatedTo
+    const spanRelatedTo: Record<string, unknown> = span.relatedTo
     const resolvedKeys =
       typeof keys === 'boolean' && keys
         ? Object.keys(relationSchema as object)
@@ -178,7 +178,8 @@ export function withMatchingRelations<
 
     if (!resolvedKeys) return false
     return resolvedKeys.every(
-      (key) => key in spanScope && spanScope[key] === relatedToInput[key],
+      (key) =>
+        key in spanRelatedTo && spanRelatedTo[key] === relatedToInput[key],
     )
   }
 }

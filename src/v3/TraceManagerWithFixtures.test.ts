@@ -13,11 +13,11 @@ import {
 } from './testUtility/fixtures/relationSchemas'
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
-import { ticketActivationDefinition } from './testUtility/fixtures/ticket.activation'
+import { ticketActivatedDefinition } from './testUtility/fixtures/ticket.activated'
 import { TraceManager } from './TraceManager'
 import type { AnyPossibleReportFn } from './types'
 
-interface TicketScope {
+interface TicketIdRelation {
   ticketId: string
 }
 
@@ -31,7 +31,7 @@ describe('TraceManager with Fixtures', () => {
   })
 
   beforeEach(() => {
-    reportFn = jest.fn<AnyPossibleReportFn<TicketScope>>()
+    reportFn = jest.fn<AnyPossibleReportFn<TicketIdRelation>>()
     generateId = jest.fn().mockReturnValue('trace-id')
     reportErrorFn = jest.fn()
   })
@@ -50,14 +50,14 @@ describe('TraceManager with Fixtures', () => {
     })
     const fixtureEntries = shouldCompleteAndHaveInteractiveTime
 
-    const scopeEntry = fixtureEntries.find(
+    const relatedToEntry = fixtureEntries.find(
       (entry) => 'relatedTo' in entry.span,
     )!
     const relatedTo = {
-      ticketId: scopeEntry.span.relatedTo!.ticketId!,
+      ticketId: relatedToEntry.span.relatedTo!.ticketId!,
     }
 
-    const tracer = traceManager.createTracer(ticketActivationDefinition)
+    const tracer = traceManager.createTracer(ticketActivatedDefinition)
     tracer.start({
       relatedTo,
       startTime: fixtureEntries[0]!.span.startTime,
@@ -114,7 +114,7 @@ describe('TraceManager with Fixtures', () => {
         "duration": 1504.4000000059605,
         "id": "trace-id",
         "interruptionReason": undefined,
-        "name": "ticket.activation",
+        "name": "ticket.activated",
         "relatedTo": {
           "ticketId": "74",
         },
@@ -139,13 +139,13 @@ describe('TraceManager with Fixtures', () => {
       reportErrorFn,
     })
     const fixtureEntries = shouldNotEndWithInteractiveTimeout
-    const scopeEntry = fixtureEntries.find(
+    const relatedToEntry = fixtureEntries.find(
       (entry) => 'relatedTo' in entry.span,
     )!
     const relatedTo = {
-      ticketId: scopeEntry.span.relatedTo!.ticketId!,
+      ticketId: relatedToEntry.span.relatedTo!.ticketId!,
     }
-    const tracer = traceManager.createTracer(ticketActivationDefinition)
+    const tracer = traceManager.createTracer(ticketActivatedDefinition)
     tracer.start({
       relatedTo,
       startTime: {
@@ -207,7 +207,7 @@ describe('TraceManager with Fixtures', () => {
         "duration": 1302.3999999910593,
         "id": "trace-id",
         "interruptionReason": undefined,
-        "name": "ticket.activation",
+        "name": "ticket.activated",
         "relatedTo": {
           "ticketId": "74",
         },

@@ -4,13 +4,13 @@ import type { TicketAndUserAndGlobalRelationSchemasFixture } from './relationSch
 const TICKET_DISPOSE_EVENT_NAME = `ticket.dispose`
 const TICKET_NAVIGATED_AWAY_EVENT_NAME = `ticket.navigated-away`
 
-export const ticketActivationDefinition: TraceDefinition<
+export const ticketActivatedDefinition: TraceDefinition<
   'ticket',
   TicketAndUserAndGlobalRelationSchemasFixture,
   'cold_boot',
   {}
 > = {
-  name: 'ticket.activation',
+  name: 'ticket.activated',
   type: 'operation',
   relationSchemaName: 'ticket',
   variants: {

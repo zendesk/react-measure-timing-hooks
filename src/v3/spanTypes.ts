@@ -83,7 +83,7 @@ export interface SpanBase<RelationSchemasT> {
   startTime: Timestamp
 
   // for non performance entries, relatedTo is set explicitly in the span, something like ticket id or user id
-  // performance entries can derive relatedTo based using `deriveScopeFromPerformanceEntry`
+  // performance entries can derive relatedTo based using `deriveRelationFromPerformanceEntry`
   relatedTo?: RelationsOnASpan<RelationSchemasT>
 
   attributes: Attributes
