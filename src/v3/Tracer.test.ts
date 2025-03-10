@@ -188,4 +188,84 @@ describe('Tracer', () => {
       expect(reportFn.mock.calls[0]![0].status).toBe('ok')
     })
   })
+
+  describe('addRequiredSpansToCurrentTrace', () => {
+    it('adds required spans to an existing trace', () => {
+      const traceManager = new TraceManager<TestRelationSchema>({
+        relationSchemas: { test: { id: String } },
+        reportFn: getReportFn(),
+        generateId,
+        reportErrorFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'test.operation',
+        type: 'operation',
+        relationSchemaName: 'test',
+        requiredSpans: [{ name: 'hello' }, { name: 'initial-required' }],
+        variants: {
+          default: { timeout: 1_000 },
+        },
+      })
+
+      // Start trace
+      tracer.start({
+        relatedTo: { id: '1' },
+        variant: 'default',
+      })
+
+      // @ts-expect-error internal prop
+      const trace = tracer.traceUtilities.getCurrentTrace()
+      expect(trace?.stateMachine.remainingRequiredSpanIndexes.size).toBe(2)
+      expect(trace?.definition.requiredSpans).toHaveLength(2)
+      expect(trace?.definition.interruptOnSpans).toHaveLength(2)
+
+      // See initial required span - should not complete yet
+      // prettier-ignore
+      const { spans: firstSpans } = getSpansFromTimeline<TestRelationSchema>`
+        Events: ${Render('hello', 0)}
+        Time:   ${50}
+      `
+      processSpans(firstSpans, traceManager)
+      expect(reportFn).not.toHaveBeenCalled()
+
+      // Now add an additional required span
+      tracer.addRequirementsToCurrentTraceOnly({
+        additionalRequiredSpans: [{ name: 'added-required' }],
+      })
+
+      // @ts-expect-error internal prop
+      const traceRecreated = tracer.traceUtilities.getCurrentTrace()
+      expect(traceRecreated).not.toBe(trace)
+      expect(traceRecreated?.definition.requiredSpans).toHaveLength(3)
+      expect(traceRecreated?.definition.interruptOnSpans).toHaveLength(3)
+      // two required spans left:
+      expect(
+        traceRecreated?.stateMachine.remainingRequiredSpanIndexes.size,
+      ).toBe(2)
+
+      // See the added required span - now should complete
+      // prettier-ignore
+      const { spans: secondSpans } = getSpansFromTimeline<TestRelationSchema>`
+        Events: ${Render('initial-required', 50)}----${Render('added-required', 0)}
+        Time:   ${100}                               ${150}
+      `
+      processSpans(secondSpans, traceManager)
+
+      // Verify trace completed
+      expect(reportFn).toHaveBeenCalled()
+      const report = reportFn.mock.calls[0]![0]
+      expect(report.status).toBe('ok')
+      expect(report.duration).toBe(150)
+
+      // Verify that previous spans were preserved
+      const recordedSpanNames = report.entries.map((s) => s.span.name)
+      expect(recordedSpanNames).toEqual([
+        'hello',
+        'initial-required',
+        'added-required',
+      ])
+      expect(traceManager.currentTracerContext).toBeUndefined()
+    })
+  })
 })

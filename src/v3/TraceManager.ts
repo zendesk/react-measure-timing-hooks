@@ -3,8 +3,7 @@ import {
   convertMatchersToFns,
   ensureMatcherFn,
 } from './ensureMatcherFn'
-import { type SpanMatch, withAllConditions } from './matchSpan'
-import { requiredSpanWithErrorStatus } from './requiredSpanWithErrorStatus'
+import { type SpanMatch } from './matchSpan'
 import type { SpanAnnotationRecord } from './spanAnnotationTypes'
 import type { Span } from './spanTypes'
 import type { AllPossibleTraces } from './Trace'
@@ -47,16 +46,13 @@ export class TraceManager<
       // by default noop for warnings
       reportWarningFn: () => {},
       ...configInput,
-      replaceCurrentTrace: (newTrace: AllPossibleTraces<RelationSchemasT>) => {
+      replaceCurrentTrace: (newTrace, reason) => {
         if (this.currentTrace) {
-          this.currentTrace.interrupt('another-trace-started')
-          this.currentTrace = undefined
+          this.currentTrace.interrupt(reason)
         }
         this.currentTrace = newTrace
       },
-      cleanupCurrentTrace: (
-        traceToCleanUp: AllPossibleTraces<RelationSchemasT>,
-      ) => {
+      cleanupCurrentTrace: (traceToCleanUp) => {
         if (traceToCleanUp === this.currentTrace) {
           this.currentTrace = undefined
         }
@@ -115,32 +111,11 @@ export class TraceManager<
       VariantsT
     >(traceDefinition.debounceOnSpans)
 
-    const manuallyDefinedInterruptOnSpans = convertMatchersToFns<
+    const interruptOnSpans = convertMatchersToFns<
       SelectedRelationNameT,
       RelationSchemasT,
       VariantsT
     >(traceDefinition.interruptOnSpans)
-
-    // all requiredSpans implicitly interrupt the trace if they error, unless explicitly ignored
-    const interruptOnRequiredErrored = requiredSpans.flatMap<
-      (typeof requiredSpans)[number]
-    >((matcher) =>
-      matcher.continueWithErrorStatus
-        ? []
-        : withAllConditions<SelectedRelationNameT, RelationSchemasT, VariantsT>(
-            matcher,
-            requiredSpanWithErrorStatus<
-              SelectedRelationNameT,
-              RelationSchemasT,
-              VariantsT
-            >(),
-          ),
-    )
-
-    const interruptOnSpans = [
-      ...(manuallyDefinedInterruptOnSpans ?? []),
-      ...interruptOnRequiredErrored,
-    ] as typeof manuallyDefinedInterruptOnSpans
 
     const suppressErrorStatusPropagationOnSpans = convertMatchersToFns<
       SelectedRelationNameT,
