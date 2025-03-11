@@ -446,4 +446,155 @@ describe('matchSpan', () => {
       expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(false)
     })
   })
+
+  describe('fromDefinition', () => {
+    it('should correctly handle standard definition objects', () => {
+      const matcher = matchSpan.fromDefinition<
+        'ticket',
+        TicketIdRelationSchemasFixture,
+        MockOrigin
+      >({
+        name: 'testEntry',
+        type: 'element',
+        attributes: { attr1: 'value1' },
+      })
+
+      const mockSpanAndAnnotation = {
+        span: mockEntryBase,
+        annotation: mockAnnotation,
+      }
+      expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(true)
+    })
+
+    describe('oneOf', () => {
+      it('should return true when one of the conditions matches', () => {
+        const matcher = matchSpan.fromDefinition<
+          'ticket',
+          TicketIdRelationSchemasFixture,
+          MockOrigin
+        >({
+          oneOf: [
+            { name: 'nonMatchingEntry' },
+            { name: 'testEntry' },
+            { name: 'anotherNonMatchingEntry' },
+          ],
+        })
+
+        const mockSpanAndAnnotation = {
+          span: mockEntryBase,
+          annotation: mockAnnotation,
+        }
+        expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(true)
+      })
+
+      it('should return false when none of the conditions match', () => {
+        const matcher = matchSpan.fromDefinition<
+          'ticket',
+          TicketIdRelationSchemasFixture,
+          MockOrigin
+        >({
+          oneOf: [
+            { name: 'nonMatchingEntry1' },
+            { name: 'nonMatchingEntry2' },
+            { name: 'nonMatchingEntry3' },
+          ],
+        })
+
+        const mockSpanAndAnnotation = {
+          span: mockEntryBase,
+          annotation: mockAnnotation,
+        }
+        expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(false)
+      })
+
+      it('should handle complex conditions within oneOf', () => {
+        const matcher = matchSpan.fromDefinition<
+          'ticket',
+          TicketIdRelationSchemasFixture,
+          MockOrigin
+        >({
+          oneOf: [
+            {
+              name: 'nonMatchingEntry',
+              type: 'element',
+            },
+            {
+              name: 'testEntry',
+              type: 'component-render', // This doesn't match our entry
+            },
+            {
+              name: 'testEntry',
+              type: 'element',
+              attributes: { attr1: 'value1' },
+            },
+          ],
+        })
+
+        const mockSpanAndAnnotation = {
+          span: mockEntryBase,
+          annotation: mockAnnotation,
+        }
+        expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(true)
+      })
+
+      it('should carry over tags from sub-matchers', () => {
+        const matcher = matchSpan.fromDefinition<
+          'ticket',
+          TicketIdRelationSchemasFixture,
+          MockOrigin
+        >({
+          oneOf: [
+            { name: 'nonMatchingEntry' },
+            { name: 'testEntry', isIdle: true },
+          ],
+        })
+
+        expect('idleCheck' in matcher).toBe(true)
+        expect(matcher.idleCheck).toBe(true)
+      })
+
+      it('should work with nested fromDefinition calls', () => {
+        // First, create a matcher using fromDefinition
+        const nestedMatcher = matchSpan.fromDefinition<
+          'ticket',
+          TicketIdRelationSchemasFixture,
+          MockOrigin
+        >({
+          type: 'element',
+        })
+
+        // Then use that matcher along with another in withOneOfConditions
+        const combinedMatcher = matchSpan.withOneOfConditions(
+          nestedMatcher,
+          matchSpan.withName('nonMatchingEntry'),
+        )
+
+        const mockSpanAndAnnotation = {
+          span: mockEntryBase,
+          annotation: mockAnnotation,
+        }
+        expect(combinedMatcher(mockSpanAndAnnotation, mockContext)).toBe(true)
+      })
+
+      it('should handle nested oneOf conditions', () => {
+        const matcher = matchSpan.fromDefinition<
+          'ticket',
+          TicketIdRelationSchemasFixture,
+          MockOrigin
+        >({
+          oneOf: [
+            { name: 'nonMatchingEntry1' },
+            {
+              oneOf: [{ name: 'nonMatchingEntry2' }, { name: 'testEntry' }],
+            },
+          ],
+        })
+        const mockSpanAndAnnotation = {
+          span: mockEntryBase,
+          annotation: mockAnnotation,
+        }
+        expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(true)
+      })
+    })
+  })
 })

@@ -35,7 +35,7 @@ export type NameMatcher<RelationSchemaT> =
       inputRelation: MapSchemaToTypes<RelationSchemaT> | undefined,
     ) => boolean)
 
-export interface SpanMatchDefinition<
+export interface SpanMatchDefinitionCombinator<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
 > {
@@ -51,6 +51,15 @@ export interface SpanMatchDefinition<
   isIdle?: boolean
   label?: string
 }
+
+export type SpanMatchDefinition<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+> =
+  | SpanMatchDefinitionCombinator<SelectedRelationNameT, RelationSchemasT>
+  | {
+      oneOf: SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT>[]
+    }
 
 export type SpanMatch<
   SelectedRelationNameT extends keyof RelationSchemasT,
@@ -321,6 +330,15 @@ export function fromDefinition<
 >(
   definition: SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT>,
 ): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
+  // Check if definition has oneOf property
+  if ('oneOf' in definition) {
+    // Convert each definition in oneOf array to a matcher and combine with OR
+    const matchers = definition.oneOf.map((def) =>
+      fromDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>(def),
+    )
+    return withOneOfConditions(...matchers)
+  }
+
   const matchers: SpanMatcherFn<
     SelectedRelationNameT,
     RelationSchemasT,
