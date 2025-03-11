@@ -30,11 +30,11 @@ export { switchFn } from './switchFn'
 export { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
 
 // visualizer
-export {
-  getTimingDisplayModule,
-  onActionAddedCallback,
-  useVisualizer,
-} from './lazyVisualizer'
+// export {
+//   getTimingDisplayModule,
+//   onActionAddedCallback,
+//   useVisualizer,
+// } from './lazyVisualizer'
 
 // operation tracking (v2)
 // export * from './v2/constants'
