@@ -1,14 +1,14 @@
 export function findLast<T, S extends T>(
-  array: T[],
-  predicate: (value: T, index: number, array: T[]) => value is S,
+  array: readonly T[],
+  predicate: (value: T, index: number, array: readonly T[]) => value is S,
 ): S | undefined
 export function findLast<T>(
-  array: T[],
-  predicate: (value: T, index: number, array: T[]) => unknown,
+  array: readonly T[],
+  predicate: (value: T, index: number, array: readonly T[]) => unknown,
 ): T | undefined
 export function findLast<T>(
-  array: T[],
-  predicate: (value: T, index: number, array: T[]) => unknown,
+  array: readonly T[],
+  predicate: (value: T, index: number, array: readonly T[]) => unknown,
 ): T | undefined {
   for (let i = array.length - 1; i >= 0; i--) {
     const value = array[i]!

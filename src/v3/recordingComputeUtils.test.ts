@@ -50,6 +50,7 @@ describe('recordingComputeUtils', () => {
             relatedTo: {},
             variant: 'origin',
           },
+          recordedItemsByLabel: {},
         },
         { transitionFromState: 'active' },
       )
@@ -82,6 +83,7 @@ describe('recordingComputeUtils', () => {
             relatedTo: {},
             variant: 'origin',
           },
+          recordedItemsByLabel: {},
         },
         { transitionFromState: 'active' },
       )
@@ -116,6 +118,7 @@ describe('recordingComputeUtils', () => {
             relatedTo: {},
             variant: 'origin',
           },
+          recordedItemsByLabel: {},
         },
         { transitionFromState: 'active' },
       )
@@ -140,6 +143,7 @@ describe('recordingComputeUtils', () => {
             relatedTo: {},
             variant: 'origin',
           },
+          recordedItemsByLabel: {},
         },
         {
           transitionFromState: 'active',
@@ -186,6 +190,7 @@ describe('recordingComputeUtils', () => {
           relatedTo: {},
           variant: 'origin',
         },
+        recordedItemsByLabel: {},
       })
 
       expect(result['test-computed-span']).toEqual({
@@ -227,6 +232,7 @@ describe('recordingComputeUtils', () => {
           relatedTo: {} as never,
           variant: 'origin',
         },
+        recordedItemsByLabel: {},
       })
 
       expect(result['operation-span']).toBeDefined()
@@ -263,6 +269,7 @@ describe('recordingComputeUtils', () => {
           relatedTo: {} as never,
           variant: 'origin',
         },
+        recordedItemsByLabel: {},
       })
 
       expect(result['error-count']).toBe(2)
@@ -301,6 +308,7 @@ describe('recordingComputeUtils', () => {
           relatedTo: {} as never,
           variant: 'origin',
         },
+        recordedItemsByLabel: {},
       })
 
       expect(result['status-counts']).toEqual(3)
@@ -362,6 +370,7 @@ describe('recordingComputeUtils', () => {
             relatedTo: {},
             variant: 'origin',
           },
+          recordedItemsByLabel: {},
         },
         { transitionFromState: 'active' },
       )

@@ -31,7 +31,7 @@ export interface ComputeRecordingData<
   RelationSchemasT,
   VariantsT extends string,
 > extends TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT> {
-  recordedItems: SpanAndAnnotation<RelationSchemasT>[]
+  recordedItems: readonly SpanAndAnnotation<RelationSchemasT>[]
 }
 
 export function getComputedValues<
@@ -173,7 +173,7 @@ function getComputedRenderBeaconSpans<
   RelationSchemasT,
   const VariantsT extends string,
 >(
-  recordedItems: SpanAndAnnotation<RelationSchemasT>[],
+  recordedItems: readonly SpanAndAnnotation<RelationSchemasT>[],
   input: ActiveTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>,
 ): TraceRecording<
   SelectedRelationNameT,

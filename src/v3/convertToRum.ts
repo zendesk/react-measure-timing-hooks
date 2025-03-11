@@ -102,7 +102,7 @@ export const defaultEmbedSpanSelector = <RelationSchemasT>(
 }
 
 export function getSpanSummaryAttributes<RelationSchemasT>(
-  recordedItems: SpanAndAnnotation<RelationSchemasT>[],
+  recordedItems: readonly SpanAndAnnotation<RelationSchemasT>[],
 ): SpanSummaryAttributes {
   // loop through recorded items, create a entry based on the name
   const spanAttributes: SpanSummaryAttributes = {}

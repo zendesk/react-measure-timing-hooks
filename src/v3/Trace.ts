@@ -27,6 +27,7 @@ import type {
   CompleteTraceDefinition,
   DraftTraceContext,
   RelationSchemasBase,
+  TraceContext,
   TraceDefinitionModifications,
   TraceInterruptionReason,
   TraceInterruptionReasonForInvalidTraces,
@@ -905,7 +906,8 @@ export class Trace<
   const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
   const VariantsT extends string,
-> {
+> implements TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>
+{
   readonly sourceDefinition: CompleteTraceDefinition<
     SelectedRelationNameT,
     RelationSchemasT,
@@ -964,6 +966,9 @@ export class Trace<
       VariantsT
     >
   > = new Set()
+  readonly recordedItemsByLabel: {
+    [label: string]: SpanAndAnnotation<RelationSchemasT>[]
+  }
 
   stateMachine: TraceStateMachine<
     SelectedRelationNameT,
@@ -1088,6 +1093,15 @@ export class Trace<
       ...interruptOnRequiredErrored,
     ] as typeof definition.interruptOnSpans
 
+    this.recordedItemsByLabel = Object.fromEntries(
+      Object.entries(this.definition.labelMatching ?? {}).map(
+        ([label, matcher]) => [
+          label,
+          [] as SpanAndAnnotation<RelationSchemasT>[],
+        ],
+      ),
+    )
+
     // definition is now set, we can initialize the state machine
     this.stateMachine = new TraceStateMachine(this)
 
@@ -1109,6 +1123,9 @@ export class Trace<
     addSpanToRecording: (spanAndAnnotation) => {
       if (!this.recordedItems.has(spanAndAnnotation)) {
         this.recordedItems.add(spanAndAnnotation)
+        for (const label of spanAndAnnotation.annotation.labels) {
+          this.recordedItemsByLabel[label]?.push(spanAndAnnotation)
+        }
       }
     },
     prepareAndEmitRecording: ({
@@ -1138,6 +1155,7 @@ export class Trace<
                 )
               : [...this.recordedItems],
             input: this.input,
+            recordedItemsByLabel: this.recordedItemsByLabel,
           },
           transition,
         )
@@ -1337,16 +1355,15 @@ export class Trace<
 
   private getSpanLabels(span: SpanAndAnnotation<RelationSchemasT>): string[] {
     const labels: string[] = []
-    const context = { definition: this.definition, input: this.input }
     if (!this.definition.labelMatching) return labels
 
-    Object.entries(this.definition.labelMatching).forEach(
-      ([label, doesSpanMatch]) => {
-        if (doesSpanMatch(span, context)) {
-          labels.push(label)
-        }
-      },
-    )
+    for (const [label, doesSpanMatch] of Object.entries(
+      this.definition.labelMatching,
+    )) {
+      if (doesSpanMatch(span, this)) {
+        labels.push(label)
+      }
+    }
 
     return labels
   }

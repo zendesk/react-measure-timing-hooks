@@ -592,4 +592,8 @@ export interface TraceContext<
   readonly input:
     | ActiveTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>
     | DraftTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>
+  // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
+  readonly recordedItemsByLabel: {
+    readonly [label: string]: readonly SpanAndAnnotation<RelationSchemasT>[]
+  }
 }

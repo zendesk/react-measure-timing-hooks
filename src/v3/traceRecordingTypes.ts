@@ -87,5 +87,5 @@ export interface TraceRecording<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
 > extends TraceRecordingBase<RelationSchemasT[SelectedRelationNameT]> {
-  entries: SpanAndAnnotation<RelationSchemasT>[]
+  entries: readonly SpanAndAnnotation<RelationSchemasT>[]
 }

@@ -40,6 +40,8 @@ describe('convertTraceToRUM', () => {
     const traceRecording = createTraceRecording(
       {
         definition,
+        input,
+        recordedItemsByLabel: {},
         recordedItems: [
           createMockSpanAndAnnotation(100.501, {
             name: 'test-component',
@@ -64,12 +66,6 @@ describe('convertTraceToRUM', () => {
             { occurrence: 2 },
           ),
         ],
-        input: {
-          id: 'test',
-          startTime: createTimestamp(0),
-          relatedTo: { ticketId: '74' },
-          variant: 'origin',
-        },
       },
       { transitionFromState: 'active' },
     )
@@ -77,6 +73,7 @@ describe('convertTraceToRUM', () => {
     const context = {
       definition,
       input,
+      recordedItemsByLabel: {},
     }
 
     const result = convertTraceToRUM(traceRecording, context)
