@@ -53,6 +53,8 @@ export interface TraceRecordingBase<RelationSchemaT> {
   // otherwise it's 'ok'
   status: TraceStatus
 
+  variant: string
+
   // STRICTER TYPE TODO: separate out trace recording into a union of trace recording and interrupted trace recording (fields that will be different: interruption reason,duration, and status)
   interruptionReason?: TraceInterruptionReason
   duration: number | null

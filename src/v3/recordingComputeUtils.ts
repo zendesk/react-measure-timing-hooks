@@ -341,7 +341,7 @@ export function createTraceRecording<
   }: FinalState<RelationSchemasT>,
 ): TraceRecording<SelectedRelationNameT, RelationSchemasT> {
   const { definition, recordedItems, input } = data
-  const { id, relatedTo } = input
+  const { id, relatedTo, variant } = input
   const { name } = definition
   // CODE CLEAN UP TODO: let's get this information (wasInterrupted) from up top (in FinalState)
   const wasInterrupted =
@@ -374,6 +374,7 @@ export function createTraceRecording<
     relatedTo,
     type: 'operation',
     duration,
+    variant,
     additionalDurations: {
       startTillRequirementsMet,
       startTillInteractive,

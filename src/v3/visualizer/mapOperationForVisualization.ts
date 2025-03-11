@@ -76,7 +76,7 @@ export const mapOperationForVisualization = (
   } = {},
 ): MappedOperation | null => {
   const allEntries = traceRecording.entries
-  if (!allEntries || !traceRecording.duration) return null
+  if (!allEntries) return null
 
   const preMappedEntries = allEntries.flatMap<
     MappedSpanAndAnnotation & { overrideGroupName?: string }
@@ -237,6 +237,9 @@ export const mapOperationForVisualization = (
     uniqueGroups,
     spanEvents,
     spanTypes,
-    duration: traceRecording.duration,
+    duration:
+      traceRecording.duration ??
+      traceRecording.entries.at(-1)?.annotation.operationRelativeEndTime ??
+      0,
   }
 }

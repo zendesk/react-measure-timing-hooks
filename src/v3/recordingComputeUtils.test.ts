@@ -385,4 +385,30 @@ describe('recordingComputeUtils', () => {
       })
     })
   })
+
+  describe('variant property', () => {
+    it('should include the variant in the recording', () => {
+      const recording = createTraceRecording(
+        {
+          definition: baseDefinitionFixture,
+          recordedItems: [
+            createMockSpanAndAnnotation(100, {
+              status: 'ok',
+              name: 'test-span',
+            }),
+          ],
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+        },
+        { transitionFromState: 'active' },
+      )
+
+      // Verify the variant is included in the recording
+      expect(recording.variant).toBe('origin')
+    })
+  })
 })

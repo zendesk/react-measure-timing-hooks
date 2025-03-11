@@ -124,6 +124,7 @@ describe('TraceManager with Fixtures', () => {
         },
         "status": "ok",
         "type": "operation",
+        "variant": "cold_boot",
       }
     `)
     expect(report.duration).toBeCloseTo(1_504.4)
@@ -217,6 +218,7 @@ describe('TraceManager with Fixtures', () => {
         },
         "status": "ok",
         "type": "operation",
+        "variant": "cold_boot",
       }
     `)
     expect(report.duration).toBeCloseTo(1_302.4)
