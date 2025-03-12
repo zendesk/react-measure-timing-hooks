@@ -171,9 +171,7 @@ export interface TraceManagerUtilities<
     newTrace: AllPossibleTraces<RelationSchemasT>,
     reason: TraceReplaceInterruptionReason,
   ) => void
-  cleanupCurrentTrace: (
-    traceToCleanUp: AllPossibleTraces<RelationSchemasT>,
-  ) => void
+  onEndTrace: (traceToCleanUp: AllPossibleTraces<RelationSchemasT>) => void
   getCurrentTrace: () => AllPossibleTraces<RelationSchemasT> | undefined
 }
 
@@ -573,6 +571,17 @@ export interface DraftTraceContext<
     VariantsT
   >
 }
+
+export type AllPossibleTraceContexts<
+  RelationSchemasT,
+  VariantsT extends string,
+> = {
+  [SelectedRelationNameT in keyof RelationSchemasT]: DraftTraceContext<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >
+}[keyof RelationSchemasT]
 
 export interface TraceContext<
   SelectedRelationNameT extends keyof RelationSchemasT,

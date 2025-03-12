@@ -9,6 +9,7 @@ import type { Span } from './spanTypes'
 import type { AllPossibleTraces } from './Trace'
 import { Tracer } from './Tracer'
 import type {
+  AllPossibleTraceContexts,
   CompleteTraceDefinition,
   ComputedValueDefinitionInput,
   RelationSchemasBase,
@@ -28,12 +29,11 @@ export class TraceManager<
   private currentTrace: AllPossibleTraces<RelationSchemasT> | undefined =
     undefined
 
-  get currentTracerContext() {
+  get currentTracerContext():
+    | AllPossibleTraceContexts<RelationSchemasT, string>
+    | undefined {
     if (!this.currentTrace) return undefined
-    return {
-      definition: this.currentTrace.definition,
-      input: this.currentTrace.input,
-    }
+    return this.currentTrace
   }
 
   constructor(
@@ -52,7 +52,7 @@ export class TraceManager<
         }
         this.currentTrace = newTrace
       },
-      cleanupCurrentTrace: (traceToCleanUp) => {
+      onEndTrace: (traceToCleanUp) => {
         if (traceToCleanUp === this.currentTrace) {
           this.currentTrace = undefined
         }

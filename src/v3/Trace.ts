@@ -1173,7 +1173,7 @@ export class Trace<
   onEnd(
     traceRecording: TraceRecording<SelectedRelationNameT, RelationSchemasT>,
   ): void {
-    this.traceUtilities.cleanupCurrentTrace(this)
+    this.traceUtilities.onEndTrace(this)
     this.traceUtilities.reportFn(traceRecording, this)
   }
 

@@ -8,6 +8,7 @@ import {
   type CompleteTraceDefinition,
   type ComputedSpanDefinitionInput,
   type ComputedValueDefinitionInput,
+  type DraftTraceContext,
   type RelationSchemasBase,
   type TraceDefinitionModifications,
   type TraceManagerUtilities,
@@ -217,6 +218,16 @@ export class Tracer<
     }
 
     trace.transitionDraftToActive(inputAndDefinitionModifications)
+  }
+
+  getCurrentTrace = ():
+    | DraftTraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    | undefined => {
+    const trace = this.traceUtilities.getCurrentTrace()
+    if (!trace || trace.sourceDefinition !== this.definition) {
+      return undefined
+    }
+    return trace
   }
 
   defineComputedSpan = (
