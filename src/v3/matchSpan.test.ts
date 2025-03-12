@@ -10,7 +10,11 @@ import type {
   TicketIdRelationSchemasFixture,
   UserIdRelationSchemasFixture,
 } from './testUtility/fixtures/relationSchemas'
-import type { CompleteTraceDefinition, MapSchemaToTypes } from './types'
+import type {
+  CompleteTraceDefinition,
+  DraftTraceContext,
+  MapSchemaToTypes,
+} from './types'
 
 const mockRelations: MapSchemaToTypes<
   TicketIdRelationSchemasFixture['ticket']
@@ -74,10 +78,7 @@ const mockContext = {
       epoch: Date.now(),
     },
     variant: 'origin',
-  } satisfies ActiveTraceInput<
-    TicketIdRelationSchemasFixture['ticket'],
-    'origin'
-  >,
+  },
   definition: {
     name: 'test',
     type: 'operation',
@@ -89,12 +90,13 @@ const mockContext = {
     variants: {
       origin: { timeout: 10_000 },
     },
-  } satisfies CompleteTraceDefinition<
-    'ticket',
-    TicketIdRelationSchemasFixture,
-    'origin'
-  >,
-} as const
+  },
+  recordedItemsByLabel: {},
+} as const satisfies DraftTraceContext<
+  'ticket',
+  TicketIdRelationSchemasFixture,
+  'origin'
+>
 
 type MockOrigin = (typeof mockContext)['input']['variant']
 
@@ -441,6 +443,40 @@ describe('matchSpan', () => {
       )
       const mockSpanAndAnnotation = {
         span: mockPerformanceEntry,
+        annotation: mockAnnotation,
+      }
+      expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(false)
+    })
+  })
+
+  describe('fn', () => {
+    it('should return true when the custom function matches', () => {
+      const matcher = matchSpan.fromDefinition<
+        'ticket',
+        TicketIdRelationSchemasFixture,
+        MockOrigin
+      >({
+        fn: ({ span }) => span.name.startsWith('test'),
+      })
+
+      const mockSpanAndAnnotation = {
+        span: mockEntryBase,
+        annotation: mockAnnotation,
+      }
+      expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(true)
+    })
+
+    it('should return false when the custom function does not match', () => {
+      const matcher = matchSpan.fromDefinition<
+        'ticket',
+        TicketIdRelationSchemasFixture,
+        MockOrigin
+      >({
+        fn: ({ span }) => span.name === 'nonMatchingEntry',
+      })
+
+      const mockSpanAndAnnotation = {
+        span: mockEntryBase,
         annotation: mockAnnotation,
       }
       expect(matcher(mockSpanAndAnnotation, mockContext)).toBe(false)

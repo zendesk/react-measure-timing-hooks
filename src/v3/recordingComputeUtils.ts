@@ -39,9 +39,8 @@ export function getComputedValues<
   RelationSchemasT,
   const VariantsT extends string,
 >({
-  definition: traceDefinition,
   recordedItems,
-  input,
+  ...context
 }: ComputeRecordingData<
   SelectedRelationNameT,
   RelationSchemasT,
@@ -52,10 +51,10 @@ export function getComputedValues<
     RelationSchemasT
   >['computedValues'] = {}
 
-  for (const [name, definition] of Object.entries(
-    traceDefinition.computedValueDefinitions,
+  for (const [name, computedValueDefinition] of Object.entries(
+    context.definition.computedValueDefinitions,
   )) {
-    const { matches, computeValueFromMatches } = definition
+    const { matches, computeValueFromMatches } = computedValueDefinition
 
     // Initialize arrays to hold matches for each matcher
     const matchingEntriesByMatcher: SpanAndAnnotation<RelationSchemasT>[][] =
@@ -64,7 +63,7 @@ export function getComputedValues<
     // Single pass through recordedItems
     for (const item of recordedItems) {
       matches.forEach((doesSpanMatch, index) => {
-        if (doesSpanMatch(item, { input, definition: traceDefinition })) {
+        if (doesSpanMatch(item, context)) {
           matchingEntriesByMatcher[index]!.push(item)
         }
       })
@@ -91,9 +90,8 @@ export function getComputedSpans<
   RelationSchemasT,
   const VariantsT extends string,
 >({
-  definition: traceDefinition,
   recordedItems,
-  input,
+  ...context
 }: ComputeRecordingData<
   SelectedRelationNameT,
   RelationSchemasT,
@@ -105,24 +103,21 @@ export function getComputedSpans<
     RelationSchemasT
   >['computedSpans'] = {}
 
-  for (const [name, definition] of Object.entries(
-    traceDefinition.computedSpanDefinitions,
+  for (const [name, computedSpanDefinition] of Object.entries(
+    context.definition.computedSpanDefinitions,
   )) {
-    const { startSpan: startSpanMatcher, endSpan } = definition
+    const { startSpan: startSpanMatcher, endSpan } = computedSpanDefinition
 
     const matchingStartEntry =
       typeof startSpanMatcher === 'function'
         ? recordedItems.find((spanAndAnnotation) =>
-            startSpanMatcher(spanAndAnnotation, {
-              input,
-              definition: traceDefinition,
-            }),
+            startSpanMatcher(spanAndAnnotation, context),
           )
         : startSpanMatcher
 
     const matchingStartTime =
       matchingStartEntry === 'operation-start'
-        ? input.startTime.now
+        ? context.input.startTime.now
         : matchingStartEntry?.span.startTime.now
 
     const endSpanMatcher =
@@ -132,13 +127,8 @@ export function getComputedSpans<
         ? markedInteractive
         : endSpan
 
-    const matchingEndEntry = findLast(
-      recordedItems,
-      (spanAndAnnotation) =>
-        endSpanMatcher(spanAndAnnotation, {
-          input,
-          definition: traceDefinition,
-        })!,
+    const matchingEndEntry = findLast(recordedItems, (spanAndAnnotation) =>
+      endSpanMatcher(spanAndAnnotation, context),
     )
 
     const matchingEndTime = matchingEndEntry
@@ -160,7 +150,7 @@ export function getComputedSpans<
         // -----E------S (computed val is negative)
         // this way the `endOffset` can be derived as follows:
         // endOffset = computedSpan.startOffset + computedSpan.duration
-        startOffset: matchingStartTime - input.startTime.now,
+        startOffset: matchingStartTime - context.input.startTime.now,
       }
     }
   }

@@ -567,12 +567,7 @@ export interface DraftTraceContext<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
-> {
-  readonly definition: CompleteTraceDefinition<
-    SelectedRelationNameT,
-    RelationSchemasT,
-    VariantsT
-  >
+> extends TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   readonly input: DraftTraceInput<
     RelationSchemasT[SelectedRelationNameT],
     VariantsT

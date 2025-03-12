@@ -38,6 +38,7 @@ export type NameMatcher<RelationSchemaT> =
 export interface SpanMatchDefinitionCombinator<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
+  VariantsT extends string,
 > {
   name?: NameMatcher<RelationSchemasT[SelectedRelationNameT]>
   performanceEntryName?: NameMatcher<RelationSchemasT[SelectedRelationNameT]>
@@ -50,15 +51,25 @@ export interface SpanMatchDefinitionCombinator<
   occurrence?: number | ((occurrence: number) => boolean)
   isIdle?: boolean
   label?: string
+  fn?: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
 }
 
 export type SpanMatchDefinition<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
+  VariantsT extends string,
 > =
-  | SpanMatchDefinitionCombinator<SelectedRelationNameT, RelationSchemasT>
+  | SpanMatchDefinitionCombinator<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >
   | {
-      oneOf: SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT>[]
+      oneOf: SpanMatchDefinition<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >[]
     }
 
 export type SpanMatch<
@@ -67,7 +78,7 @@ export type SpanMatch<
   VariantsT extends string,
 > =
   | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
-  | SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT>
+  | SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>
 
 /**
  * The common name of the span to match. Can be a string, RegExp, or function.
@@ -328,7 +339,11 @@ export function fromDefinition<
   const RelationSchemasT,
   const VariantsT extends string,
 >(
-  definition: SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT>,
+  definition: SpanMatchDefinition<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >,
 ): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   // Check if definition has oneOf property
   if ('oneOf' in definition) {
@@ -372,9 +387,11 @@ export function fromDefinition<
   if (definition.isIdle) {
     matchers.push(whenIdle(definition.isIdle))
   }
-
   if (definition.label) {
     matchers.push(withLabel(definition.label))
+  }
+  if (definition.fn) {
+    matchers.push(definition.fn)
   }
 
   return withAllConditions(...matchers)
