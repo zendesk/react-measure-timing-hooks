@@ -403,6 +403,7 @@ describe('recordingComputeUtils', () => {
             relatedTo: {},
             variant: 'origin',
           },
+          recordedItemsByLabel: {},
         },
         { transitionFromState: 'active' },
       )

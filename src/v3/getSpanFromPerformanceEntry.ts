@@ -15,7 +15,7 @@ import type { DeriveRelationsFromPerformanceEntryFn, Timestamp } from './types'
  */
 export function getSpanFromPerformanceEntry<RelationSchemasT>(
   inputEntry: PerformanceEntry,
-  deriveScopeFromPerformanceEntry?: DeriveRelationsFromPerformanceEntryFn<RelationSchemasT>,
+  deriveRelationFromPerformanceEntry?: DeriveRelationsFromPerformanceEntryFn<RelationSchemasT>,
 ):
   | PerformanceEntrySpan<RelationSchemasT>
   | ResourceSpan<RelationSchemasT>
@@ -33,7 +33,7 @@ export function getSpanFromPerformanceEntry<RelationSchemasT>(
       : {}
 
   const type = inputEntry.entryType as NativePerformanceEntryType
-  const relatedTo = deriveScopeFromPerformanceEntry?.(inputEntry)
+  const relatedTo = deriveRelationFromPerformanceEntry?.(inputEntry)
   let { name } = inputEntry
 
   if (type === 'resource' || type === 'navigation') {
