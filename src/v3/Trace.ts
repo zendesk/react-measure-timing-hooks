@@ -172,7 +172,7 @@ export class TraceStateMachine<
       VariantsT
     >,
   ) {
-    this.context = context
+    this.#context = context
     this.remainingRequiredSpanIndexes = new Set(
       context.definition.requiredSpans.map((_, i) => i),
     )
@@ -181,13 +181,13 @@ export class TraceStateMachine<
 
   readonly remainingRequiredSpanIndexes: Set<number>
 
-  readonly context: StateMachineContext<
+  readonly #context: StateMachineContext<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >
   get sideEffectFns() {
-    return this.context.sideEffectFns
+    return this.#context.sideEffectFns
   }
   currentState: TraceStates = INITIAL_STATE
   /** the span that ended at the furthest point in time */
@@ -282,8 +282,8 @@ export class TraceStateMachine<
     draft: {
       onEnterState: () => {
         this.setGlobalDeadline(
-          this.context.input.startTime.epoch +
-            this.context.definition.variants[this.context.input.variant]!
+          this.#context.input.startTime.epoch +
+            this.#context.definition.variants[this.#context.input.variant]!
               .timeout,
         )
       },
@@ -312,10 +312,10 @@ export class TraceStateMachine<
 
         // if the entry matches any of the interruptOnSpans criteria,
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
-        if (this.context.definition.interruptOnSpans) {
-          for (const doesSpanMatch of this.context.definition
+        if (this.#context.definition.interruptOnSpans) {
+          for (const doesSpanMatch of this.#context.definition
             .interruptOnSpans) {
-            if (doesSpanMatch(spanAndAnnotation, this.context)) {
+            if (doesSpanMatch(spanAndAnnotation, this.#context)) {
               return {
                 transitionToState: 'complete',
                 interruptionReason: doesSpanMatch.requiredSpan
@@ -377,10 +377,10 @@ export class TraceStateMachine<
         }
 
         // does span satisfy any of the "interruptOnSpans" definitions
-        if (this.context.definition.interruptOnSpans) {
-          for (const doesSpanMatch of this.context.definition
+        if (this.#context.definition.interruptOnSpans) {
+          for (const doesSpanMatch of this.#context.definition
             .interruptOnSpans) {
-            if (doesSpanMatch(spanAndAnnotation, this.context)) {
+            if (doesSpanMatch(spanAndAnnotation, this.#context)) {
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: doesSpanMatch.requiredSpan
@@ -391,15 +391,19 @@ export class TraceStateMachine<
           }
         }
 
-        for (let i = 0; i < this.context.definition.requiredSpans.length; i++) {
+        for (
+          let i = 0;
+          i < this.#context.definition.requiredSpans.length;
+          i++
+        ) {
           if (!this.remainingRequiredSpanIndexes.has(i)) {
             // we previously checked off this index
             // eslint-disable-next-line no-continue
             continue
           }
 
-          const doesSpanMatch = this.context.definition.requiredSpans[i]!
-          if (doesSpanMatch(spanAndAnnotation, this.context)) {
+          const doesSpanMatch = this.#context.definition.requiredSpans[i]!
+          if (doesSpanMatch(spanAndAnnotation, this.#context)) {
             // remove the index of this definition from the list of requiredSpans
             this.remainingRequiredSpanIndexes.delete(i)
 
@@ -459,7 +463,7 @@ export class TraceStateMachine<
         this.lastRequiredSpan = this.lastRelevant
         this.lastRequiredSpan.annotation.markedRequirementsMet = true
 
-        if (!this.context.definition.debounceOnSpans) {
+        if (!this.#context.definition.debounceOnSpans) {
           return { transitionToState: 'waiting-for-interactive' }
         }
         // set the first debounce deadline
@@ -467,7 +471,7 @@ export class TraceStateMachine<
           'debounce',
           this.lastRelevant.span.startTime.epoch +
             this.lastRelevant.span.duration +
-            (this.context.definition.debounceWindow ??
+            (this.#context.definition.debounceWindow ??
               DEFAULT_DEBOUNCE_DURATION),
         )
 
@@ -528,9 +532,9 @@ export class TraceStateMachine<
           span: { ...span, isIdle: true },
         }
         if (idleRegressionCheckSpan) {
-          for (const doesSpanMatch of this.context.definition.requiredSpans) {
+          for (const doesSpanMatch of this.#context.definition.requiredSpans) {
             if (
-              doesSpanMatch(idleRegressionCheckSpan, this.context) &&
+              doesSpanMatch(idleRegressionCheckSpan, this.#context) &&
               doesSpanMatch.idleCheck
             ) {
               // check if we regressed on "isIdle", and if so, transition to interrupted with reason
@@ -545,9 +549,10 @@ export class TraceStateMachine<
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
-        if (this.context.definition.debounceOnSpans) {
-          for (const doesSpanMatch of this.context.definition.debounceOnSpans) {
-            if (doesSpanMatch(spanAndAnnotation, this.context)) {
+        if (this.#context.definition.debounceOnSpans) {
+          for (const doesSpanMatch of this.#context.definition
+            .debounceOnSpans) {
+            if (doesSpanMatch(spanAndAnnotation, this.#context)) {
               // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
               if (
                 spanAndAnnotation.annotation.operationRelativeEndTime >
@@ -561,7 +566,7 @@ export class TraceStateMachine<
                   'debounce',
                   this.lastRelevant.span.startTime.epoch +
                     this.lastRelevant.span.duration +
-                    (this.context.definition.debounceWindow ??
+                    (this.#context.definition.debounceWindow ??
                       DEFAULT_DEBOUNCE_DURATION),
                 )
               }
@@ -590,7 +595,7 @@ export class TraceStateMachine<
         }
 
         this.completeSpan = this.lastRelevant
-        const interactiveConfig = this.context.definition.captureInteractive
+        const interactiveConfig = this.#context.definition.captureInteractive
         if (!interactiveConfig) {
           // nothing to do in this state, move to 'complete'
           return {
@@ -766,10 +771,10 @@ export class TraceStateMachine<
 
         // if the entry matches any of the interruptOnSpans criteria,
         // transition to complete state with the 'matched-on-interrupt' interruptionReason
-        if (this.context.definition.interruptOnSpans) {
-          for (const doesSpanMatch of this.context.definition
+        if (this.#context.definition.interruptOnSpans) {
+          for (const doesSpanMatch of this.#context.definition
             .interruptOnSpans) {
-            if (doesSpanMatch(spanAndAnnotation, this.context)) {
+            if (doesSpanMatch(spanAndAnnotation, this.#context)) {
               return {
                 transitionToState: 'complete',
                 interruptionReason: doesSpanMatch.requiredSpan
@@ -1147,13 +1152,15 @@ export class Trace<
             definition: this.definition,
             // only keep items captured until the endOfOperationSpan
             recordedItems: endOfOperationSpan
-              ? [...this.recordedItems].filter(
-                  (item) =>
-                    item.span.startTime.now + item.span.duration <=
-                    endOfOperationSpan.span.startTime.now +
-                      endOfOperationSpan.span.duration,
+              ? new Set(
+                  [...this.recordedItems].filter(
+                    (item) =>
+                      item.span.startTime.now + item.span.duration <=
+                      endOfOperationSpan.span.startTime.now +
+                        endOfOperationSpan.span.duration,
+                  ),
                 )
-              : [...this.recordedItems],
+              : this.recordedItems,
             input: this.input,
             recordedItemsByLabel: this.recordedItemsByLabel,
           },
