@@ -34,6 +34,13 @@ export interface DraftTraceConfig<RelationSchemaT, VariantsT extends string> {
    */
   attributes?: Attributes
   relatedTo: MapSchemaToTypes<RelationSchemaT> | undefined
+  /**
+   * Any additional data that can be used by the tooling to identify the trace
+   * It will *not* be a part of the trace recording.
+   */
+  // TODO: add typing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  baggage?: any
 }
 
 export interface StartTraceConfig<RelationSchemaT, VariantsT extends string>
