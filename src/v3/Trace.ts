@@ -40,6 +40,7 @@ import type {
   MergedStateHandlerMethods,
   StateHandlerPayloads,
 } from './typeUtils'
+import { validateAndCoerceRelatedToAgainstSchema } from './validateRelatedTo'
 
 const isInvalidTraceInterruptionReason = (
   reason: TraceInterruptionReason,
@@ -1198,9 +1199,23 @@ export class Trace<
   ) {
     const { attributes } = this.input
 
+    const { relatedTo, errors } = validateAndCoerceRelatedToAgainstSchema(
+      inputAndDefinitionModifications.relatedTo,
+      this.definition.relationSchema,
+    )
+    if (errors.length > 0) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `Invalid relatedTo value: ${JSON.stringify(
+            inputAndDefinitionModifications.relatedTo,
+          )}. ${errors.join(', ')}`,
+        ),
+      )
+    }
+
     this.activeInput = {
       ...this.input,
-      relatedTo: inputAndDefinitionModifications.relatedTo,
+      relatedTo,
       attributes: {
         ...this.input.attributes,
         ...attributes,
