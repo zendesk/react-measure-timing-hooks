@@ -25,7 +25,7 @@ export type ComponentLifecycleSpanType =
 
 export type SpanType = NativePerformanceEntryType | ComponentLifecycleSpanType
 
-export interface BaseStartTraceConfig<VariantsT extends string> {
+export interface DraftTraceConfig<RelationSchemaT, VariantsT extends string> {
   id?: string
   startTime?: Partial<Timestamp>
   variant: VariantsT
@@ -33,10 +33,6 @@ export interface BaseStartTraceConfig<VariantsT extends string> {
    * any attributes that are relevant to the entire trace
    */
   attributes?: Attributes
-}
-
-export interface DraftTraceConfig<RelationSchemaT, VariantsT extends string>
-  extends BaseStartTraceConfig<VariantsT> {
   relatedTo: MapSchemaToTypes<RelationSchemaT> | undefined
 }
 

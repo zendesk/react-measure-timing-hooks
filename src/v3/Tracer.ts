@@ -2,7 +2,7 @@ import { ensureMatcherFn } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import type { SpanMatch, SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { BaseStartTraceConfig, StartTraceConfig } from './spanTypes'
+import type { DraftTraceConfig, StartTraceConfig } from './spanTypes'
 import { Trace } from './Trace'
 import {
   type CompleteTraceDefinition,
@@ -56,23 +56,26 @@ export class Tracer<
   }
 
   createDraft = (
-    input: BaseStartTraceConfig<VariantsT>,
+    input: Omit<
+      DraftTraceConfig<RelationSchemasT[SelectedRelationNameT], VariantsT>,
+      'relatedTo'
+    >,
   ): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
 
-    // don't specify the SelectedRelationNameT type here because traceUtilities can be run on any trace, hence the 'any'
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const trace = new Trace<any, RelationSchemasT, VariantsT>({
-      definition: this.definition,
-      input: {
-        ...input,
-        // relatedTo will be overwritten later during initialization of the trace
-        relatedTo: undefined,
-        startTime: ensureTimestamp(input.startTime),
-        id,
+    const trace = new Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>(
+      {
+        definition: this.definition,
+        input: {
+          ...input,
+          // relatedTo will be overwritten later during initialization of the trace
+          relatedTo: undefined,
+          startTime: ensureTimestamp(input.startTime),
+          id,
+        },
+        traceUtilities: this.traceUtilities,
       },
-      traceUtilities: this.traceUtilities,
-    })
+    )
 
     this.traceUtilities.replaceCurrentTrace(trace, 'another-trace-started')
 
