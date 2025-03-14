@@ -37,13 +37,13 @@ describe('recordingComputeUtils', () => {
       const recording = createTraceRecording(
         {
           definition: baseDefinitionFixture,
-          recordedItems: [
+          recordedItems: new Set([
             createMockSpanAndAnnotation(100, {
               status: 'error',
               name: 'error-span',
             }),
             createMockSpanAndAnnotation(200, { status: 'ok', name: 'ok-span' }),
-          ],
+          ]),
           input: {
             id: 'test',
             startTime: createTimestamp(0),
@@ -70,13 +70,13 @@ describe('recordingComputeUtils', () => {
               ({ span }) => span.name === 'suppressed-error-span',
             ],
           },
-          recordedItems: [
+          recordedItems: new Set([
             createMockSpanAndAnnotation(100, {
               status: 'error',
               name: 'suppressed-error-span',
             }),
             createMockSpanAndAnnotation(200, { status: 'ok', name: 'ok-span' }),
-          ],
+          ]),
           input: {
             id: 'test',
             startTime: createTimestamp(0),
@@ -101,7 +101,7 @@ describe('recordingComputeUtils', () => {
               ({ span }) => span.name === 'suppressed-error-span',
             ],
           },
-          recordedItems: [
+          recordedItems: new Set([
             createMockSpanAndAnnotation(100, {
               status: 'error',
               name: 'suppressed-error-span',
@@ -111,7 +111,7 @@ describe('recordingComputeUtils', () => {
               name: 'non-suppressed-error-span',
             }),
             createMockSpanAndAnnotation(300, { status: 'ok', name: 'ok-span' }),
-          ],
+          ]),
           input: {
             id: 'test',
             startTime: createTimestamp(0),
@@ -131,12 +131,12 @@ describe('recordingComputeUtils', () => {
       const recording = createTraceRecording(
         {
           definition: baseDefinitionFixture,
-          recordedItems: [
+          recordedItems: new Set([
             createMockSpanAndAnnotation(100, {
               status: 'error',
               name: 'error-span',
             }),
-          ],
+          ]),
           input: {
             id: 'test',
             startTime: createTimestamp(0),
@@ -174,7 +174,7 @@ describe('recordingComputeUtils', () => {
     it('should compute duration and startOffset correctly', () => {
       const result = getComputedSpans({
         definition: baseDefinition,
-        recordedItems: [
+        recordedItems: new Set([
           createMockSpanAndAnnotation(100, {
             name: 'start-span',
             duration: 50,
@@ -183,7 +183,7 @@ describe('recordingComputeUtils', () => {
             name: 'end-span',
             duration: 50,
           }),
-        ],
+        ]),
         input: {
           id: 'test',
           startTime: createTimestamp(0),
@@ -221,10 +221,10 @@ describe('recordingComputeUtils', () => {
 
       const result = getComputedSpans({
         definition,
-        recordedItems: [
+        recordedItems: new Set([
           createMockSpanAndAnnotation(100, { name: 'start-span' }),
           markedCompleteSpan,
-        ],
+        ]),
         input: {
           id: 'test',
           startTime: createTimestamp(0),
@@ -257,11 +257,11 @@ describe('recordingComputeUtils', () => {
     it('should compute values based on matching spans', () => {
       const result = getComputedValues({
         definition: baseDefinition,
-        recordedItems: [
+        recordedItems: new Set([
           createMockSpanAndAnnotation(100, { status: 'error' }),
           createMockSpanAndAnnotation(200, { status: 'error' }),
           createMockSpanAndAnnotation(300, { status: 'ok' }),
-        ],
+        ]),
         input: {
           id: 'test',
           startTime: createTimestamp(0),
@@ -296,11 +296,11 @@ describe('recordingComputeUtils', () => {
 
       const result = getComputedValues({
         definition,
-        recordedItems: [
+        recordedItems: new Set([
           createMockSpanAndAnnotation(100, { status: 'error' }),
           createMockSpanAndAnnotation(200, { status: 'ok' }),
           createMockSpanAndAnnotation(300, { status: 'error' }),
-        ],
+        ]),
         input: {
           id: 'test',
           startTime: createTimestamp(0),
@@ -340,7 +340,7 @@ describe('recordingComputeUtils', () => {
       const recording = createTraceRecording(
         {
           definition: baseDefinitionFixture,
-          recordedItems: [
+          recordedItems: new Set([
             createMockSpanAndAnnotation(100, {
               name: 'test-component',
               type: 'component-render',
@@ -363,7 +363,7 @@ describe('recordingComputeUtils', () => {
               },
               { occurrence: 2 },
             ),
-          ],
+          ]),
           input: {
             id: 'test',
             startTime: createTimestamp(0),
@@ -391,12 +391,12 @@ describe('recordingComputeUtils', () => {
       const recording = createTraceRecording(
         {
           definition: baseDefinitionFixture,
-          recordedItems: [
+          recordedItems: new Set([
             createMockSpanAndAnnotation(100, {
               status: 'ok',
               name: 'test-span',
             }),
-          ],
+          ]),
           input: {
             id: 'test',
             startTime: createTimestamp(0),

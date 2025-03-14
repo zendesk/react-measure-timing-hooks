@@ -37,35 +37,36 @@ describe('convertTraceToRUM', () => {
       variant: 'origin',
     }
 
+    const recordedItems = new Set([
+      createMockSpanAndAnnotation(100.501, {
+        name: 'test-component',
+        type: 'component-render',
+        relatedTo: {},
+        duration: 50.499,
+        isIdle: false,
+        renderCount: 1,
+        renderedOutput: 'loading',
+      }),
+      createMockSpanAndAnnotation(
+        200.001,
+        {
+          name: 'test-component',
+          type: 'component-render',
+          relatedTo: {},
+          duration: 50.999,
+          isIdle: true,
+          renderCount: 2,
+          renderedOutput: 'content',
+        },
+        { occurrence: 2 },
+      ),
+    ])
     const traceRecording = createTraceRecording(
       {
         definition,
         input,
         recordedItemsByLabel: {},
-        recordedItems: [
-          createMockSpanAndAnnotation(100.501, {
-            name: 'test-component',
-            type: 'component-render',
-            relatedTo: {},
-            duration: 50.499,
-            isIdle: false,
-            renderCount: 1,
-            renderedOutput: 'loading',
-          }),
-          createMockSpanAndAnnotation(
-            200.001,
-            {
-              name: 'test-component',
-              type: 'component-render',
-              relatedTo: {},
-              duration: 50.999,
-              isIdle: true,
-              renderCount: 2,
-              renderedOutput: 'content',
-            },
-            { occurrence: 2 },
-          ),
-        ],
+        recordedItems,
       },
       { transitionFromState: 'active' },
     )
@@ -74,6 +75,7 @@ describe('convertTraceToRUM', () => {
       definition,
       input,
       recordedItemsByLabel: {},
+      recordedItems,
     }
 
     const result = convertTraceToRUM(traceRecording, context)

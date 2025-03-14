@@ -600,4 +600,5 @@ export interface TraceContext<
   readonly recordedItemsByLabel: {
     readonly [label: string]: readonly SpanAndAnnotation<RelationSchemasT>[]
   }
+  readonly recordedItems: ReadonlySet<SpanAndAnnotation<RelationSchemasT>>
 }

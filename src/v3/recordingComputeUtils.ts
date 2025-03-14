@@ -26,26 +26,13 @@ import { findLast } from './utils'
  *    3. _The total number of iframe apps were initialized while loading the ticket_
  */
 
-export interface ComputeRecordingData<
-  SelectedRelationNameT extends keyof RelationSchemasT,
-  RelationSchemasT,
-  VariantsT extends string,
-> extends TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT> {
-  recordedItems: readonly SpanAndAnnotation<RelationSchemasT>[]
-}
-
 export function getComputedValues<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
->({
-  recordedItems,
-  ...context
-}: ComputeRecordingData<
-  SelectedRelationNameT,
-  RelationSchemasT,
-  VariantsT
->): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedValues'] {
+>(
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedValues'] {
   const computedValues: TraceRecording<
     SelectedRelationNameT,
     RelationSchemasT
@@ -61,7 +48,7 @@ export function getComputedValues<
       Array.from({ length: matches.length }, () => [])
 
     // Single pass through recordedItems
-    for (const item of recordedItems) {
+    for (const item of context.recordedItems.values()) {
       matches.forEach((doesSpanMatch, index) => {
         if (doesSpanMatch(item, context)) {
           matchingEntriesByMatcher[index]!.push(item)
@@ -89,19 +76,15 @@ export function getComputedSpans<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   const VariantsT extends string,
->({
-  recordedItems,
-  ...context
-}: ComputeRecordingData<
-  SelectedRelationNameT,
-  RelationSchemasT,
-  VariantsT
->): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedSpans'] {
+>(
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedSpans'] {
   // loop through the computed span definitions, check for entries that match in recorded items, then calculate the startOffset and duration
   const computedSpans: TraceRecording<
     SelectedRelationNameT,
     RelationSchemasT
   >['computedSpans'] = {}
+  const recordedItemsArray = [...context.recordedItems.values()]
 
   for (const [name, computedSpanDefinition] of Object.entries(
     context.definition.computedSpanDefinitions,
@@ -110,7 +93,7 @@ export function getComputedSpans<
 
     const matchingStartEntry =
       typeof startSpanMatcher === 'function'
-        ? recordedItems.find((spanAndAnnotation) =>
+        ? recordedItemsArray.find((spanAndAnnotation) =>
             startSpanMatcher(spanAndAnnotation, context),
           )
         : startSpanMatcher
@@ -127,7 +110,7 @@ export function getComputedSpans<
         ? markedInteractive
         : endSpan
 
-    const matchingEndEntry = findLast(recordedItems, (spanAndAnnotation) =>
+    const matchingEndEntry = findLast(recordedItemsArray, (spanAndAnnotation) =>
       endSpanMatcher(spanAndAnnotation, context),
     )
 
@@ -163,7 +146,7 @@ function getComputedRenderBeaconSpans<
   RelationSchemasT,
   const VariantsT extends string,
 >(
-  recordedItems: readonly SpanAndAnnotation<RelationSchemasT>[],
+  recordedItems: ReadonlySet<SpanAndAnnotation<RelationSchemasT>>,
   input: ActiveTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>,
 ): TraceRecording<
   SelectedRelationNameT,
@@ -317,11 +300,7 @@ export function createTraceRecording<
   const RelationSchemasT,
   const VariantsT extends string,
 >(
-  data: ComputeRecordingData<
-    SelectedRelationNameT,
-    RelationSchemasT,
-    VariantsT
-  >,
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
   {
     transitionFromState,
     interruptionReason,
@@ -330,24 +309,26 @@ export function createTraceRecording<
     lastRequiredSpanAndAnnotation,
   }: FinalState<RelationSchemasT>,
 ): TraceRecording<SelectedRelationNameT, RelationSchemasT> {
-  const { definition, recordedItems, input } = data
+  const { definition, recordedItems, input } = context
   const { id, relatedTo, variant } = input
   const { name } = definition
   // CODE CLEAN UP TODO: let's get this information (wasInterrupted) from up top (in FinalState)
   const wasInterrupted =
     interruptionReason && transitionFromState !== 'waiting-for-interactive'
-  const computedSpans = !wasInterrupted ? getComputedSpans(data) : {}
-  const computedValues = !wasInterrupted ? getComputedValues(data) : {}
+  const computedSpans = !wasInterrupted ? getComputedSpans(context) : {}
+  const computedValues = !wasInterrupted ? getComputedValues(context) : {}
   const computedRenderBeaconSpans =
     !wasInterrupted && isActiveTraceInput(input)
       ? getComputedRenderBeaconSpans(recordedItems, input)
       : {}
 
-  const anyNonSuppressedErrors = recordedItems.some(
+  const recordedItemsArray = [...recordedItems.values()]
+
+  const anyNonSuppressedErrors = recordedItemsArray.some(
     (spanAndAnnotation) =>
       spanAndAnnotation.span.status === 'error' &&
       !definition.suppressErrorStatusPropagationOnSpans?.some((doesSpanMatch) =>
-        doesSpanMatch(spanAndAnnotation, data),
+        doesSpanMatch(spanAndAnnotation, context),
       ),
   )
 
@@ -385,6 +366,6 @@ export function createTraceRecording<
     computedValues,
     attributes: input.attributes ?? {},
     interruptionReason,
-    entries: recordedItems,
+    entries: recordedItemsArray,
   }
 }

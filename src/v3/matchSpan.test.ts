@@ -92,6 +92,7 @@ const mockContext = {
     },
   },
   recordedItemsByLabel: {},
+  recordedItems: new Set(),
 } as const satisfies DraftTraceContext<
   'ticket',
   TicketIdRelationSchemasFixture,
