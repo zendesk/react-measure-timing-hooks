@@ -387,7 +387,11 @@ export interface CompleteTraceDefinition<
   VariantsT extends string,
 > extends Omit<
     TraceDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT, {}>,
-    'computedSpanDefinitions' | 'computedValueDefinitions'
+    | 'computedSpanDefinitions'
+    | 'computedValueDefinitions'
+    | 'requiredSpans'
+    | 'debounceOnSpans'
+    | 'interruptOnSpans'
   > {
   computedSpanDefinitions: Record<
     string,
@@ -414,15 +418,23 @@ export interface CompleteTraceDefinition<
     VariantsT
   >
 
-  requiredSpans: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
-  >
-  debounceOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
-  >
-  interruptOnSpans?: ArrayWithAtLeastOneElement<
-    SpanMatcherFn<NoInfer<SelectedRelationNameT>, RelationSchemasT, VariantsT>
-  >
+  requiredSpans: readonly SpanMatcherFn<
+    NoInfer<SelectedRelationNameT>,
+    RelationSchemasT,
+    VariantsT
+  >[]
+
+  debounceOnSpans?: readonly SpanMatcherFn<
+    NoInfer<SelectedRelationNameT>,
+    RelationSchemasT,
+    VariantsT
+  >[]
+
+  interruptOnSpans?: readonly SpanMatcherFn<
+    NoInfer<SelectedRelationNameT>,
+    RelationSchemasT,
+    VariantsT
+  >[]
 
   suppressErrorStatusPropagationOnSpans?: readonly SpanMatcherFn<
     NoInfer<SelectedRelationNameT>,

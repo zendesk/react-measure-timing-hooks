@@ -216,7 +216,9 @@ describe('Tracer', () => {
 
       // @ts-expect-error internal prop
       const trace = tracer.traceUtilities.getCurrentTrace()
-      expect(trace?.stateMachine.remainingRequiredSpanIndexes.size).toBe(2)
+      expect(
+        trace?.stateMachine.successfullyMatchedRequiredSpanMatchers.size,
+      ).toBe(0)
       expect(trace?.definition.requiredSpans).toHaveLength(2)
       expect(trace?.definition.interruptOnSpans).toHaveLength(2)
 
@@ -241,8 +243,9 @@ describe('Tracer', () => {
       expect(traceRecreated?.definition.interruptOnSpans).toHaveLength(3)
       // two required spans left:
       expect(
-        traceRecreated?.stateMachine.remainingRequiredSpanIndexes.size,
-      ).toBe(2)
+        traceRecreated?.stateMachine.successfullyMatchedRequiredSpanMatchers
+          .size,
+      ).toBe(1)
 
       // See the added required span - now should complete
       // prettier-ignore
@@ -251,6 +254,11 @@ describe('Tracer', () => {
         Time:   ${100}                               ${150}
       `
       processSpans(secondSpans, traceManager)
+
+      expect(
+        traceRecreated?.stateMachine.successfullyMatchedRequiredSpanMatchers
+          .size,
+      ).toBe(3)
 
       // Verify trace completed
       expect(reportFn).toHaveBeenCalled()
@@ -266,6 +274,168 @@ describe('Tracer', () => {
         'added-required',
       ])
       expect(traceManager.currentTracerContext).toBeUndefined()
+    })
+  })
+
+  describe('adding requiredSpans', () => {
+    it('adds requiredSpans when starting a trace', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: { test: { id: String } },
+        reportFn: getReportFn(),
+        generateId,
+        reportErrorFn,
+      })
+      const tracer = traceManager.createTracer({
+        name: 'ticket.basic-operation',
+        type: 'operation',
+        relationSchemaName: 'test',
+        requiredSpans: [{ name: 'orig-end' }],
+        variants: {
+          cold_boot: { timeout: 10_000 },
+        },
+      })
+      const traceId = tracer.start(
+        {
+          relatedTo: { id: '1' },
+          variant: 'cold_boot',
+        },
+        {
+          additionalRequiredSpans: [{ name: 'additional-end' }],
+        },
+      )
+      expect(traceId).toBe('trace-id')
+
+      // @ts-expect-error internals
+      const trace = tracer.traceUtilities.getCurrentTrace()
+      expect(trace?.definition.requiredSpans).toHaveLength(2)
+      expect(
+        trace?.stateMachine.successfullyMatchedRequiredSpanMatchers.size,
+      ).toBe(0)
+      expect(trace?.definition.interruptOnSpans).toHaveLength(2)
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TestRelationSchema>`
+        Events: ${Render('start', 0)}-----${Render('middle', 0)}-----${Render('orig-end', 0)}----${Render('additional-end', 0)}
+        Time:   ${0}                      ${50}                      ${100}                      ${150}               
+        `
+
+      processSpans(spans, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      expect(
+        trace?.stateMachine.successfullyMatchedRequiredSpanMatchers.size,
+      ).toBe(2)
+
+      const report = reportFn.mock.calls[0]![0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    | start       middle      orig-end    additional-end
+        timeline  | |-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|-<⋯ +50 ⋯>-|
+        time (ms) | 0           50          100         150
+      `)
+      expect(report.name).toBe('ticket.basic-operation')
+      expect(report.duration).toBe(150)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
+    })
+
+    it('adds requiredSpans when creating a trace, and then again after transitioning to active, and again after start', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: { test: { id: String } },
+        reportFn: getReportFn(),
+        generateId,
+        reportErrorFn,
+      })
+      const tracer = traceManager.createTracer({
+        name: 'ticket.basic-operation',
+        type: 'operation',
+        relationSchemaName: 'test',
+        requiredSpans: [
+          function origEnd({ span }) {
+            return span.name === 'orig-end'
+          },
+        ],
+        variants: {
+          cold_boot: {
+            timeout: 10_000,
+            additionalRequiredSpans: [
+              function variantEnd({ span }) {
+                return span.name === 'variant-end'
+              },
+            ],
+          },
+        },
+      })
+      const traceId = tracer.createDraft(
+        {
+          variant: 'cold_boot',
+        },
+        {
+          additionalRequiredSpans: [
+            function draftEnd({ span }) {
+              return span.name === 'draft-end'
+            },
+          ],
+        },
+      )
+
+      tracer.transitionDraftToActive({
+        relatedTo: { id: '1' },
+        additionalRequiredSpans: [
+          function transitionToActiveEnd({ span }) {
+            return span.name === 'transition-to-active-end'
+          },
+        ],
+      })
+
+      tracer.addRequirementsToCurrentTraceOnly({
+        additionalRequiredSpans: [
+          function activeEnd({ span }) {
+            return span.name === 'active-end'
+          },
+        ],
+      })
+
+      // @ts-expect-error internals
+      const trace = tracer.traceUtilities.getCurrentTrace()
+
+      expect(trace?.definition.requiredSpans).toHaveLength(5)
+      expect(
+        trace?.stateMachine.successfullyMatchedRequiredSpanMatchers.size,
+      ).toBe(0)
+      expect(trace?.definition.interruptOnSpans).toHaveLength(5)
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TestRelationSchema>`
+        Events: ${Render('start', 0)}-----${Render('orig-end', 0)}----${Render('variant-end', 0)}----${Render('draft-end', 0)}----${Render('transition-to-active-end', 0)}---${Render('active-end', 0)}
+        Time:   ${0}                      ${50}                       ${100}                         ${150}                       ${200}                                     ${250}
+        `
+
+      processSpans(spans, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      expect(
+        trace?.stateMachine.successfullyMatchedRequiredSpanMatchers.size,
+      ).toBe(5)
+
+      const report = reportFn.mock.calls[0]![0]
+      expect(
+        report.entries.map(
+          (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
+        ),
+      ).toMatchInlineSnapshot(`
+        events    |                                                                 active-end
+        events    | start       orig-end     variant-end  draft-end    transition-to-active-end
+        timeline  | |-----------|------------|------------|------------|------------|-
+        time (ms) | 0           50           100          150          200          250
+      `)
+      expect(report.name).toBe('ticket.basic-operation')
+      expect(report.duration).toBe(250)
+      expect(report.status).toBe('ok')
+      expect(report.interruptionReason).toBeUndefined()
     })
   })
 })

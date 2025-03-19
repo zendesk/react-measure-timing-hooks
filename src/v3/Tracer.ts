@@ -47,11 +47,19 @@ export class Tracer<
    */
   start = (
     input: StartTraceConfig<RelationSchemasT[SelectedRelationNameT], VariantsT>,
+    definitionModifications?: TraceDefinitionModifications<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >,
   ): string | undefined => {
     const traceId = this.createDraft(input)
     if (!traceId) return undefined
 
-    this.transitionDraftToActive({ relatedTo: input.relatedTo })
+    this.transitionDraftToActive({
+      relatedTo: input.relatedTo,
+      ...definitionModifications,
+    })
     return traceId
   }
 
@@ -59,6 +67,11 @@ export class Tracer<
     input: Omit<
       DraftTraceConfig<RelationSchemasT[SelectedRelationNameT], VariantsT>,
       'relatedTo'
+    >,
+    definitionModifications?: TraceDefinitionModifications<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
     >,
   ): string | undefined => {
     const id = input.id ?? this.traceUtilities.generateId()
@@ -73,6 +86,7 @@ export class Tracer<
           startTime: ensureTimestamp(input.startTime),
           id,
         },
+        definitionModifications,
         traceUtilities: this.traceUtilities,
       },
     )

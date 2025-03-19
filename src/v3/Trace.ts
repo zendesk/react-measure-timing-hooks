@@ -13,7 +13,7 @@ import {
   type PerformanceEntryLike,
 } from './firstCPUIdle'
 import { getSpanKey } from './getSpanKey'
-import { withAllConditions } from './matchSpan'
+import { type SpanMatcherFn, withAllConditions } from './matchSpan'
 import { createTraceRecording } from './recordingComputeUtils'
 import { requiredSpanWithErrorStatus } from './requiredSpanWithErrorStatus'
 import type {
@@ -174,13 +174,12 @@ export class TraceStateMachine<
     >,
   ) {
     this.#context = context
-    this.remainingRequiredSpanIndexes = new Set(
-      context.definition.requiredSpans.map((_, i) => i),
-    )
     this.emit('onEnterState', undefined)
   }
 
-  readonly remainingRequiredSpanIndexes: Set<number>
+  readonly successfullyMatchedRequiredSpanMatchers = new Set<
+    SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >()
 
   readonly #context: StateMachineContext<
     SelectedRelationNameT,
@@ -392,21 +391,16 @@ export class TraceStateMachine<
           }
         }
 
-        for (
-          let i = 0;
-          i < this.#context.definition.requiredSpans.length;
-          i++
-        ) {
-          if (!this.remainingRequiredSpanIndexes.has(i)) {
-            // we previously checked off this index
+        for (const doesSpanMatch of this.#context.definition.requiredSpans) {
+          if (this.successfullyMatchedRequiredSpanMatchers.has(doesSpanMatch)) {
+            // we previously successfully matched using this matcher
             // eslint-disable-next-line no-continue
             continue
           }
 
-          const doesSpanMatch = this.#context.definition.requiredSpans[i]!
           if (doesSpanMatch(spanAndAnnotation, this.#context)) {
-            // remove the index of this definition from the list of requiredSpans
-            this.remainingRequiredSpanIndexes.delete(i)
+            // now that we've seen it, we add it to the list
+            this.successfullyMatchedRequiredSpanMatchers.add(doesSpanMatch)
 
             // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
             if (
@@ -421,7 +415,10 @@ export class TraceStateMachine<
 
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
-        if (this.remainingRequiredSpanIndexes.size === 0) {
+        if (
+          this.successfullyMatchedRequiredSpanMatchers.size ===
+          this.#context.definition.requiredSpans.length
+        ) {
           return { transitionToState: 'debouncing' }
         }
         return undefined
@@ -994,23 +991,31 @@ export class Trace<
             RelationSchemasT[SelectedRelationNameT],
             VariantsT
           >
+          definitionModifications?: TraceDefinitionModifications<
+            SelectedRelationNameT,
+            RelationSchemasT,
+            VariantsT
+          >
           traceUtilities: TraceManagerUtilities<RelationSchemasT>
         }
       | {
+          importFrom: Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
           definitionModifications: TraceDefinitionModifications<
             SelectedRelationNameT,
             RelationSchemasT,
             VariantsT
           >
-          importFrom: Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
         },
   ) {
-    const { input, traceUtilities, definition } =
+    const { input, traceUtilities, definition, definitionModifications } =
       'importFrom' in data
         ? {
             input: data.importFrom.input,
             traceUtilities: data.importFrom.traceUtilities,
+            // we use the sourceDefinition and we will re-apply all
+            // subsequent modifications to it later in the constructor
             definition: data.importFrom.sourceDefinition,
+            definitionModifications: data.definitionModifications,
           }
         : data
 
@@ -1047,11 +1052,18 @@ export class Trace<
           : undefined,
     }
 
+    // all requiredSpans implicitly interrupt the trace if they error, unless explicitly ignored
+    // creates interruptOnSpans for the source definition of requiredSpans
+    const interruptOnRequiredErrored =
+      this.mapRequiredSpanMatchersToInterruptOnMatchers(
+        this.definition.requiredSpans,
+      )
+
     // Verify that the variant value is valid
     const variant = definition.variants[input.variant]
 
     if (variant) {
-      this.applyDefinitionModifications(variant)
+      this.applyDefinitionModifications(variant, false)
     } else {
       traceUtilities.reportErrorFn(
         new Error(
@@ -1068,36 +1080,21 @@ export class Trace<
     }
     this.traceUtilities = traceUtilities
 
-    if ('importFrom' in data) {
-      for (const mod of data.importFrom.persistedDefinitionModifications) {
-        // re-apply any previously done modifications (in case this isn't the first time we're importing)
-        this.applyDefinitionModifications(mod, { persist: true })
-      }
-      this.applyDefinitionModifications(data.definitionModifications, {
-        persist: true,
-      })
-    }
-
-    // all requiredSpans implicitly interrupt the trace if they error, unless explicitly ignored
-    const interruptOnRequiredErrored = this.definition.requiredSpans.flatMap<
-      (typeof definition.requiredSpans)[number]
-    >((matcher) =>
-      matcher.continueWithErrorStatus
-        ? []
-        : withAllConditions<SelectedRelationNameT, RelationSchemasT, VariantsT>(
-            matcher,
-            requiredSpanWithErrorStatus<
-              SelectedRelationNameT,
-              RelationSchemasT,
-              VariantsT
-            >(),
-          ),
-    )
-
     this.definition.interruptOnSpans = [
       ...(this.definition.interruptOnSpans ?? []),
       ...interruptOnRequiredErrored,
     ] as typeof definition.interruptOnSpans
+
+    if ('importFrom' in data) {
+      for (const mod of data.importFrom.persistedDefinitionModifications) {
+        // re-apply any previously done modifications (in case this isn't the first time we're importing)
+        this.applyDefinitionModifications(mod)
+      }
+    }
+
+    if (definitionModifications) {
+      this.applyDefinitionModifications(definitionModifications)
+    }
 
     this.recordedItemsByLabel = Object.fromEntries(
       Object.entries(this.definition.labelMatching ?? {}).map(
@@ -1123,6 +1120,34 @@ export class Trace<
       this.processedPerformanceEntries =
         data.importFrom.processedPerformanceEntries
     }
+  }
+
+  /**
+   * all requiredSpans implicitly interrupt the trace if they error, unless explicitly ignored
+   */
+  mapRequiredSpanMatchersToInterruptOnMatchers(
+    requiredSpans: readonly SpanMatcherFn<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >[],
+  ): readonly SpanMatcherFn<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >[] {
+    return requiredSpans.flatMap((matcher) =>
+      matcher.continueWithErrorStatus
+        ? []
+        : withAllConditions<SelectedRelationNameT, RelationSchemasT, VariantsT>(
+            matcher,
+            requiredSpanWithErrorStatus<
+              SelectedRelationNameT,
+              RelationSchemasT,
+              VariantsT
+            >(),
+          ),
+    )
   }
 
   sideEffectFns: TraceStateMachineSideEffectHandlers<RelationSchemasT> = {
@@ -1238,7 +1263,8 @@ export class Trace<
       RelationSchemasT,
       VariantsT
     >,
-    { persist = false }: { persist?: boolean } = {},
+    /** set to false if the sourceDefinition contains the modification, like in the case of a variant */
+    persist = true,
   ) {
     if (persist) {
       this.persistedDefinitionModifications.add(definitionModifications)
@@ -1259,15 +1285,21 @@ export class Trace<
 
     if (additionalRequiredSpans?.length) {
       definition.requiredSpans = [
-        ...this.sourceDefinition.requiredSpans,
+        ...definition.requiredSpans,
         ...additionalRequiredSpans,
-      ] as (typeof definition)['requiredSpans']
+      ]
+      definition.interruptOnSpans = [
+        ...(definition.interruptOnSpans ?? []),
+        ...this.mapRequiredSpanMatchersToInterruptOnMatchers(
+          additionalRequiredSpans,
+        ),
+      ]
     }
     if (additionalDebounceOnSpans?.length) {
       definition.debounceOnSpans = [
-        ...(this.sourceDefinition.debounceOnSpans ?? []),
+        ...(definition.debounceOnSpans ?? []),
         ...additionalDebounceOnSpans,
-      ] as (typeof definition)['debounceOnSpans']
+      ]
     }
   }
 
