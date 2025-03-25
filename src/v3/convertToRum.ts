@@ -136,6 +136,9 @@ function recursivelyRoundValues<T extends object>(
       result[key] = value.map((item: number | T) =>
         typeof item === 'number'
           ? roundFunc(item)
+          : // Keep strings intact - don't process them
+          typeof item === 'string'
+          ? item
           : recursivelyRoundValues(item, roundFunc),
       )
     } else if (value && typeof value === 'object') {

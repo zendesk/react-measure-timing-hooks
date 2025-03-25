@@ -94,6 +94,83 @@ describe('convertTraceToRUM', () => {
       expect(embeddedSpan.spans[0]!.duration).toBe(50) // 50.499 rounded
       expect(embeddedSpan.spans[1]!.startOffset).toBe(200) // 200.001 rounded
       expect(embeddedSpan.spans[1]!.duration).toBe(51) // 50.999 rounded
+
+      expect(result.nonEmbeddedSpans).toEqual([])
     }
+  })
+
+  it('should return correct non embedded spans', () => {
+    const definition: CompleteTraceDefinition<
+      'ticket',
+      TicketIdRelationSchemasFixture,
+      'origin'
+    > = {
+      name: 'test-trace',
+      relationSchemaName: 'ticket',
+      relationSchema: { ticketId: String },
+      requiredSpans: [() => true],
+      computedSpanDefinitions: {},
+      computedValueDefinitions: {},
+      variants: {
+        origin: { timeout: 45_000 },
+      },
+    }
+
+    const input: ActiveTraceInput<
+      MapTypesToSchema<TicketIdRelationSchemasFixture['ticket']>,
+      'origin'
+    > = {
+      id: 'test',
+      startTime: createTimestamp(0),
+      relatedTo: { ticketId: '74' },
+      variant: 'origin',
+    }
+
+    const recordedItems = new Set([
+      createMockSpanAndAnnotation(100.501, {
+        name: 'test-component',
+        type: 'component-render',
+        relatedTo: {},
+        duration: 50.499,
+        isIdle: false,
+        renderCount: 1,
+        renderedOutput: 'loading',
+      }),
+      createMockSpanAndAnnotation(
+        200.001,
+        {
+          name: 'test-component',
+          type: 'component-render',
+          relatedTo: {},
+          duration: 50.999,
+          isIdle: true,
+          renderCount: 2,
+          renderedOutput: 'content',
+        },
+        { occurrence: 2 },
+      ),
+    ])
+    const traceRecording = createTraceRecording(
+      {
+        definition,
+        input,
+        recordedItemsByLabel: {},
+        recordedItems,
+      },
+      { transitionFromState: 'active' },
+    )
+
+    const context = {
+      definition,
+      input,
+      recordedItemsByLabel: {},
+      recordedItems,
+    }
+
+    // we dont want to return any embedded spans
+    const result = convertTraceToRUM(traceRecording, context, () => false)
+    expect(Object.keys(result.embeddedSpans)).toHaveLength(0)
+    expect(result.nonEmbeddedSpans).toEqual(['component-render|test-component'])
+    expect(result.nonEmbeddedSpans).toHaveLength(1)
   })
 })
