@@ -185,6 +185,11 @@ export interface TraceDefinitionModifications<
     RelationSchemasT,
     VariantsT
   >[]
+  additionalInterruptOnSpans?: SpanMatch<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >[]
   additionalDebounceOnSpans?: SpanMatch<
     SelectedRelationNameT,
     RelationSchemasT,

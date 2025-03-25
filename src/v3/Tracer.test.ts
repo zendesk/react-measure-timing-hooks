@@ -87,6 +87,46 @@ describe('Tracer', () => {
       expect(report.duration).toBe(200)
     })
 
+    it('uses additional interrupt on spans from variant', () => {
+      const traceManager = new TraceManager<TestRelationSchema>({
+        relationSchemas: { test: { id: String } },
+        reportFn: getReportFn(),
+        generateId,
+        reportErrorFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'test.operation',
+        type: 'operation',
+        relationSchemaName: 'test',
+        requiredSpans: [{ name: 'required' }],
+        debounceWindow: 100,
+        variants: {
+          variant_a: {
+            timeout: 1_000,
+            additionalInterruptOnSpans: [{ name: 'variant-a-interrupt' }],
+          },
+        },
+      })
+
+      tracer.start({
+        relatedTo: { id: '1' },
+        variant: 'variant_a',
+      })
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TestRelationSchema>`
+        Events: ${Render('span', 0)}------${Render('variant-a-interrupt', 0)}---${Render('required', 0)}
+        Time:   ${0}                      ${100}                                ${250}
+      `
+      processSpans(spans, traceManager)
+      expect(reportFn).toHaveBeenCalled()
+
+      const report = reportFn.mock.calls[0]![0]
+      expect(report.status).toBe('interrupted')
+      expect(report.duration).toBe(null)
+    })
+
     it('uses additional debounce spans from variant', () => {
       const traceManager = new TraceManager<TestRelationSchema>({
         relationSchemas: { test: { id: String } },

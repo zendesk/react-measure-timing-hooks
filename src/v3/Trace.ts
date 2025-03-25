@@ -1277,6 +1277,12 @@ export class Trace<
       VariantsT
     >(definitionModifications.additionalRequiredSpans)
 
+    const additionalInterruptOnSpans = convertMatchersToFns<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >(definitionModifications.additionalInterruptOnSpans)
+
     const additionalDebounceOnSpans = convertMatchersToFns<
       SelectedRelationNameT,
       RelationSchemasT,
@@ -1295,6 +1301,14 @@ export class Trace<
         ),
       ]
     }
+
+    if (additionalInterruptOnSpans?.length) {
+      definition.interruptOnSpans = [
+        ...(definition.interruptOnSpans ?? []),
+        ...additionalInterruptOnSpans,
+      ]
+    }
+
     if (additionalDebounceOnSpans?.length) {
       definition.debounceOnSpans = [
         ...(definition.debounceOnSpans ?? []),
