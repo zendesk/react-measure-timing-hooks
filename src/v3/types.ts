@@ -180,17 +180,17 @@ export interface TraceDefinitionModifications<
   RelationSchemasT,
   VariantsT extends string,
 > {
-  additionalRequiredSpans?: SpanMatch<
+  additionalRequiredSpans?: readonly SpanMatch<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >[]
-  additionalInterruptOnSpans?: SpanMatch<
+  additionalInterruptOnSpans?: readonly SpanMatch<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   >[]
-  additionalDebounceOnSpans?: SpanMatch<
+  additionalDebounceOnSpans?: readonly SpanMatch<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
