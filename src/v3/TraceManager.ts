@@ -13,6 +13,7 @@ import type {
   CompleteTraceDefinition,
   ComputedValueDefinitionInput,
   RelationSchemasBase,
+  ReportErrorFn,
   SpanDeduplicationStrategy,
   TraceDefinition,
   TraceManagerConfig,
@@ -40,7 +41,7 @@ export class TraceManager<
     configInput: Omit<
       TraceManagerConfig<RelationSchemasT>,
       'reportWarningFn'
-    > & { reportWarningFn?: (warning: Error) => void },
+    > & { reportWarningFn?: ReportErrorFn<RelationSchemasT> },
   ) {
     this.utilities = {
       // by default noop for warnings

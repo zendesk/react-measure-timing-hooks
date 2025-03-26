@@ -1071,6 +1071,8 @@ export class Trace<
             input.variant
           }. Must be one of: ${Object.keys(definition.variants).join(', ')}`,
         ),
+        // @ts-expect-error TS doesn't like this type for some reason
+        { definition: this.definition },
       )
     }
 
@@ -1235,6 +1237,8 @@ export class Trace<
             inputAndDefinitionModifications.relatedTo,
           )}. ${errors.join(', ')}`,
         ),
+        // @ts-expect-error TS doesn't like this type for some reason
+        { definition: this.definition },
       )
     }
 
