@@ -106,6 +106,8 @@ export class Tracer<
         new Error(
           `No currently active trace when canceling a draft. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
         ),
+        // @ts-expect-error TS doesn't like this type for some reason
+        { definition: this.definition },
       )
       return
     }
@@ -116,6 +118,8 @@ export class Tracer<
         new Error(
           `You are trying to cancel a draft that is not the same definition as the Tracer's definition.`,
         ),
+        // @ts-expect-error TS doesn't like this type for some reason
+        { definition: this.definition },
       )
       return
     }
@@ -162,6 +166,8 @@ export class Tracer<
         new Error(
           `No currently active trace when adding required spans. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
         ),
+        // @ts-expect-error TS doesn't like this type for some reason
+        { definition: this.definition },
       )
       return
     }
@@ -172,6 +178,8 @@ export class Tracer<
         new Error(
           `You are trying to add required spans to a trace that is not the same definition as the Tracer's definition.`,
         ),
+        // @ts-expect-error TS doesn't like this type for some reason
+        { definition: this.definition },
       )
       return
     }
@@ -210,6 +218,8 @@ export class Tracer<
         new Error(
           `No currently active trace when initializing a trace. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
         ),
+        // @ts-expect-error TS doesn't like this type for some reason
+        { definition: this.definition },
       )
       return
     }
@@ -220,6 +230,8 @@ export class Tracer<
         new Error(
           `You are trying to initialize a trace that has already been initialized before (${trace.definition.name}).`,
         ),
+        // @ts-expect-error TS doesn't like this type for some reason
+        { definition: this.definition },
       )
       return
     }

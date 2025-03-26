@@ -138,6 +138,15 @@ export type AnyPossibleReportFn<RelationSchemasT> = <
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, any>,
 ) => void
 
+export type PartialPossibleTraceContext<RelationSchemasT> = Partial<
+  AllPossibleTraceContexts<RelationSchemasT, string>
+>
+
+export type ReportErrorFn<RelationSchemasT> = (
+  error: Error,
+  currentTraceContext?: PartialPossibleTraceContext<RelationSchemasT>,
+) => void
+
 export interface TraceManagerConfig<RelationSchemasT> {
   reportFn: AnyPossibleReportFn<RelationSchemasT>
 
@@ -156,9 +165,8 @@ export interface TraceManagerConfig<RelationSchemasT> {
    */
   performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<RelationSchemasT>
 
-  // TODO: add trace definition as 2nd arg
-  reportErrorFn: (error: Error) => void
-  reportWarningFn: (warning: Error) => void
+  reportErrorFn: ReportErrorFn<RelationSchemasT>
+  reportWarningFn: ReportErrorFn<RelationSchemasT>
 }
 
 export interface TraceManagerUtilities<
