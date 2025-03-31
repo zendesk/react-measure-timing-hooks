@@ -214,6 +214,9 @@ describe('TraceManager', () => {
           'No currently active trace when initializing',
         ),
       }),
+      expect.objectContaining({
+        definition: expect.any(Object),
+      }),
     )
   })
 
@@ -248,6 +251,9 @@ describe('TraceManager', () => {
         message: expect.stringContaining(
           'trace that has already been initialized',
         ),
+      }),
+      expect.objectContaining({
+        definition: expect.any(Object),
       }),
     )
   })
@@ -433,6 +439,9 @@ describe('TraceManager', () => {
         message: expect.stringContaining(
           'No currently active trace when canceling a draft',
         ),
+      }),
+      expect.objectContaining({
+        definition: expect.any(Object),
       }),
     )
   })
