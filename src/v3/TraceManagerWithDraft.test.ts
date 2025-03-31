@@ -187,75 +187,144 @@ describe('TraceManager', () => {
     expect(report.duration).toBeNull()
   })
 
-  it('reports error when calling `transitionDraftToActive` when a draft trace has not yet been created', () => {
-    const traceManager = new TraceManager({
-      relationSchemas: { ticket: { ticketId: String } },
-      reportFn,
-      generateId,
-      reportErrorFn,
-      reportWarningFn,
+  describe('transitionDraftToActive: report errors', () => {
+    it('reports warning when calling `transitionDraftToActive` with no reporting opts when a draft trace has not yet been created', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: { ticket: { ticketId: String } },
+        reportFn,
+        generateId,
+        reportErrorFn,
+        reportWarningFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'ticket.basic-operation',
+        type: 'operation',
+        relationSchemaName: 'ticket',
+        requiredSpans: [{ name: 'end' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
+
+      tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
+
+      expect(reportWarningFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'No currently active trace when initializing',
+          ),
+        }),
+        expect.objectContaining({
+          definition: expect.any(Object),
+        }),
+      )
     })
 
-    const tracer = traceManager.createTracer({
-      name: 'ticket.basic-operation',
-      type: 'operation',
-      relationSchemaName: 'ticket',
-      requiredSpans: [{ name: 'end' }],
-      variants: {
-        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
-      },
+    it('reports error when calling `transitionDraftToActive` when reporting with error when a draft trace has not yet been created', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: { ticket: { ticketId: String } },
+        reportFn,
+        generateId,
+        reportErrorFn,
+        reportWarningFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'ticket.basic-operation',
+        type: 'operation',
+        relationSchemaName: 'ticket',
+        requiredSpans: [{ name: 'end' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
+
+      tracer.transitionDraftToActive(
+        { relatedTo: { ticketId: '1' } },
+        { noDraftPresentBehavior: 'error' },
+      )
+
+      expect(reportErrorFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'No currently active trace when initializing',
+          ),
+        }),
+        expect.objectContaining({
+          definition: expect.any(Object),
+        }),
+      )
+
+      expect(reportWarningFn).not.toHaveBeenCalled()
     })
 
-    tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
+    it('does NOT report anything when calling `transitionDraftToActive` when not reporting when a draft trace has not yet been created', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: { ticket: { ticketId: String } },
+        reportFn,
+        generateId,
+        reportErrorFn,
+        reportWarningFn,
+      })
 
-    expect(reportErrorFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining(
-          'No currently active trace when initializing',
-        ),
-      }),
-      expect.objectContaining({
-        definition: expect.any(Object),
-      }),
-    )
-  })
+      const tracer = traceManager.createTracer({
+        name: 'ticket.basic-operation',
+        type: 'operation',
+        relationSchemaName: 'ticket',
+        requiredSpans: [{ name: 'end' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
 
-  it('reports warning when calling `transitionDraftToActive` again after a trace is active', () => {
-    const traceManager = new TraceManager({
-      relationSchemas: { ticket: { ticketId: String } },
-      reportFn,
-      generateId,
-      reportErrorFn,
-      reportWarningFn,
+      tracer.transitionDraftToActive(
+        { relatedTo: { ticketId: '1' } },
+        { noDraftPresentBehavior: 'noop' },
+      )
+
+      expect(reportErrorFn).not.toHaveBeenCalled()
+
+      expect(reportWarningFn).not.toHaveBeenCalled()
     })
 
-    const tracer = traceManager.createTracer({
-      name: 'ticket.basic-operation',
-      type: 'operation',
-      relationSchemaName: 'ticket',
-      requiredSpans: [{ name: 'end' }],
-      variants: {
-        cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
-      },
+    it('reports warning when calling `transitionDraftToActive` with no report opts again after a trace is active', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: { ticket: { ticketId: String } },
+        reportFn,
+        generateId,
+        reportErrorFn,
+        reportWarningFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'ticket.basic-operation',
+        type: 'operation',
+        relationSchemaName: 'ticket',
+        requiredSpans: [{ name: 'end' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
+
+      tracer.createDraft({
+        variant: 'cold_boot',
+      })
+
+      tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
+      tracer.transitionDraftToActive({ relatedTo: { ticketId: '2' } })
+
+      expect(reportWarningFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'trace that has already been initialized',
+          ),
+        }),
+        expect.objectContaining({
+          definition: expect.any(Object),
+        }),
+      )
     })
-
-    tracer.createDraft({
-      variant: 'cold_boot',
-    })
-
-    tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
-    tracer.transitionDraftToActive({ relatedTo: { ticketId: '2' } })
-
-    expect(reportWarningFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining(
-          'trace that has already been initialized',
-        ),
-      }),
-      expect.objectContaining({
-        definition: expect.any(Object),
-      }),
-    )
   })
 
   it('interrupts a draft trace when interrupt() is called with error', () => {
