@@ -208,13 +208,30 @@ export class Tracer<
       RelationSchemasT,
       VariantsT
     >,
+    opts?: {
+      noDraftPresentBehavior: 'error' | 'warning' | 'noop'
+    },
   ): void => {
     const trace:
       | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
       | undefined = this.traceUtilities.getCurrentTrace()
 
+    let reportingFunction
+    const { noDraftPresentBehavior } = opts ?? {}
+
+    switch (noDraftPresentBehavior) {
+      case 'error':
+        reportingFunction = this.traceUtilities.reportErrorFn
+        break
+      case 'noop':
+        reportingFunction = undefined
+        break
+      default:
+        reportingFunction = this.traceUtilities.reportWarningFn
+    }
+
     if (!trace) {
-      this.traceUtilities.reportErrorFn(
+      reportingFunction?.(
         new Error(
           `No currently active trace when initializing a trace. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
         ),
@@ -226,7 +243,7 @@ export class Tracer<
 
     // this is an already initialized active trace, do nothing:
     if (!trace.isDraft) {
-      this.traceUtilities.reportWarningFn(
+      reportingFunction?.(
         new Error(
           `You are trying to initialize a trace that has already been initialized before (${trace.definition.name}).`,
         ),
@@ -238,7 +255,7 @@ export class Tracer<
 
     // verify that trace is the same definition as the Tracer's definition
     if (trace.sourceDefinition !== this.definition) {
-      this.traceUtilities.reportWarningFn(
+      reportingFunction?.(
         new Error(
           `You are trying to initialize a trace that is not the same definition as the Tracer's definition is different.`,
         ),
@@ -246,7 +263,7 @@ export class Tracer<
       return
     }
 
-    trace.transitionDraftToActive(inputAndDefinitionModifications)
+    trace.transitionDraftToActive(inputAndDefinitionModifications, opts)
   }
 
   getCurrentTrace = ():

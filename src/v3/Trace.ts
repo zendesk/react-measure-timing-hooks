@@ -1223,15 +1223,33 @@ export class Trace<
       RelationSchemasT,
       VariantsT
     >,
-  ) {
+    opts?: {
+      noDraftPresentBehavior: 'error' | 'warning' | 'noop'
+    },
+  ): void {
     const { attributes } = this.input
 
     const { relatedTo, errors } = validateAndCoerceRelatedToAgainstSchema(
       inputAndDefinitionModifications.relatedTo,
       this.definition.relationSchema,
     )
-    if (errors.length > 0) {
-      this.traceUtilities.reportWarningFn(
+
+    let reportingFunction
+    const { noDraftPresentBehavior } = opts ?? {}
+
+    switch (noDraftPresentBehavior) {
+      case 'error':
+        reportingFunction = this.traceUtilities.reportErrorFn
+        break
+      case 'noop':
+        reportingFunction = undefined
+        break
+      default:
+        reportingFunction = this.traceUtilities.reportWarningFn
+    }
+
+    if (errors.length > 0 && reportingFunction) {
+      reportingFunction(
         new Error(
           `Invalid relatedTo value: ${JSON.stringify(
             inputAndDefinitionModifications.relatedTo,
