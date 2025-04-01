@@ -10,7 +10,7 @@ import type { ActionLog } from './ActionLog'
 import type { ActionLogCache } from './ActionLogCache'
 import type { ACTION_TYPE, MARKER } from './constants'
 
-export type ReportFn<Metadata extends Record<string, unknown>> = (
+export type ReportFnV1<Metadata extends Record<string, unknown>> = (
   reportArgs: ReportArguments<Metadata>,
 ) => void
 
@@ -127,7 +127,7 @@ export interface StaticActionLogOptions<
 }
 
 export interface WithReportFn<CustomMetadata extends Record<string, unknown>> {
-  reportFn?: ReportFn<CustomMetadata>
+  reportFn?: ReportFnV1<CustomMetadata>
 
   /**
    * Will fire any time an action is added to the action log.
@@ -289,10 +289,10 @@ export type GeneratedTimingHooks<
   actionLogCache: ActionLogCache<Metadata>
 }
 
-export type ActionType = typeof ACTION_TYPE[keyof typeof ACTION_TYPE]
-export type Marker = typeof MARKER[keyof typeof MARKER]
-export type SpanMarker = typeof MARKER['START' | 'END']
-export type PointMarker = typeof MARKER['POINT']
+export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE]
+export type Marker = (typeof MARKER)[keyof typeof MARKER]
+export type SpanMarker = (typeof MARKER)['START' | 'END']
+export type PointMarker = (typeof MARKER)['POINT']
 
 export type CustomPerformanceEntry = PerformanceEntry & {
   startMark?: PerformanceEntry
@@ -308,12 +308,12 @@ export interface BaseAction<NameT extends ActionType, MarkerT extends Marker> {
   metadata?: Record<string, unknown>
 }
 
-export type RenderActionType = typeof ACTION_TYPE['RENDER']
+export type RenderActionType = (typeof ACTION_TYPE)['RENDER']
 export type RenderAction = BaseAction<RenderActionType, SpanMarker>
-export type UnresponsiveActionType = typeof ACTION_TYPE['UNRESPONSIVE']
+export type UnresponsiveActionType = (typeof ACTION_TYPE)['UNRESPONSIVE']
 export type UnresponsiveAction = BaseAction<UnresponsiveActionType, SpanMarker>
 export type SpanAction = RenderAction | UnresponsiveAction
-export type StageChangeActionType = typeof ACTION_TYPE['STAGE_CHANGE']
+export type StageChangeActionType = (typeof ACTION_TYPE)['STAGE_CHANGE']
 
 export interface StageChangeAction
   extends BaseAction<StageChangeActionType, PointMarker> {
@@ -321,7 +321,8 @@ export interface StageChangeAction
   renderEntry?: CustomPerformanceEntry
 }
 
-export type DependencyChangeActionType = typeof ACTION_TYPE['DEPENDENCY_CHANGE']
+export type DependencyChangeActionType =
+  (typeof ACTION_TYPE)['DEPENDENCY_CHANGE']
 export type DependencyChangeAction = BaseAction<
   DependencyChangeActionType,
   PointMarker
@@ -347,7 +348,7 @@ export interface StageDescription extends StateMeta {
   dependencyChanges: number
 }
 
-export interface Span {
+export interface TimingSpan {
   type: ActionType | 'ttr' | 'tti'
   description: string
   /** absolute timestamp of when render begun */
@@ -356,6 +357,8 @@ export interface Span {
   endTime: number
   /** relative endTime (ms since the beginning of the first action) */
   relativeEndTime: number
+
+  entry?: PerformanceEntry
   data: StateMeta & {
     source?: string
     metadata?: Record<string, unknown>

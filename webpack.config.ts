@@ -76,10 +76,11 @@ export default ({
       extensions: ['.ts', '.tsx', '...'],
       alias: {
         '#image_overlay': path.join(__dirname, 'src/dummy.png'),
-        react: path.join(__dirname, 'src/reactInterop.js'),
-        'react-dom': path.join(__dirname, 'src/reactDomInterop.js'),
-        'external-react': 'react',
-        'external-react-dom': 'react-dom',
+        // react: path.join(__dirname, 'src/reactInterop.js'),
+        // 'react-dom': path.join(__dirname, 'src/reactDomInterop'),
+        // 'external-react': 'react',
+        // 'external-react-dom': 'react-dom',
+        // 'external-react-dom-client': 'react-dom/client',
       },
     },
     mode: 'production',
@@ -117,7 +118,7 @@ export default ({
                 transpileOnly: true,
                 compilerOptions: {
                   module: 'esnext',
-                  target: 'es2015',
+                  target: 'es2020',
                   esModuleInterop: false,
                   sourceMap: true,
                 },
@@ -141,16 +142,19 @@ export default ({
       },
     ],
     externals: [
-      (async (data) => {
-        const { request } = data
-        if (request === 'external-react') {
-          return 'react'
-        }
-        if (request === 'external-react-dom') {
-          return 'react-dom'
-        }
-        return false
-      }) as ExternalFn,
+      'react',
+      'react-dom',
+      'react-dom/client',
+      // (async (data) => {
+      //   const { request } = data
+      //   if (request === 'external-react') {
+      //     return 'react'
+      //   }
+      //   if (request === 'external-react-dom') {
+      //     return 'react-dom'
+      //   }
+      //   return false
+      // }) as ExternalFn,
     ],
     externalsType: 'module',
   }

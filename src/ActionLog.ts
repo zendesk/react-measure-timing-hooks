@@ -17,15 +17,15 @@ import {
   MARKER,
   OBSERVER_SOURCE,
 } from './constants'
-import type { DebounceOptionsRef } from './debounce'
-import { debounce, FlushReason, TimeoutReason } from './debounce'
+import type { DebounceOptionsRef, FlushReason } from './debounce'
+import { debounce, TimeoutReason } from './debounce'
 import { performanceMark, performanceMeasure } from './performanceMark'
 import type {
   Action,
   ActionWithStateMetadata,
   DynamicActionLogOptions,
   ReportArguments,
-  ReportFn,
+  ReportFnV1,
   ShouldResetOnDependencyChange,
   SpanAction,
   StageChangeAction,
@@ -134,7 +134,7 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
     this.placementsCurrentlyRenderable.clear()
   }
 
-  private reportFn: ReportFn<CustomMetadata> = noop
+  private reportFn: ReportFnV1<CustomMetadata> = noop
 
   private shouldResetOnDependencyChangeFnBySource: Map<
     string,
@@ -674,17 +674,17 @@ export class ActionLog<CustomMetadata extends Record<string, unknown>> {
         this.lastStage,
       )
     } else if (lastRenderAction) {
+      ttr = performanceMeasure(
+        `${this.id}/ttr`,
+        firstAction.entry.startMark ?? firstAction.entry,
+        lastRenderAction.entry.endMark ?? lastRenderAction.entry,
+        detail,
+      )
       // add a measure so we can use it in Lighthouse runs
       tti = performanceMeasure(
         `${this.id}/tti`,
         firstAction.entry.startMark ?? firstAction.entry,
         lastAction.entry.endMark ?? lastAction.entry,
-        detail,
-      )
-      ttr = performanceMeasure(
-        `${this.id}/ttr`,
-        firstAction.entry.startMark ?? firstAction.entry,
-        lastRenderAction.entry.endMark ?? lastRenderAction.entry,
         detail,
       )
     }

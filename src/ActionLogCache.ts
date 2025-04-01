@@ -1,5 +1,5 @@
 import { ActionLog } from './ActionLog'
-import { debounce, DebouncedFn } from './debounce'
+import { debounce, type DebouncedFn } from './debounce'
 import type { StaticActionLogOptions, UseActionLogCacheOptions } from './types'
 
 export interface ActionLogRef<

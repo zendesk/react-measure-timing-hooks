@@ -14,9 +14,9 @@ import type { ReactTestRenderer } from 'react-test-renderer'
 import { act, create } from 'react-test-renderer'
 import { ActionLog } from './ActionLog'
 import { DEFAULT_STAGES, INFORMATIVE_STAGES } from './constants'
-import { type Report, generateReport } from './generateReport'
+import { generateReport, type Report } from './generateReport'
 import * as performanceMock from './performanceMark'
-import type { ReportFn } from './types'
+import type { ReportFnV1 } from './types'
 import { useTimingMeasurement } from './useTimingMeasurement'
 import { resetMemoizedCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
 
@@ -82,7 +82,7 @@ describe('useTiming', () => {
 
   const originalPerformanceObserver = window.PerformanceObserver
 
-  const mockReportFn = jest.fn<void, Parameters<ReportFn<any>>>()
+  const mockReportFn = jest.fn<void, Parameters<ReportFnV1<any>>>()
 
   const id = 'test-component'
   const timeIncrement = 100
@@ -117,7 +117,7 @@ describe('useTiming', () => {
         name,
         duration: currentTime - startMark.startTime,
         startTime: startMark.startTime,
-        entryType: 'mark',
+        entryType: 'measure',
         toJSON: () => `(toJSON:${name})`,
         detail: null,
       }
@@ -552,11 +552,9 @@ describe('useTiming', () => {
           manager: expectedRenderCount,
         },
         durations: {
-          manager: [
-            ...Array.from({ length: expectedRenderCount }).map(
-              () => timeIncrement,
-            ),
-          ],
+          manager: Array.from({ length: expectedRenderCount }).map(
+            () => timeIncrement,
+          ),
         },
         spans: expect.anything(),
         timeSpent: {
@@ -1125,7 +1123,7 @@ describe('useTiming', () => {
       // the hook shouldn't affect the contents being rendered:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1168,7 +1166,7 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1211,7 +1209,7 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1537,7 +1535,7 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1645,11 +1643,11 @@ describe('useTiming', () => {
       const generatedReport = generateReport(reportArgs!)
       expect(generatedReport).toEqual(report)
       expect(generatedReport.spans).toMatchInlineSnapshot(`
-        Array [
-          Object {
-            "data": Object {
-              "metadata": Object {},
-              "mountedPlacements": Array [
+        [
+          {
+            "data": {
+              "metadata": {},
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1658,15 +1656,15 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "<beacon> (1)",
-            "endTime": 200,
+            "endTime": 400,
             "relativeEndTime": 100,
-            "startTime": 100,
+            "startTime": 300,
             "type": "render",
           },
-          Object {
-            "data": Object {
-              "metadata": Object {},
-              "mountedPlacements": Array [
+          {
+            "data": {
+              "metadata": {},
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1675,15 +1673,15 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "<manager> (1)",
-            "endTime": 300,
+            "endTime": 500,
             "relativeEndTime": 200,
-            "startTime": 100,
+            "startTime": 300,
             "type": "render",
           },
-          Object {
-            "data": Object {
-              "metadata": Object {},
-              "mountedPlacements": Array [
+          {
+            "data": {
+              "metadata": {},
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1692,15 +1690,15 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "unresponsive",
-            "endTime": 900,
+            "endTime": 1100,
             "relativeEndTime": 800,
-            "startTime": 400,
+            "startTime": 600,
             "type": "unresponsive",
           },
-          Object {
-            "data": Object {
+          {
+            "data": {
               "dependencyChanges": 0,
-              "mountedPlacements": Array [
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1710,15 +1708,15 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "render",
-            "endTime": 300,
+            "endTime": 500,
             "relativeEndTime": 200,
-            "startTime": 100,
+            "startTime": 300,
             "type": "ttr",
           },
-          Object {
-            "data": Object {
+          {
+            "data": {
               "dependencyChanges": 0,
-              "mountedPlacements": Array [
+              "mountedPlacements": [
                 "manager",
                 "beacon",
               ],
@@ -1728,9 +1726,9 @@ describe('useTiming', () => {
               "timingId": "test-component",
             },
             "description": "interactive",
-            "endTime": 900,
+            "endTime": 1100,
             "relativeEndTime": 800,
-            "startTime": 100,
+            "startTime": 300,
             "type": "tti",
           },
         ]
@@ -1820,7 +1818,7 @@ describe('useTiming', () => {
       })
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -1862,7 +1860,7 @@ describe('useTiming', () => {
       // re-rendered with new data:
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,
@@ -2137,7 +2135,7 @@ describe('useTiming', () => {
       })
 
       expect(renderer!.toJSON()).toMatchInlineSnapshot(`
-        Array [
+        [
           <div>
             Hello!
           </div>,

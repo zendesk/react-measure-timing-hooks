@@ -16,8 +16,8 @@ import {
 import type {
   ActionWithStateMetadata,
   ReportArguments,
-  Span,
   StageDescription,
+  TimingSpan,
 } from './types'
 import { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
 
@@ -34,7 +34,7 @@ export interface Report {
   includedStages: string[]
   hadError: boolean
   handled: boolean
-  spans: Span[]
+  spans: TimingSpan[]
   loadingStagesDuration: number
   flushReason: string
 }
@@ -46,6 +46,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
   immediateSendReportStages = [],
   loadingStages = DEFAULT_LOADING_STAGES,
   flushReason = 'auto',
+  measures,
 }: ReportArguments<CustomMetadata>): Report {
   const lastStart: Record<string, number> = {}
   let lastRenderEnd: number | null = null
@@ -67,7 +68,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
   ]
   const lastAction = [...actions].reverse()[0]
   const includedStages = new Set<string>()
-  const spans: Span[] = []
+  const spans: TimingSpan[] = []
 
   const markStage = ({
     stage,
@@ -170,6 +171,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
           startTime: action.timestamp - duration,
           endTime: action.timestamp,
           relativeEndTime: action.timestamp - (startTime ?? 0),
+          entry: action.entry,
           data: {
             mountedPlacements: action.mountedPlacements,
             timingId: action.timingId,
@@ -189,6 +191,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
             startTime: lastDependencyChange!,
             endTime: action.timestamp,
             relativeEndTime: action.timestamp - (startTime ?? 0),
+            entry: action.entry,
             data: {
               mountedPlacements: action.mountedPlacements,
               timingId: action.timingId,
@@ -225,7 +228,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
         timestamp,
         timeToStage,
         ...data
-      }): Span => ({
+      }): TimingSpan => ({
         type,
         description: `${pStage} to ${stage}`,
         startTime: startTime! + previousStageTimestamp,
@@ -274,6 +277,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
       startTime: startTime as unknown as number,
       endTime: lastRenderEnd,
       relativeEndTime: lastRenderEnd - (startTime ?? 0),
+      entry: measures.ttr,
       data: {
         mountedPlacements: lastAction.mountedPlacements,
         timingId: lastAction.timingId,
@@ -295,6 +299,7 @@ export function generateReport<CustomMetadata extends Record<string, unknown>>({
         startTime: startTime as unknown as number,
         endTime: endTime as unknown as number,
         relativeEndTime: (endTime as unknown as number) - (startTime ?? 0),
+        entry: measures.tti,
         data: {
           stage: INFORMATIVE_STAGES.INTERACTIVE,
           previousStage: INFORMATIVE_STAGES.RENDERED,
