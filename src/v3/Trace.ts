@@ -1255,7 +1255,7 @@ export class Trace<
           )}. ${errors.join(', ')}`,
         ),
         // @ts-expect-error TS doesn't like this type for some reason
-        { trace: this },
+        this,
       )
     }
 
