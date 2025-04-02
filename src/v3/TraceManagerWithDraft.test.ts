@@ -321,7 +321,7 @@ describe('TraceManager', () => {
           ),
         }),
         expect.objectContaining({
-          definition: expect.any(Object),
+          trace: expect.any(Object),
         }),
       )
     })

@@ -9,6 +9,7 @@ import {
   type ComputedSpanDefinitionInput,
   type ComputedValueDefinitionInput,
   type DraftTraceContext,
+  type NoDraftPresenceBehavior,
   type RelationSchemasBase,
   type TraceDefinitionModifications,
   type TraceManagerUtilities,
@@ -116,7 +117,7 @@ export class Tracer<
     if (trace.sourceDefinition !== this.definition) {
       this.traceUtilities.reportWarningFn(
         new Error(
-          `You are trying to cancel a draft that is not the same definition as the Tracer's definition.`,
+          `You are trying to add required spans to a trace (${this.definition.name}) that is not the same definition as the Tracer's definition (${trace.sourceDefinition.name}).`,
         ),
         // @ts-expect-error TS doesn't like this type for some reason
         { definition: this.definition },
@@ -208,9 +209,7 @@ export class Tracer<
       RelationSchemasT,
       VariantsT
     >,
-    opts?: {
-      noDraftPresentBehavior: 'error' | 'warning' | 'noop'
-    },
+    opts?: NoDraftPresenceBehavior,
   ): void => {
     const trace:
       | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
@@ -248,7 +247,7 @@ export class Tracer<
           `You are trying to initialize a trace that has already been initialized before (${trace.definition.name}).`,
         ),
         // @ts-expect-error TS doesn't like this type for some reason
-        { definition: this.definition },
+        { trace },
       )
       return
     }

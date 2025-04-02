@@ -218,6 +218,10 @@ export interface TraceModifications<
   attributes?: Attributes
 }
 
+export interface NoDraftPresenceBehavior {
+  noDraftPresentBehavior: 'error' | 'warning' | 'noop'
+}
+
 export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
   /**
    * How long to wait for CPU Idle before giving up and interrupting the trace.
