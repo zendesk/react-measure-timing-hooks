@@ -26,6 +26,7 @@ import type { TraceRecording } from './traceRecordingTypes'
 import type {
   CompleteTraceDefinition,
   DraftTraceContext,
+  NoDraftPresenceBehavior,
   RelationSchemasBase,
   TraceContext,
   TraceDefinitionModifications,
@@ -1223,9 +1224,7 @@ export class Trace<
       RelationSchemasT,
       VariantsT
     >,
-    opts?: {
-      noDraftPresentBehavior: 'error' | 'warning' | 'noop'
-    },
+    opts?: NoDraftPresenceBehavior,
   ): void {
     const { attributes } = this.input
 
@@ -1248,15 +1247,15 @@ export class Trace<
         reportingFunction = this.traceUtilities.reportWarningFn
     }
 
-    if (errors.length > 0 && reportingFunction) {
-      reportingFunction(
+    if (errors.length > 0) {
+      reportingFunction?.(
         new Error(
           `Invalid relatedTo value: ${JSON.stringify(
             inputAndDefinitionModifications.relatedTo,
           )}. ${errors.join(', ')}`,
         ),
         // @ts-expect-error TS doesn't like this type for some reason
-        { definition: this.definition },
+        { trace: this },
       )
     }
 

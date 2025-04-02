@@ -10,9 +10,9 @@ export const traceManager = new TraceManager({
   },
   // eslint-disable-next-line no-magic-numbers
   generateId: () => Math.random().toString(36).slice(2),
-  reportErrorFn: (error) => {
+  reportErrorFn: (error, currentTraceContext) => {
     // eslint-disable-next-line no-console
-    console.error(error)
+    console.error(error, currentTraceContext)
   },
 })
 
