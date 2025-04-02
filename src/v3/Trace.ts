@@ -24,6 +24,7 @@ import type {
 import type { ActiveTraceConfig, DraftTraceInput, Span } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
+  AllPossibleTraceContexts,
   CompleteTraceDefinition,
   DraftTraceContext,
   NoDraftPresenceBehavior,
@@ -1254,8 +1255,7 @@ export class Trace<
             inputAndDefinitionModifications.relatedTo,
           )}. ${errors.join(', ')}`,
         ),
-        // @ts-expect-error TS doesn't like this type for some reason
-        this,
+        this as Partial<AllPossibleTraceContexts<RelationSchemasT, string>>,
       )
     }
 
