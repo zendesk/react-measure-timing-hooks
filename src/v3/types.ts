@@ -218,8 +218,11 @@ export interface TraceModifications<
   attributes?: Attributes
 }
 
-export interface NoDraftPresenceBehavior {
-  noDraftPresentBehavior: 'error' | 'warning' | 'noop'
+type ErrorBehavior = 'error' | 'error-and-continue' | 'warn-and-continue'
+
+export interface TransitionDraftOptions {
+  noDraftPresentBehavior?: ErrorBehavior
+  invalidRelatedToBehavior?: ErrorBehavior
 }
 
 export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {

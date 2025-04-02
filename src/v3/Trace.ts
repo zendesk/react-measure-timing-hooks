@@ -27,14 +27,15 @@ import type {
   AllPossibleTraceContexts,
   CompleteTraceDefinition,
   DraftTraceContext,
-  NoDraftPresenceBehavior,
   RelationSchemasBase,
+  ReportErrorFn,
   TraceContext,
   TraceDefinitionModifications,
   TraceInterruptionReason,
   TraceInterruptionReasonForInvalidTraces,
   TraceManagerUtilities,
   TraceModifications,
+  TransitionDraftOptions,
 } from './types'
 import { INVALID_TRACE_INTERRUPTION_REASONS } from './types'
 import type {
@@ -931,8 +932,12 @@ export class Trace<
     VariantsT
   > {
     if (!this.input.relatedTo) {
-      throw new Error(
-        "Tried to access trace's activeInput, but the trace was never provided a 'relatedTo' input value",
+      this.traceUtilities.reportErrorFn(
+        new Error(
+          "Tried to access trace's activeInput, but the trace was never provided a 'relatedTo' input value",
+        ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
     }
     return this.input as ActiveTraceConfig<
@@ -1073,8 +1078,8 @@ export class Trace<
             input.variant
           }. Must be one of: ${Object.keys(definition.variants).join(', ')}`,
         ),
-        // @ts-expect-error TS doesn't like this type for some reason
-        { definition: this.definition },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
     }
 
@@ -1225,8 +1230,57 @@ export class Trace<
       RelationSchemasT,
       VariantsT
     >,
-    opts?: NoDraftPresenceBehavior,
+    {
+      noDraftPresentBehavior = 'warn-and-continue',
+      invalidRelatedToBehavior = 'warn-and-continue',
+    }: TransitionDraftOptions = {},
   ): void {
+    const { isDraft } = this
+    let reportNoDraft: ReportErrorFn<RelationSchemasT>
+    let overwriteDraft = true
+
+    switch (noDraftPresentBehavior) {
+      case 'error':
+        reportNoDraft = this.traceUtilities.reportErrorFn
+        overwriteDraft = false
+        break
+      case 'error-and-continue':
+        reportNoDraft = this.traceUtilities.reportErrorFn
+        break
+      default:
+        reportNoDraft = this.traceUtilities.reportWarningFn
+        break
+    }
+
+    // this is an already initialized active trace, do nothing:
+    if (!isDraft) {
+      reportNoDraft(
+        new Error(
+          `You are trying to initialize a trace that has already been initialized before (${this.definition.name}).`,
+        ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
+      )
+      if (!overwriteDraft) {
+        return
+      }
+    }
+
+    let reportValidationError: ReportErrorFn<RelationSchemasT>
+    let useInvalidRelatedTo = true
+    switch (invalidRelatedToBehavior) {
+      case 'error':
+        reportValidationError = this.traceUtilities.reportErrorFn
+        useInvalidRelatedTo = false
+        break
+      case 'error-and-continue':
+        reportValidationError = this.traceUtilities.reportErrorFn
+        break
+      default:
+        reportValidationError = this.traceUtilities.reportWarningFn
+        break
+    }
+
     const { attributes } = this.input
 
     const { relatedTo, errors } = validateAndCoerceRelatedToAgainstSchema(
@@ -1234,29 +1288,19 @@ export class Trace<
       this.definition.relationSchema,
     )
 
-    let reportingFunction
-    const { noDraftPresentBehavior } = opts ?? {}
-
-    switch (noDraftPresentBehavior) {
-      case 'error':
-        reportingFunction = this.traceUtilities.reportErrorFn
-        break
-      case 'noop':
-        reportingFunction = undefined
-        break
-      default:
-        reportingFunction = this.traceUtilities.reportWarningFn
-    }
-
     if (errors.length > 0) {
-      reportingFunction?.(
+      reportValidationError(
         new Error(
           `Invalid relatedTo value: ${JSON.stringify(
             inputAndDefinitionModifications.relatedTo,
           )}. ${errors.join(', ')}`,
         ),
-        this as Partial<AllPossibleTraceContexts<RelationSchemasT, string>>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
+      if (!useInvalidRelatedTo) {
+        return
+      }
     }
 
     this.activeInput = {
@@ -1271,7 +1315,11 @@ export class Trace<
     this.applyDefinitionModifications(inputAndDefinitionModifications)
 
     this.wasActivated = true
-    this.stateMachine.emit('onMakeActive', undefined)
+
+    if (isDraft) {
+      // we might already be active in which case we would have issued a warning earlier in this method
+      this.stateMachine.emit('onMakeActive', undefined)
+    }
   }
 
   /**
