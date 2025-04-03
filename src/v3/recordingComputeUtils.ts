@@ -91,17 +91,35 @@ export function getComputedSpans<
   )) {
     const { startSpan: startSpanMatcher, endSpan } = computedSpanDefinition
 
-    const matchingStartEntry =
-      typeof startSpanMatcher === 'function'
-        ? recordedItemsArray.find((spanAndAnnotation) =>
-            startSpanMatcher(spanAndAnnotation, context),
-          )
-        : startSpanMatcher
+    let matchingStartEntry:
+      | SpanAndAnnotation<RelationSchemasT>
+      | 'operation-start'
+      | undefined =
+      typeof startSpanMatcher !== 'function' ? startSpanMatcher : undefined
 
-    const matchingStartTime =
-      matchingStartEntry === 'operation-start'
-        ? context.input.startTime.now
-        : matchingStartEntry?.span.startTime.now
+    if (typeof startSpanMatcher === 'function') {
+      let matchingIndex = 0
+      let matchingReverseIndex = -recordedItemsArray.length
+      // eslint-disable-next-line @typescript-eslint/prefer-for-of
+      for (let index = 0; index < recordedItemsArray.length; index++) {
+        const spanAndAnnotation = recordedItemsArray[index]!
+        if (startSpanMatcher(spanAndAnnotation, context)) {
+          if (
+            typeof startSpanMatcher.matchingIndex !== 'number' ||
+            (startSpanMatcher.matchingIndex >= 0
+              ? startSpanMatcher.matchingIndex === matchingIndex
+              : startSpanMatcher.matchingIndex === matchingReverseIndex)
+          ) {
+            // found it!
+            matchingStartEntry = spanAndAnnotation
+            continue
+          } else {
+            matchingIndex += 1
+            matchingReverseIndex += 1
+          }
+        }
+      }
+    }
 
     const endSpanMatcher =
       endSpan === 'operation-end'
@@ -110,10 +128,39 @@ export function getComputedSpans<
         ? markedInteractive
         : endSpan
 
-    const matchingEndEntry = findLast(recordedItemsArray, (spanAndAnnotation) =>
-      endSpanMatcher(spanAndAnnotation, context),
-    )
+    // use findLast as a small optimization, as most likely users will want the last instance of a span, so we start from the end
+    let matchingEndEntry: SpanAndAnnotation<RelationSchemasT> | undefined
 
+    if (typeof endSpanMatcher === 'function') {
+      let matchingIndex = recordedItemsArray.length - 1
+      let matchingReverseIndex = -1
+      for (let index = recordedItemsArray.length - 1; index >= 0; index--) {
+        const spanAndAnnotation = recordedItemsArray[index]!
+        if (endSpanMatcher(spanAndAnnotation, context)) {
+          if (
+            typeof endSpanMatcher.matchingIndex !== 'number' ||
+            (endSpanMatcher.matchingIndex >= 0
+              ? endSpanMatcher.matchingIndex === matchingIndex
+              : endSpanMatcher.matchingIndex === matchingReverseIndex)
+          ) {
+            // found it!
+            matchingEndEntry = spanAndAnnotation
+            continue
+          } else {
+            matchingIndex -= 1
+            matchingReverseIndex -= 1
+          }
+        }
+      }
+    }
+
+    const matchingStartTime =
+      matchingStartEntry === 'operation-start'
+        ? context.input.startTime.now
+        : matchingStartEntry?.span.startTime.now
+
+    // index  0    1   2   3
+    // revei  -4  -3  -2  -1
     const matchingEndTime = matchingEndEntry
       ? matchingEndEntry.span.startTime.now + matchingEndEntry.span.duration
       : undefined
