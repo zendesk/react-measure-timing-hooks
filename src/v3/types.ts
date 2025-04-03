@@ -221,7 +221,7 @@ export interface TraceModifications<
 type ErrorBehavior = 'error' | 'error-and-continue' | 'warn-and-continue'
 
 export interface TransitionDraftOptions {
-  noDraftPresentBehavior?: ErrorBehavior
+  previouslyActivatedBehavior?: ErrorBehavior
   invalidRelatedToBehavior?: ErrorBehavior
 }
 

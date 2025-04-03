@@ -189,7 +189,7 @@ export class Tracer<
     if (!trace) {
       this.traceUtilities.reportWarningFn(
         new Error(
-          `No currently active trace when canceling a draft. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
+          `No current active trace when initializing a trace. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
         ),
         { definition: this.definition } as Partial<
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

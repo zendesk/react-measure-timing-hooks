@@ -24,7 +24,6 @@ import type {
 import type { ActiveTraceConfig, DraftTraceInput, Span } from './spanTypes'
 import type { TraceRecording } from './traceRecordingTypes'
 import type {
-  AllPossibleTraceContexts,
   CompleteTraceDefinition,
   DraftTraceContext,
   RelationSchemasBase,
@@ -1231,32 +1230,31 @@ export class Trace<
       VariantsT
     >,
     {
-      noDraftPresentBehavior = 'warn-and-continue',
+      previouslyActivatedBehavior = 'warn-and-continue',
       invalidRelatedToBehavior = 'warn-and-continue',
     }: TransitionDraftOptions = {},
   ): void {
     const { isDraft } = this
-    let reportNoDraft: ReportErrorFn<RelationSchemasT>
+    let reportPreviouslyActivated: ReportErrorFn<RelationSchemasT>
     let overwriteDraft = true
-
-    switch (noDraftPresentBehavior) {
+    switch (previouslyActivatedBehavior) {
       case 'error':
-        reportNoDraft = this.traceUtilities.reportErrorFn
+        reportPreviouslyActivated = this.traceUtilities.reportErrorFn
         overwriteDraft = false
         break
       case 'error-and-continue':
-        reportNoDraft = this.traceUtilities.reportErrorFn
+        reportPreviouslyActivated = this.traceUtilities.reportErrorFn
         break
       default:
-        reportNoDraft = this.traceUtilities.reportWarningFn
+        reportPreviouslyActivated = this.traceUtilities.reportWarningFn
         break
     }
 
     // this is an already initialized active trace, do nothing:
     if (!isDraft) {
-      reportNoDraft(
+      reportPreviouslyActivated(
         new Error(
-          `You are trying to initialize a trace that has already been initialized before (${this.definition.name}).`,
+          `You are trying to activate a trace that has already been activated before (${this.definition.name}).`,
         ),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this as Trace<any, RelationSchemasT, any>,
