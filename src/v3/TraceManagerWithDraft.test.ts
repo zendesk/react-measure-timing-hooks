@@ -144,8 +144,8 @@ describe('TraceManager', () => {
     expect(report.duration).toBeNull()
   })
 
-  describe('transitionDraftToActive: report errors', () => {
-    it('reports warning when calling `transitionDraftToActive` with no reporting opts when a draft trace has not yet been created', () => {
+  describe('transitionDraftToActive()', () => {
+    it('after a trace is active: reports warning', () => {
       const traceManager = new TraceManager({
         relationSchemas: { ticket: { ticketId: String } },
         reportFn,
@@ -162,131 +162,30 @@ describe('TraceManager', () => {
         variants: {
           cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
+      })
+
+      tracer.createDraft({
+        variant: 'cold_boot',
       })
 
       tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
+      tracer.transitionDraftToActive({ relatedTo: { ticketId: '2' } })
 
       expect(reportWarningFn).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining(
-            'No current active trace when initializing',
+            'You are trying to activate a trace that has already been activated',
           ),
         }),
         expect.objectContaining({
-          definition: expect.any(Object),
+          definition: expect.objectContaining({
+            name: 'ticket.basic-operation',
+          }),
         }),
       )
     })
 
-    it('reports error when calling `transitionDraftToActive` when reporting with error', () => {
-      const traceManager = new TraceManager({
-        relationSchemas: { ticket: { ticketId: String } },
-        reportFn,
-        generateId,
-        reportErrorFn,
-        reportWarningFn,
-      })
-
-      const tracer = traceManager.createTracer({
-        name: 'ticket.basic-operation',
-        type: 'operation',
-        relationSchemaName: 'ticket',
-        requiredSpans: [{ name: 'end' }],
-        variants: {
-          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
-        },
-      })
-
-      tracer.transitionDraftToActive(
-        { relatedTo: { ticketId: '1' } },
-        { previouslyActivatedBehavior: 'error' },
-      )
-
-      expect(reportErrorFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'No current active trace when initializing',
-          ),
-        }),
-        expect.objectContaining({
-          definition: expect.any(Object),
-        }),
-      )
-    })
-
-    it('reports error when calling `transitionDraftToActive` before creating a Trace when reporting with error-and-continue', () => {
-      const traceManager = new TraceManager({
-        relationSchemas: { ticket: { ticketId: String } },
-        reportFn,
-        generateId,
-        reportErrorFn,
-        reportWarningFn,
-      })
-
-      const tracer = traceManager.createTracer({
-        name: 'ticket.basic-operation',
-        type: 'operation',
-        relationSchemaName: 'ticket',
-        requiredSpans: [{ name: 'end' }],
-        variants: {
-          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
-        },
-      })
-
-      tracer.transitionDraftToActive(
-        { relatedTo: { ticketId: '1' } },
-        { previouslyActivatedBehavior: 'error-and-continue' },
-      )
-
-      expect(reportErrorFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'No current active trace when initializing',
-          ),
-        }),
-        expect.objectContaining({
-          definition: expect.any(Object),
-        }),
-      )
-    })
-
-    it('reports error when calling `transitionDraftToActive` when reporting with error', () => {
-      const traceManager = new TraceManager({
-        relationSchemas: { ticket: { ticketId: String } },
-        reportFn,
-        generateId,
-        reportErrorFn,
-        reportWarningFn,
-      })
-
-      const tracer = traceManager.createTracer({
-        name: 'ticket.basic-operation',
-        type: 'operation',
-        relationSchemaName: 'ticket',
-        requiredSpans: [{ name: 'end' }],
-        variants: {
-          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
-        },
-      })
-
-      tracer.transitionDraftToActive(
-        { relatedTo: { ticketId: '1' } },
-        { previouslyActivatedBehavior: 'warn-and-continue' },
-      )
-
-      expect(reportWarningFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'No current active trace when initializing',
-          ),
-        }),
-        expect.objectContaining({
-          definition: expect.any(Object),
-        }),
-      )
-    })
-
-    it('reports warning when calling `transitionDraftToActive` with no report opts again after a trace is active', () => {
+    it('after a trace is active and previouslyActivatedBehavior is "warn-and-continue": reports error and continues trace with new trace modification', () => {
       const traceManager = new TraceManager({
         relationSchemas: { ticket: { ticketId: String } },
         reportFn,
@@ -312,13 +211,20 @@ describe('TraceManager', () => {
       tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
       tracer.transitionDraftToActive(
         { relatedTo: { ticketId: '2' } },
-        { previouslyActivatedBehavior: '' },
+        { previouslyActivatedBehavior: 'warn-and-continue' },
       )
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TicketIdRelationSchemasFixture>`
+      Events: ${Render('Component', 0, {type: 'component-render-start'})}--${Render('Component', 50)}--${Render('end', 50,)}
+      Time:   ${0}                                                         ${50}                       ${100}
+      `
+      processSpans(spans, traceManager)
 
       expect(reportWarningFn).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining(
-            'trace that has already been initialized',
+            'You are trying to activate a trace that has already been activated',
           ),
         }),
         expect.objectContaining({
@@ -327,9 +233,141 @@ describe('TraceManager', () => {
           }),
         }),
       )
+
+      expect(reportFn).toHaveBeenCalled()
+      const report = reportFn.mock.calls[0]![0]
+
+      expect(report.relatedTo).toEqual({
+        ticketId: '2', // relatedTo successfully replaced
+      })
     })
 
-    // add relatedTo was overridden (expected for the 2 continue actions) or not
+    it('after a trace is active and previouslyActivatedBehavior is "error-and-continue": reports error and continues trace with new trace modification', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: { ticket: { ticketId: String } },
+        reportFn,
+        generateId,
+        reportErrorFn,
+        reportWarningFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'ticket.basic-operation',
+        type: 'operation',
+        relationSchemaName: 'ticket',
+        requiredSpans: [{ name: 'end' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
+
+      tracer.createDraft({
+        variant: 'cold_boot',
+      })
+
+      tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
+      tracer.transitionDraftToActive(
+        { relatedTo: { ticketId: '2' } },
+        { previouslyActivatedBehavior: 'error-and-continue' },
+      )
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TicketIdRelationSchemasFixture>`
+      Events: ${Render('Component', 0, {type: 'component-render-start'})}--${Render('Component', 50)}--${Render('end', 50,)}
+      Time:   ${0}                                                         ${50}                       ${100}
+      `
+      processSpans(spans, traceManager)
+
+      expect(reportErrorFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'You are trying to activate a trace that has already been activated',
+          ),
+        }),
+        expect.objectContaining({
+          definition: expect.objectContaining({
+            name: 'ticket.basic-operation',
+          }),
+        }),
+      )
+
+      expect(reportFn).toHaveBeenCalled()
+      const report = reportFn.mock.calls[0]![0]
+
+      expect(report.relatedTo).toEqual({
+        ticketId: '2', // relatedTo successfully replaced
+      })
+    })
+
+    it('after a trace is active and previouslyActivatedBehavior is "error": reports error and continues trace with original trace definition', () => {
+      const traceManager = new TraceManager({
+        relationSchemas: { ticket: { ticketId: String } },
+        reportFn,
+        generateId,
+        reportErrorFn,
+        reportWarningFn,
+      })
+
+      const tracer = traceManager.createTracer({
+        name: 'ticket.basic-operation',
+        type: 'operation',
+        relationSchemaName: 'ticket',
+        requiredSpans: [{ name: 'end' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+        },
+      })
+
+      tracer.createDraft({
+        variant: 'cold_boot',
+      })
+
+      tracer.transitionDraftToActive({ relatedTo: { ticketId: '1' } })
+      tracer.transitionDraftToActive(
+        { relatedTo: { ticketId: '2' } },
+        { previouslyActivatedBehavior: 'error' },
+      )
+
+      expect(reportErrorFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'You are trying to activate a trace that has already been activated',
+          ),
+        }),
+        expect.objectContaining({
+          definition: expect.objectContaining({
+            name: 'ticket.basic-operation',
+          }),
+        }),
+      )
+
+      // prettier-ignore
+      const { spans } = getSpansFromTimeline<TicketIdRelationSchemasFixture>`
+      Events: ${Render('Component', 0, {type: 'component-render-start'})}--${Render('Component', 50)}--${Render('end', 50,)}
+      Time:   ${0}                                                         ${50}                       ${100}
+      `
+      processSpans(spans, traceManager)
+
+      expect(reportErrorFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'You are trying to activate a trace that has already been activated',
+          ),
+        }),
+        expect.objectContaining({
+          definition: expect.objectContaining({
+            name: 'ticket.basic-operation',
+          }),
+        }),
+      )
+
+      expect(reportFn).toHaveBeenCalled()
+      const report = reportFn.mock.calls[0]![0]
+
+      expect(report.relatedTo).toEqual({
+        ticketId: '1', // relatedTo was not replaced!
+      })
+    })
   })
 
   describe('interrupt()', () => {
