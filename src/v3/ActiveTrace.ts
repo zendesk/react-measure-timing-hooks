@@ -356,6 +356,7 @@ export class TraceStateMachine<
         if (this.context.definition.interruptOn) {
           for (const match of this.context.definition.interruptOn) {
             if (match(spanAndAnnotation, this.context)) {
+              this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'matched-on-interrupt',
@@ -480,11 +481,13 @@ export class TraceStateMachine<
           }
         }
 
+        // The debouncing buffer will be used to correctly group the spans into clusters when calculating the cpu idle in the waiting-for-interactive state
+        // We record the spans here as well, so that they are included even if we never make it out of the debouncing state
         this.debouncingSpanBuffer.push(spanAndAnnotation)
+        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         if (spanEndTimeEpoch > this.#debounceDeadline) {
           // done debouncing
-          this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
           return { transitionToState: 'waiting-for-interactive' }
         }
 
@@ -514,8 +517,6 @@ export class TraceStateMachine<
             }
           }
         }
-
-        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
@@ -866,7 +867,6 @@ export class TraceStateMachine<
       >
     >
     const transitionPayload = currentStateHandlers[event]?.(payload)
-    console.log('transitionPayload', transitionPayload)
     if (transitionPayload) {
       const transitionFromState = this.currentState as NonTerminalTraceStates
       this.currentState = transitionPayload.transitionToState

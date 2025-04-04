@@ -11,8 +11,8 @@ import * as matchSpan from './matchSpan'
 import { shouldCompleteAndHaveInteractiveTime } from './testUtility/fixtures/shouldCompleteAndHaveInteractiveTime'
 import { shouldNotEndWithInteractiveTimeout } from './testUtility/fixtures/shouldNotEndWithInteractiveTimeout'
 import {
-  type TicketIdScope,
   ticketActivationDefinition,
+  type TicketIdScope,
   UserIdScope,
 } from './testUtility/fixtures/ticket.activation'
 import { Check, getSpansFromTimeline, Render } from './testUtility/makeTimeline'
@@ -466,9 +466,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start
-        timeline  | |
-        time (ms) | 0
+        events    | start        interrupt
+        timeline  | |-<⋯ +100 ⋯>-|
+        time (ms) | 0            100
       `)
       expect(report.name).toBe('ticket.interrupt-on-basic-operation')
       expect(report.duration).toBeNull()
@@ -545,8 +545,8 @@ describe('TraceManager', () => {
         name: 'ticket.interrupt-on-basic-operation',
         type: 'operation',
         scopes: [],
-        requiredSpans: [{ name: 'end', isIdle: true }],
-        debounceOn: [{ name: 'end' }],
+        requiredSpans: [{ name: 'component', isIdle: true }],
+        debounceOn: [{ name: 'component' }],
         variantsByOriginatedFrom: {
           cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
         },
@@ -560,7 +560,7 @@ describe('TraceManager', () => {
 
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdScope>`
-      Events: ${Render('start', 0)}-----${Render('end', 50, {isIdle: true})}-----${Render('end', 50, {isIdle: false})}
+      Events: ${Render('start', 0)}-----${Render('component', 50, {isIdle: true})}-----${Render('component', 50, {isIdle: false})}
       Time:   ${0}                      ${100}                                   ${200}
       `
 
@@ -575,9 +575,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start        end(50)
-        timeline  | |-<⋯ +100 ⋯>-[++++++++++++++++++++++++++++++++++++++++++++++++]
-        time (ms) | 0            100
+        events    | start        component(50)                  component(50)
+        timeline  | |-<⋯ +100 ⋯>-[++++++++++++++]---------------[++++++++++++++]-
+        time (ms) | 0            100                            200
       `)
       expect(report.name).toBe('ticket.interrupt-on-basic-operation')
       expect(report.interruptionReason).toBe('idle-component-no-longer-idle')
