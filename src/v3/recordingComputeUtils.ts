@@ -5,6 +5,11 @@ import type { FinalState } from './Trace'
 import type { TraceRecording } from './traceRecordingTypes'
 import type { TraceContext } from './types'
 import { findLast } from './utils'
+import {
+  fromDefinition,
+  type SpanMatchDefinition,
+  type SpanMatcherFn,
+} from './matchSpan'
 
 /**
  * ### Deriving SLIs and other metrics from a trace
@@ -72,6 +77,115 @@ const markedInteractive = <RelationSchemasT>(
   spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
 ) => spanAndAnnotation.annotation.markedPageInteractive
 
+/**
+ * Helper function to create a matcher function from a definition
+ */
+function createMatcher<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+>(
+  spanDef:
+    | SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    | 'operation-start'
+    | 'operation-end'
+    | 'interactive'
+    | SpanMatcherFn<
+        NoInfer<SelectedRelationNameT>,
+        RelationSchemasT,
+        VariantsT
+      >,
+):
+  | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  | string
+  | undefined {
+  // Handle string types (special matchers)
+  if (typeof spanDef === 'string') {
+    return spanDef
+  }
+
+  // Handle function types
+  if (typeof spanDef === 'function') {
+    return spanDef
+  }
+
+  // Handle object types
+  if (typeof spanDef === 'object' && spanDef !== null) {
+    const matcher = fromDefinition<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >(spanDef)
+
+    // Transfer top-level matchingIndex property
+    if (spanDef.matchingIndex !== undefined && typeof matcher === 'function') {
+      matcher.matchingIndex = spanDef.matchingIndex
+    }
+
+    return matcher
+  }
+
+  return undefined
+}
+
+/**
+ * Helper function to find matching spans according to a matcher and matching index
+ */
+function findMatchingSpan<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+>(
+  matcher:
+    | ((
+        spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
+        context: TraceContext<
+          SelectedRelationNameT,
+          RelationSchemasT,
+          VariantsT
+        >,
+      ) => boolean)
+    | SpanMatcherFn<
+        SelectedRelationNameT & keyof RelationSchemasT,
+        RelationSchemasT,
+        VariantsT
+      >,
+  recordedItemsArray: SpanAndAnnotation<RelationSchemasT>[],
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+): SpanAndAnnotation<RelationSchemasT> | undefined {
+  if (typeof matcher !== 'function') return undefined
+
+  // For positive or undefined indices - find with specified index offset
+  if (matcher.matchingIndex === undefined || matcher.matchingIndex >= 0) {
+    let matchingIndex = 0
+    for (const spanAndAnnotation of recordedItemsArray) {
+      if (matcher(spanAndAnnotation, context)) {
+        if (
+          matcher.matchingIndex === undefined ||
+          matcher.matchingIndex === matchingIndex
+        ) {
+          return spanAndAnnotation
+        }
+        matchingIndex++
+      }
+    }
+    return undefined
+  }
+
+  // For negative indices - collect all and pick from the end
+  const matches: SpanAndAnnotation<RelationSchemasT>[] = []
+  for (const spanAndAnnotation of recordedItemsArray) {
+    if (matcher(spanAndAnnotation, context)) {
+      matches.push(spanAndAnnotation)
+    }
+  }
+
+  const actualIndex = matches.length + matcher.matchingIndex
+  return actualIndex >= 0 && actualIndex < matches.length
+    ? matches[actualIndex]
+    : undefined
+}
+
 export function getComputedSpans<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
@@ -79,7 +193,6 @@ export function getComputedSpans<
 >(
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
 ): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedSpans'] {
-  // loop through the computed span definitions, check for entries that match in recorded items, then calculate the startOffset and duration
   const computedSpans: TraceRecording<
     SelectedRelationNameT,
     RelationSchemasT
@@ -89,97 +202,74 @@ export function getComputedSpans<
   for (const [name, computedSpanDefinition] of Object.entries(
     context.definition.computedSpanDefinitions,
   )) {
-    const { startSpan: startSpanMatcher, endSpan } = computedSpanDefinition
+    // Create matchers from the span definitions
+    const startSpanMatcher = createMatcher<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >(computedSpanDefinition.startSpan)
 
+    const endSpanMatcher = createMatcher<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >(computedSpanDefinition.endSpan)
+
+    // Find matching start entry
     let matchingStartEntry:
       | SpanAndAnnotation<RelationSchemasT>
       | 'operation-start'
       | undefined =
-      typeof startSpanMatcher !== 'function' ? startSpanMatcher : undefined
+      startSpanMatcher === 'operation-start' ? 'operation-start' : undefined
 
     if (typeof startSpanMatcher === 'function') {
-      let matchingIndex = 0
-      let matchingReverseIndex = -recordedItemsArray.length
-      // eslint-disable-next-line @typescript-eslint/prefer-for-of
-      for (let index = 0; index < recordedItemsArray.length; index++) {
-        const spanAndAnnotation = recordedItemsArray[index]!
-        if (startSpanMatcher(spanAndAnnotation, context)) {
-          if (
-            typeof startSpanMatcher.matchingIndex !== 'number' ||
-            (startSpanMatcher.matchingIndex >= 0
-              ? startSpanMatcher.matchingIndex === matchingIndex
-              : startSpanMatcher.matchingIndex === matchingReverseIndex)
-          ) {
-            // found it!
-            matchingStartEntry = spanAndAnnotation
-            continue
-          } else {
-            matchingIndex += 1
-            matchingReverseIndex += 1
-          }
-        }
-      }
+      matchingStartEntry = findMatchingSpan(
+        startSpanMatcher,
+        recordedItemsArray,
+        context,
+      )
     }
 
-    const endSpanMatcher =
-      endSpan === 'operation-end'
-        ? markedComplete
-        : endSpan === 'interactive'
-        ? markedInteractive
-        : endSpan
-
-    // use findLast as a small optimization, as most likely users will want the last instance of a span, so we start from the end
+    // Find matching end entry
     let matchingEndEntry: SpanAndAnnotation<RelationSchemasT> | undefined
 
     if (typeof endSpanMatcher === 'function') {
-      let matchingIndex = recordedItemsArray.length - 1
-      let matchingReverseIndex = -1
-      for (let index = recordedItemsArray.length - 1; index >= 0; index--) {
-        const spanAndAnnotation = recordedItemsArray[index]!
-        if (endSpanMatcher(spanAndAnnotation, context)) {
-          if (
-            typeof endSpanMatcher.matchingIndex !== 'number' ||
-            (endSpanMatcher.matchingIndex >= 0
-              ? endSpanMatcher.matchingIndex === matchingIndex
-              : endSpanMatcher.matchingIndex === matchingReverseIndex)
-          ) {
-            // found it!
-            matchingEndEntry = spanAndAnnotation
-            continue
-          } else {
-            matchingIndex -= 1
-            matchingReverseIndex -= 1
-          }
-        }
-      }
+      matchingEndEntry = findMatchingSpan(
+        endSpanMatcher,
+        recordedItemsArray,
+        context,
+      )
+    } else if (endSpanMatcher === 'operation-end') {
+      matchingEndEntry = findMatchingSpan(
+        markedComplete,
+        recordedItemsArray,
+        context,
+      )
+    } else if (endSpanMatcher === 'interactive') {
+      matchingEndEntry = findMatchingSpan(
+        markedInteractive,
+        recordedItemsArray,
+        context,
+      )
     }
 
+    // Calculate timing values
     const matchingStartTime =
       matchingStartEntry === 'operation-start'
         ? context.input.startTime.now
         : matchingStartEntry?.span.startTime.now
 
-    // index  0    1   2   3
-    // revei  -4  -3  -2  -1
     const matchingEndTime = matchingEndEntry
       ? matchingEndEntry.span.startTime.now + matchingEndEntry.span.duration
       : undefined
 
+    // Create computed span if both start and end times are found
     if (
       typeof matchingStartTime === 'number' &&
       typeof matchingEndTime === 'number'
     ) {
-      const duration = matchingEndTime - matchingStartTime
-
       computedSpans[name] = {
-        duration,
-        // DECISION: After considering which events happen first and which one is defined as the start
-        // the start offset is always going to be anchored to the start span.
-        // cases:
-        // -----S------E (computed val is positive)
-        // -----E------S (computed val is negative)
-        // this way the `endOffset` can be derived as follows:
-        // endOffset = computedSpan.startOffset + computedSpan.duration
+        duration: matchingEndTime - matchingStartTime,
         startOffset: matchingStartTime - context.input.startTime.now,
       }
     }
