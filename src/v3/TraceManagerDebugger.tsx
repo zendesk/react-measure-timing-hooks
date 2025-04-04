@@ -3,16 +3,17 @@ import { type AllPossibleTraces, isTerminalState } from './Trace'
 import type { TraceManager } from './TraceManager'
 import type { RelationSchemasBase, TraceInterruptionReason } from './types'
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface TraceInfo<RelationSchemasT> {
   traceId: string
   traceName: string
   variant: string
   state: string
-  timestamp: number
   requiredSpans: {
     name: string
     isMatched: boolean
   }[]
+  attributes?: Record<string, unknown>
   lastRequiredSpanOffset?: number
   completeSpanOffset?: number
   cpuIdleSpanOffset?: number
@@ -242,25 +243,26 @@ function getStateStyle(state: string) {
   return styles.activeTag
 }
 
-const traceHistoryLimit = 5
+const TRACE_HISTORY_LIMIT = 5
 
-// TraceInputData component to display input data
-function TraceInputData<RelationSchemasT>({
-  inputs,
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function TraceAttributes<RelationSchemasT>({
+  attributes,
 }: {
-  inputs?: Record<string, unknown>
+  attributes?: Record<string, unknown>
 }) {
-  if (!inputs) return null
+  if (!attributes || Object.keys(attributes).length === 0) return null
 
   return (
     <div style={styles.section}>
-      <div style={styles.sectionTitle}>Input Data:</div>
-      <pre style={styles.preWrap}>{JSON.stringify(inputs, null, 2)}</pre>
+      <div style={styles.sectionTitle}>Attributes:</div>
+      <pre style={styles.preWrap}>{JSON.stringify(attributes)}</pre>
     </div>
   )
 }
 
 // TimeMarkers component to display time markers
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TimeMarkers<RelationSchemasT>({
   lastRequiredSpanOffset,
   completeSpanOffset,
@@ -305,6 +307,7 @@ function TimeMarkers<RelationSchemasT>({
 }
 
 // RequiredSpansList component to display required spans
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function RequiredSpansList<RelationSchemasT>({
   requiredSpans,
 }: {
@@ -385,7 +388,6 @@ function SingleTraceInfo<RelationSchemasT>({
             </div>
           )}
           {trace.relatedTo &&
-            Object.keys(trace.relatedTo).length > 0 &&
             Object.entries(trace.relatedTo).map(([key, value]) => (
               <div key={key} style={styles.infoChip}>
                 {key}: {JSON.stringify(value)}
@@ -393,7 +395,7 @@ function SingleTraceInfo<RelationSchemasT>({
             ))}
         </div>
 
-        <TraceInputData inputs={trace.relatedTo} />
+        <TraceAttributes attributes={trace.attributes} />
       </div>
 
       <TimeMarkers
@@ -432,7 +434,7 @@ function HistoryTraceItem<RelationSchemasT>({
           </span>
         </div>
         <span style={styles.timeDisplay}>
-          {new Date(trace.timestamp).toLocaleTimeString()}
+          {new Date(trace.startTime).toLocaleTimeString()}
         </span>
       </div>
 
@@ -446,7 +448,6 @@ function HistoryTraceItem<RelationSchemasT>({
           {trace.requiredSpans.length} spans
         </div>
         {trace.relatedTo &&
-          Object.keys(trace.relatedTo).length > 0 &&
           Object.entries(trace.relatedTo).map(([key, value]) => (
             <div key={key} style={styles.infoChip}>
               {key}: {JSON.stringify(value)}
@@ -456,7 +457,7 @@ function HistoryTraceItem<RelationSchemasT>({
 
       {isExpanded && (
         <div style={styles.expandedHistory}>
-          <TraceInputData inputs={trace.relatedTo} />
+          <TraceAttributes attributes={trace.attributes} />
 
           <TimeMarkers
             lastRequiredSpanOffset={trace.lastRequiredSpanOffset}
@@ -561,7 +562,9 @@ export function TraceManagerDebugger<
         variant: trace.input.variant as string,
         state: trace.stateMachine.currentState,
         startTime: trace.input.startTime.epoch,
-        timestamp: Date.now(),
+        attributes: trace.input.attributes
+          ? { ...trace.input.attributes }
+          : undefined,
         relatedTo: trace.input.relatedTo
           ? { ...trace.input.relatedTo }
           : undefined,
@@ -594,6 +597,12 @@ export function TraceManagerDebugger<
           const updatedTrace = {
             ...prevTrace,
             state: transition.transitionToState,
+            attributes: trace.input.attributes
+              ? { ...trace.input.attributes }
+              : undefined,
+            relatedTo: trace.input.relatedTo
+              ? { ...trace.input.relatedTo }
+              : undefined,
           }
 
           if ('interruptionReason' in transition) {
@@ -629,7 +638,7 @@ export function TraceManagerDebugger<
             setTraceHistory((prev) => {
               const newHistory = [updatedTrace, ...prev].slice(
                 0,
-                traceHistoryLimit,
+                TRACE_HISTORY_LIMIT,
               )
               return newHistory
             })
@@ -661,7 +670,7 @@ export function TraceManagerDebugger<
               matcher(matchedSpan, trace) &&
               index < updatedRequiredSpans.length
             ) {
-              updatedRequiredSpans[index].isMatched = true
+              updatedRequiredSpans[index]!.isMatched = true
             }
           })
 
