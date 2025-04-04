@@ -7,6 +7,7 @@ export interface SpanMatcherTags {
   idleCheck?: boolean
   continueWithErrorStatus?: boolean
   requiredSpan?: boolean
+  matchingIndex?: number
 }
 
 /**
@@ -52,6 +53,11 @@ export interface SpanMatchDefinitionCombinator<
   isIdle?: boolean
   label?: string
   fn?: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  /**
+   * This only has an effect on startSpan and endSpan for defining computed spans
+   * It must be defined on the top level matcher definition
+   * */
+  matchingIndex?: number
 }
 
 export type SpanMatchDefinition<
@@ -394,5 +400,11 @@ export function fromDefinition<
     matchers.push(definition.fn)
   }
 
-  return withAllConditions(...matchers)
+  const combined = withAllConditions(...matchers)
+
+  if (typeof definition.matchingIndex === 'number') {
+    combined.matchingIndex = definition.matchingIndex
+  }
+
+  return combined
 }
