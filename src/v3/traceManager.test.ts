@@ -466,9 +466,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start
-        timeline  | |
-        time (ms) | 0
+        events    | start        interrupt
+        timeline  | |-<⋯ +100 ⋯>-|
+        time (ms) | 0            100
       `)
       expect(report.name).toBe('ticket.interrupt-on-basic-operation')
       expect(report.duration).toBeNull()
@@ -544,11 +544,19 @@ describe('TraceManager', () => {
       const tracer = traceManager.createTracer({
         name: 'ticket.interrupt-on-basic-operation',
         type: 'operation',
+<<<<<<< Updated upstream:src/v3/traceManager.test.ts
         scopes: [],
         requiredSpans: [{ name: 'end', isIdle: true }],
         debounceOn: [{ name: 'end' }],
         variantsByOriginatedFrom: {
           cold_boot: { timeoutDuration: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+=======
+        relationSchemaName: 'ticket',
+        requiredSpans: [{ name: 'component', isIdle: true }],
+        debounceOnSpans: [{ name: 'component' }],
+        variants: {
+          cold_boot: { timeout: DEFAULT_COLDBOOT_TIMEOUT_DURATION },
+>>>>>>> Stashed changes:src/v3/TraceManager.test.ts
         },
       })
       tracer.start({
@@ -559,9 +567,15 @@ describe('TraceManager', () => {
       })
 
       // prettier-ignore
+<<<<<<< Updated upstream:src/v3/traceManager.test.ts
       const { spans } = getSpansFromTimeline<TicketIdScope>`
       Events: ${Render('start', 0)}-----${Render('end', 50, {isIdle: true})}-----${Render('end', 50, {isIdle: false})}
       Time:   ${0}                      ${100}                                   ${200}
+=======
+      const { spans } = getSpansFromTimeline<TicketIdRelationSchemasFixture>`
+      Events: ${Render('start', 0)}-----${Render('component', 50, {isIdle: true})}-----${Render('component', 50, {isIdle: false})}
+      Time:   ${0}                      ${100}                                         ${200}
+>>>>>>> Stashed changes:src/v3/TraceManager.test.ts
       `
 
       processSpans(spans, traceManager)
@@ -575,9 +589,9 @@ describe('TraceManager', () => {
           (spanAndAnnotation) => spanAndAnnotation.span.performanceEntry,
         ),
       ).toMatchInlineSnapshot(`
-        events    | start        end(50)
-        timeline  | |-<⋯ +100 ⋯>-[++++++++++++++++++++++++++++++++++++++++++++++++]
-        time (ms) | 0            100
+        events    | start        component(50)                  component(50)
+        timeline  | |-<⋯ +100 ⋯>-[++++++++++++++]---------------[++++++++++++++]-
+        time (ms) | 0            100                            200
       `)
       expect(report.name).toBe('ticket.interrupt-on-basic-operation')
       expect(report.interruptionReason).toBe('idle-component-no-longer-idle')
