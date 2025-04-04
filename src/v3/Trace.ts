@@ -73,7 +73,9 @@ export const TERMINAL_STATES = ['interrupted', 'complete'] as const
 type TerminalTraceStates = (typeof TERMINAL_STATES)[number]
 export type TraceStates = NonTerminalTraceStates | TerminalTraceStates
 
-const isTerminalState = (state: TraceStates): state is TerminalTraceStates =>
+export const isTerminalState = (
+  state: TraceStates,
+): state is TerminalTraceStates =>
   (TERMINAL_STATES as readonly TraceStates[]).includes(state)
 
 interface OnEnterActive {
