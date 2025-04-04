@@ -6,7 +6,7 @@ export const ticketOperationTracer = traceManager.createTracer({
   requiredSpans: [
     {
       name: 'TicketView',
-      matchingRelations: ['ticketId'],
+      matchingRelations: true,
       type: 'component-render',
       isIdle: true,
     },
@@ -19,13 +19,13 @@ export const ticketOperationTracer = traceManager.createTracer({
   debounceOnSpans: [
     {
       name: 'TicketView',
-      matchingRelations: ['ticketId'],
+      matchingRelations: true,
     },
   ],
   interruptOnSpans: [
     {
       name: 'TicketView',
-      matchingRelations: ['ticketId'],
+      matchingRelations: true,
       type: 'component-unmount',
     },
   ],

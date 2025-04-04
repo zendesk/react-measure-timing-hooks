@@ -421,6 +421,7 @@ export class TraceStateMachine<
             this.#context.eventSubjects['required-span-seen'].next({
               traceContext: this.#context,
               spanAndAnnotation,
+              matcher: doesSpanMatch,
             })
 
             // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later

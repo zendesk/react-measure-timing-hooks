@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
+import { createConsoleTraceLogger } from '../../v3/ConsoleTraceLogger'
 import { TraceManagerDebugger } from '../../v3/TraceManagerDebugger'
 import { App } from './App'
 import { traceManager } from './traceManager'
@@ -19,10 +20,10 @@ export const Primary: Story = {
 export const WithDebugger: Story = {
   render: () => (
     <div>
-      <App />
-      <div style={{ marginTop: '20px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <TraceManagerDebugger traceManager={traceManager} />
       </div>
+      <App />
     </div>
   ),
 }
@@ -34,4 +35,38 @@ export const WithFloatingDebugger: Story = {
       <TraceManagerDebugger traceManager={traceManager} float={true} />
     </div>
   ),
+}
+
+export const WithConsoleTraceLogger: Story = {
+  render: () => {
+    // Initialize the console trace logger when the story renders
+    useEffect(() => {
+      const consoleLogger = createConsoleTraceLogger(traceManager, {
+        verbose: true,
+      })
+
+      // Log a message to explain how to use the console
+      console.info(
+        'ConsoleTraceLogger is active. Open your browser console to see trace events. ' +
+          'Try clicking on tickets to see trace events logged in real-time.',
+      )
+
+      // Example of custom logger function if needed
+      // consoleLogger.setOptions({
+      //   logFn: (message) => {
+      //     console.log(`%c${message}`, 'color: blue');
+      //   }
+      // });
+
+      // Clean up the logger when the component unmounts
+      return () => {
+        consoleLogger.cleanup()
+        console.info(
+          'ConsoleTraceLogger has been cleaned up and unsubscribed from all events.',
+        )
+      }
+    }, [])
+
+    return <App />
+  },
 }

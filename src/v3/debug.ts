@@ -1,3 +1,4 @@
+import type { SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { OnEnterStatePayload } from './Trace'
 import type { DraftTraceContext, RelationSchemasBase } from './types'
@@ -36,6 +37,7 @@ export interface RequiredSpanSeenEvent<
     VariantsT
   >
   spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>
+  matcher: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
 }
 
 export type AllPossibleTraceStartEvents<

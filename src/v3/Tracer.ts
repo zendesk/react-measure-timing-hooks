@@ -203,7 +203,7 @@ export class Tracer<
     if (trace.sourceDefinition !== this.definition) {
       this.traceUtilities.reportWarningFn(
         new Error(
-          `Trying to access '${this.definition.name}' trace, however the started trace (${trace.sourceDefinition.name}) has a different definition`,
+          `Attempted to access the trace '${this.definition.name}', but the currently active trace '${trace.sourceDefinition.name}' has a different definition. Ensure you are accessing the correct trace.`,
         ),
         { definition: this.definition } as Partial<
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
