@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react'
-import type { SpanAndAnnotation } from './spanAnnotationTypes'
+import React, { useEffect, useRef, useState } from 'react'
 import { type AllPossibleTraces, isTerminalState } from './Trace'
 import type { TraceManager } from './TraceManager'
 import type { RelationSchemasBase, TraceInterruptionReason } from './types'
@@ -10,7 +9,6 @@ interface TraceInfo<RelationSchemasT> {
   variant: string
   state: string
   timestamp: number
-  inputs?: Record<string, unknown>
   requiredSpans: {
     name: string
     isMatched: boolean
@@ -20,6 +18,7 @@ interface TraceInfo<RelationSchemasT> {
   cpuIdleSpanOffset?: number
   interruptionReason?: TraceInterruptionReason
   startTime: number
+  relatedTo?: Record<string, unknown>
 }
 
 const styles = {
@@ -180,6 +179,60 @@ const styles = {
     overflowX: 'auto' as const,
     maxHeight: '100px',
   },
+  floatingContainer: {
+    position: 'fixed' as const,
+    top: '10px',
+    right: '10px',
+    maxWidth: '400px',
+    width: '100%',
+    zIndex: 1_000,
+    resize: 'both' as const,
+    overflow: 'auto' as const,
+    maxHeight: '90vh',
+    cursor: 'move',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+  },
+  handle: {
+    padding: '8px',
+    backgroundColor: '#2a2a2a',
+    color: 'white',
+    cursor: 'move',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopLeftRadius: '8px',
+    borderTopRightRadius: '8px',
+  },
+  handleTitle: {
+    margin: 0,
+    fontSize: '14px',
+    fontWeight: 'bold' as const,
+  },
+  closeButton: {
+    background: 'none',
+    border: 'none',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: '16px',
+    padding: '2px 6px',
+  },
+  minimizedButton: {
+    position: 'fixed' as const,
+    bottom: '20px',
+    right: '20px',
+    backgroundColor: '#1565c0',
+    color: 'white',
+    border: 'none',
+    borderRadius: '50%',
+    width: '50px',
+    height: '50px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+    zIndex: 1_000,
+  },
 }
 
 function getStateStyle(state: string) {
@@ -331,9 +384,16 @@ function SingleTraceInfo<RelationSchemasT>({
               Reason: {trace.interruptionReason}
             </div>
           )}
+          {trace.relatedTo &&
+            Object.keys(trace.relatedTo).length > 0 &&
+            Object.entries(trace.relatedTo).map(([key, value]) => (
+              <div key={key} style={styles.infoChip}>
+                {key}: {JSON.stringify(value)}
+              </div>
+            ))}
         </div>
 
-        <TraceInputData inputs={trace.inputs} />
+        <TraceInputData inputs={trace.relatedTo} />
       </div>
 
       <TimeMarkers
@@ -385,11 +445,18 @@ function HistoryTraceItem<RelationSchemasT>({
           Completed: {trace.requiredSpans.filter((s) => s.isMatched).length}/
           {trace.requiredSpans.length} spans
         </div>
+        {trace.relatedTo &&
+          Object.keys(trace.relatedTo).length > 0 &&
+          Object.entries(trace.relatedTo).map(([key, value]) => (
+            <div key={key} style={styles.infoChip}>
+              {key}: {JSON.stringify(value)}
+            </div>
+          ))}
       </div>
 
       {isExpanded && (
         <div style={styles.expandedHistory}>
-          <TraceInputData inputs={trace.inputs} />
+          <TraceInputData inputs={trace.relatedTo} />
 
           <TimeMarkers
             lastRequiredSpanOffset={trace.lastRequiredSpanOffset}
@@ -409,7 +476,13 @@ function HistoryTraceItem<RelationSchemasT>({
  */
 export function TraceManagerDebugger<
   RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
->({ traceManager }: { traceManager: TraceManager<RelationSchemasT> }) {
+>({
+  traceManager,
+  float = false,
+}: {
+  traceManager: TraceManager<RelationSchemasT>
+  float?: boolean
+}) {
   const [currentTrace, setCurrentTrace] =
     useState<TraceInfo<RelationSchemasT> | null>(null)
   const [traceHistory, setTraceHistory] = useState<
@@ -418,6 +491,64 @@ export function TraceManagerDebugger<
   const [expandedHistoryIndex, setExpandedHistoryIndex] = useState<
     number | null
   >(null)
+
+  // For floating panel functionality
+  const [position, setPosition] = useState({ x: 10, y: 10 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [isMinimized, setIsMinimized] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!containerRef.current) return
+
+    // Prevent default browser behavior like text selection
+    e.preventDefault()
+
+    setIsDragging(true)
+
+    // Calculate the offset from cursor to container top-left corner
+    setDragOffset({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    })
+  }
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return
+
+    // Prevent default behavior during dragging
+    e.preventDefault()
+
+    // Calculate new position by subtracting the initial offset
+    requestAnimationFrame(() => {
+      setPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+      })
+    })
+  }
+
+  const handleMouseUp = (e: MouseEvent) => {
+    if (isDragging) {
+      // Prevent default only if we were dragging
+      e.preventDefault()
+    }
+    setIsDragging(false)
+  }
+
+  useEffect(() => {
+    if (float) {
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove)
+        window.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+    return undefined
+  }, [float, isDragging, dragOffset])
 
   useEffect(() => {
     // Subscribe to trace-start events
@@ -431,7 +562,7 @@ export function TraceManagerDebugger<
         state: trace.stateMachine.currentState,
         startTime: trace.input.startTime.epoch,
         timestamp: Date.now(),
-        inputs: trace.input.relatedTo
+        relatedTo: trace.input.relatedTo
           ? { ...trace.input.relatedTo }
           : undefined,
         requiredSpans: trace.definition.requiredSpans.map((matcher, index) => {
@@ -548,11 +679,38 @@ export function TraceManagerDebugger<
     }
   }, [traceManager])
 
-  return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h2 style={styles.title}>Trace Manager Debugger</h2>
-      </div>
+  if (float && isMinimized) {
+    return (
+      <button
+        style={styles.minimizedButton}
+        onClick={() => void setIsMinimized(false)}
+      >
+        Debug
+      </button>
+    )
+  }
+
+  const content = (
+    <>
+      {float && (
+        <div style={styles.handle} onMouseDown={handleMouseDown}>
+          <h3 style={styles.handleTitle}>Trace Manager Debugger</h3>
+          <div>
+            <button
+              style={styles.closeButton}
+              onClick={() => void setIsMinimized(true)}
+            >
+              −
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!float && (
+        <div style={styles.header}>
+          <h2 style={styles.title}>Trace Manager Debugger</h2>
+        </div>
+      )}
 
       {currentTrace ? (
         <SingleTraceInfo trace={currentTrace} isActive={true} />
@@ -579,6 +737,25 @@ export function TraceManagerDebugger<
           ))}
         </>
       )}
-    </div>
+    </>
   )
+
+  if (float) {
+    return (
+      <div
+        ref={containerRef}
+        style={{
+          ...styles.container,
+          ...styles.floatingContainer,
+          top: `${position.y}px`,
+          left: `${position.x}px`,
+          padding: 0,
+        }}
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return <div style={styles.container}>{content}</div>
 }

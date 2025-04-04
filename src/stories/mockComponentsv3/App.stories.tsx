@@ -19,10 +19,19 @@ export const Primary: Story = {
 export const WithDebugger: Story = {
   render: () => (
     <div>
+      <App />
       <div style={{ marginTop: '20px' }}>
         <TraceManagerDebugger traceManager={traceManager} />
       </div>
+    </div>
+  ),
+}
+
+export const WithFloatingDebugger: Story = {
+  render: () => (
+    <div>
       <App />
+      <TraceManagerDebugger traceManager={traceManager} float={true} />
     </div>
   ),
 }
