@@ -9,8 +9,8 @@ import { convertMatchersToFns } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import {
   type CPUIdleLongTaskProcessor,
-  type PerformanceEntryLike,
   createCPUIdleProcessor,
+  type PerformanceEntryLike,
 } from './firstCPUIdle'
 import { getSpanKey } from './getSpanKey'
 import { createTraceRecording } from './recordingComputeUtils'
@@ -244,14 +244,14 @@ export class TraceStateMachine<
    * if we have long tasks before FMP, we want to use them as a potential grouping post FMP.
    */
   debouncingSpanBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
-  #provisionalBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
+  #draftBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
 
   // eslint-disable-next-line consistent-return
   #processProvisionalBuffer(): Transition<AllPossibleScopesT> | void {
     // process items in the buffer (stick the scope in the entries) (if its empty, well we can skip this!)
     let span: SpanAndAnnotation<AllPossibleScopesT> | undefined
     // eslint-disable-next-line no-cond-assign
-    while ((span = this.#provisionalBuffer.shift())) {
+    while ((span = this.#draftBuffer.shift())) {
       const transition = this.emit('onProcessSpan', span)
       if (transition) return transition
     }
@@ -306,7 +306,7 @@ export class TraceStateMachine<
         }
 
         // else, add into array buffer
-        this.#provisionalBuffer.push(spanAndAnnotation)
+        this.#draftBuffer.push(spanAndAnnotation)
         return undefined
       },
 
