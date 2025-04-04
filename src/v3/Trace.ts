@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 /* eslint-disable max-classes-per-file */
+import type { Observable } from 'rxjs'
+import { Subject } from 'rxjs'
 import {
   DEADLINE_BUFFER,
   DEFAULT_DEBOUNCE_DURATION,
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
 } from './constants'
+import type { RequiredSpanSeenEvent, StateTransitionEvent } from './debug'
 import { convertMatchersToFns } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import {
@@ -99,7 +102,7 @@ interface OnEnterDebouncing {
   transitionFromState: NonTerminalTraceStates
 }
 
-type OnEnterStatePayload<RelationSchemasT> =
+export type OnEnterStatePayload<RelationSchemasT> =
   | OnEnterActive
   | OnEnterInterrupted
   | OnEnterComplete<RelationSchemasT>
@@ -159,6 +162,14 @@ interface StateMachineContext<
     VariantsT
   > {
   sideEffectFns: TraceStateMachineSideEffectHandlers<RelationSchemasT>
+  eventSubjects: {
+    'state-transition': Subject<
+      StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >
+    'required-span-seen': Subject<
+      RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >
+  }
 }
 
 type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
@@ -403,6 +414,12 @@ export class TraceStateMachine<
           if (doesSpanMatch(spanAndAnnotation, this.#context)) {
             // now that we've seen it, we add it to the list
             this.successfullyMatchedRequiredSpanMatchers.add(doesSpanMatch)
+
+            // Emit required span seen event for debugging
+            this.#context.eventSubjects['required-span-seen'].next({
+              traceContext: this.#context,
+              spanAndAnnotation,
+            })
 
             // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
             if (
@@ -896,6 +913,13 @@ export class TraceStateMachine<
         ...transitionPayload,
         transitionFromState,
       }
+
+      // Emit state transition event for debugging
+      this.#context.eventSubjects['state-transition'].next({
+        traceContext: this.#context,
+        stateTransition: onEnterStateEvent,
+      })
+
       return this.emit('onEnterState', onEnterStateEvent) ?? onEnterStateEvent
     }
     return undefined
@@ -984,6 +1008,42 @@ export class Trace<
     RelationSchemasT,
     VariantsT
   >
+
+  // debugging observables
+  eventSubjects = {
+    'state-transition': new Subject<
+      StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >(),
+    'required-span-seen': new Subject<
+      RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >(),
+  }
+
+  when(
+    event: 'state-transition',
+  ): Observable<
+    StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >
+  when(
+    event: 'required-span-seen',
+  ): Observable<
+    RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >
+  when(
+    event: 'required-span-seen' | 'state-transition',
+  ):
+    | Observable<
+        StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+      >
+    | Observable<
+        RequiredSpanSeenEvent<
+          SelectedRelationNameT,
+          RelationSchemasT,
+          VariantsT
+        >
+      > {
+    return this.eventSubjects[event].asObservable()
+  }
 
   constructor(
     data:
