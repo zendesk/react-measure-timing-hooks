@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 export function triggerLongTasks({
   minTime,
   maxTime,
@@ -20,25 +19,25 @@ export function triggerLongTasks({
     const endTime = Date.now()
 
     if (controller.signal.aborted) {
-      console.log('Cluster aborted.')
+      // console.log('Cluster aborted.')
       return
     }
 
     if (endTime - startTime < totalClusterDuration) {
-      console.log(`Starting long task for ${taskDuration} ms`)
+      // console.log(`Starting long task for ${taskDuration} ms`)
       const taskEnd = Date.now() + taskDuration
 
       // Simulating a blocking long task
       while (Date.now() < taskEnd) {
         if (controller.signal.aborted) {
-          console.log('Task aborted.')
+          // console.log('Task aborted.')
           return
         }
       }
 
       executeLongTask() // Trigger the next task
     } else {
-      console.log('Completed all tasks within the cluster duration.')
+      // console.log('Completed all tasks within the cluster duration.')
     }
   }
 

@@ -7,7 +7,7 @@ import {
   DEFAULT_DEBOUNCE_DURATION,
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
 } from './constants'
-import type { RequiredSpanSeenEvent, StateTransitionEvent } from './debug'
+import type { RequiredSpanSeenEvent, StateTransitionEvent } from './debugTypes'
 import { convertMatchersToFns } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import {

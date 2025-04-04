@@ -4,7 +4,7 @@ import type {
   AllPossibleRequiredSpanSeenEvents,
   AllPossibleStateTransitionEvents,
   AllPossibleTraceStartEvents,
-} from './debug'
+} from './debugTypes'
 import {
   convertLabelMatchersToFns,
   convertMatchersToFns,

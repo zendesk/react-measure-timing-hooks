@@ -2,7 +2,7 @@ import type {
   AllPossibleRequiredSpanSeenEvents,
   AllPossibleStateTransitionEvents,
   AllPossibleTraceStartEvents,
-} from './debug'
+} from './debugTypes'
 import type { SpanMatcherFn } from './matchSpan'
 import type { OnEnterStatePayload } from './Trace'
 import { isTerminalState } from './Trace'
