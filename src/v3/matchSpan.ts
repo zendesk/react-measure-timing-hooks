@@ -26,6 +26,13 @@ export interface SpanMatcherFn<
       VariantsT
     >,
   ): boolean
+
+  /** source definition object for debugging (if converted from object) */
+  fromDefinition?: SpanMatchDefinitionCombinator<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >
 }
 
 export type NameMatcher<RelationSchemaT> =
@@ -53,6 +60,11 @@ export interface SpanMatchDefinitionCombinator<
   isIdle?: boolean
   label?: string
   fn?: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  oneOf?: SpanMatchDefinition<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >[]
   /**
    * This only has an effect on startSpan and endSpan for defining computed spans
    * It must be defined on the top level matcher definition
@@ -64,19 +76,11 @@ export type SpanMatchDefinition<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
   VariantsT extends string,
-> =
-  | SpanMatchDefinitionCombinator<
-      SelectedRelationNameT,
-      RelationSchemasT,
-      VariantsT
-    >
-  | {
-      oneOf: SpanMatchDefinition<
-        SelectedRelationNameT,
-        RelationSchemasT,
-        VariantsT
-      >[]
-    }
+> = SpanMatchDefinitionCombinator<
+  SelectedRelationNameT,
+  RelationSchemasT,
+  VariantsT
+>
 
 export type SpanMatch<
   SelectedRelationNameT extends keyof RelationSchemasT,
@@ -292,16 +296,25 @@ export function withAllConditions<
   >[]
 ): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
   const tags: SpanMatcherTags = {}
+  const definition: SpanMatchDefinitionCombinator<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  > = {}
   for (const matcher of matchers) {
     // carry over tags from sub-matchers
     Object.assign(tags, matcher)
+    if (matcher.fromDefinition) {
+      // carry over definition from sub-matchers
+      Object.assign(definition, matcher.fromDefinition)
+    }
   }
   const matcherFn: SpanMatcherFn<
     SelectedRelationNameT,
     RelationSchemasT,
     VariantsT
   > = (...args) => matchers.every((matcher) => matcher(...args))
-  return Object.assign(matcherFn, tags)
+  return Object.assign(matcherFn, tags, { fromDefinition: definition })
 }
 
 // OR
@@ -326,7 +339,7 @@ export function withOneOfConditions<
     RelationSchemasT,
     VariantsT
   > = (...args) => matchers.some((matcher) => matcher(...args))
-  return Object.assign(matcherFn, tags)
+  return Object.assign(matcherFn, tags, { fromDefinition: { oneOf: matchers } })
 }
 
 export function not<
@@ -351,15 +364,6 @@ export function fromDefinition<
     VariantsT
   >,
 ): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
-  // Check if definition has oneOf property
-  if ('oneOf' in definition) {
-    // Convert each definition in oneOf array to a matcher and combine with OR
-    const matchers = definition.oneOf.map((def) =>
-      fromDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>(def),
-    )
-    return withOneOfConditions(...matchers)
-  }
-
   const matchers: SpanMatcherFn<
     SelectedRelationNameT,
     RelationSchemasT,
@@ -400,7 +404,27 @@ export function fromDefinition<
     matchers.push(definition.fn)
   }
 
-  const combined = withAllConditions(...matchers)
+  let combined: SpanMatcherFn<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >
+
+  // Check if definition has oneOf property
+  if (definition.oneOf) {
+    // Convert each definition in oneOf array to a matcher and combine with OR
+    const oneOfMatchers = definition.oneOf.map((def) =>
+      fromDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>(def),
+    )
+    combined = withAllConditions(
+      ...matchers,
+      withOneOfConditions(...oneOfMatchers),
+    )
+  } else {
+    combined = withAllConditions(...matchers)
+  }
+
+  combined.fromDefinition = definition
 
   if (typeof definition.matchingIndex === 'number') {
     combined.matchingIndex = definition.matchingIndex

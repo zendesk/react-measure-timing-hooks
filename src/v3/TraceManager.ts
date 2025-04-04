@@ -1,3 +1,10 @@
+import type { Observable } from 'rxjs'
+import { Subject } from 'rxjs'
+import type {
+  AllPossibleRequiredSpanSeenEvents,
+  AllPossibleStateTransitionEvents,
+  AllPossibleTraceStartEvents,
+} from './debugTypes'
 import {
   convertLabelMatchersToFns,
   convertMatchersToFns,
@@ -22,7 +29,8 @@ import type {
 } from './types'
 
 /**
- * Class representing the centralized trace performance manager.
+ * Class representing the centralized trace manager.
+ * Usually you'll have a single instance of this class in your app.
  */
 export class TraceManager<
   const RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
@@ -30,6 +38,17 @@ export class TraceManager<
   readonly performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<RelationSchemasT>
   private currentTrace: AllPossibleTraces<RelationSchemasT> | undefined =
     undefined
+
+  // Event subjects for all traces
+  private eventSubjects = {
+    'trace-start': new Subject<AllPossibleTraceStartEvents<RelationSchemasT>>(),
+    'state-transition': new Subject<
+      AllPossibleStateTransitionEvents<RelationSchemasT>
+    >(),
+    'required-span-seen': new Subject<
+      AllPossibleRequiredSpanSeenEvents<RelationSchemasT>
+    >(),
+  }
 
   get currentTracerContext():
     | AllPossibleTraceContexts<RelationSchemasT, string>
@@ -53,6 +72,13 @@ export class TraceManager<
           this.currentTrace.interrupt(reason)
         }
         this.currentTrace = newTrace
+
+        // Subscribe to the new trace's events and forward them to our subjects
+        this.subscribeToTraceEvents(newTrace)
+        // Emit trace-start event
+        this.eventSubjects['trace-start'].next({
+          traceContext: newTrace,
+        })
       },
       onEndTrace: (traceToCleanUp) => {
         if (traceToCleanUp === this.currentTrace) {
@@ -62,6 +88,46 @@ export class TraceManager<
       },
       getCurrentTrace: () => this.currentTrace,
     }
+  }
+
+  /**
+   * Subscribe to events from a trace and forward them to the TraceManager subjects
+   */
+  private subscribeToTraceEvents(
+    trace: AllPossibleTraces<RelationSchemasT>,
+  ): void {
+    // Forward state transition events
+    trace.when('state-transition').subscribe((event) => {
+      this.eventSubjects['state-transition'].next(event)
+    })
+
+    // Forward required span seen events
+    trace.when('required-span-seen').subscribe((event) => {
+      this.eventSubjects['required-span-seen'].next(event)
+    })
+  }
+
+  /**
+   * Observable for events from all traces
+   * @param event The event type to observe
+   * @returns An Observable that emits events of the specified type from all traces
+   */
+  when(
+    event: 'trace-start',
+  ): Observable<AllPossibleTraceStartEvents<RelationSchemasT>>
+  when(
+    event: 'state-transition',
+  ): Observable<AllPossibleStateTransitionEvents<RelationSchemasT>>
+  when(
+    event: 'required-span-seen',
+  ): Observable<AllPossibleRequiredSpanSeenEvents<RelationSchemasT>>
+  when(
+    event: 'required-span-seen' | 'trace-start' | 'state-transition',
+  ):
+    | Observable<AllPossibleTraceStartEvents<RelationSchemasT>>
+    | Observable<AllPossibleStateTransitionEvents<RelationSchemasT>>
+    | Observable<AllPossibleRequiredSpanSeenEvents<RelationSchemasT>> {
+    return this.eventSubjects[event].asObservable()
   }
 
   private utilities: TraceManagerUtilities<RelationSchemasT>
