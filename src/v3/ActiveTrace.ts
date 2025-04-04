@@ -243,20 +243,15 @@ export class TraceStateMachine<
    *
    * if we have long tasks before FMP, we want to use them as a potential grouping post FMP.
    */
-<<<<<<< Updated upstream:src/v3/ActiveTrace.ts
   debouncingSpanBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
   #provisionalBuffer: SpanAndAnnotation<AllPossibleScopesT>[] = []
-=======
-  debouncingSpanBuffer: SpanAndAnnotation<RelationSchemasT>[] = []
-  #draftBuffer: SpanAndAnnotation<RelationSchemasT>[] = []
->>>>>>> Stashed changes:src/v3/Trace.ts
 
   // eslint-disable-next-line consistent-return
   #processProvisionalBuffer(): Transition<AllPossibleScopesT> | void {
     // process items in the buffer (stick the scope in the entries) (if its empty, well we can skip this!)
     let span: SpanAndAnnotation<AllPossibleScopesT> | undefined
     // eslint-disable-next-line no-cond-assign
-    while ((span = this.#draftBuffer.shift())) {
+    while ((span = this.#provisionalBuffer.shift())) {
       const transition = this.emit('onProcessSpan', span)
       if (transition) return transition
     }
@@ -310,13 +305,8 @@ export class TraceStateMachine<
           }
         }
 
-<<<<<<< Updated upstream:src/v3/ActiveTrace.ts
         // else, add into array buffer
         this.#provisionalBuffer.push(spanAndAnnotation)
-=======
-        // else, add into span buffer
-        this.#draftBuffer.push(spanAndAnnotation)
->>>>>>> Stashed changes:src/v3/Trace.ts
         return undefined
       },
 
@@ -362,20 +352,10 @@ export class TraceStateMachine<
           }
         }
 
-<<<<<<< Updated upstream:src/v3/ActiveTrace.ts
         // does span satisfy any of the "interruptOn" definitions
         if (this.context.definition.interruptOn) {
           for (const match of this.context.definition.interruptOn) {
             if (match(spanAndAnnotation, this.context)) {
-=======
-        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
-
-        // does span satisfy any of the "interruptOnSpans" definitions
-        if (this.#context.definition.interruptOnSpans) {
-          for (const doesSpanMatch of this.#context.definition
-            .interruptOnSpans) {
-            if (doesSpanMatch(spanAndAnnotation, this.#context)) {
->>>>>>> Stashed changes:src/v3/Trace.ts
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'matched-on-interrupt',
@@ -407,16 +387,9 @@ export class TraceStateMachine<
           }
         }
 
-<<<<<<< Updated upstream:src/v3/ActiveTrace.ts
         this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         if (this.context.requiredSpansIndexChecklist.size === 0) {
-=======
-        if (
-          this.successfullyMatchedRequiredSpanMatchers.size ===
-          this.#context.definition.requiredSpans.length
-        ) {
->>>>>>> Stashed changes:src/v3/Trace.ts
           return { transitionToState: 'debouncing' }
         }
         return undefined
@@ -507,13 +480,11 @@ export class TraceStateMachine<
           }
         }
 
-        // The debouncing buffer will be used to correctly group the spans into clusters when calculating the cpu idle in the waiting-for-interactive state
-        // We record the spans here as well, so that they are included even if we never make it out of the debouncing state
         this.debouncingSpanBuffer.push(spanAndAnnotation)
-        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         if (spanEndTimeEpoch > this.#debounceDeadline) {
           // done debouncing
+          this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
           return { transitionToState: 'waiting-for-interactive' }
         }
 
@@ -543,6 +514,8 @@ export class TraceStateMachine<
             }
           }
         }
+
+        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.context.definition.debounceOn) {
@@ -801,21 +774,6 @@ export class TraceStateMachine<
     // terminal states:
     interrupted: {
       onEnterState: (transition: OnEnterInterrupted) => {
-<<<<<<< Updated upstream:src/v3/ActiveTrace.ts
-=======
-        // depending on the reason, if we're coming from draft, we want to flush the provisional buffer:
-        if (
-          transition.transitionFromState === 'draft' &&
-          !isInvalidTraceInterruptionReason(transition.interruptionReason)
-        ) {
-          let span: SpanAndAnnotation<RelationSchemasT> | undefined
-          // eslint-disable-next-line no-cond-assign
-          while ((span = this.#draftBuffer.shift())) {
-            this.sideEffectFns.addSpanToRecording(span)
-          }
-        }
-
->>>>>>> Stashed changes:src/v3/Trace.ts
         // terminal state
         this.clearDeadline()
         this.sideEffectFns.prepareAndEmitRecording({
