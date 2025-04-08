@@ -316,6 +316,7 @@ export class TraceStateMachine<
           for (const doesSpanMatch of this.#context.definition
             .interruptOnSpans) {
             if (doesSpanMatch(spanAndAnnotation, this.#context)) {
+              // TODO: do we want to record this span? Nothing else is being recorded at this point and is instead going into the buffer
               return {
                 transitionToState: 'complete',
                 interruptionReason: doesSpanMatch.requiredSpan
@@ -381,6 +382,8 @@ export class TraceStateMachine<
           for (const doesSpanMatch of this.#context.definition
             .interruptOnSpans) {
             if (doesSpanMatch(spanAndAnnotation, this.#context)) {
+              // still record the span that interrupted the trace
+              this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: doesSpanMatch.requiredSpan
@@ -509,11 +512,13 @@ export class TraceStateMachine<
           }
         }
 
+        // The debouncing buffer will be used to correctly group the spans into clusters when calculating the cpu idle in the waiting-for-interactive state
+        // We record the spans here as well, so that they are included even if we never make it out of the debouncing state
         this.debouncingSpanBuffer.push(spanAndAnnotation)
+        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         if (spanEndTimeEpoch > this.#debounceDeadline) {
           // done debouncing
-          this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
           return { transitionToState: 'waiting-for-interactive' }
         }
 
@@ -543,8 +548,6 @@ export class TraceStateMachine<
             }
           }
         }
-
-        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.#context.definition.debounceOnSpans) {
