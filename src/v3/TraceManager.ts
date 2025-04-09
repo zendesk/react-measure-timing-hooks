@@ -194,7 +194,7 @@ export class TraceManager<
     if (!requiredSpans) {
       this.utilities.reportErrorFn(
         new Error(
-          'requiredSpans must be defined along with the trace, as a trace will never end otherwise',
+          'requiredSpans must be defined along with the trace, as a trace can only end in an interrupted state otherwise',
         ),
         { definition: completeTraceDefinition } as Partial<
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
