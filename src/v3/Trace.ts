@@ -27,12 +27,14 @@ import type {
   CompleteTraceDefinition,
   DraftTraceContext,
   RelationSchemasBase,
+  ReportErrorFn,
   TraceContext,
   TraceDefinitionModifications,
   TraceInterruptionReason,
   TraceInterruptionReasonForInvalidTraces,
   TraceManagerUtilities,
   TraceModifications,
+  TransitionDraftOptions,
 } from './types'
 import { INVALID_TRACE_INTERRUPTION_REASONS } from './types'
 import type {
@@ -932,8 +934,12 @@ export class Trace<
     VariantsT
   > {
     if (!this.input.relatedTo) {
-      throw new Error(
-        "Tried to access trace's activeInput, but the trace was never provided a 'relatedTo' input value",
+      this.traceUtilities.reportErrorFn(
+        new Error(
+          "Tried to access trace's activeInput, but the trace was never provided a 'relatedTo' input value",
+        ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
     }
     return this.input as ActiveTraceConfig<
@@ -1074,6 +1080,8 @@ export class Trace<
             input.variant
           }. Must be one of: ${Object.keys(definition.variants).join(', ')}`,
         ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
     }
 
@@ -1224,21 +1232,76 @@ export class Trace<
       RelationSchemasT,
       VariantsT
     >,
-  ) {
+    {
+      previouslyActivatedBehavior = 'warn-and-continue',
+      invalidRelatedToBehavior = 'warn-and-continue',
+    }: TransitionDraftOptions = {},
+  ): void {
+    const { isDraft } = this
+    let reportPreviouslyActivated: ReportErrorFn<RelationSchemasT>
+    let overwriteDraft = true
+    switch (previouslyActivatedBehavior) {
+      case 'error':
+        reportPreviouslyActivated = this.traceUtilities.reportErrorFn
+        overwriteDraft = false
+        break
+      case 'error-and-continue':
+        reportPreviouslyActivated = this.traceUtilities.reportErrorFn
+        break
+      default:
+        reportPreviouslyActivated = this.traceUtilities.reportWarningFn
+        break
+    }
+
+    // this is an already initialized active trace, do nothing:
+    if (!isDraft) {
+      reportPreviouslyActivated(
+        new Error(
+          `You are trying to activate a trace that has already been activated before (${this.definition.name}).`,
+        ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
+      )
+      if (!overwriteDraft) {
+        return
+      }
+    }
+
+    let reportValidationError: ReportErrorFn<RelationSchemasT>
+    let useInvalidRelatedTo = true
+    switch (invalidRelatedToBehavior) {
+      case 'error':
+        reportValidationError = this.traceUtilities.reportErrorFn
+        useInvalidRelatedTo = false
+        break
+      case 'error-and-continue':
+        reportValidationError = this.traceUtilities.reportErrorFn
+        break
+      default:
+        reportValidationError = this.traceUtilities.reportWarningFn
+        break
+    }
+
     const { attributes } = this.input
 
     const { relatedTo, errors } = validateAndCoerceRelatedToAgainstSchema(
       inputAndDefinitionModifications.relatedTo,
       this.definition.relationSchema,
     )
+
     if (errors.length > 0) {
-      this.traceUtilities.reportWarningFn(
+      reportValidationError(
         new Error(
           `Invalid relatedTo value: ${JSON.stringify(
             inputAndDefinitionModifications.relatedTo,
           )}. ${errors.join(', ')}`,
         ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
+      if (!useInvalidRelatedTo) {
+        return
+      }
     }
 
     this.activeInput = {
@@ -1253,7 +1316,11 @@ export class Trace<
     this.applyDefinitionModifications(inputAndDefinitionModifications)
 
     this.wasActivated = true
-    this.stateMachine.emit('onMakeActive', undefined)
+
+    if (isDraft) {
+      // we might already be active in which case we would have issued a warning earlier in this method
+      this.stateMachine.emit('onMakeActive', undefined)
+    }
   }
 
   /**
