@@ -12,7 +12,9 @@ import type {
   AllPossibleTraceContexts,
   CompleteTraceDefinition,
   ComputedValueDefinitionInput,
+  DraftTraceContext,
   RelationSchemasBase,
+  ReportErrorFn,
   SpanDeduplicationStrategy,
   TraceDefinition,
   TraceManagerConfig,
@@ -40,7 +42,7 @@ export class TraceManager<
     configInput: Omit<
       TraceManagerConfig<RelationSchemasT>,
       'reportWarningFn'
-    > & { reportWarningFn?: (warning: Error) => void },
+    > & { reportWarningFn?: ReportErrorFn<RelationSchemasT> },
   ) {
     this.utilities = {
       // by default noop for warnings
@@ -94,12 +96,6 @@ export class TraceManager<
       RelationSchemasT,
       VariantsT
     >(traceDefinition.requiredSpans)
-
-    if (!requiredSpans) {
-      throw new Error(
-        'requiredSpans must be defined, as a trace will never end otherwise',
-      )
-    }
 
     const labelMatching = traceDefinition.labelMatching
       ? convertLabelMatchersToFns(traceDefinition.labelMatching)
@@ -180,7 +176,11 @@ export class TraceManager<
       VariantsT
     > = {
       ...traceDefinition,
-      requiredSpans,
+      requiredSpans:
+        requiredSpans ??
+        [
+          // lack of requiredSpan is invalid, but we warn about it below
+        ],
       debounceOnSpans,
       interruptOnSpans,
       suppressErrorStatusPropagationOnSpans,
@@ -189,6 +189,18 @@ export class TraceManager<
       labelMatching,
       relationSchema:
         this.utilities.relationSchemas[traceDefinition.relationSchemaName],
+    }
+
+    if (!requiredSpans) {
+      this.utilities.reportErrorFn(
+        new Error(
+          'requiredSpans must be defined along with the trace, as a trace can only end in an interrupted state otherwise',
+        ),
+        { definition: completeTraceDefinition } as Partial<
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          DraftTraceContext<any, RelationSchemasT, any>
+        >,
+      )
     }
 
     return new Tracer(completeTraceDefinition, this.utilities)
