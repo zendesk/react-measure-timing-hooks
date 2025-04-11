@@ -1,15 +1,14 @@
 /* eslint-disable no-continue */
-import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
-import type { FinalState } from './Trace'
-import type { TraceRecording } from './traceRecordingTypes'
-import type { TraceContext } from './types'
-import { findLast } from './utils'
 import {
   fromDefinition,
   type SpanMatchDefinition,
   type SpanMatcherFn,
 } from './matchSpan'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
+import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
+import type { FinalState } from './Trace'
+import type { TraceRecording } from './traceRecordingTypes'
+import type { TraceContext } from './types'
 
 /**
  * ### Deriving SLIs and other metrics from a trace
@@ -118,7 +117,11 @@ function createMatcher<
     >(spanDef)
 
     // Transfer top-level matchingIndex property
-    if (spanDef.matchingIndex !== undefined && typeof matcher === 'function') {
+    if (
+      'matchingIndex' in spanDef &&
+      spanDef.matchingIndex !== undefined &&
+      typeof matcher === 'function'
+    ) {
       matcher.matchingIndex = spanDef.matchingIndex
     }
 
@@ -139,12 +142,7 @@ function findMatchingSpan<
   matcher:
     | ((
         spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
-        context: TraceContext<
-          SelectedRelationNameT,
-          RelationSchemasT,
-          VariantsT
-        >,
-      ) => boolean)
+      ) => boolean | undefined)
     | SpanMatcherFn<
         SelectedRelationNameT & keyof RelationSchemasT,
         RelationSchemasT,
@@ -156,11 +154,16 @@ function findMatchingSpan<
   if (typeof matcher !== 'function') return undefined
 
   // For positive or undefined indices - find with specified index offset
-  if (matcher.matchingIndex === undefined || matcher.matchingIndex >= 0) {
+  if (
+    !('matchingIndex' in matcher) ||
+    matcher.matchingIndex === undefined ||
+    matcher.matchingIndex >= 0
+  ) {
     let matchingIndex = 0
     for (const spanAndAnnotation of recordedItemsArray) {
       if (matcher(spanAndAnnotation, context)) {
         if (
+          !('matchingIndex' in matcher) ||
           matcher.matchingIndex === undefined ||
           matcher.matchingIndex === matchingIndex
         ) {

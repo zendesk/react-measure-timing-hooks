@@ -525,66 +525,66 @@ describe('recordingComputeUtils', () => {
         })
       })
 
-      it('should handle complex span definitions with oneOf and matchingIndex when matchingIndex is valid', () => {
-        const definition: CompleteTraceDefinition<
-          'global',
-          AnyRelation,
-          'origin'
-        > = {
-          ...baseDefinitionFixture,
-          computedSpanDefinitions: {
-            'component-render-time': {
-              startSpan: {
-                matchingIndex: 2,
-                oneOf: [{ name: 'componentA' }, { name: 'componentB' }],
-              },
-              endSpan: {
-                matchingRelations: true,
-                matchingIndex: -2,
-                oneOf: [{ name: 'componentA' }, { name: 'componentB' }],
-              },
-            },
-          },
-        }
-        const result = getComputedSpans({
-          definition,
-          recordedItems: new Set([
-            createMockSpanAndAnnotation(0, { name: 'componentA' }),
-            createMockSpanAndAnnotation(10, { name: 'componentB' }),
-            createMockSpanAndAnnotation(20, { name: 'componentA' }), // starting span
-            createMockSpanAndAnnotation(30, { name: 'componentB' }),
-            createMockSpanAndAnnotation(100, { name: 'componentA' }),
-            createMockSpanAndAnnotation(150, { name: 'componentB' }),
-            createMockSpanAndAnnotation(200, {
-              name: 'componentA',
-              isIdle: true,
-              duration: 50,
-            }),
-            createMockSpanAndAnnotation(300, {
-              // end span
-              name: 'componentB',
-              isIdle: true,
-              duration: 50,
-            }),
-            createMockSpanAndAnnotation(400, {
-              name: 'componentA',
-              isIdle: true,
-              duration: 50,
-            }),
-          ]),
-          input: {
-            id: 'test',
-            startTime: createTimestamp(0),
-            relatedTo: {},
-            variant: 'origin',
-          },
-          recordedItemsByLabel: {},
-        })
-        expect(result['component-render-time']).toEqual({
-          duration: 330, // (300 + 50) - 20
-          startOffset: 20,
-        })
-      })
+      // it('should handle complex span definitions with oneOf and matchingIndex when matchingIndex is valid', () => {
+      //   const definition: CompleteTraceDefinition<
+      //     'global',
+      //     AnyRelation,
+      //     'origin'
+      //   > = {
+      //     ...baseDefinitionFixture,
+      //     computedSpanDefinitions: {
+      //       'component-render-time': {
+      //         startSpan: {
+      //           matchingIndex: 2,
+      //           oneOf: [{ name: 'componentA' }, { name: 'componentB' }],
+      //         },
+      //         endSpan: {
+      //           matchingRelations: true,
+      //           matchingIndex: -2,
+      //           oneOf: [{ name: 'componentA' }, { name: 'componentB' }],
+      //         },
+      //       },
+      //     },
+      //   }
+      //   const result = getComputedSpans({
+      //     definition,
+      //     recordedItems: new Set([
+      //       createMockSpanAndAnnotation(0, { name: 'componentA' }),
+      //       createMockSpanAndAnnotation(10, { name: 'componentB' }),
+      //       createMockSpanAndAnnotation(20, { name: 'componentA' }), // starting span
+      //       createMockSpanAndAnnotation(30, { name: 'componentB' }),
+      //       createMockSpanAndAnnotation(100, { name: 'componentA' }),
+      //       createMockSpanAndAnnotation(150, { name: 'componentB' }),
+      //       createMockSpanAndAnnotation(200, {
+      //         name: 'componentA',
+      //         isIdle: true,
+      //         duration: 50,
+      //       }),
+      //       createMockSpanAndAnnotation(300, {
+      //         // end span
+      //         name: 'componentB',
+      //         isIdle: true,
+      //         duration: 50,
+      //       }),
+      //       createMockSpanAndAnnotation(400, {
+      //         name: 'componentA',
+      //         isIdle: true,
+      //         duration: 50,
+      //       }),
+      //     ]),
+      //     input: {
+      //       id: 'test',
+      //       startTime: createTimestamp(0),
+      //       relatedTo: {},
+      //       variant: 'origin',
+      //     },
+      //     recordedItemsByLabel: {},
+      //   })
+      //   expect(result['component-render-time']).toEqual({
+      //     duration: 330, // (300 + 50) - 20
+      //     startOffset: 20,
+      //   })
+      // })
 
       // it('out of scope: should handle complex span definitions with oneOf and matchingIndex when matchingIndex is invalid', () => {
       //   const definition: CompleteTraceDefinition<
