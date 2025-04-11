@@ -10,7 +10,9 @@ import {
   createTimestamp,
 } from './testUtility/createMockFactory'
 import type { CompleteTraceDefinition } from './types'
-import { withMatchingRelations } from './matchSpan'
+import { withMatchingRelations, type SpanMatcherFn } from './matchSpan'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
+import type { Span } from './spanTypes'
 
 interface AnyRelation {
   global: {}
@@ -250,7 +252,8 @@ describe('recordingComputeUtils', () => {
           computedSpanDefinitions: {
             'test-computed-span': {
               startSpan: Object.assign(
-                ({ span }) => span.name === 'start-span',
+                ({ span }: { span: Span<AnyRelation> }) =>
+                  span.name === 'start-span',
                 { matchingIndex: 1 }, // starts at 0th index
               ),
               endSpan: ({ span }) => span.name === 'end-span',
@@ -292,7 +295,8 @@ describe('recordingComputeUtils', () => {
           computedSpanDefinitions: {
             'test-computed-span': {
               startSpan: Object.assign(
-                ({ span }) => span.name === 'start-span',
+                ({ span }: { span: Span<AnyRelation> }) =>
+                  span.name === 'start-span',
                 { matchingIndex: -3 },
               ),
               endSpan: ({ span }) => span.name === 'end-span',
@@ -334,9 +338,13 @@ describe('recordingComputeUtils', () => {
           computedSpanDefinitions: {
             'test-computed-span': {
               startSpan: ({ span }) => span.name === 'start-span',
-              endSpan: Object.assign(({ span }) => span.name === 'end-span', {
-                matchingIndex: 2,
-              }),
+              endSpan: Object.assign(
+                ({ span }: { span: Span<AnyRelation> }) =>
+                  span.name === 'end-span',
+                {
+                  matchingIndex: 2,
+                },
+              ),
             },
           },
         }
@@ -387,9 +395,13 @@ describe('recordingComputeUtils', () => {
           computedSpanDefinitions: {
             'test-computed-span': {
               startSpan: ({ span }) => span.name === 'start-span',
-              endSpan: Object.assign(({ span }) => span.name === 'end-span', {
-                matchingIndex: -1,
-              }),
+              endSpan: Object.assign(
+                ({ span }: { span: Span<AnyRelation> }) =>
+                  span.name === 'end-span',
+                {
+                  matchingIndex: -1,
+                },
+              ),
             },
           },
         }
@@ -439,9 +451,13 @@ describe('recordingComputeUtils', () => {
           computedSpanDefinitions: {
             'test-computed-span': {
               startSpan: ({ span }) => span.name === 'start-span',
-              endSpan: Object.assign(({ span }) => span.name === 'end-span', {
-                matchingIndex: -100,
-              }),
+              endSpan: Object.assign(
+                ({ span }: { span: Span<AnyRelation> }) =>
+                  span.name === 'end-span',
+                {
+                  matchingIndex: -100,
+                },
+              ),
             },
           },
         }
