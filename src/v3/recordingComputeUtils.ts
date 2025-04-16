@@ -26,7 +26,6 @@ import type { SpecialEndToken, SpecialStartToken, TraceContext } from './types'
  *    2. _The total number of requests made while loading the ticket_
  *    3. _The total number of iframe apps were initialized while loading the ticket_
  */
-
 export function getComputedValues<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
@@ -83,34 +82,42 @@ function findMatchingSpan<
     matcher.matchingIndex === undefined ||
     matcher.matchingIndex >= 0
   ) {
-    let matchingIndex = 0
+    let matchCount = 0
     for (const spanAndAnnotation of recordedItemsArray) {
       if (matcher(spanAndAnnotation, context)) {
         if (
-          !('matchingIndex' in matcher) ||
           matcher.matchingIndex === undefined ||
-          matcher.matchingIndex === matchingIndex
+          matcher.matchingIndex === matchCount
         ) {
           return spanAndAnnotation
         }
-        matchingIndex++
+        matchCount++
       }
     }
     return undefined
   }
 
-  // For negative indices - collect all and pick from the end
-  const matches: SpanAndAnnotation<RelationSchemasT>[] = []
-  for (const spanAndAnnotation of recordedItemsArray) {
+  // For negative indices - iterate from the end
+  // If matchingIndex is -1, we need the last match
+  // If matchingIndex is -2, we need the second-to-last match, etc.
+  const targetIndex = Math.abs(matcher.matchingIndex) - 1
+  let matchCount = 0
+
+  // Iterate from the end of the array
+  // TODO: I'm wondering if we should sort recordedItemsArrayReversed by the end time...?
+  // For that matter, should recordedItemsArray be sorted by their start time?
+  // If yes, it might be good to do this in createTraceRecording and pass in both recordedItemsArray and recordedItemsArrayReversed pre-sorted, so we don't sort every time we need to calculate a computed span.
+  for (let i = recordedItemsArray.length - 1; i >= 0; i--) {
+    const spanAndAnnotation = recordedItemsArray[i]!
     if (matcher(spanAndAnnotation, context)) {
-      matches.push(spanAndAnnotation)
+      if (matchCount === targetIndex) {
+        return spanAndAnnotation
+      }
+      matchCount++
     }
   }
 
-  const actualIndex = matches.length + matcher.matchingIndex
-  return actualIndex >= 0 && actualIndex < matches.length
-    ? matches[actualIndex]
-    : undefined
+  return undefined
 }
 
 export function getComputedSpans<
@@ -196,6 +203,14 @@ export function getComputedSpans<
       computedSpans[name] = {
         duration: matchingEndTime - matchingStartTime,
         startOffset: matchingStartTime - context.input.startTime.now,
+
+        // DECISION: After considering which events happen first and which one is defined as the start
+        // the start offset is always going to be anchored to the start span.
+        // cases:
+        // -----S------E (computed val is positive)
+        // -----E------S (computed val is negative)
+        // this way the `endOffset` can be derived as follows:
+        // endOffset = computedSpan.startOffset + computedSpan.duration
       }
     }
   }

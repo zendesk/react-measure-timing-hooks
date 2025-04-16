@@ -226,21 +226,24 @@ describe('recordingComputeUtils', () => {
       })
       markedCompleteSpan.annotation.markedComplete = true
 
-      const result = getComputedSpans({
-        definition,
-        recordedItems: new Set([
-          createMockSpanAndAnnotation(100, { name: 'start-span' }),
-          markedCompleteSpan,
-        ]),
-        input: {
-          id: 'test',
-          startTime: createTimestamp(0),
-          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-          relatedTo: {} as never,
-          variant: 'origin',
+      const result = getComputedSpans(
+        {
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, { name: 'start-span' }),
+            markedCompleteSpan,
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+            relatedTo: {} as never,
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
         },
-        recordedItemsByLabel: {},
-      })
+        { completeSpanAndAnnotation: markedCompleteSpan },
+      )
 
       expect(result['operation-span']).toBeDefined()
     })
