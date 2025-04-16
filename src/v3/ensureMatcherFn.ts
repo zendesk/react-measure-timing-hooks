@@ -77,3 +77,27 @@ export function convertLabelMatchersToFns<
   }
   return matchers
 }
+
+/**
+ * Helper function to ensure that the matcher is a function or a special token
+ */
+export function ensureMatcherFnOrSpecialToken<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+  SpecialToken extends string,
+>(
+  spanMatcher:
+    | SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    | SpecialToken,
+):
+  | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  | SpecialToken
+  | undefined {
+  // Handle string types (special matchers)
+  if (typeof spanMatcher === 'string') {
+    return spanMatcher
+  }
+
+  return ensureMatcherFn(spanMatcher)
+}

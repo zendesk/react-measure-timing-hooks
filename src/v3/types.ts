@@ -498,6 +498,10 @@ export interface SpanDeduplicationStrategy<RelationSchemasT> {
   ) => Span<RelationSchemasT>
 }
 
+export type SpecialStartToken = 'operation-start'
+export type SpecialEndToken = 'operation-end' | 'interactive'
+export type SpecialToken = SpecialStartToken | SpecialEndToken
+
 /**
  * Definition of custom spans
  */
@@ -511,14 +515,13 @@ export interface ComputedSpanDefinition<
    */
   startSpan:
     | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
-    | 'operation-start'
+    | SpecialStartToken
   /**
    * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
    */
   endSpan:
     | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
-    | 'operation-end'
-    | 'interactive'
+    | SpecialEndToken
 
   /**
    * If true, we will attempt to compute the span even if the trace was interrupted.

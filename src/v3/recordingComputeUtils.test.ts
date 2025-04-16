@@ -1,10 +1,17 @@
 import { describe, expect, it, vitest as jest } from 'vitest'
 import { getSpanSummaryAttributes } from './convertToRum'
 import {
+  fromDefinition,
+  type SpanMatcherFn,
+  withMatchingRelations,
+} from './matchSpan'
+import {
   createTraceRecording,
   getComputedSpans,
   getComputedValues,
 } from './recordingComputeUtils'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
+import type { Span } from './spanTypes'
 import {
   createMockSpanAndAnnotation,
   createTimestamp,
@@ -219,23 +226,319 @@ describe('recordingComputeUtils', () => {
       })
       markedCompleteSpan.annotation.markedComplete = true
 
-      const result = getComputedSpans({
-        definition,
-        recordedItems: new Set([
-          createMockSpanAndAnnotation(100, { name: 'start-span' }),
-          markedCompleteSpan,
-        ]),
-        input: {
-          id: 'test',
-          startTime: createTimestamp(0),
-          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-          relatedTo: {} as never,
-          variant: 'origin',
+      const result = getComputedSpans(
+        {
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, { name: 'start-span' }),
+            markedCompleteSpan,
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+            relatedTo: {} as never,
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
         },
-        recordedItemsByLabel: {},
-      })
+        { completeSpanAndAnnotation: markedCompleteSpan },
+      )
 
       expect(result['operation-span']).toBeDefined()
+    })
+
+    describe('matchingIndex', () => {
+      it('should select the correct start span using a positive matchingIndex', () => {
+        const definition: CompleteTraceDefinition<
+          'global',
+          AnyRelation,
+          'origin'
+        > = {
+          ...baseDefinitionFixture,
+          computedSpanDefinitions: {
+            'test-computed-span': {
+              startSpan: fromDefinition({
+                name: 'start-span',
+                matchingIndex: 1, // starts at 0th index
+              }),
+              endSpan: fromDefinition({ name: 'end-span' }),
+            },
+          },
+        }
+        const result = getComputedSpans({
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, { name: 'start-span' }),
+            createMockSpanAndAnnotation(300, { name: 'start-span' }), // matching start span
+            createMockSpanAndAnnotation(400, { name: 'start-span' }),
+            createMockSpanAndAnnotation(500, {
+              name: 'end-span',
+              duration: 50,
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        })
+        expect(result['test-computed-span']).toEqual({
+          duration: 250, // (500 + 50) - 300
+          startOffset: 300, // should use the second start-span
+        })
+      })
+
+      it('should select the correct start span using a negative matchingIndex', () => {
+        const definition: CompleteTraceDefinition<
+          'global',
+          AnyRelation,
+          'origin'
+        > = {
+          ...baseDefinitionFixture,
+          computedSpanDefinitions: {
+            'test-computed-span': {
+              startSpan: fromDefinition({
+                name: 'start-span',
+                matchingIndex: -3,
+              }),
+              endSpan: fromDefinition({ name: 'end-span' }),
+            },
+          },
+        }
+        const result = getComputedSpans({
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, { name: 'start-span' }), // starting span
+            createMockSpanAndAnnotation(200, { name: 'start-span' }),
+            createMockSpanAndAnnotation(300, { name: 'start-span' }),
+            createMockSpanAndAnnotation(500, {
+              name: 'end-span',
+              duration: 50,
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        })
+        expect(result['test-computed-span']).toEqual({
+          duration: 450, // (500 + 50) - 100
+          startOffset: 100,
+        })
+      })
+
+      it('should select the correct end span using a positive matchingIndex', () => {
+        const definition: CompleteTraceDefinition<
+          'global',
+          AnyRelation,
+          'origin'
+        > = {
+          ...baseDefinitionFixture,
+          computedSpanDefinitions: {
+            'test-computed-span': {
+              startSpan: fromDefinition({ name: 'start-span' }),
+              endSpan: fromDefinition({
+                name: 'end-span',
+                matchingIndex: 2,
+              }),
+            },
+          },
+        }
+        const result = getComputedSpans({
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, { name: 'start-span' }),
+            createMockSpanAndAnnotation(150, { name: 'span' }),
+            createMockSpanAndAnnotation(200, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(400, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(600, {
+              // matching span
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(700, {
+              name: 'end-span',
+              duration: 50,
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        })
+        expect(result['test-computed-span']).toEqual({
+          duration: 550, // (600 + 50) - 100
+          startOffset: 100,
+        })
+      })
+
+      it('should select the correct end span using a negative matchingIndex', () => {
+        const definition: CompleteTraceDefinition<
+          'global',
+          AnyRelation,
+          'origin'
+        > = {
+          ...baseDefinitionFixture,
+          computedSpanDefinitions: {
+            'test-computed-span': {
+              startSpan: fromDefinition({ name: 'start-span' }),
+              endSpan: fromDefinition({
+                name: 'end-span',
+                matchingIndex: -1,
+              }),
+            },
+          },
+        }
+        const result = getComputedSpans({
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, { name: 'start-span' }),
+            createMockSpanAndAnnotation(200, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(400, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(600, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(700, {
+              // matching span
+              name: 'end-span',
+              duration: 50,
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        })
+        expect(result['test-computed-span']).toEqual({
+          duration: 650, // (700 + 50) - 100
+          startOffset: 100,
+        })
+      })
+
+      it('should not return any computed spans using a invalid matchingIndex', () => {
+        const definition: CompleteTraceDefinition<
+          'global',
+          AnyRelation,
+          'origin'
+        > = {
+          ...baseDefinitionFixture,
+          computedSpanDefinitions: {
+            'test-computed-span': {
+              startSpan: fromDefinition({ name: 'start-span' }),
+              endSpan: fromDefinition({
+                name: 'end-span',
+                matchingIndex: -100,
+              }),
+            },
+          },
+        }
+        const result = getComputedSpans({
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, { name: 'start-span' }),
+            createMockSpanAndAnnotation(200, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(400, {
+              // matching span
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(600, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(700, {
+              name: 'end-span',
+              duration: 50,
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        })
+        expect(result).toEqual({})
+      })
+
+      it('should work with span definition objects containing matchingIndex', () => {
+        const definition: CompleteTraceDefinition<
+          'global',
+          AnyRelation,
+          'origin'
+        > = {
+          ...baseDefinitionFixture,
+          computedSpanDefinitions: {
+            'test-computed-span': {
+              startSpan: fromDefinition({
+                name: 'start-span',
+                matchingIndex: 1,
+              }),
+              endSpan: fromDefinition({ name: 'end-span', matchingIndex: -1 }),
+            },
+          },
+        }
+        const result = getComputedSpans({
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, { name: 'start-span' }),
+            createMockSpanAndAnnotation(200, { name: 'start-span' }),
+            createMockSpanAndAnnotation(300, { name: 'start-span' }),
+            createMockSpanAndAnnotation(400, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(500, {
+              name: 'end-span',
+              duration: 50,
+            }),
+            createMockSpanAndAnnotation(600, {
+              name: 'end-span',
+              duration: 50,
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        })
+        expect(result['test-computed-span']).toEqual({
+          duration: 450, // (600 + 50) - 200
+          startOffset: 200, // should use second start-span
+        })
+      })
     })
   })
 
