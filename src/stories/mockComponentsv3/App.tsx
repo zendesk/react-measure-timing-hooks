@@ -44,6 +44,7 @@ export const App: React.FC = () => {
   const handleTicketClick = (id: number) => {
     ticketOperationTracer.start({
       relatedTo: { ticketId: id },
+      attributes: { exampleTraceAttribute: true },
       variant: 'click',
     })
 
