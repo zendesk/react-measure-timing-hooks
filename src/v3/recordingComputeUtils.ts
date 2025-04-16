@@ -1,10 +1,11 @@
 /* eslint-disable no-continue */
+import { ensureMatcherFnOrSpecialToken } from './ensureMatcherFn'
+import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
 import type { FinalState } from './Trace'
 import type { TraceRecording } from './traceRecordingTypes'
-import type { TraceContext } from './types'
-import { findLast } from './utils'
+import type { SpecialEndToken, SpecialStartToken, TraceContext } from './types'
 
 /**
  * ### Deriving SLIs and other metrics from a trace
@@ -25,7 +26,6 @@ import { findLast } from './utils'
  *    2. _The total number of requests made while loading the ticket_
  *    3. _The total number of iframe apps were initialized while loading the ticket_
  */
-
 export function getComputedValues<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
@@ -64,13 +64,61 @@ export function getComputedValues<
   return computedValues
 }
 
-const markedComplete = <RelationSchemasT>(
-  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
-) => spanAndAnnotation.annotation.markedComplete
+/**
+ * Helper function to find matching spans according to a matcher and matching index
+ */
+function findMatchingSpan<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+>(
+  matcher: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+  recordedItemsArray: SpanAndAnnotation<RelationSchemasT>[],
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+): SpanAndAnnotation<RelationSchemasT> | undefined {
+  // For positive or undefined indices - find with specified index offset
+  if (
+    !('matchingIndex' in matcher) ||
+    matcher.matchingIndex === undefined ||
+    matcher.matchingIndex >= 0
+  ) {
+    let matchCount = 0
+    for (const spanAndAnnotation of recordedItemsArray) {
+      if (matcher(spanAndAnnotation, context)) {
+        if (
+          matcher.matchingIndex === undefined ||
+          matcher.matchingIndex === matchCount
+        ) {
+          return spanAndAnnotation
+        }
+        matchCount++
+      }
+    }
+    return undefined
+  }
 
-const markedInteractive = <RelationSchemasT>(
-  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
-) => spanAndAnnotation.annotation.markedPageInteractive
+  // For negative indices - iterate from the end
+  // If matchingIndex is -1, we need the last match
+  // If matchingIndex is -2, we need the second-to-last match, etc.
+  const targetIndex = Math.abs(matcher.matchingIndex) - 1
+  let matchCount = 0
+
+  // Iterate from the end of the array
+  // TODO: I'm wondering if we should sort recordedItemsArrayReversed by the end time...?
+  // For that matter, should recordedItemsArray be sorted by their start time?
+  // If yes, it might be good to do this in createTraceRecording and pass in both recordedItemsArray and recordedItemsArrayReversed pre-sorted, so we don't sort every time we need to calculate a computed span.
+  for (let i = recordedItemsArray.length - 1; i >= 0; i--) {
+    const spanAndAnnotation = recordedItemsArray[i]!
+    if (matcher(spanAndAnnotation, context)) {
+      if (matchCount === targetIndex) {
+        return spanAndAnnotation
+      }
+      matchCount++
+    }
+  }
+
+  return undefined
+}
 
 export function getComputedSpans<
   SelectedRelationNameT extends keyof RelationSchemasT,
@@ -78,8 +126,11 @@ export function getComputedSpans<
   const VariantsT extends string,
 >(
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+  finalState?: {
+    completeSpanAndAnnotation?: SpanAndAnnotation<RelationSchemasT>
+    cpuIdleSpanAndAnnotation?: SpanAndAnnotation<RelationSchemasT>
+  },
 ): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedSpans'] {
-  // loop through the computed span definitions, check for entries that match in recorded items, then calculate the startOffset and duration
   const computedSpans: TraceRecording<
     SelectedRelationNameT,
     RelationSchemasT
@@ -89,43 +140,70 @@ export function getComputedSpans<
   for (const [name, computedSpanDefinition] of Object.entries(
     context.definition.computedSpanDefinitions,
   )) {
-    const { startSpan: startSpanMatcher, endSpan } = computedSpanDefinition
+    // Create matchers from the span definitions
+    const startSpanMatcher = ensureMatcherFnOrSpecialToken<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT,
+      SpecialStartToken
+    >(computedSpanDefinition.startSpan)
 
-    const matchingStartEntry =
-      typeof startSpanMatcher === 'function'
-        ? recordedItemsArray.find((spanAndAnnotation) =>
-            startSpanMatcher(spanAndAnnotation, context),
-          )
-        : startSpanMatcher
+    const endSpanMatcher = ensureMatcherFnOrSpecialToken<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT,
+      SpecialEndToken
+    >(computedSpanDefinition.endSpan)
 
+    // Find matching start entry
+    let matchingStartEntry:
+      | SpanAndAnnotation<RelationSchemasT>
+      | 'operation-start'
+      | undefined =
+      startSpanMatcher === 'operation-start' ? 'operation-start' : undefined
+
+    if (typeof startSpanMatcher === 'function') {
+      matchingStartEntry = findMatchingSpan(
+        startSpanMatcher,
+        recordedItemsArray,
+        context,
+      )
+    }
+
+    // Find matching end entry
+    let matchingEndEntry: SpanAndAnnotation<RelationSchemasT> | undefined
+
+    if (typeof endSpanMatcher === 'function') {
+      matchingEndEntry = findMatchingSpan(
+        endSpanMatcher,
+        recordedItemsArray,
+        context,
+      )
+    } else if (endSpanMatcher === 'operation-end') {
+      matchingEndEntry = finalState?.completeSpanAndAnnotation
+    } else if (endSpanMatcher === 'interactive') {
+      matchingEndEntry = finalState?.cpuIdleSpanAndAnnotation
+    }
+
+    // Calculate timing values
     const matchingStartTime =
       matchingStartEntry === 'operation-start'
         ? context.input.startTime.now
         : matchingStartEntry?.span.startTime.now
 
-    const endSpanMatcher =
-      endSpan === 'operation-end'
-        ? markedComplete
-        : endSpan === 'interactive'
-        ? markedInteractive
-        : endSpan
-
-    const matchingEndEntry = findLast(recordedItemsArray, (spanAndAnnotation) =>
-      endSpanMatcher(spanAndAnnotation, context),
-    )
-
     const matchingEndTime = matchingEndEntry
       ? matchingEndEntry.span.startTime.now + matchingEndEntry.span.duration
       : undefined
 
+    // Create computed span if both start and end times are found
     if (
       typeof matchingStartTime === 'number' &&
       typeof matchingEndTime === 'number'
     ) {
-      const duration = matchingEndTime - matchingStartTime
-
       computedSpans[name] = {
-        duration,
+        duration: matchingEndTime - matchingStartTime,
+        startOffset: matchingStartTime - context.input.startTime.now,
+
         // DECISION: After considering which events happen first and which one is defined as the start
         // the start offset is always going to be anchored to the start span.
         // cases:
@@ -133,7 +211,6 @@ export function getComputedSpans<
         // -----E------S (computed val is negative)
         // this way the `endOffset` can be derived as follows:
         // endOffset = computedSpan.startOffset + computedSpan.duration
-        startOffset: matchingStartTime - context.input.startTime.now,
       }
     }
   }
@@ -315,7 +392,12 @@ export function createTraceRecording<
   // CODE CLEAN UP TODO: let's get this information (wasInterrupted) from up top (in FinalState)
   const wasInterrupted =
     interruptionReason && transitionFromState !== 'waiting-for-interactive'
-  const computedSpans = !wasInterrupted ? getComputedSpans(context) : {}
+  const computedSpans = !wasInterrupted
+    ? getComputedSpans(context, {
+        completeSpanAndAnnotation,
+        cpuIdleSpanAndAnnotation,
+      })
+    : {}
   const computedValues = !wasInterrupted ? getComputedValues(context) : {}
   const computedRenderBeaconSpans =
     !wasInterrupted && isActiveTraceInput(input)
