@@ -1,14 +1,11 @@
 /* eslint-disable no-continue */
-import {
-  fromDefinition,
-  type SpanMatchDefinition,
-  type SpanMatcherFn,
-} from './matchSpan'
+import { ensureMatcherFnOrSpecialToken } from './ensureMatcherFn'
+import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
 import type { FinalState } from './Trace'
 import type { TraceRecording } from './traceRecordingTypes'
-import type { TraceContext } from './types'
+import type { SpecialEndToken, SpecialStartToken, TraceContext } from './types'
 
 /**
  * ### Deriving SLIs and other metrics from a trace
@@ -68,69 +65,6 @@ export function getComputedValues<
   return computedValues
 }
 
-const markedComplete = <RelationSchemasT>(
-  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
-) => spanAndAnnotation.annotation.markedComplete
-
-const markedInteractive = <RelationSchemasT>(
-  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
-) => spanAndAnnotation.annotation.markedPageInteractive
-
-/**
- * Helper function to create a matcher function from a definition
- */
-function createMatcher<
-  SelectedRelationNameT extends keyof RelationSchemasT,
-  RelationSchemasT,
-  VariantsT extends string,
->(
-  spanDef:
-    | SpanMatchDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>
-    | 'operation-start'
-    | 'operation-end'
-    | 'interactive'
-    | SpanMatcherFn<
-        NoInfer<SelectedRelationNameT>,
-        RelationSchemasT,
-        VariantsT
-      >,
-):
-  | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
-  | string
-  | undefined {
-  // Handle string types (special matchers)
-  if (typeof spanDef === 'string') {
-    return spanDef
-  }
-
-  // Handle function types
-  if (typeof spanDef === 'function') {
-    return spanDef
-  }
-
-  // Handle object types
-  if (typeof spanDef === 'object' && spanDef !== null) {
-    const matcher = fromDefinition<
-      SelectedRelationNameT,
-      RelationSchemasT,
-      VariantsT
-    >(spanDef)
-
-    // Transfer top-level matchingIndex property
-    if (
-      'matchingIndex' in spanDef &&
-      spanDef.matchingIndex !== undefined &&
-      typeof matcher === 'function'
-    ) {
-      matcher.matchingIndex = spanDef.matchingIndex
-    }
-
-    return matcher
-  }
-
-  return undefined
-}
-
 /**
  * Helper function to find matching spans according to a matcher and matching index
  */
@@ -139,20 +73,10 @@ function findMatchingSpan<
   RelationSchemasT,
   VariantsT extends string,
 >(
-  matcher:
-    | ((
-        spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
-      ) => boolean | undefined)
-    | SpanMatcherFn<
-        SelectedRelationNameT & keyof RelationSchemasT,
-        RelationSchemasT,
-        VariantsT
-      >,
+  matcher: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>,
   recordedItemsArray: SpanAndAnnotation<RelationSchemasT>[],
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
 ): SpanAndAnnotation<RelationSchemasT> | undefined {
-  if (typeof matcher !== 'function') return undefined
-
   // For positive or undefined indices - find with specified index offset
   if (
     !('matchingIndex' in matcher) ||
@@ -195,6 +119,10 @@ export function getComputedSpans<
   const VariantsT extends string,
 >(
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+  finalState?: {
+    completeSpanAndAnnotation?: SpanAndAnnotation<RelationSchemasT>
+    cpuIdleSpanAndAnnotation?: SpanAndAnnotation<RelationSchemasT>
+  },
 ): TraceRecording<SelectedRelationNameT, RelationSchemasT>['computedSpans'] {
   const computedSpans: TraceRecording<
     SelectedRelationNameT,
@@ -206,16 +134,18 @@ export function getComputedSpans<
     context.definition.computedSpanDefinitions,
   )) {
     // Create matchers from the span definitions
-    const startSpanMatcher = createMatcher<
+    const startSpanMatcher = ensureMatcherFnOrSpecialToken<
       SelectedRelationNameT,
       RelationSchemasT,
-      VariantsT
+      VariantsT,
+      SpecialStartToken
     >(computedSpanDefinition.startSpan)
 
-    const endSpanMatcher = createMatcher<
+    const endSpanMatcher = ensureMatcherFnOrSpecialToken<
       SelectedRelationNameT,
       RelationSchemasT,
-      VariantsT
+      VariantsT,
+      SpecialEndToken
     >(computedSpanDefinition.endSpan)
 
     // Find matching start entry
@@ -243,17 +173,9 @@ export function getComputedSpans<
         context,
       )
     } else if (endSpanMatcher === 'operation-end') {
-      matchingEndEntry = findMatchingSpan(
-        markedComplete,
-        recordedItemsArray,
-        context,
-      )
+      matchingEndEntry = finalState?.completeSpanAndAnnotation
     } else if (endSpanMatcher === 'interactive') {
-      matchingEndEntry = findMatchingSpan(
-        markedInteractive,
-        recordedItemsArray,
-        context,
-      )
+      matchingEndEntry = finalState?.cpuIdleSpanAndAnnotation
     }
 
     // Calculate timing values
@@ -455,7 +377,12 @@ export function createTraceRecording<
   // CODE CLEAN UP TODO: let's get this information (wasInterrupted) from up top (in FinalState)
   const wasInterrupted =
     interruptionReason && transitionFromState !== 'waiting-for-interactive'
-  const computedSpans = !wasInterrupted ? getComputedSpans(context) : {}
+  const computedSpans = !wasInterrupted
+    ? getComputedSpans(context, {
+        completeSpanAndAnnotation,
+        cpuIdleSpanAndAnnotation,
+      })
+    : {}
   const computedValues = !wasInterrupted ? getComputedValues(context) : {}
   const computedRenderBeaconSpans =
     !wasInterrupted && isActiveTraceInput(input)

@@ -1,18 +1,22 @@
 import { describe, expect, it, vitest as jest } from 'vitest'
 import { getSpanSummaryAttributes } from './convertToRum'
 import {
+  fromDefinition,
+  type SpanMatcherFn,
+  withMatchingRelations,
+} from './matchSpan'
+import {
   createTraceRecording,
   getComputedSpans,
   getComputedValues,
 } from './recordingComputeUtils'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
+import type { Span } from './spanTypes'
 import {
   createMockSpanAndAnnotation,
   createTimestamp,
 } from './testUtility/createMockFactory'
 import type { CompleteTraceDefinition } from './types'
-import { withMatchingRelations, type SpanMatcherFn } from './matchSpan'
-import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { Span } from './spanTypes'
 
 interface AnyRelation {
   global: {}
@@ -251,12 +255,11 @@ describe('recordingComputeUtils', () => {
           ...baseDefinitionFixture,
           computedSpanDefinitions: {
             'test-computed-span': {
-              startSpan: Object.assign(
-                ({ span }: { span: Span<AnyRelation> }) =>
-                  span.name === 'start-span',
-                { matchingIndex: 1 }, // starts at 0th index
-              ),
-              endSpan: ({ span }) => span.name === 'end-span',
+              startSpan: fromDefinition({
+                name: 'start-span',
+                matchingIndex: 1, // starts at 0th index
+              }),
+              endSpan: fromDefinition({ name: 'end-span' }),
             },
           },
         }
@@ -294,12 +297,11 @@ describe('recordingComputeUtils', () => {
           ...baseDefinitionFixture,
           computedSpanDefinitions: {
             'test-computed-span': {
-              startSpan: Object.assign(
-                ({ span }: { span: Span<AnyRelation> }) =>
-                  span.name === 'start-span',
-                { matchingIndex: -3 },
-              ),
-              endSpan: ({ span }) => span.name === 'end-span',
+              startSpan: fromDefinition({
+                name: 'start-span',
+                matchingIndex: -3,
+              }),
+              endSpan: fromDefinition({ name: 'end-span' }),
             },
           },
         }
@@ -337,14 +339,11 @@ describe('recordingComputeUtils', () => {
           ...baseDefinitionFixture,
           computedSpanDefinitions: {
             'test-computed-span': {
-              startSpan: ({ span }) => span.name === 'start-span',
-              endSpan: Object.assign(
-                ({ span }: { span: Span<AnyRelation> }) =>
-                  span.name === 'end-span',
-                {
-                  matchingIndex: 2,
-                },
-              ),
+              startSpan: fromDefinition({ name: 'start-span' }),
+              endSpan: fromDefinition({
+                name: 'end-span',
+                matchingIndex: 2,
+              }),
             },
           },
         }
@@ -394,14 +393,11 @@ describe('recordingComputeUtils', () => {
           ...baseDefinitionFixture,
           computedSpanDefinitions: {
             'test-computed-span': {
-              startSpan: ({ span }) => span.name === 'start-span',
-              endSpan: Object.assign(
-                ({ span }: { span: Span<AnyRelation> }) =>
-                  span.name === 'end-span',
-                {
-                  matchingIndex: -1,
-                },
-              ),
+              startSpan: fromDefinition({ name: 'start-span' }),
+              endSpan: fromDefinition({
+                name: 'end-span',
+                matchingIndex: -1,
+              }),
             },
           },
         }
@@ -414,7 +410,6 @@ describe('recordingComputeUtils', () => {
               duration: 50,
             }),
             createMockSpanAndAnnotation(400, {
-              // matching span
               name: 'end-span',
               duration: 50,
             }),
@@ -423,6 +418,7 @@ describe('recordingComputeUtils', () => {
               duration: 50,
             }),
             createMockSpanAndAnnotation(700, {
+              // matching span
               name: 'end-span',
               duration: 50,
             }),
@@ -450,14 +446,11 @@ describe('recordingComputeUtils', () => {
           ...baseDefinitionFixture,
           computedSpanDefinitions: {
             'test-computed-span': {
-              startSpan: ({ span }) => span.name === 'start-span',
-              endSpan: Object.assign(
-                ({ span }: { span: Span<AnyRelation> }) =>
-                  span.name === 'end-span',
-                {
-                  matchingIndex: -100,
-                },
-              ),
+              startSpan: fromDefinition({ name: 'start-span' }),
+              endSpan: fromDefinition({
+                name: 'end-span',
+                matchingIndex: -100,
+              }),
             },
           },
         }
@@ -503,8 +496,11 @@ describe('recordingComputeUtils', () => {
           ...baseDefinitionFixture,
           computedSpanDefinitions: {
             'test-computed-span': {
-              startSpan: { name: 'start-span', matchingIndex: 1 },
-              endSpan: { name: 'end-span', matchingIndex: -1 },
+              startSpan: fromDefinition({
+                name: 'start-span',
+                matchingIndex: 1,
+              }),
+              endSpan: fromDefinition({ name: 'end-span', matchingIndex: -1 }),
             },
           },
         }
@@ -540,130 +536,6 @@ describe('recordingComputeUtils', () => {
           startOffset: 200, // should use second start-span
         })
       })
-
-      // it('should handle complex span definitions with oneOf and matchingIndex when matchingIndex is valid', () => {
-      //   const definition: CompleteTraceDefinition<
-      //     'global',
-      //     AnyRelation,
-      //     'origin'
-      //   > = {
-      //     ...baseDefinitionFixture,
-      //     computedSpanDefinitions: {
-      //       'component-render-time': {
-      //         startSpan: {
-      //           matchingIndex: 2,
-      //           oneOf: [{ name: 'componentA' }, { name: 'componentB' }],
-      //         },
-      //         endSpan: {
-      //           matchingRelations: true,
-      //           matchingIndex: -2,
-      //           oneOf: [{ name: 'componentA' }, { name: 'componentB' }],
-      //         },
-      //       },
-      //     },
-      //   }
-      //   const result = getComputedSpans({
-      //     definition,
-      //     recordedItems: new Set([
-      //       createMockSpanAndAnnotation(0, { name: 'componentA' }),
-      //       createMockSpanAndAnnotation(10, { name: 'componentB' }),
-      //       createMockSpanAndAnnotation(20, { name: 'componentA' }), // starting span
-      //       createMockSpanAndAnnotation(30, { name: 'componentB' }),
-      //       createMockSpanAndAnnotation(100, { name: 'componentA' }),
-      //       createMockSpanAndAnnotation(150, { name: 'componentB' }),
-      //       createMockSpanAndAnnotation(200, {
-      //         name: 'componentA',
-      //         isIdle: true,
-      //         duration: 50,
-      //       }),
-      //       createMockSpanAndAnnotation(300, {
-      //         // end span
-      //         name: 'componentB',
-      //         isIdle: true,
-      //         duration: 50,
-      //       }),
-      //       createMockSpanAndAnnotation(400, {
-      //         name: 'componentA',
-      //         isIdle: true,
-      //         duration: 50,
-      //       }),
-      //     ]),
-      //     input: {
-      //       id: 'test',
-      //       startTime: createTimestamp(0),
-      //       relatedTo: {},
-      //       variant: 'origin',
-      //     },
-      //     recordedItemsByLabel: {},
-      //   })
-      //   expect(result['component-render-time']).toEqual({
-      //     duration: 330, // (300 + 50) - 20
-      //     startOffset: 20,
-      //   })
-      // })
-
-      // it('out of scope: should handle complex span definitions with oneOf and matchingIndex when matchingIndex is invalid', () => {
-      //   const definition: CompleteTraceDefinition<
-      //     'global',
-      //     AnyRelation,
-      //     'origin'
-      //   > = {
-      //     ...baseDefinitionFixture,
-      //     computedSpanDefinitions: {
-      //       'component-render-time': {
-      //         startSpan: {
-      //           oneOf: [
-      //             { name: 'componentA', matchingIndex: 0 },
-      //             { name: 'componentB', matchingIndex: 0 },
-      //           ],
-      //         },
-      //         endSpan: {
-      //           matchingRelations: true,
-      //           oneOf: [
-      //             { name: 'componentA', matchingIndex: -3 },
-      //             { name: 'componentB', matchingIndex: -6 },
-      //           ],
-      //         },
-      //       },
-      //     },
-      //   }
-      //   const result = getComputedSpans({
-      //     definition,
-      //     recordedItems: new Set([
-      //       createMockSpanAndAnnotation(100, { name: 'componentA' }),
-      //       createMockSpanAndAnnotation(150, { name: 'componentB' }),
-      //       createMockSpanAndAnnotation(200, {
-      //         name: 'componentA',
-      //         isIdle: false,
-      //         duration: 50,
-      //       }),
-      //       createMockSpanAndAnnotation(300, {
-      //         name: 'componentB',
-      //         isIdle: true,
-      //         duration: 50,
-      //       }),
-      //       createMockSpanAndAnnotation(400, {
-      //         // end span
-      //         name: 'componentA',
-      //         isIdle: true,
-      //         duration: 50,
-      //       }),
-      //       createMockSpanAndAnnotation(500, {
-      //         name: 'OmniSilog',
-      //         isIdle: true,
-      //         duration: 50,
-      //       }),
-      //     ]),
-      //     input: {
-      //       id: 'test',
-      //       startTime: createTimestamp(0),
-      //       relatedTo: {},
-      //       variant: 'origin',
-      //     },
-      //     recordedItemsByLabel: {},
-      //   })
-      //   expect(result).toEqual({})
-      // })
     })
   })
 
