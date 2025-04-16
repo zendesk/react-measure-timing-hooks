@@ -3,16 +3,23 @@ import { type AllPossibleTraces, isTerminalState } from './Trace'
 import type { TraceManager } from './TraceManager'
 import type { RelationSchemasBase, TraceInterruptionReason } from './types'
 
+// Constants to avoid magic numbers
+const MAX_STRING_LENGTH = 20
+const LONG_STRING_THRESHOLD = 25
+
+interface RequiredSpan {
+  name: string
+  isMatched: boolean
+  definition?: Record<string, unknown>
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface TraceInfo<RelationSchemasT> {
   traceId: string
   traceName: string
   variant: string
   state: string
-  requiredSpans: {
-    name: string
-    isMatched: boolean
-  }[]
+  requiredSpans: RequiredSpan[]
   attributes?: Record<string, unknown>
   lastRequiredSpanOffset?: number
   completeSpanOffset?: number
@@ -27,7 +34,7 @@ const styles = {
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
     maxWidth: '800px',
     margin: '20px auto',
-    padding: '15px',
+    padding: '20px',
     border: '1px solid #ddd',
     borderRadius: '8px',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
@@ -35,41 +42,42 @@ const styles = {
   },
   header: {
     borderBottom: '1px solid #eee',
-    paddingBottom: '10px',
-    marginBottom: '15px',
+    paddingBottom: '15px',
+    marginBottom: '20px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   title: {
     margin: '0',
-    fontSize: '18px',
+    fontSize: '20px',
     fontWeight: 'bold',
     color: '#333',
   },
   activeTrace: {
-    padding: '15px',
+    padding: '20px',
     backgroundColor: '#fff',
-    borderRadius: '6px',
-    marginBottom: '15px',
+    borderRadius: '8px',
+    marginBottom: '20px',
     border: '1px solid #e0e0e0',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
   },
   section: {
-    marginBottom: '10px',
+    marginBottom: '15px',
   },
   sectionTitle: {
     fontWeight: 'bold',
-    marginBottom: '5px',
+    marginBottom: '10px',
     fontSize: '14px',
     color: '#555',
   },
   statusTag: {
     display: 'inline-block',
-    padding: '3px 8px',
+    padding: '4px 10px',
     borderRadius: '12px',
     fontSize: '12px',
     fontWeight: '500',
-    marginLeft: '8px',
+    marginLeft: '10px',
   },
   activeTag: {
     backgroundColor: '#e3f2fd',
@@ -88,34 +96,36 @@ const styles = {
     color: '#616161',
   },
   listItem: {
-    padding: '8px 12px',
+    padding: '5px 15px',
     backgroundColor: '#f5f5f5',
-    borderRadius: '4px',
-    marginBottom: '6px',
+    borderRadius: '6px',
+    marginBottom: '3px',
     fontSize: '13px',
+    display: 'flex',
+    justifyContent: 'space-between',
   },
   requiredSpan: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '6px 12px',
+    padding: '10px 15px',
     backgroundColor: '#f5f5f5',
-    borderRadius: '4px',
-    marginBottom: '6px',
+    borderRadius: '6px',
+    marginBottom: '8px',
     fontSize: '13px',
   },
   matched: {
-    borderLeft: '3px solid #2e7d32',
+    borderLeft: '4px solid #2e7d32',
   },
   unmatched: {
-    borderLeft: '3px solid #757575',
+    borderLeft: '4px solid #757575',
   },
   matchedIndicator: {
     display: 'inline-block',
-    width: '10px',
-    height: '10px',
+    width: '12px',
+    height: '12px',
     borderRadius: '50%',
-    marginRight: '8px',
+    marginRight: '10px',
   },
   matchedDot: {
     backgroundColor: '#2e7d32',
@@ -124,77 +134,84 @@ const styles = {
     backgroundColor: '#bdbdbd',
   },
   noTrace: {
-    padding: '20px',
+    padding: '30px',
     textAlign: 'center' as const,
     color: '#757575',
     fontStyle: 'italic',
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    border: '1px solid #e0e0e0',
   },
   historyTitle: {
-    marginTop: '20px',
-    paddingTop: '15px',
+    paddingTop: '20px',
     borderTop: '1px solid #eee',
-    fontSize: '16px',
+    fontSize: '18px',
     fontWeight: 'bold',
     color: '#333',
   },
   historyItem: {
-    padding: '12px',
+    padding: '15px',
     backgroundColor: '#fff',
-    borderRadius: '6px',
-    marginBottom: '10px',
+    borderRadius: '8px',
+    marginBottom: '12px',
     border: '1px solid #e0e0e0',
     cursor: 'pointer',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+    transition: 'box-shadow 0.2s ease',
   },
   historyHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    marginBottom: '8px',
+    marginBottom: '10px',
   },
   expandedHistory: {
-    marginTop: '10px',
-    paddingTop: '10px',
+    marginTop: '15px',
+    paddingTop: '15px',
     borderTop: '1px dashed #e0e0e0',
   },
   timeDisplay: {
-    fontSize: '11px',
+    fontSize: '12px',
     color: '#666',
+    fontWeight: '500',
   },
   keyInfo: {
     display: 'flex',
     gap: '8px',
     flexWrap: 'wrap' as const,
-    marginBottom: '6px',
+    marginBottom: '10px',
   },
   infoChip: {
     backgroundColor: '#f1f1f1',
-    padding: '2px 8px',
+    padding: '3px 10px',
     borderRadius: '12px',
-    fontSize: '11px',
+    fontSize: '12px',
+    color: '#333',
+    border: '1px solid #e0e0e0',
   },
   preWrap: {
     whiteSpace: 'pre-wrap' as const,
     fontSize: '12px',
     backgroundColor: '#f5f5f5',
-    padding: '8px',
-    borderRadius: '4px',
+    padding: '12px',
+    borderRadius: '6px',
     overflowX: 'auto' as const,
-    maxHeight: '100px',
+    maxHeight: '200px',
+    border: '1px solid #e0e0e0',
   },
   floatingContainer: {
     position: 'fixed' as const,
     top: '10px',
     right: '10px',
-    maxWidth: '400px',
+    maxWidth: '650px',
     width: '100%',
     zIndex: 1_000,
     resize: 'both' as const,
     overflow: 'auto' as const,
     maxHeight: '90vh',
-    cursor: 'move',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
   },
   handle: {
-    padding: '8px',
+    padding: '12px 15px',
     backgroundColor: '#2a2a2a',
     color: 'white',
     cursor: 'move',
@@ -214,8 +231,8 @@ const styles = {
     border: 'none',
     color: 'white',
     cursor: 'pointer',
-    fontSize: '16px',
-    padding: '2px 6px',
+    fontSize: '18px',
+    padding: '2px 8px',
   },
   minimizedButton: {
     position: 'fixed' as const,
@@ -225,16 +242,71 @@ const styles = {
     color: 'white',
     border: 'none',
     borderRadius: '50%',
-    width: '50px',
-    height: '50px',
+    width: '54px',
+    height: '54px',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     cursor: 'pointer',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)',
     zIndex: 1_000,
+    fontSize: '14px',
+    fontWeight: 'bold',
   },
-}
+  defChipContainer: {
+    display: 'flex',
+    flexWrap: 'wrap' as const,
+    gap: '5px',
+    alignItems: 'center',
+  },
+  defChip: {
+    backgroundColor: '#e3f2fd',
+    color: '#1565c0',
+    padding: '2px 8px',
+    borderRadius: '10px',
+    fontSize: '11px',
+    maxWidth: '150px',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+    position: 'relative' as const,
+    border: '1px solid #90caf9',
+  },
+  defChipValue: {
+    fontWeight: 'bold' as const,
+  },
+  defChipTooltip: {
+    position: 'absolute' as const,
+    bottom: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    color: '#fff',
+    padding: '5px 10px',
+    borderRadius: '4px',
+    fontSize: '11px',
+    // eslint-disable-next-line no-magic-numbers
+    zIndex: 1_001 as const,
+    minWidth: '200px',
+    maxWidth: '300px',
+    wordBreak: 'break-word' as const,
+    pointerEvents: 'none' as const,
+    opacity: 0,
+    transition: 'opacity 0.3s ease',
+    visibility: 'hidden' as const,
+  },
+  defChipHoverable: {
+    cursor: 'help',
+  },
+  defChipHoverVisible: {
+    opacity: 1,
+    visibility: 'visible' as const,
+  },
+  spanContent: {
+    display: 'flex',
+    alignItems: 'center',
+    flex: 1,
+  },
+} as const
 
 function getStateStyle(state: string) {
   if (state === 'complete') return styles.completedTag
@@ -243,7 +315,7 @@ function getStateStyle(state: string) {
   return styles.activeTag
 }
 
-const TRACE_HISTORY_LIMIT = 5
+const TRACE_HISTORY_LIMIT = 15
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TraceAttributes<RelationSchemasT>({
@@ -306,12 +378,81 @@ function TimeMarkers<RelationSchemasT>({
   )
 }
 
+// DefinitionChip component for displaying matcher definition key/value pairs
+function DefinitionChip({
+  keyName,
+  value,
+}: {
+  keyName: string
+  value: unknown
+}) {
+  const [showTooltip, setShowTooltip] = useState(false)
+  const valueIsComplex =
+    value !== null &&
+    (typeof value === 'object' ||
+      (typeof value === 'string' && value.length > LONG_STRING_THRESHOLD))
+  const stringValue =
+    typeof value === 'object' ? JSON.stringify(value) : String(value)
+  const needsTooltip = valueIsComplex || stringValue.length > MAX_STRING_LENGTH
+
+  // Create truncated display value
+  const displayValue =
+    stringValue.length > MAX_STRING_LENGTH
+      ? `${stringValue.slice(0, MAX_STRING_LENGTH)}...`
+      : stringValue
+
+  return (
+    <div
+      style={{
+        ...styles.defChip,
+        ...(needsTooltip ? styles.defChipHoverable : {}),
+      }}
+      onMouseEnter={() => void setShowTooltip(true)}
+      onMouseLeave={() => void setShowTooltip(false)}
+    >
+      {keyName}: <span style={styles.defChipValue}>{displayValue}</span>
+      {needsTooltip && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '120%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            color: '#fff',
+            padding: '8px 12px',
+            borderRadius: '4px',
+            fontSize: '11px',
+
+            zIndex: 1_001,
+            minWidth: '150px',
+            maxWidth: '300px',
+            wordBreak: 'break-word',
+            pointerEvents: 'none',
+            opacity: showTooltip ? 1 : 0,
+            visibility: showTooltip ? 'visible' : 'hidden',
+            transition: 'opacity 0.2s ease',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {typeof value === 'object'
+            ? JSON.stringify(value, null, 2)
+            : String(value)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// No longer needed - will directly use definition property
+
 // RequiredSpansList component to display required spans
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function RequiredSpansList<RelationSchemasT>({
   requiredSpans,
 }: {
-  requiredSpans: { name: string; isMatched: boolean }[]
+  requiredSpans: RequiredSpan[]
 }) {
   return (
     <div style={styles.section}>
@@ -328,14 +469,22 @@ function RequiredSpansList<RelationSchemasT>({
               ...(span.isMatched ? styles.matched : styles.unmatched),
             }}
           >
-            <div>
+            <div style={styles.spanContent}>
               <span
                 style={{
                   ...styles.matchedIndicator,
                   ...(span.isMatched ? styles.matchedDot : styles.unmatchedDot),
                 }}
               />
-              {span.name}
+              {span.definition ? (
+                <div style={styles.defChipContainer}>
+                  {Object.entries(span.definition).map(([key, value]) => (
+                    <DefinitionChip key={key} keyName={key} value={value} />
+                  ))}
+                </div>
+              ) : (
+                span.name
+              )}
             </div>
             <div>{span.isMatched ? 'Matched' : 'Pending'}</div>
           </div>
@@ -345,82 +494,27 @@ function RequiredSpansList<RelationSchemasT>({
   )
 }
 
-// SingleTraceInfo component to display a trace
-function SingleTraceInfo<RelationSchemasT>({
-  trace,
-  isActive = false,
-}: {
-  trace: TraceInfo<RelationSchemasT>
-  isActive?: boolean
-}) {
-  return (
-    <div style={styles.activeTrace}>
-      <div style={styles.section}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <h3 style={{ margin: '0 0 10px 0' }}>
-            {trace.traceName}
-            <span
-              style={{
-                ...styles.statusTag,
-                ...getStateStyle(trace.state),
-              }}
-            >
-              {trace.state}
-            </span>
-          </h3>
-          <span style={styles.timeDisplay}>
-            Started: {new Date(trace.startTime).toLocaleTimeString()}
-          </span>
-        </div>
-
-        <div style={styles.keyInfo}>
-          <div style={styles.infoChip}>ID: {trace.traceId}</div>
-          <div style={styles.infoChip}>Variant: {trace.variant}</div>
-          {trace.interruptionReason && (
-            <div style={styles.infoChip}>
-              Reason: {trace.interruptionReason}
-            </div>
-          )}
-          {trace.relatedTo &&
-            Object.entries(trace.relatedTo).map(([key, value]) => (
-              <div key={key} style={styles.infoChip}>
-                {key}: {JSON.stringify(value)}
-              </div>
-            ))}
-        </div>
-
-        <TraceAttributes attributes={trace.attributes} />
-      </div>
-
-      <TimeMarkers
-        lastRequiredSpanOffset={trace.lastRequiredSpanOffset}
-        completeSpanOffset={trace.completeSpanOffset}
-        cpuIdleSpanOffset={trace.cpuIdleSpanOffset}
-      />
-
-      <RequiredSpansList requiredSpans={trace.requiredSpans} />
-    </div>
-  )
-}
-
-// HistoryTraceItem component to display a trace in history
-function HistoryTraceItem<RelationSchemasT>({
+// TraceItem component to display a trace (used for both active and history traces)
+function TraceItem<RelationSchemasT>({
   trace,
   isExpanded,
   onToggleExpand,
+  isCurrentTrace = false,
 }: {
   trace: TraceInfo<RelationSchemasT>
   isExpanded: boolean
   onToggleExpand: () => void
+  isCurrentTrace?: boolean
 }) {
   return (
-    <div style={styles.historyItem} onClick={onToggleExpand}>
+    <div
+      style={{
+        ...styles.historyItem,
+        borderLeft: '3px solid',
+        borderLeftColor: isCurrentTrace ? '#1565c0' : 'transparent',
+      }}
+      onClick={onToggleExpand}
+    >
       <div style={styles.historyHeader}>
         <div>
           <strong>{trace.traceName}</strong>
@@ -439,6 +533,13 @@ function HistoryTraceItem<RelationSchemasT>({
       </div>
 
       <div style={styles.keyInfo}>
+        <div style={styles.infoChip}>ID: {trace.traceId}</div>
+        {trace.relatedTo &&
+          Object.entries(trace.relatedTo).map(([key, value]) => (
+            <div key={key} style={styles.infoChip}>
+              {key}: {JSON.stringify(value)}
+            </div>
+          ))}
         <div style={styles.infoChip}>Variant: {trace.variant}</div>
         {trace.interruptionReason && (
           <div style={styles.infoChip}>Reason: {trace.interruptionReason}</div>
@@ -447,25 +548,19 @@ function HistoryTraceItem<RelationSchemasT>({
           Completed: {trace.requiredSpans.filter((s) => s.isMatched).length}/
           {trace.requiredSpans.length} spans
         </div>
-        {trace.relatedTo &&
-          Object.entries(trace.relatedTo).map(([key, value]) => (
-            <div key={key} style={styles.infoChip}>
-              {key}: {JSON.stringify(value)}
-            </div>
-          ))}
       </div>
 
       {isExpanded && (
         <div style={styles.expandedHistory}>
           <TraceAttributes attributes={trace.attributes} />
 
+          <RequiredSpansList requiredSpans={trace.requiredSpans} />
+
           <TimeMarkers
             lastRequiredSpanOffset={trace.lastRequiredSpanOffset}
             completeSpanOffset={trace.completeSpanOffset}
             cpuIdleSpanOffset={trace.cpuIdleSpanOffset}
           />
-
-          <RequiredSpansList requiredSpans={trace.requiredSpans} />
         </div>
       )}
     </div>
@@ -480,9 +575,11 @@ export function TraceManagerDebugger<
 >({
   traceManager,
   float = false,
+  traceHistoryLimit = TRACE_HISTORY_LIMIT,
 }: {
   traceManager: TraceManager<RelationSchemasT>
   float?: boolean
+  traceHistoryLimit?: number
 }) {
   const [currentTrace, setCurrentTrace] =
     useState<TraceInfo<RelationSchemasT> | null>(null)
@@ -491,7 +588,7 @@ export function TraceManagerDebugger<
   >([])
   const [expandedHistoryIndex, setExpandedHistoryIndex] = useState<
     number | null
-  >(null)
+  >(0)
 
   // For floating panel functionality
   const [position, setPosition] = useState({ x: 10, y: 10 })
@@ -569,13 +666,13 @@ export function TraceManagerDebugger<
           ? { ...trace.input.relatedTo }
           : undefined,
         requiredSpans: trace.definition.requiredSpans.map((matcher, index) => {
-          const name = matcher.fromDefinition
-            ? JSON.stringify(matcher.fromDefinition)
-            : `Matcher #${index}`
+          const name = `Matcher #${index}`
 
           return {
             name,
             isMatched: false,
+            definition:
+              (matcher.fromDefinition as Record<string, unknown>) ?? undefined,
           }
         }),
       }
@@ -638,7 +735,7 @@ export function TraceManagerDebugger<
             setTraceHistory((prev) => {
               const newHistory = [updatedTrace, ...prev].slice(
                 0,
-                TRACE_HISTORY_LIMIT,
+                traceHistoryLimit,
               )
               return newHistory
             })
@@ -688,6 +785,10 @@ export function TraceManagerDebugger<
     }
   }, [traceManager])
 
+  const allTraces = currentTrace
+    ? [currentTrace, ...traceHistory]
+    : traceHistory
+
   if (float && isMinimized) {
     return (
       <button
@@ -721,22 +822,19 @@ export function TraceManagerDebugger<
         </div>
       )}
 
-      {currentTrace ? (
-        <SingleTraceInfo trace={currentTrace} isActive={true} />
-      ) : (
-        <div style={styles.noTrace}>No active trace running</div>
-      )}
-
-      {traceHistory.length > 0 && (
-        <>
-          <h3 style={styles.historyTitle}>
-            Recent Traces ({traceHistory.length})
-          </h3>
-          {traceHistory.map((trace, index) => (
-            <HistoryTraceItem
+      {allTraces.length > 0 ? (
+        <div style={{ padding: '0 15px' }}>
+          <h3 style={styles.historyTitle}>Traces ({allTraces.length})</h3>
+          {allTraces.map((trace, index) => (
+            <TraceItem
               key={trace.traceId}
               trace={trace}
-              isExpanded={expandedHistoryIndex === index}
+              isExpanded={
+                // Auto-expand current trace or selected history trace
+                currentTrace?.traceId === trace.traceId ||
+                expandedHistoryIndex === index
+              }
+              isCurrentTrace={currentTrace?.traceId === trace.traceId}
               onToggleExpand={() =>
                 void setExpandedHistoryIndex(
                   expandedHistoryIndex === index ? null : index,
@@ -744,7 +842,9 @@ export function TraceManagerDebugger<
               }
             />
           ))}
-        </>
+        </div>
+      ) : (
+        <div style={styles.noTrace}>No traces running or completed</div>
       )}
     </>
   )

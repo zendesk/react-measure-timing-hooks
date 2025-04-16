@@ -38,6 +38,7 @@ export const TicketView: React.FC<TicketViewProps> = ({
     name: 'TicketView',
     relatedTo: { ticketId },
     renderedOutput: cached ? 'content' : 'loading',
+    attributes: { exampleBeaconAttribute: true },
     isIdle: cached,
   })
 
