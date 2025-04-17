@@ -129,3 +129,5 @@ export type DebugEventType =
   | 'trace-start'
   | 'state-transition'
   | 'required-span-seen'
+  | 'add-span-to-recording'
+  | 'definition-modified'

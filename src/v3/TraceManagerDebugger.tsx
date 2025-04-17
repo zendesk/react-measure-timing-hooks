@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  DEFAULT_DEBOUNCE_DURATION,
-  DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
-} from './constants'
-import { isSuppressedError } from './debugUtils'
+  formatMatcher,
+  formatMs,
+  getComputedResults,
+  getConfigSummary,
+  isSuppressedError,
+} from './debugUtils'
 import { createTraceRecording } from './recordingComputeUtils'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import {
@@ -557,53 +559,6 @@ function getStateStyle(state: string) {
 
 const TRACE_HISTORY_LIMIT = 15
 
-// Add a helper to format ms
-function formatMs(ms?: number) {
-  if (ms == null) return ''
-  if (ms < 1_000) return `${ms}ms`
-  return `${(ms / 1_000).toFixed(2)}s`
-}
-
-// Add a helper to get config summary from traceContext
-function getConfigSummary<RelationSchemasT>(
-  trace: TraceInfo<RelationSchemasT>,
-) {
-  if (!trace.traceContext) return {}
-  const def = trace.traceContext.definition
-  const variant = def.variants[trace.variant]
-  const timeout = variant?.timeout
-  const debounce =
-    (def.debounceOnSpans ?? []).length > 0
-      ? def.debounceWindow ?? DEFAULT_DEBOUNCE_DURATION
-      : undefined
-  const interactive =
-    typeof def.captureInteractive === 'object'
-      ? def.captureInteractive.timeout
-      : def.captureInteractive
-      ? DEFAULT_INTERACTIVE_TIMEOUT_DURATION
-      : undefined
-  return { timeout, debounce, interactive }
-}
-
-// Add a helper to get computed values/spans for completed/interrupted traces
-function getComputedResults<RelationSchemasT>(
-  trace: TraceInfo<RelationSchemasT>,
-) {
-  if (!trace.traceContext || !trace.finalTransition) return {}
-  try {
-    const recording = createTraceRecording(
-      trace.traceContext,
-      trace.finalTransition,
-    )
-    return {
-      computedValues: recording.computedValues,
-      computedSpans: recording.computedSpans,
-    }
-  } catch {
-    return {}
-  }
-}
-
 // TraceAttributes component to display attributes as chips
 function TraceAttributes({
   attributes,
@@ -994,7 +949,9 @@ function TraceItem<
       <div style={styles.configInfoRow}>
         {/* Config summary chips */}
         {(() => {
-          const { timeout, debounce, interactive } = getConfigSummary(trace)
+          const { timeout, debounce, interactive } = trace.traceContext
+            ? getConfigSummary(trace.traceContext)
+            : {}
           return (
             <>
               {timeout != null && (
@@ -1038,7 +995,13 @@ function TraceItem<
                   {name}
                   {trace.state === 'complete' || trace.state === 'interrupted'
                     ? (() => {
-                        const { computedSpans } = getComputedResults(trace)
+                        const { computedSpans } =
+                          trace.traceContext && trace.finalTransition
+                            ? getComputedResults(
+                                trace.traceContext,
+                                trace.finalTransition,
+                              )
+                            : {}
                         if (computedSpans?.[name]) {
                           return (
                             <span style={{ marginLeft: 8, color: '#1976d2' }}>
@@ -1061,7 +1024,13 @@ function TraceItem<
                   {name}
                   {trace.state === 'complete' || trace.state === 'interrupted'
                     ? (() => {
-                        const { computedValues } = getComputedResults(trace)
+                        const { computedValues } =
+                          trace.traceContext && trace.finalTransition
+                            ? getComputedResults(
+                                trace.traceContext,
+                                trace.finalTransition,
+                              )
+                            : {}
                         if (computedValues?.[name] !== undefined) {
                           return (
                             <span style={{ marginLeft: 8, color: '#1976d2' }}>
@@ -1210,7 +1179,7 @@ export default function TraceManagerDebugger<
           ? { ...trace.input.relatedTo }
           : undefined,
         requiredSpans: trace.definition.requiredSpans.map((matcher, index) => {
-          const name = `Matcher #${index}`
+          const name = formatMatcher(matcher, index)
 
           return {
             name,
