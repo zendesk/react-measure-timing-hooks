@@ -570,7 +570,7 @@ describe('TraceManager', () => {
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdRelationSchemasFixture>`
       Events: ${Render('start', 0)}-----${Render('component', 50, {isIdle: true})}-----${Render('component', 50, {isIdle: false})}
-      Time:   ${0}                      ${100}                                   ${200}
+      Time:   ${0}                      ${100}                                         ${200}
       `
 
       processSpans(spans, traceManager)

@@ -593,6 +593,13 @@ export class TraceStateMachine<
               doesSpanMatch(idleRegressionCheckSpan, this.#context) &&
               doesSpanMatch.idleCheck
             ) {
+              // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
+              if (
+                spanAndAnnotation.annotation.operationRelativeEndTime >
+                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+              ) {
+                this.lastRelevant = spanAndAnnotation
+              }
               // check if we regressed on "isIdle", and if so, transition to interrupted with reason
               return {
                 transitionToState: 'interrupted',
@@ -1252,12 +1259,10 @@ export class Trace<
     }
 
     this.recordedItemsByLabel = Object.fromEntries(
-      Object.entries(this.definition.labelMatching ?? {}).map(
-        ([label, matcher]) => [
-          label,
-          [] as SpanAndAnnotation<RelationSchemasT>[],
-        ],
-      ),
+      Object.keys(this.definition.labelMatching ?? {}).map((label) => [
+        label,
+        [] as SpanAndAnnotation<RelationSchemasT>[],
+      ]),
     )
 
     // definition is now set, we can initialize the state machine

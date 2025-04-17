@@ -72,6 +72,9 @@ describe('convertTraceToRUM', () => {
         transitionFromState: 'active',
         lastRelevantSpanAndAnnotation: undefined,
         transitionToState: 'complete',
+        completeSpanAndAnnotation: undefined,
+        cpuIdleSpanAndAnnotation: undefined,
+        lastRequiredSpanAndAnnotation: undefined,
       },
     )
 
@@ -165,6 +168,9 @@ describe('convertTraceToRUM', () => {
         transitionFromState: 'active',
         lastRelevantSpanAndAnnotation: undefined,
         transitionToState: 'complete',
+        completeSpanAndAnnotation: undefined,
+        cpuIdleSpanAndAnnotation: undefined,
+        lastRequiredSpanAndAnnotation: undefined,
       },
     )
 

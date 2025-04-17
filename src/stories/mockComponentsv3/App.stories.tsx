@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 import { createConsoleTraceLogger } from '../../v3/ConsoleTraceLogger'
-import { TraceManagerDebugger } from '../../v3/TraceManagerDebugger'
+import TraceManagerDebugger from '../../v3/TraceManagerDebugger'
 import { App } from './App'
 import { traceManager } from './traceManager'
 
