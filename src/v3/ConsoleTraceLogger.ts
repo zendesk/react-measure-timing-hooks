@@ -112,6 +112,7 @@ export function createConsoleTraceLogger<
   options: ConsoleTraceLoggerOptions = {},
 ) {
   const {
+    // eslint-disable-next-line no-console
     logFn = console.log,
     verbose = false,
     prefix = '[Trace]',
