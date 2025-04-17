@@ -1,7 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { type AllPossibleTraces, isTerminalState } from './Trace'
+import { createTraceRecording } from './recordingComputeUtils'
+import {
+  type AllPossibleTraces,
+  type FinalTransition,
+  isTerminalState,
+} from './Trace'
 import type { TraceManager } from './TraceManager'
-import type { RelationSchemasBase, TraceInterruptionReason } from './types'
+import type {
+  RelationSchemasBase,
+  TraceContext,
+  TraceInterruptionReason,
+} from './types'
 
 // Constants to avoid magic numbers
 const MAX_STRING_LENGTH = 20
@@ -13,7 +22,6 @@ interface RequiredSpan {
   definition?: Record<string, unknown>
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface TraceInfo<RelationSchemasT> {
   traceId: string
   traceName: string
@@ -27,6 +35,10 @@ interface TraceInfo<RelationSchemasT> {
   interruptionReason?: TraceInterruptionReason
   startTime: number
   relatedTo?: Record<string, unknown>
+  // Store the trace context to be able to generate trace recordings later
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  traceContext?: TraceContext<any, RelationSchemasT, any>
+  finalTransition?: FinalTransition<RelationSchemasT>
 }
 
 const styles = {
@@ -144,10 +156,26 @@ const styles = {
   },
   historyTitle: {
     paddingTop: '20px',
+    marginBottom: '10px',
     borderTop: '1px solid #eee',
     fontSize: '18px',
     fontWeight: 'bold',
     color: '#333',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  visualizerLink: {
+    backgroundColor: '#1976d2',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '4px 10px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
   },
   historyItem: {
     padding: '15px',
@@ -158,11 +186,34 @@ const styles = {
     cursor: 'pointer',
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
     transition: 'box-shadow 0.2s ease',
+    position: 'relative', // For positioning the arrow
+  },
+  historyItemHover: {
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
   },
   historyHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    marginBottom: '10px',
+    alignItems: 'center',
+    marginBottom: '8px',
+  },
+  expandArrow: {
+    position: 'absolute',
+    bottom: '0px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '24px',
+    height: '24px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    transition: 'transform 0.2s ease',
+  },
+  expandArrowDown: {
+    transform: 'translateX(-50%) rotate(0deg)',
+  },
+  expandArrowUp: {
+    transform: 'translateX(-50%) rotate(180deg)',
   },
   expandedHistory: {
     marginTop: '15px',
@@ -188,6 +239,137 @@ const styles = {
     color: '#333',
     border: '1px solid #e0e0e0',
   },
+  idChip: {
+    backgroundColor: '#f5f5f5',
+    color: '#757575',
+    padding: '3px 10px',
+    borderRadius: '12px',
+    fontSize: '11px',
+    border: '1px solid #e0e0e0',
+  },
+  variantChip: {
+    backgroundColor: '#e8f5e9',
+    color: '#2e7d32',
+    padding: '3px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    border: '1px solid #c8e6c9',
+    fontWeight: '500',
+  },
+  reasonChip: {
+    backgroundColor: '#ffebee',
+    color: '#c62828',
+    padding: '3px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    border: '1px solid #ffcdd2',
+    fontWeight: '500',
+  },
+  relatedChip: {
+    backgroundColor: '#e3f2fd',
+    color: '#1565c0',
+    padding: '3px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    border: '1px solid #bbdefb',
+  },
+  relatedGroup: {
+    display: 'inline-flex',
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
+    borderRadius: '12px',
+    border: '1px solid #bbdefb',
+    backgroundColor: '#e3f2fd',
+  },
+  relatedLabel: {
+    color: '#1565c0',
+    padding: '3px 8px',
+    fontSize: '12px',
+  },
+  relatedItems: {
+    backgroundColor: '#1565c0',
+    display: 'flex',
+    gap: '2px',
+    padding: '0 6px',
+  },
+  relatedItem: {
+    backgroundColor: '#1565c0',
+    color: 'white',
+    padding: '3px 4px',
+    fontSize: '12px',
+  },
+  // Variant chip group
+  variantGroup: {
+    display: 'inline-flex',
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
+    borderRadius: '12px',
+    border: '1px solid #c8e6c9',
+    backgroundColor: '#e8f5e9',
+  },
+  variantLabel: {
+    color: '#2e7d32',
+    padding: '3px 8px',
+    fontSize: '12px',
+  },
+  variantValue: {
+    backgroundColor: '#2e7d32',
+    color: 'white',
+    padding: '3px 8px',
+    fontSize: '12px',
+    fontWeight: '500',
+  },
+  // Required spans chip group
+  spansGroup: {
+    display: 'inline-flex',
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
+    borderRadius: '12px',
+    border: '1px solid #ffe0b2',
+    backgroundColor: '#fff3e0',
+  },
+  spansLabel: {
+    color: '#e65100',
+    padding: '3px 8px',
+    fontSize: '12px',
+  },
+  spansValue: {
+    backgroundColor: '#e65100',
+    color: 'white',
+    padding: '3px 8px',
+    fontSize: '12px',
+    fontWeight: '500',
+  },
+  // Interruption reason chip group
+  reasonGroup: {
+    display: 'inline-flex',
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
+    borderRadius: '12px',
+    border: '1px solid #ffcdd2',
+    backgroundColor: '#ffebee',
+  },
+  reasonLabel: {
+    color: '#c62828',
+    padding: '3px 8px',
+    fontSize: '12px',
+  },
+  reasonValue: {
+    backgroundColor: '#c62828',
+    color: 'white',
+    padding: '3px 8px',
+    fontSize: '12px',
+    fontWeight: '500',
+  },
+  spansChip: {
+    backgroundColor: '#fff3e0',
+    color: '#e65100',
+    padding: '3px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    border: '1px solid #ffe0b2',
+    fontWeight: '500',
+  },
   preWrap: {
     whiteSpace: 'pre-wrap' as const,
     fontSize: '12px',
@@ -197,6 +379,13 @@ const styles = {
     overflowX: 'auto' as const,
     maxHeight: '200px',
     border: '1px solid #e0e0e0',
+  },
+  timeMarkerValue: {
+    fontFamily: 'monospace',
+    textAlign: 'right',
+    display: 'inline-block',
+    width: '80px',
+    fontWeight: '500',
   },
   floatingContainer: {
     position: 'fixed' as const,
@@ -242,8 +431,9 @@ const styles = {
     color: 'white',
     border: 'none',
     borderRadius: '50%',
-    width: '54px',
-    height: '54px',
+    width: '74px',
+    height: '74px',
+    opacity: 0.9,
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
@@ -265,7 +455,7 @@ const styles = {
     padding: '2px 8px',
     borderRadius: '10px',
     fontSize: '11px',
-    maxWidth: '150px',
+    maxWidth: '200px',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap' as const,
     position: 'relative' as const,
@@ -306,6 +496,20 @@ const styles = {
     alignItems: 'center',
     flex: 1,
   },
+  downloadButton: {
+    backgroundColor: '#1976d2',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '4px 10px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    alignItems: 'center',
+    marginLeft: '10px',
+  },
+  downloadIcon: {
+    fontSize: '14px',
+  },
 } as const
 
 function getStateStyle(state: string) {
@@ -317,8 +521,8 @@ function getStateStyle(state: string) {
 
 const TRACE_HISTORY_LIMIT = 15
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function TraceAttributes<RelationSchemasT>({
+// TraceAttributes component to display attributes as chips
+function TraceAttributes({
   attributes,
 }: {
   attributes?: Record<string, unknown>
@@ -328,7 +532,12 @@ function TraceAttributes<RelationSchemasT>({
   return (
     <div style={styles.section}>
       <div style={styles.sectionTitle}>Attributes:</div>
-      <pre style={styles.preWrap}>{JSON.stringify(attributes)}</pre>
+      <div style={styles.defChipContainer}>
+        {Object.entries(attributes).map(([key, value]) => (
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+          <DefinitionChip key={key} keyName={key} value={value} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -358,19 +567,50 @@ function TimeMarkers<RelationSchemasT>({
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {lastRequiredSpanOffset !== undefined && (
           <li style={styles.listItem}>
-            Last Required Span: +{lastRequiredSpanOffset.toFixed(2)}ms
+            <span style={{ display: 'inline-block' }}>Last Required Span:</span>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                textAlign: 'right',
+                display: 'inline-block',
+                width: '80px',
+                fontWeight: '500',
+              }}
+            >
+              +{lastRequiredSpanOffset.toFixed(2)}ms
+            </span>
           </li>
         )}
         {completeSpanOffset !== undefined && (
           <li style={styles.listItem}>
-            Complete Span: +{completeSpanOffset.toFixed(2)}
-            ms
+            <span style={{ display: 'inline-block' }}>Complete Span:</span>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                textAlign: 'right',
+                display: 'inline-block',
+                width: '80px',
+                fontWeight: '500',
+              }}
+            >
+              +{completeSpanOffset.toFixed(2)}ms
+            </span>
           </li>
         )}
         {cpuIdleSpanOffset !== undefined && (
           <li style={styles.listItem}>
-            CPU Idle Span: +{cpuIdleSpanOffset.toFixed(2)}
-            ms
+            <span style={{ display: 'inline-block' }}>CPU Idle Span:</span>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                textAlign: 'right',
+                display: 'inline-block',
+                width: '80px',
+                fontWeight: '500',
+              }}
+            >
+              +{cpuIdleSpanOffset.toFixed(2)}ms
+            </span>
           </li>
         )}
       </ul>
@@ -393,7 +633,8 @@ function DefinitionChip({
       (typeof value === 'string' && value.length > LONG_STRING_THRESHOLD))
   const stringValue =
     typeof value === 'object' ? JSON.stringify(value) : String(value)
-  const needsTooltip = valueIsComplex || stringValue.length > MAX_STRING_LENGTH
+  const needsTooltip =
+    valueIsComplex || keyName.length + stringValue.length > MAX_STRING_LENGTH
 
   // Create truncated display value
   const displayValue =
@@ -414,26 +655,9 @@ function DefinitionChip({
       {needsTooltip && (
         <div
           style={{
-            position: 'absolute',
-            bottom: '120%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(0,0,0,0.85)',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            fontSize: '11px',
-
-            zIndex: 1_001,
-            minWidth: '150px',
-            maxWidth: '300px',
-            wordBreak: 'break-word',
-            pointerEvents: 'none',
+            ...styles.defChipTooltip,
             opacity: showTooltip ? 1 : 0,
             visibility: showTooltip ? 'visible' : 'hidden',
-            transition: 'opacity 0.2s ease',
-            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-            whiteSpace: 'pre-wrap',
           }}
         >
           {typeof value === 'object'
@@ -475,6 +699,7 @@ function RequiredSpansList<RelationSchemasT>({
                   ...styles.matchedIndicator,
                   ...(span.isMatched ? styles.matchedDot : styles.unmatchedDot),
                 }}
+                title={span.isMatched ? 'Matched' : 'Pending'}
               />
               {span.definition ? (
                 <div style={styles.defChipContainer}>
@@ -486,7 +711,6 @@ function RequiredSpansList<RelationSchemasT>({
                 span.name
               )}
             </div>
-            <div>{span.isMatched ? 'Matched' : 'Pending'}</div>
           </div>
         ))}
       </div>
@@ -494,8 +718,47 @@ function RequiredSpansList<RelationSchemasT>({
   )
 }
 
+// Function to download trace recording as a JSON file
+function downloadTraceRecording<
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
+>(trace: TraceInfo<RelationSchemasT>) {
+  if (!trace.traceContext || !trace.finalTransition) {
+    return
+  }
+
+  try {
+    // Generate the trace recording
+    const recording = createTraceRecording(
+      trace.traceContext,
+      trace.finalTransition,
+    )
+
+    // Create a blob with the JSON data
+    const recordingJson = JSON.stringify(recording, null, 2)
+    const blob = new Blob([recordingJson], { type: 'application/json' })
+
+    // Create download link
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `trace-${trace.traceId}-${trace.traceName}.json`
+    document.body.append(a)
+    a.click()
+
+    // Clean up
+    setTimeout(() => {
+      a.remove()
+      URL.revokeObjectURL(url)
+    }, 0)
+  } catch (error) {
+    console.error('Failed to generate trace recording:', error)
+  }
+}
+
 // TraceItem component to display a trace (used for both active and history traces)
-function TraceItem<RelationSchemasT>({
+function TraceItem<
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
+>({
   trace,
   isExpanded,
   onToggleExpand,
@@ -506,14 +769,31 @@ function TraceItem<RelationSchemasT>({
   onToggleExpand: () => void
   isCurrentTrace?: boolean
 }) {
+  const [isHovered, setIsHovered] = useState(false)
+
+  // Determine if we can download a trace recording (only for completed/interrupted traces)
+  const canDownloadRecording =
+    (trace.state === 'complete' || trace.state === 'interrupted') &&
+    !!trace.traceContext &&
+    !!trace.finalTransition
+
+  // Handle download button click without triggering the expand/collapse
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    downloadTraceRecording(trace)
+  }
+
   return (
     <div
       style={{
         ...styles.historyItem,
+        ...(isHovered ? styles.historyItemHover : {}),
         borderLeft: '3px solid',
         borderLeftColor: isCurrentTrace ? '#1565c0' : 'transparent',
       }}
       onClick={onToggleExpand}
+      onMouseEnter={() => void setIsHovered(true)}
+      onMouseLeave={() => void setIsHovered(false)}
     >
       <div style={styles.historyHeader}>
         <div>
@@ -526,28 +806,63 @@ function TraceItem<RelationSchemasT>({
           >
             {trace.state}
           </span>
+          {canDownloadRecording && (
+            <button
+              style={styles.downloadButton}
+              onClick={handleDownloadClick}
+              title="Download trace recording as JSON"
+            >
+              <span style={styles.downloadIcon}>⬇</span>
+            </button>
+          )}
         </div>
-        <span style={styles.timeDisplay}>
-          {new Date(trace.startTime).toLocaleTimeString()}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={styles.idChip} title="Trace ID">
+            {trace.traceId}
+          </div>
+          <span style={styles.timeDisplay}>
+            {new Date(trace.startTime).toLocaleTimeString()}
+          </span>
+        </div>
       </div>
 
       <div style={styles.keyInfo}>
-        <div style={styles.infoChip}>ID: {trace.traceId}</div>
-        {trace.relatedTo &&
-          Object.entries(trace.relatedTo).map(([key, value]) => (
-            <div key={key} style={styles.infoChip}>
-              {key}: {JSON.stringify(value)}
-            </div>
-          ))}
-        <div style={styles.infoChip}>Variant: {trace.variant}</div>
-        {trace.interruptionReason && (
-          <div style={styles.infoChip}>Reason: {trace.interruptionReason}</div>
-        )}
-        <div style={styles.infoChip}>
-          Completed: {trace.requiredSpans.filter((s) => s.isMatched).length}/
-          {trace.requiredSpans.length} spans
+        {/* Variant in chip group */}
+        <div style={styles.variantGroup}>
+          <span style={styles.variantLabel}>Variant</span>
+          <span style={styles.variantValue}>{trace.variant}</span>
         </div>
+
+        {/* Required spans in chip group */}
+        <div style={styles.spansGroup}>
+          <span style={styles.spansLabel}>Required</span>
+          <span style={styles.spansValue}>
+            {trace.requiredSpans.filter((s) => s.isMatched).length}/
+            {trace.requiredSpans.length}
+          </span>
+        </div>
+
+        {/* Group related items together */}
+        {trace.relatedTo && Object.keys(trace.relatedTo).length > 0 && (
+          <div style={styles.relatedGroup}>
+            <span style={styles.relatedLabel}>Related</span>
+            <div style={styles.relatedItems}>
+              {Object.entries(trace.relatedTo).map(([key, value]) => (
+                <span key={key} style={styles.relatedItem}>
+                  {key}: {JSON.stringify(value)}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Interruption reason in chip group */}
+        {trace.interruptionReason && (
+          <div style={styles.reasonGroup}>
+            <span style={styles.reasonLabel}>Reason</span>
+            <span style={styles.reasonValue}>{trace.interruptionReason}</span>
+          </div>
+        )}
       </div>
 
       {isExpanded && (
@@ -563,6 +878,16 @@ function TraceItem<RelationSchemasT>({
           />
         </div>
       )}
+
+      {/* Expand/collapse arrow indicator */}
+      <div
+        style={{
+          ...styles.expandArrow,
+          ...(isExpanded ? styles.expandArrowUp : styles.expandArrowDown),
+        }}
+      >
+        ▼
+      </div>
     </div>
   )
 }
@@ -675,6 +1000,12 @@ export function TraceManagerDebugger<
               (matcher.fromDefinition as Record<string, unknown>) ?? undefined,
           }
         }),
+        traceContext: {
+          definition: trace.definition,
+          input: trace.input,
+          recordedItemsByLabel: trace.recordedItemsByLabel,
+          recordedItems: trace.recordedItems,
+        },
       }
 
       setCurrentTrace(traceInfo)
@@ -732,6 +1063,10 @@ export function TraceManagerDebugger<
 
           // Terminal states - add to history
           if (isTerminalState(transition.transitionToState)) {
+            // Store the final transition data for trace recording generation
+            updatedTrace.finalTransition =
+              transition as FinalTransition<RelationSchemasT>
+
             setTraceHistory((prev) => {
               const newHistory = [updatedTrace, ...prev].slice(
                 0,
@@ -795,7 +1130,7 @@ export function TraceManagerDebugger<
         style={styles.minimizedButton}
         onClick={() => void setIsMinimized(false)}
       >
-        Debug
+        Traces
       </button>
     )
   }
@@ -824,7 +1159,17 @@ export function TraceManagerDebugger<
 
       {allTraces.length > 0 ? (
         <div style={{ padding: '0 15px' }}>
-          <h3 style={styles.historyTitle}>Traces ({allTraces.length})</h3>
+          <h3 style={styles.historyTitle}>
+            Traces ({allTraces.length})
+            <a
+              href="https://zendesk.github.io/react-measure-timing-hooks/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.visualizerLink}
+            >
+              Trace Visualizer
+            </a>
+          </h3>
           {allTraces.map((trace, index) => (
             <TraceItem
               key={trace.traceId}
