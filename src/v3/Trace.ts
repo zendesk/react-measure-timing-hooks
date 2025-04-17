@@ -7,7 +7,12 @@ import {
   DEFAULT_DEBOUNCE_DURATION,
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
 } from './constants'
-import type { RequiredSpanSeenEvent, StateTransitionEvent } from './debugTypes'
+import type {
+  AddSpanToRecordingEvent,
+  DefinitionModifiedEvent,
+  RequiredSpanSeenEvent,
+  StateTransitionEvent,
+} from './debugTypes'
 import { convertMatchersToFns } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import {
@@ -54,14 +59,6 @@ const isInvalidTraceInterruptionReason = (
     INVALID_TRACE_INTERRUPTION_REASONS as readonly TraceInterruptionReason[]
   ).includes(reason)
 
-export interface FinalState<RelationSchemaT> {
-  transitionFromState: NonTerminalTraceStates
-  interruptionReason?: TraceInterruptionReason
-  cpuIdleSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
-  completeSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
-  lastRequiredSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
-}
-
 const INITIAL_STATE = 'draft'
 type InitialTraceState = typeof INITIAL_STATE
 export type NonTerminalTraceStates =
@@ -83,24 +80,26 @@ interface OnEnterActive {
   transitionFromState: NonTerminalTraceStates
 }
 
-interface OnEnterInterrupted {
+interface OnEnterInterrupted<RelationSchemasT> {
   transitionToState: 'interrupted'
   transitionFromState: NonTerminalTraceStates
   interruptionReason: TraceInterruptionReason
-}
-
-interface OnEnterComplete<RelationSchemasT>
-  extends FinalState<RelationSchemasT> {
-  transitionToState: 'complete'
-}
-
-export type FinalTransition<RelationSchemasT> = (
-  | (OnEnterInterrupted &
-      Omit<FinalState<RelationSchemasT>, 'transitionFromState'>)
-  | OnEnterComplete<RelationSchemasT>
-) & {
   lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
 }
+
+interface OnEnterComplete<RelationSchemasT> {
+  transitionToState: 'complete'
+  transitionFromState: NonTerminalTraceStates
+  interruptionReason?: TraceInterruptionReason
+  cpuIdleSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
+  completeSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
+  lastRequiredSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
+  lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
+}
+
+export type FinalTransition<RelationSchemasT> =
+  | OnEnterInterrupted<RelationSchemasT>
+  | OnEnterComplete<RelationSchemasT>
 
 interface OnEnterWaitingForInteractive {
   transitionToState: 'waiting-for-interactive'
@@ -114,7 +113,7 @@ interface OnEnterDebouncing {
 
 export type OnEnterStatePayload<RelationSchemasT> =
   | OnEnterActive
-  | OnEnterInterrupted
+  | OnEnterInterrupted<RelationSchemasT>
   | OnEnterComplete<RelationSchemasT>
   | OnEnterDebouncing
   | OnEnterWaitingForInteractive
@@ -154,7 +153,7 @@ interface TraceStateMachineSideEffectHandlers<RelationSchemasT> {
     spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
   ) => void
   readonly prepareAndEmitRecording: (
-    options: PrepareAndEmitRecordingOptions<RelationSchemasT>,
+    transition: OnEnterStatePayload<RelationSchemasT>,
   ) => void
 }
 
@@ -178,6 +177,20 @@ interface StateMachineContext<
     >
     'required-span-seen': Subject<
       RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >
+    'add-span-to-recording': Subject<
+      AddSpanToRecordingEvent<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >
+    >
+    'definition-modified': Subject<
+      DefinitionModifiedEvent<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >
     >
   }
 }
@@ -330,6 +343,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: undefined,
           }
         }
 
@@ -347,6 +361,7 @@ export class TraceStateMachine<
                 interruptionReason: doesSpanMatch.requiredSpan
                   ? 'matched-on-required-span-with-error'
                   : 'matched-on-interrupt',
+                lastRelevantSpanAndAnnotation: undefined,
               }
             }
           }
@@ -358,6 +373,7 @@ export class TraceStateMachine<
       onInterrupt: (reason: TraceInterruptionReason) => ({
         transitionToState: 'interrupted',
         interruptionReason: reason,
+        lastRelevantSpanAndAnnotation: undefined,
       }),
 
       onDeadline: (deadlineType: DeadlineType) => {
@@ -365,6 +381,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: undefined,
           }
         }
         // other cases should never happen
@@ -395,6 +412,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -410,6 +428,7 @@ export class TraceStateMachine<
                 interruptionReason: doesSpanMatch.requiredSpan
                   ? 'matched-on-required-span-with-error'
                   : 'matched-on-interrupt',
+                lastRelevantSpanAndAnnotation: this.lastRelevant,
               }
             }
           }
@@ -458,6 +477,7 @@ export class TraceStateMachine<
       onInterrupt: (reason: TraceInterruptionReason) => ({
         transitionToState: 'interrupted',
         interruptionReason: reason,
+        lastRelevantSpanAndAnnotation: this.lastRelevant,
       }),
 
       onDeadline: (deadlineType: DeadlineType) => {
@@ -465,6 +485,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
         // other cases should never happen
@@ -486,6 +507,8 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'invalid-state-transition',
+
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -512,6 +535,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
         if (deadlineType === 'debounce') {
@@ -537,6 +561,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -572,6 +597,7 @@ export class TraceStateMachine<
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'idle-component-no-longer-idle',
+                lastRelevantSpanAndAnnotation: this.lastRelevant,
               }
             }
           }
@@ -610,6 +636,7 @@ export class TraceStateMachine<
       onInterrupt: (reason: TraceInterruptionReason) => ({
         transitionToState: 'interrupted',
         interruptionReason: reason,
+        lastRelevantSpanAndAnnotation: this.lastRelevant,
       }),
     },
 
@@ -620,6 +647,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'invalid-state-transition',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -630,7 +658,9 @@ export class TraceStateMachine<
           return {
             transitionToState: 'complete',
             completeSpanAndAnnotation: this.completeSpan,
+            cpuIdleSpanAndAnnotation: undefined,
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -691,6 +721,8 @@ export class TraceStateMachine<
             interruptionReason: 'timeout',
             completeSpanAndAnnotation: this.completeSpan,
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
+            cpuIdleSpanAndAnnotation: undefined,
           }
         }
         if (
@@ -718,6 +750,7 @@ export class TraceStateMachine<
               lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
               completeSpanAndAnnotation: this.completeSpan,
               cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
+              lastRelevantSpanAndAnnotation: this.lastRelevant,
             }
           }
           if (deadlineType === 'interactive') {
@@ -728,6 +761,8 @@ export class TraceStateMachine<
               transitionToState: 'complete',
               lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
               completeSpanAndAnnotation: this.completeSpan,
+              lastRelevantSpanAndAnnotation: this.lastRelevant,
+              cpuIdleSpanAndAnnotation: undefined,
             }
           }
 
@@ -770,6 +805,7 @@ export class TraceStateMachine<
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
             completeSpanAndAnnotation: this.completeSpan,
             cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -784,6 +820,8 @@ export class TraceStateMachine<
             interruptionReason: 'timeout',
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
             completeSpanAndAnnotation: this.completeSpan,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
+            cpuIdleSpanAndAnnotation: undefined,
           }
         }
 
@@ -795,6 +833,8 @@ export class TraceStateMachine<
             interruptionReason: 'waiting-for-interactive-timeout',
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
             completeSpanAndAnnotation: this.completeSpan,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
+            cpuIdleSpanAndAnnotation: undefined,
           }
         }
 
@@ -811,6 +851,8 @@ export class TraceStateMachine<
                   : 'matched-on-interrupt',
                 lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
                 completeSpanAndAnnotation: this.completeSpan,
+                lastRelevantSpanAndAnnotation: this.lastRelevant,
+                cpuIdleSpanAndAnnotation: undefined,
               }
             }
           }
@@ -832,12 +874,14 @@ export class TraceStateMachine<
           interruptionReason: reason,
           lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
           completeSpanAndAnnotation: this.completeSpan,
+          lastRelevantSpanAndAnnotation: this.lastRelevant,
+          cpuIdleSpanAndAnnotation: undefined,
         }),
     },
 
     // terminal states:
     interrupted: {
-      onEnterState: (transition: OnEnterInterrupted) => {
+      onEnterState: (transition: OnEnterInterrupted<RelationSchemasT>) => {
         // depending on the reason, if we're coming from draft, we want to flush the buffer:
         if (
           transition.transitionFromState === 'draft' &&
@@ -859,10 +903,7 @@ export class TraceStateMachine<
           return
         }
 
-        this.sideEffectFns.prepareAndEmitRecording({
-          transition,
-          lastRelevantSpanAndAnnotation: undefined,
-        })
+        this.sideEffectFns.prepareAndEmitRecording(transition)
       },
     },
 
@@ -885,10 +926,7 @@ export class TraceStateMachine<
           cpuIdleSpanAndAnnotation.annotation.markedPageInteractive = true
         }
 
-        this.sideEffectFns.prepareAndEmitRecording({
-          transition,
-          lastRelevantSpanAndAnnotation: this.lastRelevant,
-        })
+        this.sideEffectFns.prepareAndEmitRecording(transition)
       },
     },
   } satisfies StatesBase<RelationSchemasT>
@@ -936,11 +974,6 @@ export class TraceStateMachine<
     }
     return undefined
   }
-}
-
-interface PrepareAndEmitRecordingOptions<RelationSchemasT> {
-  transition: OnEnterStatePayload<RelationSchemasT>
-  lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
 }
 
 export class Trace<
@@ -1029,6 +1062,20 @@ export class Trace<
     'required-span-seen': new Subject<
       RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
     >(),
+    'add-span-to-recording': new Subject<
+      AddSpanToRecordingEvent<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >
+    >(),
+    'definition-modified': new Subject<
+      DefinitionModifiedEvent<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >
+    >(),
   }
 
   when(
@@ -1042,13 +1089,41 @@ export class Trace<
     RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
   >
   when(
-    event: 'required-span-seen' | 'state-transition',
+    event: 'add-span-to-recording',
+  ): Observable<
+    AddSpanToRecordingEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >
+  when(
+    event: 'definition-modified',
+  ): Observable<
+    DefinitionModifiedEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >
+  when(
+    event:
+      | 'required-span-seen'
+      | 'state-transition'
+      | 'add-span-to-recording'
+      | 'definition-modified',
   ):
     | Observable<
         StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
       >
     | Observable<
         RequiredSpanSeenEvent<
+          SelectedRelationNameT,
+          RelationSchemasT,
+          VariantsT
+        >
+      >
+    | Observable<
+        AddSpanToRecordingEvent<
+          SelectedRelationNameT,
+          RelationSchemasT,
+          VariantsT
+        >
+      >
+    | Observable<
+        DefinitionModifiedEvent<
           SelectedRelationNameT,
           RelationSchemasT,
           VariantsT
@@ -1237,12 +1312,13 @@ export class Trace<
         for (const label of spanAndAnnotation.annotation.labels) {
           this.recordedItemsByLabel[label]?.push(spanAndAnnotation)
         }
+        this.eventSubjects['add-span-to-recording'].next({
+          spanAndAnnotation,
+          traceContext: this,
+        })
       }
     },
-    prepareAndEmitRecording: ({
-      transition,
-      lastRelevantSpanAndAnnotation,
-    }) => {
+    prepareAndEmitRecording: (transition) => {
       if (
         transition.transitionToState === 'interrupted' ||
         transition.transitionToState === 'complete'
@@ -1256,7 +1332,7 @@ export class Trace<
             input: this.input,
             recordedItemsByLabel: this.recordedItemsByLabel,
           },
-          { ...transition, lastRelevantSpanAndAnnotation },
+          transition,
         )
         this.onEnd(traceRecording)
 
@@ -1442,6 +1518,12 @@ export class Trace<
         ...additionalDebounceOnSpans,
       ]
     }
+
+    // Emit definition-modified event
+    this.eventSubjects['definition-modified'].next({
+      modifications: definitionModifications,
+      traceContext: this,
+    })
   }
 
   /**

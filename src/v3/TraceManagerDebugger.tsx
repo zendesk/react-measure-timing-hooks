@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
+import {
+  DEFAULT_DEBOUNCE_DURATION,
+  DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
+} from './constants'
+import { isSuppressedError } from './debugUtils'
 import { createTraceRecording } from './recordingComputeUtils'
+import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import {
   type AllPossibleTraces,
   type FinalTransition,
@@ -39,6 +45,13 @@ interface TraceInfo<RelationSchemasT> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   traceContext?: TraceContext<any, RelationSchemasT, any>
   finalTransition?: FinalTransition<RelationSchemasT>
+  liveDuration?: number
+  totalSpanCount?: number
+  hasErrorSpan?: boolean
+  hasSuppressedErrorSpan?: boolean
+  definitionModifications?: unknown[]
+  computedSpans?: string[]
+  computedValues?: string[]
 }
 
 const styles = {
@@ -231,6 +244,20 @@ const styles = {
     flexWrap: 'wrap' as const,
     marginBottom: '10px',
   },
+  traceInfoRow: {
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap' as const,
+    marginBottom: '10px',
+    padding: '8px 0',
+  },
+  configInfoRow: {
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap' as const,
+    marginBottom: '2px',
+    fontSize: '90%',
+  },
   infoChip: {
     backgroundColor: '#f1f1f1',
     padding: '3px 10px',
@@ -238,6 +265,14 @@ const styles = {
     fontSize: '12px',
     color: '#333',
     border: '1px solid #e0e0e0',
+  },
+  configChip: {
+    backgroundColor: '#f8f8f8',
+    padding: '2px 8px',
+    borderRadius: '10px',
+    fontSize: '11px',
+    color: '#555',
+    border: '1px solid #e8e8e8',
   },
   idChip: {
     backgroundColor: '#f5f5f5',
@@ -391,7 +426,8 @@ const styles = {
     position: 'fixed' as const,
     top: '10px',
     right: '10px',
-    maxWidth: '650px',
+    minWidth: '600px',
+    maxWidth: '750px',
     width: '100%',
     zIndex: 1_000,
     resize: 'both' as const,
@@ -521,6 +557,53 @@ function getStateStyle(state: string) {
 
 const TRACE_HISTORY_LIMIT = 15
 
+// Add a helper to format ms
+function formatMs(ms?: number) {
+  if (ms == null) return ''
+  if (ms < 1_000) return `${ms}ms`
+  return `${(ms / 1_000).toFixed(2)}s`
+}
+
+// Add a helper to get config summary from traceContext
+function getConfigSummary<RelationSchemasT>(
+  trace: TraceInfo<RelationSchemasT>,
+) {
+  if (!trace.traceContext) return {}
+  const def = trace.traceContext.definition
+  const variant = def.variants[trace.variant]
+  const timeout = variant?.timeout
+  const debounce =
+    (def.debounceOnSpans ?? []).length > 0
+      ? def.debounceWindow ?? DEFAULT_DEBOUNCE_DURATION
+      : undefined
+  const interactive =
+    typeof def.captureInteractive === 'object'
+      ? def.captureInteractive.timeout
+      : def.captureInteractive
+      ? DEFAULT_INTERACTIVE_TIMEOUT_DURATION
+      : undefined
+  return { timeout, debounce, interactive }
+}
+
+// Add a helper to get computed values/spans for completed/interrupted traces
+function getComputedResults<RelationSchemasT>(
+  trace: TraceInfo<RelationSchemasT>,
+) {
+  if (!trace.traceContext || !trace.finalTransition) return {}
+  try {
+    const recording = createTraceRecording(
+      trace.traceContext,
+      trace.finalTransition,
+    )
+    return {
+      computedValues: recording.computedValues,
+      computedSpans: recording.computedSpans,
+    }
+  } catch {
+    return {}
+  }
+}
+
 // TraceAttributes component to display attributes as chips
 function TraceAttributes({
   attributes,
@@ -577,7 +660,7 @@ function TimeMarkers<RelationSchemasT>({
                 fontWeight: '500',
               }}
             >
-              +{lastRequiredSpanOffset.toFixed(2)}ms
+              +{formatMs(lastRequiredSpanOffset)}
             </span>
           </li>
         )}
@@ -593,7 +676,7 @@ function TimeMarkers<RelationSchemasT>({
                 fontWeight: '500',
               }}
             >
-              +{completeSpanOffset.toFixed(2)}ms
+              +{formatMs(completeSpanOffset)}
             </span>
           </li>
         )}
@@ -609,7 +692,7 @@ function TimeMarkers<RelationSchemasT>({
                 fontWeight: '500',
               }}
             >
-              +{cpuIdleSpanOffset.toFixed(2)}ms
+              +{formatMs(cpuIdleSpanOffset)}
             </span>
           </li>
         )}
@@ -751,6 +834,7 @@ function downloadTraceRecording<
       URL.revokeObjectURL(url)
     }, 0)
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to generate trace recording:', error)
   }
 }
@@ -789,15 +873,22 @@ function TraceItem<
         ...styles.historyItem,
         ...(isHovered ? styles.historyItemHover : {}),
         borderLeft: '3px solid',
-        borderLeftColor: isCurrentTrace ? '#1565c0' : 'transparent',
+        borderLeftColor: isCurrentTrace
+          ? '#1565c0'
+          : trace.state === 'complete'
+          ? '#2e7d32'
+          : trace.state === 'interrupted'
+          ? '#c62828'
+          : '#e0e0e0',
       }}
       onClick={onToggleExpand}
       onMouseEnter={() => void setIsHovered(true)}
       onMouseLeave={() => void setIsHovered(false)}
     >
+      {/* ROW 1: Title, state, buttons, and IDs */}
       <div style={styles.historyHeader}>
-        <div>
-          <strong>{trace.traceName}</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <strong style={{ fontSize: '15px' }}>{trace.traceName}</strong>
           <span
             style={{
               ...styles.statusTag,
@@ -815,8 +906,40 @@ function TraceItem<
               <span style={styles.downloadIcon}>⬇</span>
             </button>
           )}
+          {/* Error indicator */}
+          {(trace.hasErrorSpan || trace.hasSuppressedErrorSpan) && (
+            <span
+              title={
+                trace.hasSuppressedErrorSpan
+                  ? 'Suppressed error span(s) seen'
+                  : 'Error span(s) seen'
+              }
+              style={{
+                color: '#c62828',
+                fontSize: '18px',
+              }}
+            >
+              ⚠️
+            </span>
+          )}
+          {/* Definition modification indicator */}
+          {trace.definitionModifications &&
+            trace.definitionModifications.length > 0 && (
+              <span
+                title="Definition modified"
+                style={{
+                  color: '#1976d2',
+                  fontSize: '18px',
+                }}
+              >
+                🔧
+              </span>
+            )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={styles.timeDisplay}>
+            ({formatMs(trace.liveDuration)})
+          </span>
           <div style={styles.idChip} title="Trace ID">
             {trace.traceId}
           </div>
@@ -826,7 +949,8 @@ function TraceItem<
         </div>
       </div>
 
-      <div style={styles.keyInfo}>
+      {/* ROW 2: Main trace information */}
+      <div style={styles.traceInfoRow}>
         {/* Variant in chip group */}
         <div style={styles.variantGroup}>
           <span style={styles.variantLabel}>Variant</span>
@@ -863,6 +987,36 @@ function TraceItem<
             <span style={styles.reasonValue}>{trace.interruptionReason}</span>
           </div>
         )}
+
+        {/* Span count chip */}
+        <span style={styles.infoChip}>Spans: {trace.totalSpanCount ?? 0}</span>
+      </div>
+
+      {/* ROW 3: Trace configuration information */}
+      <div style={styles.configInfoRow}>
+        {/* Config summary chips */}
+        {(() => {
+          const { timeout, debounce, interactive } = getConfigSummary(trace)
+          return (
+            <>
+              {timeout != null && (
+                <span style={styles.configChip}>
+                  Timeout: {formatMs(timeout)}
+                </span>
+              )}
+              {debounce != null && (
+                <span style={styles.configChip}>
+                  Debounce: {formatMs(debounce)}
+                </span>
+              )}
+              {interactive != null && (
+                <span style={styles.configChip}>
+                  Interactive: {formatMs(interactive)}
+                </span>
+              )}
+            </>
+          )
+        })()}
       </div>
 
       {isExpanded && (
@@ -876,6 +1030,68 @@ function TraceItem<
             completeSpanOffset={trace.completeSpanOffset}
             cpuIdleSpanOffset={trace.cpuIdleSpanOffset}
           />
+
+          {/* Computed Spans/Values */}
+          <div style={styles.section}>
+            <div style={styles.sectionTitle}>Computed Spans:</div>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {(trace.computedSpans ?? []).map((name) => (
+                <li key={name} style={styles.listItem}>
+                  {name}
+                  {trace.state === 'complete' || trace.state === 'interrupted'
+                    ? (() => {
+                        const { computedSpans } = getComputedResults(trace)
+                        if (computedSpans?.[name]) {
+                          return (
+                            <span style={{ marginLeft: 8, color: '#1976d2' }}>
+                              {JSON.stringify(computedSpans[name])}
+                            </span>
+                          )
+                        }
+                        return null
+                      })()
+                    : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div style={styles.section}>
+            <div style={styles.sectionTitle}>Computed Values:</div>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {(trace.computedValues ?? []).map((name) => (
+                <li key={name} style={styles.listItem}>
+                  {name}
+                  {trace.state === 'complete' || trace.state === 'interrupted'
+                    ? (() => {
+                        const { computedValues } = getComputedResults(trace)
+                        if (computedValues?.[name] !== undefined) {
+                          return (
+                            <span style={{ marginLeft: 8, color: '#1976d2' }}>
+                              {String(computedValues[name])}
+                            </span>
+                          )
+                        }
+                        return null
+                      })()
+                    : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* Definition modifications details */}
+          {trace.definitionModifications &&
+            trace.definitionModifications.length > 0 && (
+              <div style={styles.section}>
+                <div style={styles.sectionTitle}>Definition Modifications:</div>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  {trace.definitionModifications.map((mod, i) => (
+                    <li key={i} style={styles.listItem}>
+                      {JSON.stringify(mod)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
         </div>
       )}
 
@@ -1006,6 +1222,18 @@ export function TraceManagerDebugger<
           recordedItemsByLabel: trace.recordedItemsByLabel,
           recordedItems: trace.recordedItems,
         },
+        // New fields for live info
+        liveDuration: 0,
+        totalSpanCount: 0,
+        hasErrorSpan: false,
+        hasSuppressedErrorSpan: false,
+        definitionModifications: [],
+        computedSpans: Object.keys(
+          trace.definition.computedSpanDefinitions ?? {},
+        ),
+        computedValues: Object.keys(
+          trace.definition.computedValueDefinitions ?? {},
+        ),
       }
 
       setCurrentTrace(traceInfo)
@@ -1022,7 +1250,7 @@ export function TraceManagerDebugger<
           if (!prevTrace || prevTrace.traceId !== trace.input.id)
             return prevTrace
 
-          const updatedTrace = {
+          const updatedTrace: TraceInfo<RelationSchemasT> = {
             ...prevTrace,
             state: transition.transitionToState,
             attributes: trace.input.attributes
@@ -1063,19 +1291,12 @@ export function TraceManagerDebugger<
 
           // Terminal states - add to history
           if (isTerminalState(transition.transitionToState)) {
-            // Store the final transition data for trace recording generation
-            updatedTrace.finalTransition =
-              transition as FinalTransition<RelationSchemasT>
-
             setTraceHistory((prev) => {
-              const newHistory = [updatedTrace, ...prev].slice(
-                0,
-                traceHistoryLimit,
-              )
-              return newHistory
+              updatedTrace.finalTransition =
+                transition as FinalTransition<RelationSchemasT>
+              const newHistory = [updatedTrace, ...prev]
+              return newHistory.slice(0, traceHistoryLimit)
             })
-
-            // Return null to clear current trace since it ended
             return null
           }
 
@@ -1090,19 +1311,19 @@ export function TraceManagerDebugger<
         const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
 
         setCurrentTrace((prevTrace) => {
-          if (!prevTrace || prevTrace.traceId !== trace.input.id)
+          if (!prevTrace || prevTrace.traceId !== trace.input.id) {
             return prevTrace
-
+          }
           // Find which required span was matched by comparing against all matchers
           const updatedRequiredSpans = [...prevTrace.requiredSpans]
           const matchedSpan = event.spanAndAnnotation
 
           trace.definition.requiredSpans.forEach((matcher, index) => {
-            if (
-              matcher(matchedSpan, trace) &&
-              index < updatedRequiredSpans.length
-            ) {
-              updatedRequiredSpans[index]!.isMatched = true
+            if (matcher(matchedSpan, trace)) {
+              updatedRequiredSpans[index] = {
+                ...updatedRequiredSpans[index]!,
+                isMatched: true,
+              }
             }
           })
 
@@ -1113,12 +1334,74 @@ export function TraceManagerDebugger<
         })
       })
 
+    const entries: SpanAndAnnotation<RelationSchemasT>[] = []
+
+    // Subscribe to add-span-to-recording for live info
+    const addSpanSub = traceManager
+      .when('add-span-to-recording')
+      .subscribe((event) => {
+        setCurrentTrace((prevTrace) => {
+          if (!prevTrace) return prevTrace
+          if (event.traceContext.input.id !== prevTrace.traceId) {
+            return prevTrace
+          }
+          // Calculate live info from traceContext
+          const trace = event.traceContext
+          entries.push(event.spanAndAnnotation)
+
+          const liveDuration =
+            entries.length > 0
+              ? Math.round(
+                  Math.max(
+                    ...entries.map(
+                      (e) => e.span.startTime.epoch + e.span.duration,
+                    ),
+                  ) - trace.input.startTime.epoch,
+                )
+              : 0
+          const totalSpanCount = entries.length
+          const hasErrorSpan = entries.some(
+            (e) => e.span.status === 'error' && !isSuppressedError(trace, e),
+          )
+          const hasSuppressedErrorSpan = entries.some(
+            (e) => e.span.status === 'error' && isSuppressedError(trace, e),
+          )
+          return {
+            ...prevTrace,
+            liveDuration,
+            totalSpanCount,
+            hasErrorSpan,
+            hasSuppressedErrorSpan,
+          }
+        })
+      })
+
+    // Subscribe to definition-modified for modification indicator
+    const defModSub = traceManager
+      .when('definition-modified')
+      .subscribe((event) => {
+        setCurrentTrace((prevTrace) => {
+          if (!prevTrace) return prevTrace
+          if (event.traceContext.input.id !== prevTrace.traceId)
+            return prevTrace
+          return {
+            ...prevTrace,
+            definitionModifications: [
+              ...(prevTrace.definitionModifications ?? []),
+              event.modifications,
+            ],
+          }
+        })
+      })
+
     return () => {
       startSub.unsubscribe()
       stateSub.unsubscribe()
       spanSeenSub.unsubscribe()
+      addSpanSub.unsubscribe()
+      defModSub.unsubscribe()
     }
-  }, [traceManager])
+  }, [traceManager, traceHistoryLimit])
 
   const allTraces = currentTrace
     ? [currentTrace, ...traceHistory]
