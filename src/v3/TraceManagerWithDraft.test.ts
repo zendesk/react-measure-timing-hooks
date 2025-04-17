@@ -396,7 +396,7 @@ describe('TraceManager', () => {
       // prettier-ignore
       const { spans } = getSpansFromTimeline<TicketIdRelationSchemasFixture>`
         Events: ${Render('start', 0)}-----${Render('interrupt', 0)}-----${Render('end', 0)}
-        Time:   ${0}                      ${100}                      ${200}
+        Time:   ${0}                      ${100}                        ${200}
         `
       processSpans(spans, traceManager)
 
@@ -406,12 +406,12 @@ describe('TraceManager', () => {
         AnyPossibleReportFn<TicketIdRelationSchemasFixture>
       >[0] = reportFn.mock.calls[0][0]
 
-      // there are NO entries in the report because this trace was interrupted before transitioning from draft to active
-      expect(report.entries).toHaveLength(0)
+      // this trace was interrupted before transitioning from draft to active, so the only available entries are up to the interrupt
+      expect(report.entries).toHaveLength(2)
       expect(report.name).toBe('ticket.interrupt-on-basic-operation')
       expect(report.duration).toBeNull()
-      expect(report.status).toBe('interrupted')
       expect(report.interruptionReason).toBe('matched-on-interrupt')
+      expect(report.status).toBe('interrupted')
     })
 
     it('interrupts a draft trace when interrupt() is called with error', () => {

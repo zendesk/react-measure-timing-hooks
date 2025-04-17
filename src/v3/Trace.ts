@@ -94,6 +94,14 @@ interface OnEnterComplete<RelationSchemasT>
   transitionToState: 'complete'
 }
 
+export type FinalTransition<RelationSchemasT> = (
+  | (OnEnterInterrupted &
+      Omit<FinalState<RelationSchemasT>, 'transitionFromState'>)
+  | OnEnterComplete<RelationSchemasT>
+) & {
+  lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
+}
+
 interface OnEnterWaitingForInteractive {
   transitionToState: 'waiting-for-interactive'
   transitionFromState: NonTerminalTraceStates
@@ -325,27 +333,25 @@ export class TraceStateMachine<
           }
         }
 
+        // add into span buffer
+        this.#draftBuffer.push(spanAndAnnotation)
+
         // if the entry matches any of the interruptOnSpans criteria,
-        // transition to complete state with the 'matched-on-interrupt' interruptionReason
+        // transition to interrupted state with the correct interruptionReason
         if (this.#context.definition.interruptOnSpans) {
           for (const doesSpanMatch of this.#context.definition
             .interruptOnSpans) {
             if (doesSpanMatch(spanAndAnnotation, this.#context)) {
-              // TODO: do we want to record this span? Nothing else is being recorded at this point and is instead going into the buffer
               return {
-                transitionToState: 'complete',
+                transitionToState: 'interrupted',
                 interruptionReason: doesSpanMatch.requiredSpan
                   ? 'matched-on-required-span-with-error'
                   : 'matched-on-interrupt',
-                lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-                completeSpanAndAnnotation: this.completeSpan,
               }
             }
           }
         }
 
-        // else, add into span buffer
-        this.#draftBuffer.push(spanAndAnnotation)
         return undefined
       },
 
@@ -1241,30 +1247,14 @@ export class Trace<
         transition.transitionToState === 'interrupted' ||
         transition.transitionToState === 'complete'
       ) {
-        const endOfOperationSpan =
-          (transition.transitionToState === 'complete' &&
-            (transition.cpuIdleSpanAndAnnotation ??
-              transition.completeSpanAndAnnotation)) ||
-          lastRelevantSpanAndAnnotation
-
         const traceRecording = createTraceRecording(
           {
             definition: this.definition,
-            // only keep items captured until the endOfOperationSpan
-            recordedItems: endOfOperationSpan
-              ? new Set(
-                  [...this.recordedItems].filter(
-                    (item) =>
-                      item.span.startTime.now + item.span.duration <=
-                      endOfOperationSpan.span.startTime.now +
-                        endOfOperationSpan.span.duration,
-                  ),
-                )
-              : this.recordedItems,
+            recordedItems: this.recordedItems,
             input: this.input,
             recordedItemsByLabel: this.recordedItemsByLabel,
           },
-          transition,
+          { ...transition, lastRelevantSpanAndAnnotation },
         )
         this.onEnd(traceRecording)
 
