@@ -63,6 +63,9 @@ describe('recordingComputeUtils', () => {
           transitionFromState: 'active',
           lastRelevantSpanAndAnnotation: undefined,
           transitionToState: 'complete',
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
         },
       )
 
@@ -100,6 +103,9 @@ describe('recordingComputeUtils', () => {
           transitionFromState: 'active',
           lastRelevantSpanAndAnnotation: undefined,
           transitionToState: 'complete',
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
         },
       )
 
@@ -139,6 +145,9 @@ describe('recordingComputeUtils', () => {
           transitionFromState: 'active',
           lastRelevantSpanAndAnnotation: undefined,
           transitionToState: 'complete',
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
         },
       )
 
@@ -693,6 +702,9 @@ describe('recordingComputeUtils', () => {
           transitionFromState: 'active',
           transitionToState: 'complete',
           lastRelevantSpanAndAnnotation: undefined,
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
         },
       )
 
@@ -730,6 +742,9 @@ describe('recordingComputeUtils', () => {
           transitionFromState: 'active',
           transitionToState: 'complete',
           lastRelevantSpanAndAnnotation: undefined,
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
         },
       )
 

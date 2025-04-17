@@ -752,8 +752,6 @@ function DefinitionChip({
   )
 }
 
-// No longer needed - will directly use definition property
-
 // RequiredSpansList component to display required spans
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function RequiredSpansList<RelationSchemasT>({
@@ -903,7 +901,7 @@ function TraceItem<
               onClick={handleDownloadClick}
               title="Download trace recording as JSON"
             >
-              <span style={styles.downloadIcon}>⬇</span>
+              <span style={styles.downloadIcon}>🔽 JSON</span>
             </button>
           )}
           {/* Error indicator */}
@@ -1108,20 +1106,25 @@ function TraceItem<
   )
 }
 
+export interface TraceManagerDebuggerProps<
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
+> {
+  traceManager: TraceManager<RelationSchemasT>
+  float?: boolean
+  traceHistoryLimit?: number
+}
+
 /**
  * A component that visualizes the current state of the TraceManager and its Traces
  */
-export function TraceManagerDebugger<
+// eslint-disable-next-line import/no-default-export
+export default function TraceManagerDebugger<
   RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
 >({
   traceManager,
   float = false,
   traceHistoryLimit = TRACE_HISTORY_LIMIT,
-}: {
-  traceManager: TraceManager<RelationSchemasT>
-  float?: boolean
-  traceHistoryLimit?: number
-}) {
+}: TraceManagerDebuggerProps<RelationSchemasT>) {
   const [currentTrace, setCurrentTrace] =
     useState<TraceInfo<RelationSchemasT> | null>(null)
   const [traceHistory, setTraceHistory] = useState<
