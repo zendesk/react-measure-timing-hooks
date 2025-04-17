@@ -1,10 +1,16 @@
+import {
+  DEFAULT_DEBOUNCE_DURATION,
+  DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
+} from './constants'
 import type {
   AllPossibleRequiredSpanSeenEvents,
   AllPossibleStateTransitionEvents,
   AllPossibleTraceStartEvents,
 } from './debugTypes'
+import { isSuppressedError } from './debugUtils'
 import type { SpanMatcherFn } from './matchSpan'
-import type { OnEnterStatePayload } from './Trace'
+import { createTraceRecording } from './recordingComputeUtils'
+import type { FinalTransition, OnEnterStatePayload } from './Trace'
 import { isTerminalState } from './Trace'
 import type { TraceManager } from './TraceManager'
 import type { DraftTraceContext, RelationSchemasBase } from './types'
@@ -245,6 +251,13 @@ export function createConsoleTraceLogger<
   // Store subscriptions for cleanup
   const subscriptions: { unsubscribe: () => void }[] = []
 
+  // Track live info for active trace
+  let liveDuration = 0
+  let totalSpanCount = 0
+  let hasErrorSpan = false
+  let hasSuppressedErrorSpan = false
+  let definitionModifications: unknown[] = []
+
   // --- Helper Functions ---
 
   /** Apply color codes if enabled */
@@ -460,6 +473,33 @@ export function createConsoleTraceLogger<
       )
     }
     log(`   Required spans: ${requiredSpans.length}`)
+    // Log config summary
+    const variantConfig = trace.definition.variants[trace.input.variant]
+    const timeout = variantConfig?.timeout
+    const debounce =
+      trace.definition.debounceWindow ?? DEFAULT_DEBOUNCE_DURATION
+    const interactive =
+      typeof trace.definition.captureInteractive === 'object'
+        ? trace.definition.captureInteractive.timeout
+        : trace.definition.captureInteractive
+        ? DEFAULT_INTERACTIVE_TIMEOUT_DURATION
+        : undefined
+    log(
+      `   Config: Timeout=${timeout}ms, Debounce=${debounce}ms${
+        interactive ? `, Interactive=${interactive}ms` : ''
+      }`,
+    )
+    // Log computed definitions
+    const computedSpans = Object.keys(
+      trace.definition.computedSpanDefinitions ?? {},
+    )
+    const computedValues = Object.keys(
+      trace.definition.computedValueDefinitions ?? {},
+    )
+    if (computedSpans.length > 0)
+      log(`   Computed Spans: ${computedSpans.join(', ')}`)
+    if (computedValues.length > 0)
+      log(`   Computed Values: ${computedValues.join(', ')}`)
     log('', 'groupEnd') // Close the initial group immediately
   }
 
@@ -477,6 +517,19 @@ export function createConsoleTraceLogger<
     const traceState = transition.transitionToState
 
     const groupLevel = options.verbose ? 'group' : 'groupCollapsed'
+    // Add live duration, span count, and error indicator
+    const liveInfo = [
+      liveDuration ? `(+${liveDuration}ms elapsed)` : '',
+      totalSpanCount ? `(Spans: ${totalSpanCount})` : '',
+      hasErrorSpan
+        ? colorize('❗', RED)
+        : hasSuppressedErrorSpan
+        ? colorize('❗(suppressed)', RED)
+        : '',
+      definitionModifications.length > 0 ? colorize('🔧', MAGENTA) : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
     log(
       `${colorize(
         '↪️ Trace',
@@ -484,7 +537,7 @@ export function createConsoleTraceLogger<
       )} ${traceName} state changed: ${previousState} → ${colorize(
         traceState,
         CYAN,
-      )}`,
+      )} ${liveInfo}`,
       groupLevel,
     )
 
@@ -495,6 +548,28 @@ export function createConsoleTraceLogger<
       if (traceState === 'complete') {
         log(`${colorize('✅ Trace', GREEN)} ${traceName} complete`)
         logTimingInfo(transition)
+        // Log computed values and spans
+        try {
+          const rec = createTraceRecording(trace, transition)
+          const computedVals = rec.computedValues
+          const { computedSpans } = rec
+          if (computedVals && Object.keys(computedVals).length > 0) {
+            log(
+              `   Computed Values: ${Object.entries(computedVals)
+                .map(([k, v]) => `${k}=${v}`)
+                .join(', ')}`,
+            )
+          }
+          if (computedSpans && Object.keys(computedSpans).length > 0) {
+            log(
+              `   Computed Spans: ${Object.entries(computedSpans)
+                .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+                .join(', ')}`,
+            )
+          }
+        } catch {
+          // ignore
+        }
       } else {
         // interrupted
         const reason = (
@@ -510,8 +585,38 @@ export function createConsoleTraceLogger<
           )})`,
         )
         logTimingInfo(transition)
+        // Log computed values and spans
+        try {
+          const rec = createTraceRecording(
+            trace,
+            transition as FinalTransition<RelationSchemasT>,
+          )
+          const computedVals = rec.computedValues
+          const { computedSpans } = rec
+          if (computedVals && Object.keys(computedVals).length > 0) {
+            log(
+              `   Computed Values: ${Object.entries(computedVals)
+                .map(([k, v]) => `${k}=${v}`)
+                .join(', ')}`,
+            )
+          }
+          if (computedSpans && Object.keys(computedSpans).length > 0) {
+            log(
+              `   Computed Spans: ${Object.entries(computedSpans)
+                .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+                .join(', ')}`,
+            )
+          }
+        } catch {
+          // ignore
+        }
       }
       currentTraceInfo = null // Clear trace info on terminal state
+      liveDuration = 0
+      totalSpanCount = 0
+      hasErrorSpan = false
+      hasSuppressedErrorSpan = false
+      definitionModifications = []
     }
 
     log('', 'groupEnd') // End the group for this transition
@@ -602,6 +707,58 @@ export function createConsoleTraceLogger<
     .when('required-span-seen')
     .subscribe(handleRequiredSpanSeen)
   subscriptions.push(spanSeenSubscription)
+
+  // Subscribe to add-span-to-recording events for live updates
+  const addSpanSub = traceManager
+    .when('add-span-to-recording')
+    .subscribe((event) => {
+      if (!currentTraceInfo) return
+      // Calculate live info from traceContext
+      const trace = event.traceContext
+      const entries = [
+        ...(trace.recordedItems.values
+          ? trace.recordedItems.values()
+          : trace.recordedItems),
+      ]
+      liveDuration =
+        entries.length > 0
+          ? Math.round(
+              Math.max(
+                ...entries.map((e) => e.span.startTime.epoch + e.span.duration),
+              ) - trace.input.startTime.epoch,
+            )
+          : 0
+      totalSpanCount = entries.length
+      hasErrorSpan = entries.some(
+        (e) => e.span.status === 'error' && !isSuppressedError(trace, e),
+      )
+      hasSuppressedErrorSpan = entries.some(
+        (e) => e.span.status === 'error' && isSuppressedError(trace, e),
+      )
+      // Log error if this span is error
+      if (event.spanAndAnnotation.span.status === 'error') {
+        const suppressed = isSuppressedError(trace, event.spanAndAnnotation)
+        log(
+          `${colorize('❗ Error span', RED)} '${
+            event.spanAndAnnotation.span.name
+          }' seen${suppressed ? ' (suppressed)' : ''}`,
+        )
+      }
+    })
+  subscriptions.push(addSpanSub)
+
+  // Subscribe to definition-modified events
+  const defModSub = traceManager
+    .when('definition-modified')
+    .subscribe((event) => {
+      definitionModifications.push(event.modifications)
+      log(
+        `${colorize('🔧 Definition modified', MAGENTA)}: ${Object.keys(
+          event.modifications,
+        ).join(', ')}`,
+      )
+    })
+  subscriptions.push(defModSub)
 
   // Return API for the logger
   return {

@@ -1,7 +1,42 @@
 import type { SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { OnEnterStatePayload } from './Trace'
-import type { DraftTraceContext, RelationSchemasBase } from './types'
+import type {
+  DraftTraceContext,
+  RelationSchemasBase,
+  TraceDefinitionModifications,
+} from './types'
+
+// Types for debugging/monitoring events
+export interface AddSpanToRecordingEvent<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+> {
+  spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>
+  traceContext: DraftTraceContext<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >
+}
+
+export interface DefinitionModifiedEvent<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+> {
+  modifications: TraceDefinitionModifications<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >
+  traceContext: DraftTraceContext<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >
+}
 
 export interface TraceStartEvent<
   SelectedRelationNameT extends keyof RelationSchemasT,
@@ -64,6 +99,26 @@ export type AllPossibleRequiredSpanSeenEvents<
   RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
 > = {
   [SelectedRelationNameT in keyof RelationSchemasT]: RequiredSpanSeenEvent<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    string
+  >
+}[keyof RelationSchemasT]
+
+export type AllPossibleAddSpanToRecordingEvents<
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
+> = {
+  [SelectedRelationNameT in keyof RelationSchemasT]: AddSpanToRecordingEvent<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    string
+  >
+}[keyof RelationSchemasT]
+
+export type AllPossibleDefinitionModifiedEvents<
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
+> = {
+  [SelectedRelationNameT in keyof RelationSchemasT]: DefinitionModifiedEvent<
     SelectedRelationNameT,
     RelationSchemasT,
     string
