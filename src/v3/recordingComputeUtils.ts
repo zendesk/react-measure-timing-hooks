@@ -379,7 +379,6 @@ export function createTraceRecording<
 >(
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
   {
-    transitionFromState,
     transitionToState,
     interruptionReason,
     cpuIdleSpanAndAnnotation,
