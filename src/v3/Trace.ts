@@ -1248,6 +1248,8 @@ export class Trace<
         transition.transitionToState === 'complete'
       ) {
         const traceRecording = createTraceRecording(
+          // we don't want to pass 'this' but select the relevant properties
+          // to avoid circular references
           {
             definition: this.definition,
             recordedItems: this.recordedItems,
@@ -1259,9 +1261,11 @@ export class Trace<
         this.onEnd(traceRecording)
 
         // memory clean-up in case something retains the Trace instance
-        this.recordedItems.clear()
-        this.occurrenceCounters.clear()
+        this.recordedItems = new Set()
+        this.occurrenceCounters = new Map()
         this.processedPerformanceEntries = new WeakMap()
+        // @ts-expect-error memory cleanup force override the otherwise readonly property
+        this.recordedItemsByLabel = {}
         this.traceUtilities.performanceEntryDeduplicationStrategy?.reset()
       }
     },
