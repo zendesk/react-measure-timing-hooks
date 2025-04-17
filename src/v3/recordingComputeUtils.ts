@@ -378,18 +378,25 @@ export function createTraceRecording<
   const VariantsT extends string,
 >(
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
-  {
+  transition: FinalTransition<RelationSchemasT>,
+): TraceRecording<SelectedRelationNameT, RelationSchemasT> {
+  const { definition, recordedItems, input } = context
+  const { id, relatedTo, variant } = input
+  const { name } = definition
+
+  const {
     transitionToState,
     interruptionReason,
     cpuIdleSpanAndAnnotation,
     completeSpanAndAnnotation,
     lastRequiredSpanAndAnnotation,
     lastRelevantSpanAndAnnotation,
-  }: FinalTransition<RelationSchemasT>,
-): TraceRecording<SelectedRelationNameT, RelationSchemasT> {
-  const { definition, recordedItems, input } = context
-  const { id, relatedTo, variant } = input
-  const { name } = definition
+  } = {
+    cpuIdleSpanAndAnnotation: undefined,
+    completeSpanAndAnnotation: undefined,
+    lastRequiredSpanAndAnnotation: undefined,
+    ...transition,
+  }
 
   const endOfOperationSpan =
     (transitionToState === 'complete' &&

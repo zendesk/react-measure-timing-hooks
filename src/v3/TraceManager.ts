@@ -1,6 +1,8 @@
 import type { Observable } from 'rxjs'
 import { Subject } from 'rxjs'
 import type {
+  AllPossibleAddSpanToRecordingEvents,
+  AllPossibleDefinitionModifiedEvents,
   AllPossibleRequiredSpanSeenEvents,
   AllPossibleStateTransitionEvents,
   AllPossibleTraceStartEvents,
@@ -47,6 +49,12 @@ export class TraceManager<
     >(),
     'required-span-seen': new Subject<
       AllPossibleRequiredSpanSeenEvents<RelationSchemasT>
+    >(),
+    'add-span-to-recording': new Subject<
+      AllPossibleAddSpanToRecordingEvents<RelationSchemasT>
+    >(),
+    'definition-modified': new Subject<
+      AllPossibleDefinitionModifiedEvents<RelationSchemasT>
     >(),
   }
 
@@ -105,6 +113,16 @@ export class TraceManager<
     trace.when('required-span-seen').subscribe((event) => {
       this.eventSubjects['required-span-seen'].next(event)
     })
+
+    // Forward add-span-to-recording events
+    if ('when' in trace) {
+      trace.when('add-span-to-recording').subscribe((event) => {
+        this.eventSubjects['add-span-to-recording'].next(event)
+      })
+      trace.when('definition-modified').subscribe((event) => {
+        this.eventSubjects['definition-modified'].next(event)
+      })
+    }
   }
 
   /**
@@ -121,12 +139,26 @@ export class TraceManager<
   when(
     event: 'required-span-seen',
   ): Observable<AllPossibleRequiredSpanSeenEvents<RelationSchemasT>>
+  // New events
   when(
-    event: 'required-span-seen' | 'trace-start' | 'state-transition',
+    event: 'add-span-to-recording',
+  ): Observable<AllPossibleAddSpanToRecordingEvents<RelationSchemasT>>
+  when(
+    event: 'definition-modified',
+  ): Observable<AllPossibleDefinitionModifiedEvents<RelationSchemasT>>
+  when(
+    event:
+      | 'required-span-seen'
+      | 'trace-start'
+      | 'state-transition'
+      | 'add-span-to-recording'
+      | 'definition-modified',
   ):
     | Observable<AllPossibleTraceStartEvents<RelationSchemasT>>
     | Observable<AllPossibleStateTransitionEvents<RelationSchemasT>>
-    | Observable<AllPossibleRequiredSpanSeenEvents<RelationSchemasT>> {
+    | Observable<AllPossibleRequiredSpanSeenEvents<RelationSchemasT>>
+    | Observable<AllPossibleAddSpanToRecordingEvents<RelationSchemasT>>
+    | Observable<AllPossibleDefinitionModifiedEvents<RelationSchemasT>> {
     return this.eventSubjects[event].asObservable()
   }
 
