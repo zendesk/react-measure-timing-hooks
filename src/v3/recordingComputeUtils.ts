@@ -3,7 +3,7 @@ import { ensureMatcherFnOrSpecialToken } from './ensureMatcherFn'
 import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
-import type { FinalState } from './Trace'
+import type { FinalState, FinalTransition } from './Trace'
 import type { TraceRecording } from './traceRecordingTypes'
 import type { SpecialEndToken, SpecialStartToken, TraceContext } from './types'
 
@@ -223,7 +223,7 @@ function getComputedRenderBeaconSpans<
   RelationSchemasT,
   const VariantsT extends string,
 >(
-  recordedItems: ReadonlySet<SpanAndAnnotation<RelationSchemasT>>,
+  recordedItems: readonly SpanAndAnnotation<RelationSchemasT>[],
   input: ActiveTraceInput<RelationSchemasT[SelectedRelationNameT], VariantsT>,
 ): TraceRecording<
   SelectedRelationNameT,
@@ -380,18 +380,35 @@ export function createTraceRecording<
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
   {
     transitionFromState,
+    transitionToState,
     interruptionReason,
     cpuIdleSpanAndAnnotation,
     completeSpanAndAnnotation,
     lastRequiredSpanAndAnnotation,
-  }: FinalState<RelationSchemasT>,
+    lastRelevantSpanAndAnnotation,
+  }: FinalTransition<RelationSchemasT>,
 ): TraceRecording<SelectedRelationNameT, RelationSchemasT> {
   const { definition, recordedItems, input } = context
   const { id, relatedTo, variant } = input
   const { name } = definition
+
+  const endOfOperationSpan =
+    (transitionToState === 'complete' &&
+      (cpuIdleSpanAndAnnotation ?? completeSpanAndAnnotation)) ||
+    lastRelevantSpanAndAnnotation
+
+  // only keep items captured until the endOfOperationSpan or if not available, the lastRelevantSpan
+  const recordedItemsArray = endOfOperationSpan
+    ? [...recordedItems].filter(
+        (item) =>
+          item.span.startTime.now + item.span.duration <=
+          endOfOperationSpan.span.startTime.now +
+            endOfOperationSpan.span.duration,
+      )
+    : [...recordedItems.values()]
+
   // CODE CLEAN UP TODO: let's get this information (wasInterrupted) from up top (in FinalState)
-  const wasInterrupted =
-    interruptionReason && transitionFromState !== 'waiting-for-interactive'
+  const wasInterrupted = transitionToState === 'interrupted'
   const computedSpans = !wasInterrupted
     ? getComputedSpans(context, {
         completeSpanAndAnnotation,
@@ -401,10 +418,8 @@ export function createTraceRecording<
   const computedValues = !wasInterrupted ? getComputedValues(context) : {}
   const computedRenderBeaconSpans =
     !wasInterrupted && isActiveTraceInput(input)
-      ? getComputedRenderBeaconSpans(recordedItems, input)
+      ? getComputedRenderBeaconSpans(recordedItemsArray, input)
       : {}
-
-  const recordedItemsArray = [...recordedItems.values()]
 
   const anyNonSuppressedErrors = recordedItemsArray.some(
     (spanAndAnnotation) =>

@@ -155,6 +155,8 @@ describe('recordingComputeUtils', () => {
         {
           transitionFromState: 'active',
           interruptionReason: 'timeout',
+          transitionToState: 'interrupted',
+          lastRelevantSpanAndAnnotation: undefined,
         },
       )
 
@@ -675,7 +677,11 @@ describe('recordingComputeUtils', () => {
           },
           recordedItemsByLabel: {},
         },
-        { transitionFromState: 'active' },
+        {
+          transitionFromState: 'active',
+          transitionToState: 'complete',
+          lastRelevantSpanAndAnnotation: undefined,
+        },
       )
 
       expect(recording.computedRenderBeaconSpans['test-component']).toEqual({
@@ -708,7 +714,11 @@ describe('recordingComputeUtils', () => {
           },
           recordedItemsByLabel: {},
         },
-        { transitionFromState: 'active' },
+        {
+          transitionFromState: 'active',
+          transitionToState: 'complete',
+          lastRelevantSpanAndAnnotation: undefined,
+        },
       )
 
       // Verify the variant is included in the recording
