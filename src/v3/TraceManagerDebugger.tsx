@@ -1162,6 +1162,9 @@ export default function TraceManagerDebugger<
   }, [float, isDragging, dragOffset])
 
   useEffect(() => {
+    // schedule updates asynchronously so we never call setState mid‐render
+    const schedule = (fn: () => void) => void setTimeout(fn, 0)
+
     // Subscribe to trace-start events
     const startSub = traceManager.when('trace-start').subscribe((event) => {
       const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
@@ -1208,7 +1211,7 @@ export default function TraceManagerDebugger<
         ),
       }
 
-      setCurrentTrace(traceInfo)
+      schedule(() => void setCurrentTrace(traceInfo))
     })
 
     // Subscribe to state transition events
@@ -1218,62 +1221,65 @@ export default function TraceManagerDebugger<
         const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
         const transition = event.stateTransition
 
-        setCurrentTrace((prevTrace) => {
-          if (!prevTrace || prevTrace.traceId !== trace.input.id)
-            return prevTrace
+        schedule(
+          () =>
+            void setCurrentTrace((prevTrace) => {
+              if (!prevTrace || prevTrace.traceId !== trace.input.id)
+                return prevTrace
 
-          const updatedTrace: TraceInfo<RelationSchemasT> = {
-            ...prevTrace,
-            state: transition.transitionToState,
-            attributes: trace.input.attributes
-              ? { ...trace.input.attributes }
-              : undefined,
-            relatedTo: trace.input.relatedTo
-              ? { ...trace.input.relatedTo }
-              : undefined,
-          }
+              const updatedTrace: TraceInfo<RelationSchemasT> = {
+                ...prevTrace,
+                state: transition.transitionToState,
+                attributes: trace.input.attributes
+                  ? { ...trace.input.attributes }
+                  : undefined,
+                relatedTo: trace.input.relatedTo
+                  ? { ...trace.input.relatedTo }
+                  : undefined,
+              }
 
-          if ('interruptionReason' in transition) {
-            updatedTrace.interruptionReason = transition.interruptionReason
-          }
+              if ('interruptionReason' in transition) {
+                updatedTrace.interruptionReason = transition.interruptionReason
+              }
 
-          if (
-            'lastRequiredSpanAndAnnotation' in transition &&
-            transition.lastRequiredSpanAndAnnotation
-          ) {
-            updatedTrace.lastRequiredSpanOffset =
-              transition.lastRequiredSpanAndAnnotation.annotation.operationRelativeEndTime
-          }
+              if (
+                'lastRequiredSpanAndAnnotation' in transition &&
+                transition.lastRequiredSpanAndAnnotation
+              ) {
+                updatedTrace.lastRequiredSpanOffset =
+                  transition.lastRequiredSpanAndAnnotation.annotation.operationRelativeEndTime
+              }
 
-          if (
-            'completeSpanAndAnnotation' in transition &&
-            transition.completeSpanAndAnnotation
-          ) {
-            updatedTrace.completeSpanOffset =
-              transition.completeSpanAndAnnotation.annotation.operationRelativeEndTime
-          }
+              if (
+                'completeSpanAndAnnotation' in transition &&
+                transition.completeSpanAndAnnotation
+              ) {
+                updatedTrace.completeSpanOffset =
+                  transition.completeSpanAndAnnotation.annotation.operationRelativeEndTime
+              }
 
-          if (
-            'cpuIdleSpanAndAnnotation' in transition &&
-            transition.cpuIdleSpanAndAnnotation
-          ) {
-            updatedTrace.cpuIdleSpanOffset =
-              transition.cpuIdleSpanAndAnnotation.annotation.operationRelativeEndTime
-          }
+              if (
+                'cpuIdleSpanAndAnnotation' in transition &&
+                transition.cpuIdleSpanAndAnnotation
+              ) {
+                updatedTrace.cpuIdleSpanOffset =
+                  transition.cpuIdleSpanAndAnnotation.annotation.operationRelativeEndTime
+              }
 
-          // Terminal states - add to history
-          if (isTerminalState(transition.transitionToState)) {
-            setTraceHistory((prev) => {
-              updatedTrace.finalTransition =
-                transition as FinalTransition<RelationSchemasT>
-              const newHistory = [updatedTrace, ...prev]
-              return newHistory.slice(0, traceHistoryLimit)
-            })
-            return null
-          }
+              // Terminal states - add to history
+              if (isTerminalState(transition.transitionToState)) {
+                setTraceHistory((prev) => {
+                  updatedTrace.finalTransition =
+                    transition as FinalTransition<RelationSchemasT>
+                  const newHistory = [updatedTrace, ...prev]
+                  return newHistory.slice(0, traceHistoryLimit)
+                })
+                return null
+              }
 
-          return updatedTrace
-        })
+              return updatedTrace
+            }),
+        )
       })
 
     // Subscribe to required span seen events
@@ -1282,28 +1288,31 @@ export default function TraceManagerDebugger<
       .subscribe((event) => {
         const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
 
-        setCurrentTrace((prevTrace) => {
-          if (!prevTrace || prevTrace.traceId !== trace.input.id) {
-            return prevTrace
-          }
-          // Find which required span was matched by comparing against all matchers
-          const updatedRequiredSpans = [...prevTrace.requiredSpans]
-          const matchedSpan = event.spanAndAnnotation
-
-          trace.definition.requiredSpans.forEach((matcher, index) => {
-            if (matcher(matchedSpan, trace)) {
-              updatedRequiredSpans[index] = {
-                ...updatedRequiredSpans[index]!,
-                isMatched: true,
+        schedule(
+          () =>
+            void setCurrentTrace((prevTrace) => {
+              if (!prevTrace || prevTrace.traceId !== trace.input.id) {
+                return prevTrace
               }
-            }
-          })
+              // Find which required span was matched by comparing against all matchers
+              const updatedRequiredSpans = [...prevTrace.requiredSpans]
+              const matchedSpan = event.spanAndAnnotation
 
-          return {
-            ...prevTrace,
-            requiredSpans: updatedRequiredSpans,
-          }
-        })
+              trace.definition.requiredSpans.forEach((matcher, index) => {
+                if (matcher(matchedSpan, trace)) {
+                  updatedRequiredSpans[index] = {
+                    ...updatedRequiredSpans[index]!,
+                    isMatched: true,
+                  }
+                }
+              })
+
+              return {
+                ...prevTrace,
+                requiredSpans: updatedRequiredSpans,
+              }
+            }),
+        )
       })
 
     const entries: SpanAndAnnotation<RelationSchemasT>[] = []
@@ -1312,58 +1321,65 @@ export default function TraceManagerDebugger<
     const addSpanSub = traceManager
       .when('add-span-to-recording')
       .subscribe((event) => {
-        setCurrentTrace((prevTrace) => {
-          if (!prevTrace) return prevTrace
-          if (event.traceContext.input.id !== prevTrace.traceId) {
-            return prevTrace
-          }
-          // Calculate live info from traceContext
-          const trace = event.traceContext
-          entries.push(event.spanAndAnnotation)
+        schedule(
+          () =>
+            void setCurrentTrace((prevTrace) => {
+              if (!prevTrace) return prevTrace
+              if (event.traceContext.input.id !== prevTrace.traceId) {
+                return prevTrace
+              }
+              // Calculate live info from traceContext
+              const trace = event.traceContext
+              entries.push(event.spanAndAnnotation)
 
-          const liveDuration =
-            entries.length > 0
-              ? Math.round(
-                  Math.max(
-                    ...entries.map(
-                      (e) => e.span.startTime.epoch + e.span.duration,
-                    ),
-                  ) - trace.input.startTime.epoch,
-                )
-              : 0
-          const totalSpanCount = entries.length
-          const hasErrorSpan = entries.some(
-            (e) => e.span.status === 'error' && !isSuppressedError(trace, e),
-          )
-          const hasSuppressedErrorSpan = entries.some(
-            (e) => e.span.status === 'error' && isSuppressedError(trace, e),
-          )
-          return {
-            ...prevTrace,
-            liveDuration,
-            totalSpanCount,
-            hasErrorSpan,
-            hasSuppressedErrorSpan,
-          }
-        })
+              const liveDuration =
+                entries.length > 0
+                  ? Math.round(
+                      Math.max(
+                        ...entries.map(
+                          (e) => e.span.startTime.epoch + e.span.duration,
+                        ),
+                      ) - trace.input.startTime.epoch,
+                    )
+                  : 0
+              const totalSpanCount = entries.length
+              const hasErrorSpan = entries.some(
+                (e) =>
+                  e.span.status === 'error' && !isSuppressedError(trace, e),
+              )
+              const hasSuppressedErrorSpan = entries.some(
+                (e) => e.span.status === 'error' && isSuppressedError(trace, e),
+              )
+              return {
+                ...prevTrace,
+                liveDuration,
+                totalSpanCount,
+                hasErrorSpan,
+                hasSuppressedErrorSpan,
+              }
+            }),
+        )
       })
 
     // Subscribe to definition-modified for modification indicator
     const defModSub = traceManager
       .when('definition-modified')
       .subscribe((event) => {
-        setCurrentTrace((prevTrace) => {
-          if (!prevTrace) return prevTrace
-          if (event.traceContext.input.id !== prevTrace.traceId)
-            return prevTrace
-          return {
-            ...prevTrace,
-            definitionModifications: [
-              ...(prevTrace.definitionModifications ?? []),
-              event.modifications,
-            ],
-          }
-        })
+        schedule(
+          () =>
+            void setCurrentTrace((prevTrace) => {
+              if (!prevTrace) return prevTrace
+              if (event.traceContext.input.id !== prevTrace.traceId)
+                return prevTrace
+              return {
+                ...prevTrace,
+                definitionModifications: [
+                  ...(prevTrace.definitionModifications ?? []),
+                  event.modifications,
+                ],
+              }
+            }),
+        )
       })
 
     return () => {
