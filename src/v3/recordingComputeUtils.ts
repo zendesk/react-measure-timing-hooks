@@ -3,7 +3,7 @@ import { ensureMatcherFnOrSpecialToken } from './ensureMatcherFn'
 import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
-import type { FinalState, FinalTransition } from './Trace'
+import type { FinalTransition } from './Trace'
 import type { TraceRecording } from './traceRecordingTypes'
 import type { SpecialEndToken, SpecialStartToken, TraceContext } from './types'
 
