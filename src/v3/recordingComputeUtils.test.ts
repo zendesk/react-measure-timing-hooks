@@ -59,7 +59,11 @@ describe('recordingComputeUtils', () => {
           },
           recordedItemsByLabel: {},
         },
-        { transitionFromState: 'active' },
+        {
+          transitionFromState: 'active',
+          lastRelevantSpanAndAnnotation: undefined,
+          transitionToState: 'complete',
+        },
       )
 
       expect(recording.status).toBe('error')
@@ -92,7 +96,11 @@ describe('recordingComputeUtils', () => {
           },
           recordedItemsByLabel: {},
         },
-        { transitionFromState: 'active' },
+        {
+          transitionFromState: 'active',
+          lastRelevantSpanAndAnnotation: undefined,
+          transitionToState: 'complete',
+        },
       )
 
       expect(recording.status).toBe('ok')
@@ -127,7 +135,11 @@ describe('recordingComputeUtils', () => {
           },
           recordedItemsByLabel: {},
         },
-        { transitionFromState: 'active' },
+        {
+          transitionFromState: 'active',
+          lastRelevantSpanAndAnnotation: undefined,
+          transitionToState: 'complete',
+        },
       )
 
       expect(recording.status).toBe('error')
