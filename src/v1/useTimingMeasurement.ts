@@ -7,8 +7,8 @@
 
 import type { DependencyList } from 'react'
 import { useEffect, useRef } from 'react'
+import { useOnErrorBoundaryDidCatch } from '../ErrorBoundary'
 import { ACTION_TYPE, DEFAULT_STAGES } from './constants'
-import { useOnErrorBoundaryDidCatch } from './ErrorBoundary'
 import { performanceMark, performanceMeasure } from './performanceMark'
 import type { UseTimingMeasurementHookConfiguration } from './types'
 

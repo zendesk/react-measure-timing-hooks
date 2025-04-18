@@ -1,4 +1,4 @@
-import { adjustTimestampBy } from '../ensureTimestamp'
+import { adjustTimestampBy } from '../v3/ensureTimestamp'
 import type { SupportedSpanTypes } from './constants'
 import type { MappedSpanAndAnnotation, RecordingInputFile } from './types'
 

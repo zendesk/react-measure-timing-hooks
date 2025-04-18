@@ -5,29 +5,29 @@
  * found at http://www.apache.org/licenses/LICENSE-2.0.
  */
 
-export { ActionLog } from './ActionLog'
-export type { ActionLogRef } from './ActionLogCache'
-export { ActionLogCache } from './ActionLogCache'
-export * from './constants'
-export type { Report } from './generateReport'
-export { generateReport } from './generateReport'
-export { generateTimingHooks } from './generateTimingHooks'
-export { getExternalApi } from './getExternalApi'
-export * from './types'
-export { useActionLog } from './useActionLog'
-export { useTiming } from './useTiming'
-export { useTimingMeasurement } from './useTimingMeasurement'
+export { ActionLog } from './v1/ActionLog'
+export type { ActionLogRef } from './v1/ActionLogCache'
+export { ActionLogCache } from './v1/ActionLogCache'
+export * from './v1/constants'
+export type { Report } from './v1/generateReport'
+export { generateReport } from './v1/generateReport'
+export { generateTimingHooks } from './v1/generateTimingHooks'
+export { getExternalApi } from './v1/getExternalApi'
+export * from './v1/types'
+export { useActionLog } from './v1/useActionLog'
+export { useTiming } from './v1/useTiming'
+export { useTimingMeasurement } from './v1/useTimingMeasurement'
 
 // utils
-export type { DebounceOptionsRef } from './debounce'
-export { debounce } from './debounce'
 export {
   ReactMeasureErrorBoundary,
   useOnErrorBoundaryDidCatch,
 } from './ErrorBoundary'
-export { performanceMark, performanceMeasure } from './performanceMark'
-export { switchFn } from './switchFn'
-export { getCurrentBrowserSupportForNonResponsiveStateDetection } from './utilities'
+export type { DebounceOptionsRef } from './v1/debounce'
+export { debounce } from './v1/debounce'
+export { performanceMark, performanceMeasure } from './v1/performanceMark'
+export { switchFn } from './v1/switchFn'
+export { getCurrentBrowserSupportForNonResponsiveStateDetection } from './v1/utilities'
 
 // v3
 export * from './v3/constants'
