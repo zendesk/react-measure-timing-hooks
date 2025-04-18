@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import React, { useEffect } from 'react'
 import type { Meta, StoryObj } from '@storybook/react'
 import { createConsoleTraceLogger } from '../../v3/ConsoleTraceLogger'
@@ -50,13 +51,6 @@ export const WithConsoleTraceLogger: Story = {
         'ConsoleTraceLogger is active. Open your browser console to see trace events. ' +
           'Try clicking on tickets to see trace events logged in real-time.',
       )
-
-      // Example of custom logger function if needed
-      // consoleLogger.setOptions({
-      //   logFn: (message) => {
-      //     console.log(`%c${message}`, 'color: blue');
-      //   }
-      // });
 
       // Clean up the logger when the component unmounts
       return () => {
