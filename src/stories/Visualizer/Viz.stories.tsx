@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import { useScreenSize } from '@visx/responsive'
 import OperationVisualizer, {
   type OperationVisualizerProps,
-} from '../../v3/visualizer'
+} from '../../visualizer'
 
 export const OperationVisualizerStory: StoryObj<OperationVisualizerProps> = {
   render: () => {

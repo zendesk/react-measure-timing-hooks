@@ -123,12 +123,12 @@ metrics are:
   render, to the end of the last render (of the desired final stage), after which no more re-renders
   had occured during the specified debounce period.
 
-![Understanding useTiming hook](./docs/useTiming.png)
+![Understanding useTiming hook](../../docs/useTiming.png)
 
 <!-- NOTE: if you need to update the diagram, the PNG file contains an embedded source file that can be opened by excalidraw.com -->
 
 The full report includes individual stage timings and re-render counts. See the
-[`Report`](./src/generateReport.ts)'s interface to see what data is available.
+[`Report`](../v1/generateReport.ts)'s interface to see what data is available.
 
 The `reportFn` may also be overriden at the call-site of the hook itself (i.e. in the component
 render function).
