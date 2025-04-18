@@ -58,6 +58,7 @@ export function getConfigSummary<
 
 // Helper to get computed values/spans for completed/interrupted traces
 export function getComputedResults<RelationSchemasT>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   traceContext: TraceContext<any, RelationSchemasT, any>,
   finalTransition: FinalTransition<RelationSchemasT>,
 ) {
