@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { IGardenTheme } from '@zendeskgarden/react-theming'
-import type { SpanAnnotation } from '../spanAnnotationTypes'
-import type { Attributes, Span, SpanBase } from '../spanTypes'
-import type { TraceRecording } from '../traceRecordingTypes'
-import type { Timestamp } from '../types'
+import type { SpanAnnotation } from '../v3/spanAnnotationTypes'
+import type { Attributes, Span, SpanBase } from '../v3/spanTypes'
+import type { TraceRecording } from '../v3/traceRecordingTypes'
+import type { Timestamp } from '../v3/types'
 import type { SupportedSpanTypes } from './constants'
 
 type DistributiveOmit<T, K extends keyof any> = T extends T ? Omit<T, K> : never

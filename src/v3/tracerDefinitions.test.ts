@@ -326,7 +326,6 @@ describe('Trace Definitions', () => {
         },
         computedValueDefinitions: {
           'feature-count': {
-            // @ts-expect-error TODO: broken inference
             matches: [match.withName('feature'), match.withName('feature-2')],
             computeValueFromMatches: (feature, feature2) =>
               // @ts-expect-error unexpected TS error
@@ -334,7 +333,6 @@ describe('Trace Definitions', () => {
               feature.length + feature2.length,
           },
           'error-count': {
-            // @ts-expect-error TODO: broken inference
             matches: [match.withName((name) => name.startsWith('error'))],
             // @ts-expect-error unexpected TS error
             computeValueFromMatches: (errors) => errors.length,

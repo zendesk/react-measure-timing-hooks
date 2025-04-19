@@ -1,5 +1,6 @@
 import type { SpanMatcherFn, SpanMatcherTags } from './matchSpan'
 
+// tag matcher with a special, internal matcher tag, and match on span.status === 'error'
 export function requiredSpanWithErrorStatus<
   const SelectedRelationNameT extends keyof RelationSchemasT,
   const RelationSchemasT,

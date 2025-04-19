@@ -1,3 +1,12 @@
+import type { Observable } from 'rxjs'
+import { Subject } from 'rxjs'
+import type {
+  AllPossibleAddSpanToRecordingEvents,
+  AllPossibleDefinitionModifiedEvents,
+  AllPossibleRequiredSpanSeenEvents,
+  AllPossibleStateTransitionEvents,
+  AllPossibleTraceStartEvents,
+} from './debugTypes'
 import {
   convertLabelMatchersToFns,
   convertMatchersToFns,
@@ -12,7 +21,9 @@ import type {
   AllPossibleTraceContexts,
   CompleteTraceDefinition,
   ComputedValueDefinitionInput,
+  DraftTraceContext,
   RelationSchemasBase,
+  ReportErrorFn,
   SpanDeduplicationStrategy,
   TraceDefinition,
   TraceManagerConfig,
@@ -20,7 +31,8 @@ import type {
 } from './types'
 
 /**
- * Class representing the centralized trace performance manager.
+ * Class representing the centralized trace manager.
+ * Usually you'll have a single instance of this class in your app.
  */
 export class TraceManager<
   const RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
@@ -28,6 +40,23 @@ export class TraceManager<
   readonly performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<RelationSchemasT>
   private currentTrace: AllPossibleTraces<RelationSchemasT> | undefined =
     undefined
+
+  // Event subjects for all traces
+  private eventSubjects = {
+    'trace-start': new Subject<AllPossibleTraceStartEvents<RelationSchemasT>>(),
+    'state-transition': new Subject<
+      AllPossibleStateTransitionEvents<RelationSchemasT>
+    >(),
+    'required-span-seen': new Subject<
+      AllPossibleRequiredSpanSeenEvents<RelationSchemasT>
+    >(),
+    'add-span-to-recording': new Subject<
+      AllPossibleAddSpanToRecordingEvents<RelationSchemasT>
+    >(),
+    'definition-modified': new Subject<
+      AllPossibleDefinitionModifiedEvents<RelationSchemasT>
+    >(),
+  }
 
   get currentTracerContext():
     | AllPossibleTraceContexts<RelationSchemasT, string>
@@ -40,7 +69,7 @@ export class TraceManager<
     configInput: Omit<
       TraceManagerConfig<RelationSchemasT>,
       'reportWarningFn'
-    > & { reportWarningFn?: (warning: Error) => void },
+    > & { reportWarningFn?: ReportErrorFn<RelationSchemasT> },
   ) {
     this.utilities = {
       // by default noop for warnings
@@ -51,6 +80,13 @@ export class TraceManager<
           this.currentTrace.interrupt(reason)
         }
         this.currentTrace = newTrace
+
+        // Subscribe to the new trace's events and forward them to our subjects
+        this.subscribeToTraceEvents(newTrace)
+        // Emit trace-start event
+        this.eventSubjects['trace-start'].next({
+          traceContext: newTrace,
+        })
       },
       onEndTrace: (traceToCleanUp) => {
         if (traceToCleanUp === this.currentTrace) {
@@ -60,6 +96,70 @@ export class TraceManager<
       },
       getCurrentTrace: () => this.currentTrace,
     }
+  }
+
+  /**
+   * Subscribe to events from a trace and forward them to the TraceManager subjects
+   */
+  private subscribeToTraceEvents(
+    trace: AllPossibleTraces<RelationSchemasT>,
+  ): void {
+    // Forward state transition events
+    trace.when('state-transition').subscribe((event) => {
+      this.eventSubjects['state-transition'].next(event)
+    })
+
+    // Forward required span seen events
+    trace.when('required-span-seen').subscribe((event) => {
+      this.eventSubjects['required-span-seen'].next(event)
+    })
+
+    // Forward add-span-to-recording events
+    if ('when' in trace) {
+      trace.when('add-span-to-recording').subscribe((event) => {
+        this.eventSubjects['add-span-to-recording'].next(event)
+      })
+      trace.when('definition-modified').subscribe((event) => {
+        this.eventSubjects['definition-modified'].next(event)
+      })
+    }
+  }
+
+  /**
+   * Observable for events from all traces
+   * @param event The event type to observe
+   * @returns An Observable that emits events of the specified type from all traces
+   */
+  when(
+    event: 'trace-start',
+  ): Observable<AllPossibleTraceStartEvents<RelationSchemasT>>
+  when(
+    event: 'state-transition',
+  ): Observable<AllPossibleStateTransitionEvents<RelationSchemasT>>
+  when(
+    event: 'required-span-seen',
+  ): Observable<AllPossibleRequiredSpanSeenEvents<RelationSchemasT>>
+  // New events
+  when(
+    event: 'add-span-to-recording',
+  ): Observable<AllPossibleAddSpanToRecordingEvents<RelationSchemasT>>
+  when(
+    event: 'definition-modified',
+  ): Observable<AllPossibleDefinitionModifiedEvents<RelationSchemasT>>
+  when(
+    event:
+      | 'required-span-seen'
+      | 'trace-start'
+      | 'state-transition'
+      | 'add-span-to-recording'
+      | 'definition-modified',
+  ):
+    | Observable<AllPossibleTraceStartEvents<RelationSchemasT>>
+    | Observable<AllPossibleStateTransitionEvents<RelationSchemasT>>
+    | Observable<AllPossibleRequiredSpanSeenEvents<RelationSchemasT>>
+    | Observable<AllPossibleAddSpanToRecordingEvents<RelationSchemasT>>
+    | Observable<AllPossibleDefinitionModifiedEvents<RelationSchemasT>> {
+    return this.eventSubjects[event].asObservable()
   }
 
   private utilities: TraceManagerUtilities<RelationSchemasT>
@@ -94,12 +194,6 @@ export class TraceManager<
       RelationSchemasT,
       VariantsT
     >(traceDefinition.requiredSpans)
-
-    if (!requiredSpans) {
-      throw new Error(
-        'requiredSpans must be defined, as a trace will never end otherwise',
-      )
-    }
 
     const labelMatching = traceDefinition.labelMatching
       ? convertLabelMatchersToFns(traceDefinition.labelMatching)
@@ -180,7 +274,11 @@ export class TraceManager<
       VariantsT
     > = {
       ...traceDefinition,
-      requiredSpans,
+      requiredSpans:
+        requiredSpans ??
+        [
+          // lack of requiredSpan is invalid, but we warn about it below
+        ],
       debounceOnSpans,
       interruptOnSpans,
       suppressErrorStatusPropagationOnSpans,
@@ -189,6 +287,18 @@ export class TraceManager<
       labelMatching,
       relationSchema:
         this.utilities.relationSchemas[traceDefinition.relationSchemaName],
+    }
+
+    if (!requiredSpans) {
+      this.utilities.reportErrorFn(
+        new Error(
+          'requiredSpans must be defined along with the trace, as a trace can only end in an interrupted state otherwise',
+        ),
+        { definition: completeTraceDefinition } as Partial<
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          DraftTraceContext<any, RelationSchemasT, any>
+        >,
+      )
     }
 
     return new Tracer(completeTraceDefinition, this.utilities)

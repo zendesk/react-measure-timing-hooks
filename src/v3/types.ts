@@ -138,6 +138,15 @@ export type AnyPossibleReportFn<RelationSchemasT> = <
   context: TraceContext<SelectedRelationNameT, RelationSchemasT, any>,
 ) => void
 
+export type PartialPossibleTraceContext<RelationSchemasT> = Partial<
+  AllPossibleTraceContexts<RelationSchemasT, string>
+>
+
+export type ReportErrorFn<RelationSchemasT> = (
+  error: Error,
+  currentTraceContext?: PartialPossibleTraceContext<RelationSchemasT>,
+) => void
+
 export interface TraceManagerConfig<RelationSchemasT> {
   reportFn: AnyPossibleReportFn<RelationSchemasT>
 
@@ -156,9 +165,8 @@ export interface TraceManagerConfig<RelationSchemasT> {
    */
   performanceEntryDeduplicationStrategy?: SpanDeduplicationStrategy<RelationSchemasT>
 
-  // TODO: add trace definition as 2nd arg
-  reportErrorFn: (error: Error) => void
-  reportWarningFn: (warning: Error) => void
+  reportErrorFn: ReportErrorFn<RelationSchemasT>
+  reportWarningFn: ReportErrorFn<RelationSchemasT>
 }
 
 export interface TraceManagerUtilities<
@@ -208,6 +216,13 @@ export interface TraceModifications<
   > {
   relatedTo: MapSchemaToTypes<RelationSchemasT[SelectedRelationNameT]>
   attributes?: Attributes
+}
+
+type ErrorBehavior = 'error' | 'error-and-continue' | 'warn-and-continue'
+
+export interface TransitionDraftOptions {
+  previouslyActivatedBehavior?: ErrorBehavior
+  invalidRelatedToBehavior?: ErrorBehavior
 }
 
 export interface CaptureInteractiveConfig extends CPUIdleProcessorOptions {
@@ -483,6 +498,10 @@ export interface SpanDeduplicationStrategy<RelationSchemasT> {
   ) => Span<RelationSchemasT>
 }
 
+export type SpecialStartToken = 'operation-start'
+export type SpecialEndToken = 'operation-end' | 'interactive'
+export type SpecialToken = SpecialStartToken | SpecialEndToken
+
 /**
  * Definition of custom spans
  */
@@ -496,14 +515,13 @@ export interface ComputedSpanDefinition<
    */
   startSpan:
     | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
-    | 'operation-start'
+    | SpecialStartToken
   /**
    * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
    */
   endSpan:
     | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
-    | 'operation-end'
-    | 'interactive'
+    | SpecialEndToken
 
   /**
    * If true, we will attempt to compute the span even if the trace was interrupted.

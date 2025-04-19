@@ -1,10 +1,18 @@
 /* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 /* eslint-disable max-classes-per-file */
+import type { Observable } from 'rxjs'
+import { Subject } from 'rxjs'
 import {
   DEADLINE_BUFFER,
   DEFAULT_DEBOUNCE_DURATION,
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
 } from './constants'
+import type {
+  AddSpanToRecordingEvent,
+  DefinitionModifiedEvent,
+  RequiredSpanSeenEvent,
+  StateTransitionEvent,
+} from './debugTypes'
 import { convertMatchersToFns } from './ensureMatcherFn'
 import { ensureTimestamp } from './ensureTimestamp'
 import {
@@ -27,12 +35,14 @@ import type {
   CompleteTraceDefinition,
   DraftTraceContext,
   RelationSchemasBase,
+  ReportErrorFn,
   TraceContext,
   TraceDefinitionModifications,
   TraceInterruptionReason,
   TraceInterruptionReasonForInvalidTraces,
   TraceManagerUtilities,
   TraceModifications,
+  TransitionDraftOptions,
 } from './types'
 import { INVALID_TRACE_INTERRUPTION_REASONS } from './types'
 import type {
@@ -49,14 +59,6 @@ const isInvalidTraceInterruptionReason = (
     INVALID_TRACE_INTERRUPTION_REASONS as readonly TraceInterruptionReason[]
   ).includes(reason)
 
-export interface FinalState<RelationSchemaT> {
-  transitionFromState: NonTerminalTraceStates
-  interruptionReason?: TraceInterruptionReason
-  cpuIdleSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
-  completeSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
-  lastRequiredSpanAndAnnotation?: SpanAndAnnotation<RelationSchemaT>
-}
-
 const INITIAL_STATE = 'draft'
 type InitialTraceState = typeof INITIAL_STATE
 export type NonTerminalTraceStates =
@@ -68,7 +70,9 @@ export const TERMINAL_STATES = ['interrupted', 'complete'] as const
 type TerminalTraceStates = (typeof TERMINAL_STATES)[number]
 export type TraceStates = NonTerminalTraceStates | TerminalTraceStates
 
-const isTerminalState = (state: TraceStates): state is TerminalTraceStates =>
+export const isTerminalState = (
+  state: TraceStates,
+): state is TerminalTraceStates =>
   (TERMINAL_STATES as readonly TraceStates[]).includes(state)
 
 interface OnEnterActive {
@@ -76,16 +80,26 @@ interface OnEnterActive {
   transitionFromState: NonTerminalTraceStates
 }
 
-interface OnEnterInterrupted {
+interface OnEnterInterrupted<RelationSchemasT> {
   transitionToState: 'interrupted'
   transitionFromState: NonTerminalTraceStates
   interruptionReason: TraceInterruptionReason
+  lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
 }
 
-interface OnEnterComplete<RelationSchemasT>
-  extends FinalState<RelationSchemasT> {
+interface OnEnterComplete<RelationSchemasT> {
   transitionToState: 'complete'
+  transitionFromState: NonTerminalTraceStates
+  interruptionReason?: TraceInterruptionReason
+  cpuIdleSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
+  completeSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
+  lastRequiredSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
+  lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
 }
+
+export type FinalTransition<RelationSchemasT> =
+  | OnEnterInterrupted<RelationSchemasT>
+  | OnEnterComplete<RelationSchemasT>
 
 interface OnEnterWaitingForInteractive {
   transitionToState: 'waiting-for-interactive'
@@ -97,9 +111,9 @@ interface OnEnterDebouncing {
   transitionFromState: NonTerminalTraceStates
 }
 
-type OnEnterStatePayload<RelationSchemasT> =
+export type OnEnterStatePayload<RelationSchemasT> =
   | OnEnterActive
-  | OnEnterInterrupted
+  | OnEnterInterrupted<RelationSchemasT>
   | OnEnterComplete<RelationSchemasT>
   | OnEnterDebouncing
   | OnEnterWaitingForInteractive
@@ -139,7 +153,7 @@ interface TraceStateMachineSideEffectHandlers<RelationSchemasT> {
     spanAndAnnotation: SpanAndAnnotation<RelationSchemasT>,
   ) => void
   readonly prepareAndEmitRecording: (
-    options: PrepareAndEmitRecordingOptions<RelationSchemasT>,
+    transition: OnEnterStatePayload<RelationSchemasT>,
   ) => void
 }
 
@@ -157,6 +171,28 @@ interface StateMachineContext<
     VariantsT
   > {
   sideEffectFns: TraceStateMachineSideEffectHandlers<RelationSchemasT>
+  eventSubjects: {
+    'state-transition': Subject<
+      StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >
+    'required-span-seen': Subject<
+      RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >
+    'add-span-to-recording': Subject<
+      AddSpanToRecordingEvent<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >
+    >
+    'definition-modified': Subject<
+      DefinitionModifiedEvent<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >
+    >
+  }
 }
 
 type DeadlineType = 'global' | 'debounce' | 'interactive' | 'next-quiet-window'
@@ -265,14 +301,14 @@ export class TraceStateMachine<
    * if we have long tasks before FMP, we want to use them as a potential grouping post FMP.
    */
   debouncingSpanBuffer: SpanAndAnnotation<RelationSchemasT>[] = []
-  #provisionalBuffer: SpanAndAnnotation<RelationSchemasT>[] = []
+  #draftBuffer: SpanAndAnnotation<RelationSchemasT>[] = []
 
   // eslint-disable-next-line consistent-return
-  #processProvisionalBuffer(): Transition<RelationSchemasT> | void {
+  #processDraftBuffer(): Transition<RelationSchemasT> | void {
     // process items in the buffer (stick the relatedTo in the entries) (if its empty, well we can skip this!)
     let span: SpanAndAnnotation<RelationSchemasT> | undefined
     // eslint-disable-next-line no-cond-assign
-    while ((span = this.#provisionalBuffer.shift())) {
+    while ((span = this.#draftBuffer.shift())) {
       const transition = this.emit('onProcessSpan', span)
       if (transition) return transition
     }
@@ -307,35 +343,37 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: undefined,
           }
         }
 
+        // add into span buffer
+        this.#draftBuffer.push(spanAndAnnotation)
+
         // if the entry matches any of the interruptOnSpans criteria,
-        // transition to complete state with the 'matched-on-interrupt' interruptionReason
+        // transition to interrupted state with the correct interruptionReason
         if (this.#context.definition.interruptOnSpans) {
           for (const doesSpanMatch of this.#context.definition
             .interruptOnSpans) {
             if (doesSpanMatch(spanAndAnnotation, this.#context)) {
               return {
-                transitionToState: 'complete',
+                transitionToState: 'interrupted',
                 interruptionReason: doesSpanMatch.requiredSpan
                   ? 'matched-on-required-span-with-error'
                   : 'matched-on-interrupt',
-                lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
-                completeSpanAndAnnotation: this.completeSpan,
+                lastRelevantSpanAndAnnotation: undefined,
               }
             }
           }
         }
 
-        // else, add into span buffer
-        this.#provisionalBuffer.push(spanAndAnnotation)
         return undefined
       },
 
       onInterrupt: (reason: TraceInterruptionReason) => ({
         transitionToState: 'interrupted',
         interruptionReason: reason,
+        lastRelevantSpanAndAnnotation: undefined,
       }),
 
       onDeadline: (deadlineType: DeadlineType) => {
@@ -343,6 +381,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: undefined,
           }
         }
         // other cases should never happen
@@ -352,7 +391,7 @@ export class TraceStateMachine<
 
     active: {
       onEnterState: (_transition: OnEnterActive) => {
-        const nextTransition = this.#processProvisionalBuffer()
+        const nextTransition = this.#processDraftBuffer()
         if (nextTransition) return nextTransition
 
         return undefined
@@ -373,6 +412,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -381,11 +421,14 @@ export class TraceStateMachine<
           for (const doesSpanMatch of this.#context.definition
             .interruptOnSpans) {
             if (doesSpanMatch(spanAndAnnotation, this.#context)) {
+              // still record the span that interrupted the trace
+              this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: doesSpanMatch.requiredSpan
                   ? 'matched-on-required-span-with-error'
                   : 'matched-on-interrupt',
+                lastRelevantSpanAndAnnotation: this.lastRelevant,
               }
             }
           }
@@ -401,6 +444,13 @@ export class TraceStateMachine<
           if (doesSpanMatch(spanAndAnnotation, this.#context)) {
             // now that we've seen it, we add it to the list
             this.successfullyMatchedRequiredSpanMatchers.add(doesSpanMatch)
+
+            // Emit required span seen event for debugging
+            this.#context.eventSubjects['required-span-seen'].next({
+              traceContext: this.#context,
+              spanAndAnnotation,
+              matcher: doesSpanMatch,
+            })
 
             // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
             if (
@@ -427,6 +477,7 @@ export class TraceStateMachine<
       onInterrupt: (reason: TraceInterruptionReason) => ({
         transitionToState: 'interrupted',
         interruptionReason: reason,
+        lastRelevantSpanAndAnnotation: this.lastRelevant,
       }),
 
       onDeadline: (deadlineType: DeadlineType) => {
@@ -434,6 +485,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
         // other cases should never happen
@@ -455,6 +507,8 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'invalid-state-transition',
+
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -481,6 +535,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
         if (deadlineType === 'debounce') {
@@ -506,14 +561,17 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'timeout',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
+        // The debouncing buffer will be used to correctly group the spans into clusters when calculating the cpu idle in the waiting-for-interactive state
+        // We record the spans here as well, so that they are included even if we never make it out of the debouncing state
         this.debouncingSpanBuffer.push(spanAndAnnotation)
+        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         if (spanEndTimeEpoch > this.#debounceDeadline) {
           // done debouncing
-          this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
           return { transitionToState: 'waiting-for-interactive' }
         }
 
@@ -535,16 +593,22 @@ export class TraceStateMachine<
               doesSpanMatch(idleRegressionCheckSpan, this.#context) &&
               doesSpanMatch.idleCheck
             ) {
+              // Sometimes spans are processed out of order, we update the lastRelevant if this span ends later
+              if (
+                spanAndAnnotation.annotation.operationRelativeEndTime >
+                (this.lastRelevant?.annotation.operationRelativeEndTime ?? 0)
+              ) {
+                this.lastRelevant = spanAndAnnotation
+              }
               // check if we regressed on "isIdle", and if so, transition to interrupted with reason
               return {
                 transitionToState: 'interrupted',
                 interruptionReason: 'idle-component-no-longer-idle',
+                lastRelevantSpanAndAnnotation: this.lastRelevant,
               }
             }
           }
         }
-
-        this.sideEffectFns.addSpanToRecording(spanAndAnnotation)
 
         // does span satisfy any of the "debouncedOn" and if so, restart our debounce timer
         if (this.#context.definition.debounceOnSpans) {
@@ -579,6 +643,7 @@ export class TraceStateMachine<
       onInterrupt: (reason: TraceInterruptionReason) => ({
         transitionToState: 'interrupted',
         interruptionReason: reason,
+        lastRelevantSpanAndAnnotation: this.lastRelevant,
       }),
     },
 
@@ -589,6 +654,7 @@ export class TraceStateMachine<
           return {
             transitionToState: 'interrupted',
             interruptionReason: 'invalid-state-transition',
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -599,7 +665,9 @@ export class TraceStateMachine<
           return {
             transitionToState: 'complete',
             completeSpanAndAnnotation: this.completeSpan,
+            cpuIdleSpanAndAnnotation: undefined,
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -660,6 +728,8 @@ export class TraceStateMachine<
             interruptionReason: 'timeout',
             completeSpanAndAnnotation: this.completeSpan,
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
+            cpuIdleSpanAndAnnotation: undefined,
           }
         }
         if (
@@ -687,6 +757,7 @@ export class TraceStateMachine<
               lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
               completeSpanAndAnnotation: this.completeSpan,
               cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
+              lastRelevantSpanAndAnnotation: this.lastRelevant,
             }
           }
           if (deadlineType === 'interactive') {
@@ -697,6 +768,8 @@ export class TraceStateMachine<
               transitionToState: 'complete',
               lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
               completeSpanAndAnnotation: this.completeSpan,
+              lastRelevantSpanAndAnnotation: this.lastRelevant,
+              cpuIdleSpanAndAnnotation: undefined,
             }
           }
 
@@ -739,6 +812,7 @@ export class TraceStateMachine<
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
             completeSpanAndAnnotation: this.completeSpan,
             cpuIdleSpanAndAnnotation: cpuIdleMatch.entry,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
           }
         }
 
@@ -753,6 +827,8 @@ export class TraceStateMachine<
             interruptionReason: 'timeout',
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
             completeSpanAndAnnotation: this.completeSpan,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
+            cpuIdleSpanAndAnnotation: undefined,
           }
         }
 
@@ -764,6 +840,8 @@ export class TraceStateMachine<
             interruptionReason: 'waiting-for-interactive-timeout',
             lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
             completeSpanAndAnnotation: this.completeSpan,
+            lastRelevantSpanAndAnnotation: this.lastRelevant,
+            cpuIdleSpanAndAnnotation: undefined,
           }
         }
 
@@ -780,6 +858,8 @@ export class TraceStateMachine<
                   : 'matched-on-interrupt',
                 lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
                 completeSpanAndAnnotation: this.completeSpan,
+                lastRelevantSpanAndAnnotation: this.lastRelevant,
+                cpuIdleSpanAndAnnotation: undefined,
               }
             }
           }
@@ -801,20 +881,22 @@ export class TraceStateMachine<
           interruptionReason: reason,
           lastRequiredSpanAndAnnotation: this.lastRequiredSpan,
           completeSpanAndAnnotation: this.completeSpan,
+          lastRelevantSpanAndAnnotation: this.lastRelevant,
+          cpuIdleSpanAndAnnotation: undefined,
         }),
     },
 
     // terminal states:
     interrupted: {
-      onEnterState: (transition: OnEnterInterrupted) => {
-        // depending on the reason, if we're coming from draft, we want to flush the provisional buffer:
+      onEnterState: (transition: OnEnterInterrupted<RelationSchemasT>) => {
+        // depending on the reason, if we're coming from draft, we want to flush the buffer:
         if (
           transition.transitionFromState === 'draft' &&
           !isInvalidTraceInterruptionReason(transition.interruptionReason)
         ) {
           let span: SpanAndAnnotation<RelationSchemasT> | undefined
           // eslint-disable-next-line no-cond-assign
-          while ((span = this.#provisionalBuffer.shift())) {
+          while ((span = this.#draftBuffer.shift())) {
             this.sideEffectFns.addSpanToRecording(span)
           }
         }
@@ -828,10 +910,7 @@ export class TraceStateMachine<
           return
         }
 
-        this.sideEffectFns.prepareAndEmitRecording({
-          transition,
-          lastRelevantSpanAndAnnotation: undefined,
-        })
+        this.sideEffectFns.prepareAndEmitRecording(transition)
       },
     },
 
@@ -854,10 +933,7 @@ export class TraceStateMachine<
           cpuIdleSpanAndAnnotation.annotation.markedPageInteractive = true
         }
 
-        this.sideEffectFns.prepareAndEmitRecording({
-          transition,
-          lastRelevantSpanAndAnnotation: this.lastRelevant,
-        })
+        this.sideEffectFns.prepareAndEmitRecording(transition)
       },
     },
   } satisfies StatesBase<RelationSchemasT>
@@ -894,15 +970,17 @@ export class TraceStateMachine<
         ...transitionPayload,
         transitionFromState,
       }
+
+      // Emit state transition event for debugging
+      this.#context.eventSubjects['state-transition'].next({
+        traceContext: this.#context,
+        stateTransition: onEnterStateEvent,
+      })
+
       return this.emit('onEnterState', onEnterStateEvent) ?? onEnterStateEvent
     }
     return undefined
   }
-}
-
-interface PrepareAndEmitRecordingOptions<RelationSchemasT> {
-  transition: OnEnterStatePayload<RelationSchemasT>
-  lastRelevantSpanAndAnnotation: SpanAndAnnotation<RelationSchemasT> | undefined
 }
 
 export class Trace<
@@ -929,8 +1007,12 @@ export class Trace<
     VariantsT
   > {
     if (!this.input.relatedTo) {
-      throw new Error(
-        "Tried to access trace's activeInput, but the trace was never provided a 'relatedTo' input value",
+      this.traceUtilities.reportErrorFn(
+        new Error(
+          "Tried to access trace's activeInput, but the trace was never provided a 'relatedTo' input value",
+        ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
     }
     return this.input as ActiveTraceConfig<
@@ -978,6 +1060,84 @@ export class Trace<
     RelationSchemasT,
     VariantsT
   >
+
+  // debugging observables
+  eventSubjects = {
+    'state-transition': new Subject<
+      StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >(),
+    'required-span-seen': new Subject<
+      RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    >(),
+    'add-span-to-recording': new Subject<
+      AddSpanToRecordingEvent<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >
+    >(),
+    'definition-modified': new Subject<
+      DefinitionModifiedEvent<
+        SelectedRelationNameT,
+        RelationSchemasT,
+        VariantsT
+      >
+    >(),
+  }
+
+  when(
+    event: 'state-transition',
+  ): Observable<
+    StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >
+  when(
+    event: 'required-span-seen',
+  ): Observable<
+    RequiredSpanSeenEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >
+  when(
+    event: 'add-span-to-recording',
+  ): Observable<
+    AddSpanToRecordingEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >
+  when(
+    event: 'definition-modified',
+  ): Observable<
+    DefinitionModifiedEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  >
+  when(
+    event:
+      | 'required-span-seen'
+      | 'state-transition'
+      | 'add-span-to-recording'
+      | 'definition-modified',
+  ):
+    | Observable<
+        StateTransitionEvent<SelectedRelationNameT, RelationSchemasT, VariantsT>
+      >
+    | Observable<
+        RequiredSpanSeenEvent<
+          SelectedRelationNameT,
+          RelationSchemasT,
+          VariantsT
+        >
+      >
+    | Observable<
+        AddSpanToRecordingEvent<
+          SelectedRelationNameT,
+          RelationSchemasT,
+          VariantsT
+        >
+      >
+    | Observable<
+        DefinitionModifiedEvent<
+          SelectedRelationNameT,
+          RelationSchemasT,
+          VariantsT
+        >
+      > {
+    return this.eventSubjects[event].asObservable()
+  }
 
   constructor(
     data:
@@ -1071,6 +1231,8 @@ export class Trace<
             input.variant
           }. Must be one of: ${Object.keys(definition.variants).join(', ')}`,
         ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
     }
 
@@ -1097,12 +1259,10 @@ export class Trace<
     }
 
     this.recordedItemsByLabel = Object.fromEntries(
-      Object.entries(this.definition.labelMatching ?? {}).map(
-        ([label, matcher]) => [
-          label,
-          [] as SpanAndAnnotation<RelationSchemasT>[],
-        ],
-      ),
+      Object.keys(this.definition.labelMatching ?? {}).map((label) => [
+        label,
+        [] as SpanAndAnnotation<RelationSchemasT>[],
+      ]),
     )
 
     // definition is now set, we can initialize the state machine
@@ -1157,36 +1317,23 @@ export class Trace<
         for (const label of spanAndAnnotation.annotation.labels) {
           this.recordedItemsByLabel[label]?.push(spanAndAnnotation)
         }
+        this.eventSubjects['add-span-to-recording'].next({
+          spanAndAnnotation,
+          traceContext: this,
+        })
       }
     },
-    prepareAndEmitRecording: ({
-      transition,
-      lastRelevantSpanAndAnnotation,
-    }) => {
+    prepareAndEmitRecording: (transition) => {
       if (
         transition.transitionToState === 'interrupted' ||
         transition.transitionToState === 'complete'
       ) {
-        const endOfOperationSpan =
-          (transition.transitionToState === 'complete' &&
-            (transition.cpuIdleSpanAndAnnotation ??
-              transition.completeSpanAndAnnotation)) ||
-          lastRelevantSpanAndAnnotation
-
         const traceRecording = createTraceRecording(
+          // we don't want to pass 'this' but select the relevant properties
+          // to avoid circular references
           {
             definition: this.definition,
-            // only keep items captured until the endOfOperationSpan
-            recordedItems: endOfOperationSpan
-              ? new Set(
-                  [...this.recordedItems].filter(
-                    (item) =>
-                      item.span.startTime.now + item.span.duration <=
-                      endOfOperationSpan.span.startTime.now +
-                        endOfOperationSpan.span.duration,
-                  ),
-                )
-              : this.recordedItems,
+            recordedItems: this.recordedItems,
             input: this.input,
             recordedItemsByLabel: this.recordedItemsByLabel,
           },
@@ -1195,9 +1342,11 @@ export class Trace<
         this.onEnd(traceRecording)
 
         // memory clean-up in case something retains the Trace instance
-        this.recordedItems.clear()
-        this.occurrenceCounters.clear()
+        this.recordedItems = new Set()
+        this.occurrenceCounters = new Map()
         this.processedPerformanceEntries = new WeakMap()
+        // @ts-expect-error memory cleanup force override the otherwise readonly property
+        this.recordedItemsByLabel = {}
         this.traceUtilities.performanceEntryDeduplicationStrategy?.reset()
       }
     },
@@ -1221,21 +1370,76 @@ export class Trace<
       RelationSchemasT,
       VariantsT
     >,
-  ) {
+    {
+      previouslyActivatedBehavior = 'warn-and-continue',
+      invalidRelatedToBehavior = 'warn-and-continue',
+    }: TransitionDraftOptions = {},
+  ): void {
+    const { isDraft } = this
+    let reportPreviouslyActivated: ReportErrorFn<RelationSchemasT>
+    let overwriteDraft = true
+    switch (previouslyActivatedBehavior) {
+      case 'error':
+        reportPreviouslyActivated = this.traceUtilities.reportErrorFn
+        overwriteDraft = false
+        break
+      case 'error-and-continue':
+        reportPreviouslyActivated = this.traceUtilities.reportErrorFn
+        break
+      default:
+        reportPreviouslyActivated = this.traceUtilities.reportWarningFn
+        break
+    }
+
+    // this is an already initialized active trace, do nothing:
+    if (!isDraft) {
+      reportPreviouslyActivated(
+        new Error(
+          `You are trying to activate a trace that has already been activated before (${this.definition.name}).`,
+        ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
+      )
+      if (!overwriteDraft) {
+        return
+      }
+    }
+
+    let reportValidationError: ReportErrorFn<RelationSchemasT>
+    let useInvalidRelatedTo = true
+    switch (invalidRelatedToBehavior) {
+      case 'error':
+        reportValidationError = this.traceUtilities.reportErrorFn
+        useInvalidRelatedTo = false
+        break
+      case 'error-and-continue':
+        reportValidationError = this.traceUtilities.reportErrorFn
+        break
+      default:
+        reportValidationError = this.traceUtilities.reportWarningFn
+        break
+    }
+
     const { attributes } = this.input
 
     const { relatedTo, errors } = validateAndCoerceRelatedToAgainstSchema(
       inputAndDefinitionModifications.relatedTo,
       this.definition.relationSchema,
     )
+
     if (errors.length > 0) {
-      this.traceUtilities.reportWarningFn(
+      reportValidationError(
         new Error(
           `Invalid relatedTo value: ${JSON.stringify(
             inputAndDefinitionModifications.relatedTo,
           )}. ${errors.join(', ')}`,
         ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this as Trace<any, RelationSchemasT, any>,
       )
+      if (!useInvalidRelatedTo) {
+        return
+      }
     }
 
     this.activeInput = {
@@ -1250,7 +1454,11 @@ export class Trace<
     this.applyDefinitionModifications(inputAndDefinitionModifications)
 
     this.wasActivated = true
-    this.stateMachine.emit('onMakeActive', undefined)
+
+    if (isDraft) {
+      // we might already be active in which case we would have issued a warning earlier in this method
+      this.stateMachine.emit('onMakeActive', undefined)
+    }
   }
 
   /**
@@ -1315,6 +1523,12 @@ export class Trace<
         ...additionalDebounceOnSpans,
       ]
     }
+
+    // Emit definition-modified event
+    this.eventSubjects['definition-modified'].next({
+      modifications: definitionModifications,
+      traceContext: this,
+    })
   }
 
   /**

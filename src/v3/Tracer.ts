@@ -13,6 +13,7 @@ import {
   type TraceDefinitionModifications,
   type TraceManagerUtilities,
   type TraceModifications,
+  type TransitionDraftOptions,
 } from './types'
 
 /**
@@ -97,29 +98,8 @@ export class Tracer<
   }
 
   interrupt = ({ error }: { error?: Error } = {}) => {
-    const trace:
-      | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
-      | undefined = this.traceUtilities.getCurrentTrace()
-
-    if (!trace) {
-      this.traceUtilities.reportWarningFn(
-        new Error(
-          `No currently active trace when canceling a draft. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
-        ),
-      )
-      return
-    }
-
-    // verify that trace is the same definition as the Tracer's definition
-    if (trace.sourceDefinition !== this.definition) {
-      this.traceUtilities.reportWarningFn(
-        new Error(
-          `You are trying to cancel a draft that is not the same definition as the Tracer's definition.`,
-        ),
-      )
-      return
-    }
-
+    const trace = this.getCurrentTraceOrWarn()
+    if (!trace) return
     if (error) {
       trace.processSpan({
         name: error.name,
@@ -153,28 +133,8 @@ export class Tracer<
       VariantsT
     >,
   ): void => {
-    const trace:
-      | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
-      | undefined = this.traceUtilities.getCurrentTrace()
-
-    if (!trace) {
-      this.traceUtilities.reportWarningFn(
-        new Error(
-          `No currently active trace when adding required spans. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
-        ),
-      )
-      return
-    }
-
-    // verify that trace is the same definition as the Tracer's definition
-    if (trace.sourceDefinition !== this.definition) {
-      this.traceUtilities.reportWarningFn(
-        new Error(
-          `You are trying to add required spans to a trace that is not the same definition as the Tracer's definition.`,
-        ),
-      )
-      return
-    }
+    const trace = this.getCurrentTraceOrWarn()
+    if (!trace) return
 
     // Create a new trace with the updated definition, importing state from the existing trace
     const newTrace = new Trace<
@@ -200,41 +160,12 @@ export class Tracer<
       RelationSchemasT,
       VariantsT
     >,
+    opts?: TransitionDraftOptions,
   ): void => {
-    const trace:
-      | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
-      | undefined = this.traceUtilities.getCurrentTrace()
+    const trace = this.getCurrentTraceOrWarn()
+    if (!trace) return
 
-    if (!trace) {
-      this.traceUtilities.reportErrorFn(
-        new Error(
-          `No currently active trace when initializing a trace. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
-        ),
-      )
-      return
-    }
-
-    // this is an already initialized active trace, do nothing:
-    if (!trace.isDraft) {
-      this.traceUtilities.reportWarningFn(
-        new Error(
-          `You are trying to initialize a trace that has already been initialized before (${trace.definition.name}).`,
-        ),
-      )
-      return
-    }
-
-    // verify that trace is the same definition as the Tracer's definition
-    if (trace.sourceDefinition !== this.definition) {
-      this.traceUtilities.reportWarningFn(
-        new Error(
-          `You are trying to initialize a trace that is not the same definition as the Tracer's definition is different.`,
-        ),
-      )
-      return
-    }
-
-    trace.transitionDraftToActive(inputAndDefinitionModifications)
+    trace.transitionDraftToActive(inputAndDefinitionModifications, opts)
   }
 
   getCurrentTrace = ():
@@ -244,6 +175,44 @@ export class Tracer<
     if (!trace || trace.sourceDefinition !== this.definition) {
       return undefined
     }
+    return trace
+  }
+
+  // same as getCurrentTrace, but with a warning if no trace or a different trace is found
+  private getCurrentTraceOrWarn = ():
+    | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
+    | undefined => {
+    const trace:
+      | Trace<SelectedRelationNameT, RelationSchemasT, VariantsT>
+      | undefined = this.traceUtilities.getCurrentTrace()
+
+    if (!trace) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `No current active trace when initializing a trace. Call tracer.start(...) or tracer.createDraft(...) beforehand.`,
+        ),
+        { definition: this.definition } as Partial<
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          DraftTraceContext<any, RelationSchemasT, any>
+        >,
+      )
+      return undefined
+    }
+
+    // verify that trace is the same definition as the Tracer's definition
+    if (trace.sourceDefinition !== this.definition) {
+      this.traceUtilities.reportWarningFn(
+        new Error(
+          `Trying to interrupt '${this.definition.name}' trace, however the started trace (${trace.sourceDefinition.name}) has a different definition`,
+        ),
+        { definition: this.definition } as Partial<
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          DraftTraceContext<any, RelationSchemasT, any>
+        >,
+      )
+      return undefined
+    }
+
     return trace
   }
 

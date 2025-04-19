@@ -21,40 +21,8 @@ import { ReactComponent as ZendeskIcon } from '@zendeskgarden/svg-icons/src/26/z
 // CYN: NEED UPDATE
 import { mockTickets } from './mockTickets'
 import { TicketList } from './TicketList'
+import { ticketOperationTracer } from './ticketOperationTracer'
 import { TicketView } from './TicketView'
-import { traceManager } from './traceManager'
-
-const ticketOperationTracer = traceManager.createTracer({
-  name: `ticket-activation`,
-  type: 'operation',
-  requiredSpans: [
-    {
-      name: 'TicketView',
-      matchingRelations: ['ticketId'],
-      type: 'component-render',
-      isIdle: true,
-    },
-  ],
-  relationSchemaName: 'ticket',
-  variants: {
-    click: { timeout: 45_000 },
-  },
-  // debounceWindow: 1_000,
-  debounceOnSpans: [
-    {
-      name: 'TicketView',
-      matchingRelations: ['ticketId'],
-    },
-  ],
-  interruptOnSpans: [
-    {
-      name: 'TicketView',
-      matchingRelations: ['ticketId'],
-      type: 'component-unmount',
-    },
-  ],
-  captureInteractive: true,
-})
 
 // simulate an event every 2 seconds
 const simulateEventPeriodically = (ticketId: number | null) => {
@@ -74,29 +42,9 @@ export const App: React.FC = () => {
   )
 
   const handleTicketClick = (id: number) => {
-    // traceManager.startOperation({
-    //   operationName: `ticket-activation`,
-    //   track: [
-    //     {
-    //       match: { type: 'component-unmount', attributes: { ticketId: id } },
-    //       interruptWhenSeen: true,
-    //     },
-    //     {
-    //       match: { attributes: { ticketId: id } },
-    //       debounceEndWhenSeen: { debounceBy: 1_000 },
-    //     },
-    //     {
-    //       match: { attributes: { ticketId: id, visibleState: 'complete' } },
-    //       requiredToEnd: true,
-    //     },
-    //   ],
-    //   onTracked,
-    //   onEnd: onTracked,
-    //   waitUntilInteractive: true,
-    //   interruptSelf: true,
-    // })
     ticketOperationTracer.start({
       relatedTo: { ticketId: id },
+      attributes: { exampleTraceAttribute: true },
       variant: 'click',
     })
 

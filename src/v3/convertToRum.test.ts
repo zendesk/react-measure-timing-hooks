@@ -68,7 +68,14 @@ describe('convertTraceToRUM', () => {
         recordedItemsByLabel: {},
         recordedItems,
       },
-      { transitionFromState: 'active' },
+      {
+        transitionFromState: 'active',
+        lastRelevantSpanAndAnnotation: undefined,
+        transitionToState: 'complete',
+        completeSpanAndAnnotation: undefined,
+        cpuIdleSpanAndAnnotation: undefined,
+        lastRequiredSpanAndAnnotation: undefined,
+      },
     )
 
     const context = {
@@ -157,7 +164,14 @@ describe('convertTraceToRUM', () => {
         recordedItemsByLabel: {},
         recordedItems,
       },
-      { transitionFromState: 'active' },
+      {
+        transitionFromState: 'active',
+        lastRelevantSpanAndAnnotation: undefined,
+        transitionToState: 'complete',
+        completeSpanAndAnnotation: undefined,
+        cpuIdleSpanAndAnnotation: undefined,
+        lastRequiredSpanAndAnnotation: undefined,
+      },
     )
 
     const context = {
