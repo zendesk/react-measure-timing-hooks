@@ -14,6 +14,7 @@ import {
   isTerminalState,
 } from './Trace'
 import type { TraceManager } from './TraceManager'
+import type { ComputedRenderSpan, ComputedSpan } from './traceRecordingTypes'
 import type {
   RelationSchemasBase,
   TraceContext,
@@ -559,6 +560,14 @@ function getStateStyle(state: string) {
 
 const TRACE_HISTORY_LIMIT = 15
 
+// Helper to safely get a value from a possibly empty object
+function getFromRecord<T>(
+  record: Record<string, T> | undefined,
+  key: string,
+): T | undefined {
+  return record && Object.hasOwn(record, key) ? record[key] : undefined
+}
+
 // TraceAttributes component to display attributes as chips
 function TraceAttributes({
   attributes,
@@ -754,6 +763,57 @@ function RequiredSpansList<RelationSchemasT>({
   )
 }
 
+// Helper to render ComputedSpan nicely
+function RenderComputedSpan({ value }: { value: ComputedSpan }) {
+  if (!value) return null
+  return (
+    <span style={{ marginLeft: 8, color: '#1976d2' }}>
+      start: {value.startOffset.toFixed(2)}ms, duration:{' '}
+      {value.duration.toFixed(2)}ms
+    </span>
+  )
+}
+
+// Helper to render ComputedRenderSpan nicely
+function RenderComputedRenderSpan({ value }: { value: ComputedRenderSpan }) {
+  if (!value) return null
+  return (
+    <span style={{ marginLeft: 8, color: '#1976d2' }}>
+      start: {value.startOffset.toFixed(2)}ms, loading:{' '}
+      {value.firstRenderTillLoading.toFixed(2)}ms, data:{' '}
+      {value.firstRenderTillData.toFixed(2)}ms, content:{' '}
+      {value.firstRenderTillContent.toFixed(2)}ms, renders: {value.renderCount},
+      total: {value.sumOfRenderDurations.toFixed(2)}ms
+    </span>
+  )
+}
+
+// Helper to render ComputedRenderBeaconSpans nicely
+function RenderComputedRenderBeaconSpans({
+  computedRenderBeaconSpans,
+}: {
+  computedRenderBeaconSpans: Record<string, ComputedRenderSpan>
+}) {
+  if (
+    !computedRenderBeaconSpans ||
+    Object.keys(computedRenderBeaconSpans).length === 0
+  )
+    return null
+  return (
+    <div style={styles.section}>
+      <div style={styles.sectionTitle}>Computed Render Beacon Spans:</div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {Object.entries(computedRenderBeaconSpans).map(([name, value]) => (
+          <li key={name} style={styles.listItem}>
+            {name}
+            <RenderComputedRenderSpan value={value} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 // Function to download trace recording as a JSON file
 function downloadTraceRecording<
   RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
@@ -819,7 +879,11 @@ function TraceItem<
     if (trace.traceContext && trace.finalTransition) {
       return getComputedResults(trace.traceContext, trace.finalTransition)
     }
-    return { computedSpans: {}, computedValues: {} }
+    return {
+      computedSpans: {},
+      computedValues: {},
+      computedRenderBeaconSpans: {},
+    }
   }, [trace.traceContext, trace.finalTransition])
 
   // Handle download button click without triggering the expand/collapse
@@ -1003,16 +1067,14 @@ function TraceItem<
             <div style={styles.sectionTitle}>Computed Spans:</div>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {(trace.computedSpans ?? []).map((name) => {
-                const value = computedResults.computedSpans?.[name]
+                const value = getFromRecord(computedResults.computedSpans, name)
                 return (
                   <li key={name} style={styles.listItem}>
                     {name}
                     {trace.state === 'complete' ||
                     trace.state === 'interrupted' ? (
                       value ? (
-                        <span style={{ marginLeft: 8, color: '#1976d2' }}>
-                          {JSON.stringify(value)}
-                        </span>
+                        <RenderComputedSpan value={value} />
                       ) : (
                         <span
                           style={{
@@ -1030,27 +1092,39 @@ function TraceItem<
               })}
             </ul>
           </div>
+          {'computedRenderBeaconSpans' in computedResults &&
+          computedResults.computedRenderBeaconSpans &&
+          Object.keys(computedResults.computedRenderBeaconSpans).length > 0 ? (
+            <RenderComputedRenderBeaconSpans
+              computedRenderBeaconSpans={
+                computedResults.computedRenderBeaconSpans
+              }
+            />
+          ) : null}
           <div style={styles.section}>
             <div style={styles.sectionTitle}>Computed Values:</div>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {(trace.computedValues ?? []).map((name) => (
-                <li key={name} style={styles.listItem}>
-                  {name}
-                  {trace.state === 'complete' || trace.state === 'interrupted'
-                    ? (() => {
-                        const value = computedResults.computedValues?.[name]
-                        if (value !== undefined) {
-                          return (
-                            <span style={{ marginLeft: 8, color: '#1976d2' }}>
-                              {String(value)}
-                            </span>
-                          )
-                        }
-                        return null
-                      })()
-                    : null}
-                </li>
-              ))}
+              {(trace.computedValues ?? []).map((name) => {
+                const value = getFromRecord<string | number | boolean>(
+                  computedResults.computedValues as Record<
+                    string,
+                    string | number | boolean
+                  >,
+                  name,
+                )
+                return (
+                  <li key={name} style={styles.listItem}>
+                    {name}
+                    {trace.state === 'complete' || trace.state === 'interrupted'
+                      ? value !== undefined && (
+                          <span style={{ marginLeft: 8, color: '#1976d2' }}>
+                            {String(value)}
+                          </span>
+                        )
+                      : null}
+                  </li>
+                )
+              })}
             </ul>
           </div>
           {/* Definition modifications details */}
