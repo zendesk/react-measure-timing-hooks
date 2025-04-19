@@ -1189,6 +1189,7 @@ export class Trace<
       variants: definition.variants,
       labelMatching: definition.labelMatching,
       debounceWindow: definition.debounceWindow,
+      promoteSpanAttributes: definition.promoteSpanAttributes,
 
       // below props are potentially mutable elements of the definition, let's make local copies:
       requiredSpans: [...definition.requiredSpans],

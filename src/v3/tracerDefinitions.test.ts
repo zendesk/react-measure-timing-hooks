@@ -360,5 +360,151 @@ describe('Trace Definitions', () => {
         'error-count': 2,
       })
     })
+    describe('promoteSpanAttributes integration', () => {
+      it('should promote span attributes to trace attributes from specific span only', () => {
+        const traceManager = new TraceManager({
+          relationSchemas,
+          reportFn: getReportFn(),
+          generateId,
+          reportErrorFn,
+        })
+
+        const tracer = traceManager.createTracer({
+          name: 'ticket.promote-span-attributes',
+          type: 'operation',
+          relationSchemaName: 'ticket',
+          requiredSpans: [match.withName('final')],
+          variants: { x: { timeout: 1_000 } },
+          promoteSpanAttributes: [
+            {
+              span: { name: 'foo', matchingIndex: -1 },
+              attributes: ['foo', 'only'],
+            },
+            {
+              span: { name: 'bar', matchingIndex: -1 },
+              attributes: ['bar', 'baz'],
+            },
+          ],
+        })
+
+        tracer.start({ relatedTo: { ticketId: 't-aaa' }, variant: 'x' })
+
+        // prettier-ignore
+        const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
+          Events: ${Render('foo', 0, { attributes: { foo: 'abc', only: 1, other: 99 } })}---${Render('foo', 2, { attributes: { foo: 'bar' } })}---${Render('bar', 4, { attributes: { bar: 123, baz: 'b', ignoreMe: 20 } })}---${Render('final', 6)}
+          Time:   ${0}                                                                   ${2}                                                     ${4}                                                                        ${6}
+        `
+        processSpans(spans, traceManager)
+        expect(reportFn).toHaveBeenCalled()
+        const report = reportFn.mock.calls[0]![0]
+        expect(report.attributes.foo).toBe('bar')
+        expect(report.attributes.only).toBeUndefined()
+        expect(report.attributes.bar).toBe(123)
+        expect(report.attributes.baz).toBe('b')
+        expect(report.attributes.other).toBeUndefined()
+      })
+
+      it('should promote all span attributes to trace attributes when no matchingIndex is specified', () => {
+        const traceManager = new TraceManager({
+          relationSchemas,
+          reportFn: getReportFn(),
+          generateId,
+          reportErrorFn,
+        })
+
+        const tracer = traceManager.createTracer({
+          name: 'ticket.promote-span-attributes',
+          type: 'operation',
+          relationSchemaName: 'ticket',
+          requiredSpans: [match.withName('final')],
+          variants: { x: { timeout: 1_000 } },
+          promoteSpanAttributes: [
+            { span: match.withName('foo'), attributes: ['foo', 'only'] },
+            { span: match.withName('bar'), attributes: ['bar', 'baz'] },
+          ],
+        })
+
+        tracer.start({ relatedTo: { ticketId: 't-aaa' }, variant: 'x' })
+
+        // prettier-ignore
+        const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
+          Events: ${Render('foo', 0, { attributes: { foo: 'abc', only: 1, other: 99 } })}---${Render('foo', 2, { attributes: { foo: 'bar' } })}---${Render('bar', 4, { attributes: { bar: 123, baz: 'b', ignoreMe: 20 } })}---${Render('final', 6)}
+          Time:   ${0}                                                                      ${2}                                                  ${4}                                                                        ${6}
+        `
+        processSpans(spans, traceManager)
+        expect(reportFn).toHaveBeenCalled()
+        const report = reportFn.mock.calls[0]![0]
+        expect(report.attributes.foo).toBe('bar')
+        expect(report.attributes.only).toBe(1)
+        expect(report.attributes.bar).toBe(123)
+        expect(report.attributes.baz).toBe('b')
+        expect(report.attributes.other).toBeUndefined()
+      })
+
+      it('should prefer explicit trace attributes over promoted', () => {
+        const traceManager = new TraceManager({
+          relationSchemas,
+          reportFn: getReportFn(),
+          generateId,
+          reportErrorFn,
+        })
+        const tracer = traceManager.createTracer({
+          name: 'ticket.promote-span-precedence',
+          type: 'operation',
+          relationSchemaName: 'ticket',
+          requiredSpans: [match.withName('final')],
+          variants: { v: { timeout: 1_000 } },
+          promoteSpanAttributes: [
+            { span: match.withName('foo'), attributes: ['foo', 'bar'] },
+          ],
+        })
+
+        tracer.start({
+          relatedTo: { ticketId: 't-bbb' },
+          variant: 'v',
+          attributes: { foo: 'winner', bar: 'own' },
+        })
+        // prettier-ignore
+        const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
+          Events: ${Render('foo', 3, { attributes: { foo: 'loser', bar: 'lost' } })}---${Render('final', 5)}
+          Time:   ${3}                                                                 ${5}
+        `
+        processSpans(spans, traceManager)
+        expect(reportFn).toHaveBeenCalled()
+        const report = reportFn.mock.calls[0]![0]
+        expect(report.attributes.foo).toBe('winner')
+        expect(report.attributes.bar).toBe('own')
+      })
+
+      it('should promote on interruption', () => {
+        const traceManager = new TraceManager({
+          relationSchemas,
+          reportFn: getReportFn(),
+          generateId,
+          reportErrorFn,
+        })
+        const tracer = traceManager.createTracer({
+          name: 'ticket.promote-span-interrupt',
+          type: 'operation',
+          relationSchemaName: 'ticket',
+          requiredSpans: [match.withName('done')],
+          variants: { iv: { timeout: 1_000 } },
+          promoteSpanAttributes: [
+            { span: match.withName('interruptme'), attributes: ['interrupt'] },
+          ],
+        })
+        tracer.start({ relatedTo: { ticketId: 't-interrupt' }, variant: 'iv' })
+        // prettier-ignore
+        const { spans } = getSpansFromTimeline<TicketAndUserAndGlobalRelationSchemasFixture>`
+          Events: ${Render('interruptme', 8, { attributes: { interrupt: 'here' } })}---${Render('done', 20)}
+          Time:   ${8}                                                                 ${20}
+        `
+        // forcibly interrupt
+        processSpans(spans, traceManager)
+        expect(reportFn).toHaveBeenCalled()
+        const report = reportFn.mock.calls[0]![0]
+        expect(report.attributes.interrupt).toBe('here')
+      })
+    })
   })
 })
