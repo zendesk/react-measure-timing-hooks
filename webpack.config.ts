@@ -1,9 +1,13 @@
 // call like: yarn webpack build --mode production --entry ./lib/hashids.ts --env moduleTarget=esm --env engineTarget=web --env outDir=dist/umd
 
-import path from 'path'
-import { Compilation } from 'webpack'
+import * as path from 'path'
+import webpack from 'webpack'
 import type { Configuration, Compiler } from 'webpack'
-import { ReplaceSource, Source } from 'webpack-sources'
+import webpackSources from 'webpack-sources'
+import type { Source } from 'webpack-sources'
+
+const __dirname = import.meta.dirname
+const { ReplaceSource } = webpackSources
 
 type ExternalFn = Extract<
   NonNullable<Configuration['externals']>,
@@ -18,7 +22,8 @@ class PostProcessChunkWebpackPlugin {
         compilation.hooks.processAssets.tap(
           {
             name: 'PostProcessChunkWebpackPlugin',
-            stage: Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_COMPATIBILITY,
+            stage:
+              webpack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_COMPATIBILITY,
           },
           (assetRecord) => {
             const jsAssets = Object.entries(
