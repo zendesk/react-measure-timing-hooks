@@ -1,17 +1,11 @@
 import { describe, expect, it, vitest as jest } from 'vitest'
 import { getSpanSummaryAttributes } from './convertToRum'
-import {
-  fromDefinition,
-  type SpanMatcherFn,
-  withMatchingRelations,
-} from './matchSpan'
+import { fromDefinition } from './matchSpan'
 import {
   createTraceRecording,
   getComputedSpans,
   getComputedValues,
 } from './recordingComputeUtils'
-import type { SpanAndAnnotation } from './spanAnnotationTypes'
-import type { Span } from './spanTypes'
 import {
   createMockSpanAndAnnotation,
   createTimestamp,
@@ -750,6 +744,183 @@ describe('recordingComputeUtils', () => {
 
       // Verify the variant is included in the recording
       expect(recording.variant).toBe('origin')
+    })
+  })
+
+  describe('promoteSpanAttributesForTrace and attribute promotion', () => {
+    const promotedAttributesTraceDefinition = {
+      ...baseDefinitionFixture,
+      promoteSpanAttributes: [
+        {
+          span: { name: 'foo-span' },
+          attributes: ['foo', 'bar'],
+        },
+        {
+          span: { name: 'baz-span' },
+          attributes: ['baz'],
+        },
+      ],
+    }
+
+    it('should promote specified attributes from last matching spans to trace', () => {
+      const recording = createTraceRecording(
+        {
+          definition: promotedAttributesTraceDefinition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, {
+              name: 'foo-span',
+              attributes: { foo: 1, bar: 2, unused: 42 },
+            }),
+            createMockSpanAndAnnotation(200, {
+              name: 'foo-span',
+              attributes: { foo: 7, bar: 8 },
+            }),
+            createMockSpanAndAnnotation(300, {
+              name: 'baz-span',
+              attributes: { baz: 'hello' },
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        },
+        {
+          transitionFromState: 'active',
+          transitionToState: 'complete',
+          lastRelevantSpanAndAnnotation: undefined,
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
+        },
+      )
+      // Should select last foo-span (timestamp 200) for foo/bar, and baz-span for baz
+      expect(recording.attributes.foo).toBe(7)
+      expect(recording.attributes.bar).toBe(8)
+      expect(recording.attributes.baz).toBe('hello')
+      expect('unused' in recording.attributes).toBe(false)
+    })
+
+    it('should not set unset promoted attributes if not found', () => {
+      const partialAttrDefinition = {
+        ...baseDefinitionFixture,
+        promoteSpanAttributes: [
+          {
+            span: { name: 'foo-span' },
+            attributes: ['foo', 'bar'],
+          },
+          {
+            span: { name: 'no-match' },
+            attributes: ['baz', 'shouldNotBeSet'],
+          },
+        ],
+      }
+      const recording = createTraceRecording(
+        {
+          definition: partialAttrDefinition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(111, {
+              name: 'foo-span',
+              attributes: { foo: 99 },
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        },
+        {
+          transitionFromState: 'active',
+          transitionToState: 'complete',
+          lastRelevantSpanAndAnnotation: undefined,
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
+        },
+      )
+      expect(recording.attributes.foo).toBe(99)
+      expect('bar' in recording.attributes).toBe(false)
+      expect('baz' in recording.attributes).toBe(false)
+      expect('shouldNotBeSet' in recording.attributes).toBe(false)
+    })
+
+    it('should allow attribute promotion on interruption', () => {
+      const recording = createTraceRecording(
+        {
+          definition: promotedAttributesTraceDefinition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, {
+              name: 'foo-span',
+              attributes: { foo: 'z' },
+            }),
+            createMockSpanAndAnnotation(200, {
+              name: 'baz-span',
+              attributes: { baz: 10 },
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        },
+        {
+          transitionFromState: 'active',
+          transitionToState: 'interrupted',
+          interruptionReason: 'timeout',
+          lastRelevantSpanAndAnnotation: undefined,
+        },
+      )
+      expect(recording.attributes.foo).toBe('z')
+      expect(recording.attributes.baz).toBe(10)
+    })
+
+    it('should allow original trace attributes to take precedence over promoted', () => {
+      const definition = {
+        ...promotedAttributesTraceDefinition,
+      }
+
+      const recording = createTraceRecording(
+        {
+          definition,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(100, {
+              name: 'foo-span',
+              attributes: { foo: 'notUsed' },
+            }),
+            createMockSpanAndAnnotation(200, {
+              name: 'baz-span',
+              attributes: { baz: 111 },
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+            attributes: { foo: 'owned', baz: 'shouldWin' },
+          },
+          recordedItemsByLabel: {},
+        },
+        {
+          transitionFromState: 'active',
+          transitionToState: 'complete',
+          lastRelevantSpanAndAnnotation: undefined,
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
+        },
+      )
+      expect(recording.attributes.foo).toBe('owned')
+      expect(recording.attributes.baz).toBe('shouldWin')
     })
   })
 })

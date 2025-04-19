@@ -1,6 +1,34 @@
-import { fromDefinition, type SpanMatch, type SpanMatcherFn } from './matchSpan'
+import {
+  fromDefinition,
+  type SpanMatch,
+  type SpanMatcherFn,
+  type SpanMatcherTags,
+} from './matchSpan'
 import type { LabelMatchingFnsRecord, LabelMatchingInputRecord } from './types'
 import type { ArrayWithAtLeastOneElement } from './typeUtils'
+
+export function applyDefaultTags<
+  const SelectedRelationNameT extends keyof RelationSchemasT,
+  const RelationSchemasT,
+  const VariantsT extends string,
+>(
+  matcherFn: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+  defaultTags?: SpanMatcherTags,
+): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
+  if (!defaultTags) {
+    return matcherFn
+  }
+  for (const key of Object.keys(defaultTags)) {
+    const k = key as keyof SpanMatcherTags
+    // only add default tags to matcher if they are not already defined
+    if (!matcherFn[k]) {
+      // @ts-expect-error hard to type
+      // eslint-disable-next-line no-param-reassign
+      matcherFn[k] = defaultTags[k]
+    }
+  }
+  return matcherFn
+}
 
 export function ensureMatcherFn<
   const SelectedRelationNameT extends keyof RelationSchemasT,
@@ -13,12 +41,16 @@ export function ensureMatcherFn<
   > = SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>,
 >(
   matcherFnOrDefinition: MatcherInputT,
+  defaultTags?: SpanMatcherTags,
 ): SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT> {
-  return typeof matcherFnOrDefinition === 'function'
-    ? matcherFnOrDefinition
-    : fromDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>(
-        matcherFnOrDefinition,
-      )
+  return applyDefaultTags(
+    typeof matcherFnOrDefinition === 'function'
+      ? matcherFnOrDefinition
+      : fromDefinition<SelectedRelationNameT, RelationSchemasT, VariantsT>(
+          matcherFnOrDefinition,
+        ),
+    defaultTags,
+  )
 }
 
 function arrayHasAtLeastOneElement<T>(

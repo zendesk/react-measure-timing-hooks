@@ -266,6 +266,15 @@ export interface TraceVariant<
   timeout: number
 }
 
+export interface PromoteSpanAttributesDefinition<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+> {
+  span: SpanMatch<SelectedRelationNameT, RelationSchemasT, VariantsT>
+  attributes: string[]
+}
+
 /**
  * Definition of a trace that includes conditions on when to end, debounce, and interrupt.
  * The "input" version will be transformed into the standardized version internally,
@@ -395,6 +404,12 @@ export interface TraceDefinition<
    * The key is the name of the computed value. You can add more computed values later using tracer.defineComputedValue().
    */
   computedValueDefinitions?: ComputedValueDefinitionsT
+
+  promoteSpanAttributes?: PromoteSpanAttributesDefinition<
+    NoInfer<SelectedRelationNameT>,
+    RelationSchemasT,
+    VariantsT
+  >[]
 }
 
 /**
@@ -511,13 +526,15 @@ export interface ComputedSpanDefinition<
   VariantsT extends string,
 > {
   /**
-   * startSpan is the *first* span matching the condition that will be considered as the start of the computed span
+   * the *first* span matching the condition that will be considered as the start of the computed span
+   * if you want the *last* matching span, use `matchingIndex: -1`
    */
   startSpan:
     | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>
     | SpecialStartToken
   /**
-   * endSpan is the *last* span matching the condition that will be considered as the end of the computed span
+   * the *first* span matching the condition that will be considered as the end of the computed span
+   * if you want the *last* matching span, use `matchingIndex: -1`
    */
   endSpan:
     | SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>

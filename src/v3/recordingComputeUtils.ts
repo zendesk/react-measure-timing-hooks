@@ -1,11 +1,75 @@
 /* eslint-disable no-continue */
-import { ensureMatcherFnOrSpecialToken } from './ensureMatcherFn'
+import {
+  ensureMatcherFn,
+  ensureMatcherFnOrSpecialToken,
+} from './ensureMatcherFn'
 import { type SpanMatcherFn } from './matchSpan'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { ActiveTraceInput, DraftTraceInput } from './spanTypes'
 import type { FinalTransition } from './Trace'
 import type { TraceRecording } from './traceRecordingTypes'
-import type { SpecialEndToken, SpecialStartToken, TraceContext } from './types'
+import type {
+  PromoteSpanAttributesDefinition,
+  SpecialEndToken,
+  SpecialStartToken,
+  TraceContext,
+} from './types'
+
+/**
+ * Helper function to find matching spans according to a matcher and matching index
+ */
+function findMatchingSpan<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+>(
+  matcher: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+  recordedItemsArray: SpanAndAnnotation<RelationSchemasT>[],
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+): SpanAndAnnotation<RelationSchemasT> | undefined {
+  // For positive or undefined indices - find with specified index offset
+  if (
+    !('matchingIndex' in matcher) ||
+    matcher.matchingIndex === undefined ||
+    matcher.matchingIndex >= 0
+  ) {
+    let matchCount = 0
+    for (const spanAndAnnotation of recordedItemsArray) {
+      if (matcher(spanAndAnnotation, context)) {
+        if (
+          matcher.matchingIndex === undefined ||
+          matcher.matchingIndex === matchCount
+        ) {
+          return spanAndAnnotation
+        }
+        matchCount++
+      }
+    }
+    return undefined
+  }
+
+  // For negative indices - iterate from the end
+  // If matchingIndex is -1, we need the last match
+  // If matchingIndex is -2, we need the second-to-last match, etc.
+  const targetIndex = Math.abs(matcher.matchingIndex) - 1
+  let matchCount = 0
+
+  // Iterate from the end of the array
+  // TODO: I'm wondering if we should sort recordedItemsArrayReversed by the end time...?
+  // For that matter, should recordedItemsArray be sorted by their start time?
+  // If yes, it might be good to do this in createTraceRecording and pass in both recordedItemsArray and recordedItemsArrayReversed pre-sorted, so we don't sort every time we need to calculate a computed span.
+  for (let i = recordedItemsArray.length - 1; i >= 0; i--) {
+    const spanAndAnnotation = recordedItemsArray[i]!
+    if (matcher(spanAndAnnotation, context)) {
+      if (matchCount === targetIndex) {
+        return spanAndAnnotation
+      }
+      matchCount++
+    }
+  }
+
+  return undefined
+}
 
 /**
  * ### Deriving SLIs and other metrics from a trace
@@ -62,62 +126,6 @@ export function getComputedValues<
     }
   }
   return computedValues
-}
-
-/**
- * Helper function to find matching spans according to a matcher and matching index
- */
-function findMatchingSpan<
-  SelectedRelationNameT extends keyof RelationSchemasT,
-  RelationSchemasT,
-  VariantsT extends string,
->(
-  matcher: SpanMatcherFn<SelectedRelationNameT, RelationSchemasT, VariantsT>,
-  recordedItemsArray: SpanAndAnnotation<RelationSchemasT>[],
-  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
-): SpanAndAnnotation<RelationSchemasT> | undefined {
-  // For positive or undefined indices - find with specified index offset
-  if (
-    !('matchingIndex' in matcher) ||
-    matcher.matchingIndex === undefined ||
-    matcher.matchingIndex >= 0
-  ) {
-    let matchCount = 0
-    for (const spanAndAnnotation of recordedItemsArray) {
-      if (matcher(spanAndAnnotation, context)) {
-        if (
-          matcher.matchingIndex === undefined ||
-          matcher.matchingIndex === matchCount
-        ) {
-          return spanAndAnnotation
-        }
-        matchCount++
-      }
-    }
-    return undefined
-  }
-
-  // For negative indices - iterate from the end
-  // If matchingIndex is -1, we need the last match
-  // If matchingIndex is -2, we need the second-to-last match, etc.
-  const targetIndex = Math.abs(matcher.matchingIndex) - 1
-  let matchCount = 0
-
-  // Iterate from the end of the array
-  // TODO: I'm wondering if we should sort recordedItemsArrayReversed by the end time...?
-  // For that matter, should recordedItemsArray be sorted by their start time?
-  // If yes, it might be good to do this in createTraceRecording and pass in both recordedItemsArray and recordedItemsArrayReversed pre-sorted, so we don't sort every time we need to calculate a computed span.
-  for (let i = recordedItemsArray.length - 1; i >= 0; i--) {
-    const spanAndAnnotation = recordedItemsArray[i]!
-    if (matcher(spanAndAnnotation, context)) {
-      if (matchCount === targetIndex) {
-        return spanAndAnnotation
-      }
-      matchCount++
-    }
-  }
-
-  return undefined
 }
 
 export function getComputedSpans<
@@ -357,6 +365,64 @@ function getComputedRenderBeaconSpans<
   return computedRenderBeaconSpans
 }
 
+/**
+ * Find and promote span attributes to trace attributes per promoteSpanAttributes definition.
+ */
+function promoteSpanAttributesForTrace<
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  RelationSchemasT,
+  VariantsT extends string,
+>(
+  definition: {
+    promoteSpanAttributes?: PromoteSpanAttributesDefinition<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >[]
+  },
+  recordedItemsArray: SpanAndAnnotation<RelationSchemasT>[],
+  context: TraceContext<SelectedRelationNameT, RelationSchemasT, VariantsT>,
+): Record<string, unknown> {
+  if (!definition.promoteSpanAttributes) return {}
+  const promoted: Record<string, unknown> = {}
+  for (const rule of definition.promoteSpanAttributes) {
+    const matcher = ensureMatcherFn<
+      SelectedRelationNameT,
+      RelationSchemasT,
+      VariantsT
+    >(rule.span)
+    if (matcher.matchingIndex === undefined) {
+      // if no specific index is provided, we accumulate attributes from all matches
+      // last one wins
+      for (const spanAnn of recordedItemsArray) {
+        if (matcher(spanAnn, context)) {
+          const attrs = spanAnn.span.attributes
+          if (attrs) {
+            for (const key of rule.attributes) {
+              if (key in attrs) promoted[key] = attrs[key]
+            }
+          }
+        }
+      }
+    } else {
+      const matchingSpan = findMatchingSpan(
+        matcher,
+        recordedItemsArray,
+        context,
+      )
+      if (matchingSpan) {
+        const attrs = matchingSpan.span.attributes
+        if (attrs) {
+          for (const key of rule.attributes) {
+            if (key in attrs) promoted[key] = attrs[key]
+          }
+        }
+      }
+    }
+  }
+  return promoted
+}
+
 function isActiveTraceInput<
   SelectedRelationNameT extends keyof RelationSchemasT,
   RelationSchemasT,
@@ -435,6 +501,14 @@ export function createTraceRecording<
       ),
   )
 
+  // promote span attributes to trace attributes per configuration
+  const promotedAttributes = promoteSpanAttributesForTrace(
+    definition,
+    recordedItemsArray,
+    context,
+  )
+  const traceAttributes = { ...promotedAttributes, ...input.attributes }
+
   const duration =
     completeSpanAndAnnotation?.annotation.operationRelativeEndTime ?? null
   const startTillInteractive =
@@ -467,7 +541,7 @@ export function createTraceRecording<
     computedSpans,
     computedRenderBeaconSpans,
     computedValues,
-    attributes: input.attributes ?? {},
+    attributes: traceAttributes,
     interruptionReason,
     entries: recordedItemsArray,
   }
