@@ -21,7 +21,7 @@ export function applyDefaultTags<
   for (const key of Object.keys(defaultTags)) {
     const k = key as keyof SpanMatcherTags
     // only add default tags to matcher if they are not already defined
-    if (!matcherFn[k]) {
+    if (!(k in matcherFn)) {
       // @ts-expect-error hard to type
       // eslint-disable-next-line no-param-reassign
       matcherFn[k] = defaultTags[k]
