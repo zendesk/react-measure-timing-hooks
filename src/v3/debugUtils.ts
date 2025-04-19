@@ -24,8 +24,8 @@ export function isSuppressedError<RelationSchemasT>(
 
 // Helper to format ms
 export function formatMs(ms?: number): string {
-  if (ms == null) return ''
-  if (ms < 1_000) return `${ms}ms`
+  if (ms == null) return 'n/a'
+  if (ms < 1_000) return `${ms.toFixed(0)}ms`
   return `${(ms / 1_000).toFixed(2)}s`
 }
 
