@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   formatMatcher,
   formatMs,
@@ -814,6 +814,14 @@ function TraceItem<
     !!trace.traceContext &&
     !!trace.finalTransition
 
+  // Memoize computed results for this trace
+  const computedResults = useMemo(() => {
+    if (trace.traceContext && trace.finalTransition) {
+      return getComputedResults(trace.traceContext, trace.finalTransition)
+    }
+    return { computedSpans: {}, computedValues: {} }
+  }, [trace.traceContext, trace.finalTransition])
+
   // Handle download button click without triggering the expand/collapse
   const handleDownloadClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -834,12 +842,11 @@ function TraceItem<
           ? '#c62828'
           : '#e0e0e0',
       }}
-      onClick={onToggleExpand}
       onMouseEnter={() => void setIsHovered(true)}
       onMouseLeave={() => void setIsHovered(false)}
     >
       {/* ROW 1: Title, state, buttons, and IDs */}
-      <div style={styles.historyHeader}>
+      <div style={styles.historyHeader} onClick={onToggleExpand}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <strong style={{ fontSize: '15px' }}>{trace.traceName}</strong>
           <span
@@ -975,7 +982,12 @@ function TraceItem<
       </div>
 
       {isExpanded && (
-        <div style={styles.expandedHistory}>
+        <div
+          style={styles.expandedHistory}
+          onClick={(e) => {
+            void e.stopPropagation()
+          }}
+        >
           <TraceAttributes attributes={trace.attributes} />
 
           <RequiredSpansList requiredSpans={trace.requiredSpans} />
@@ -990,30 +1002,32 @@ function TraceItem<
           <div style={styles.section}>
             <div style={styles.sectionTitle}>Computed Spans:</div>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {(trace.computedSpans ?? []).map((name) => (
-                <li key={name} style={styles.listItem}>
-                  {name}
-                  {trace.state === 'complete' || trace.state === 'interrupted'
-                    ? (() => {
-                        const { computedSpans } =
-                          trace.traceContext && trace.finalTransition
-                            ? getComputedResults(
-                                trace.traceContext,
-                                trace.finalTransition,
-                              )
-                            : {}
-                        if (computedSpans?.[name]) {
-                          return (
-                            <span style={{ marginLeft: 8, color: '#1976d2' }}>
-                              {JSON.stringify(computedSpans[name])}
-                            </span>
-                          )
-                        }
-                        return null
-                      })()
-                    : null}
-                </li>
-              ))}
+              {(trace.computedSpans ?? []).map((name) => {
+                const value = computedResults.computedSpans?.[name]
+                return (
+                  <li key={name} style={styles.listItem}>
+                    {name}
+                    {trace.state === 'complete' ||
+                    trace.state === 'interrupted' ? (
+                      value ? (
+                        <span style={{ marginLeft: 8, color: '#1976d2' }}>
+                          {JSON.stringify(value)}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            color: 'red',
+                            fontWeight: 500,
+                          }}
+                        >
+                          missing
+                        </span>
+                      )
+                    ) : null}
+                  </li>
+                )
+              })}
             </ul>
           </div>
           <div style={styles.section}>
@@ -1024,17 +1038,11 @@ function TraceItem<
                   {name}
                   {trace.state === 'complete' || trace.state === 'interrupted'
                     ? (() => {
-                        const { computedValues } =
-                          trace.traceContext && trace.finalTransition
-                            ? getComputedResults(
-                                trace.traceContext,
-                                trace.finalTransition,
-                              )
-                            : {}
-                        if (computedValues?.[name] !== undefined) {
+                        const value = computedResults.computedValues?.[name]
+                        if (value !== undefined) {
                           return (
                             <span style={{ marginLeft: 8, color: '#1976d2' }}>
-                              {String(computedValues[name])}
+                              {String(value)}
                             </span>
                           )
                         }
@@ -1068,6 +1076,7 @@ function TraceItem<
           ...styles.expandArrow,
           ...(isExpanded ? styles.expandArrowUp : styles.expandArrowDown),
         }}
+        onClick={onToggleExpand}
       >
         ▼
       </div>
