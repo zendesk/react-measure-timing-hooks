@@ -6,7 +6,6 @@ import type { Configuration, Compiler } from 'webpack'
 import webpackSources from 'webpack-sources'
 import type { Source } from 'webpack-sources'
 
-const __dirname = import.meta.dirname
 const { ReplaceSource } = webpackSources
 
 type ExternalFn = Extract<
