@@ -205,9 +205,79 @@ export const mapOperationForVisualization = (
     },
   }))
 
+  // Add computedRenderBeaconSpans as three computed-span entries per beacon
+  const entriesFromComputedRenderBeaconSpans = Object.entries(
+    traceRecording.computedRenderBeaconSpans || {},
+  ).flatMap<MappedSpanAndAnnotation>(([beaconName, beaconSpan]) => [
+    {
+      groupName: beaconName,
+      type: 'computed-span',
+      span: {
+        type: 'computed-span',
+        duration: beaconSpan.firstRenderTillContent,
+        name: `${beaconName}/firstRenderTillContent`,
+        startTime: adjustTimestampBy(
+          traceRecording.startTime,
+          beaconSpan.startOffset,
+        ),
+        relatedTo: traceRecording.relatedTo,
+      },
+      annotation: {
+        id: traceRecording.id,
+        occurrence: 1,
+        operationRelativeStartTime: beaconSpan.startOffset,
+        operationRelativeEndTime:
+          beaconSpan.startOffset + beaconSpan.firstRenderTillContent,
+      },
+    },
+    {
+      groupName: beaconName,
+      type: 'computed-span',
+      span: {
+        type: 'computed-span',
+        duration: beaconSpan.firstRenderTillLoading,
+        name: `${beaconName}/firstRenderTillLoading`,
+        startTime: adjustTimestampBy(
+          traceRecording.startTime,
+          beaconSpan.startOffset,
+        ),
+        relatedTo: traceRecording.relatedTo,
+      },
+      annotation: {
+        id: traceRecording.id,
+        occurrence: 1,
+        operationRelativeStartTime: beaconSpan.startOffset,
+        operationRelativeEndTime:
+          beaconSpan.startOffset + beaconSpan.firstRenderTillLoading,
+      },
+    },
+    {
+      groupName: beaconName,
+      type: 'computed-span',
+      span: {
+        type: 'computed-span',
+        duration: beaconSpan.firstRenderTillData,
+        name: `${beaconName}/firstRenderTillData`,
+        startTime: adjustTimestampBy(
+          traceRecording.startTime,
+          beaconSpan.startOffset,
+        ),
+        relatedTo: traceRecording.relatedTo,
+      },
+      annotation: {
+        id: traceRecording.id,
+        occurrence: 1,
+        operationRelativeStartTime: beaconSpan.startOffset,
+        operationRelativeEndTime:
+          beaconSpan.startOffset + beaconSpan.firstRenderTillData,
+      },
+    },
+  ])
+
   const entriesWithComputedSpans = [
     ...mappedEntries,
     ...entriesFromComputedSpans,
+    ...entriesFromComputedRenderBeaconSpans,
   ].sort((a, b) => {
     const orderA = order[a.type] ?? 100
     const orderB = order[b.type] ?? 100
