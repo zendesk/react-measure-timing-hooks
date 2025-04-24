@@ -13,9 +13,8 @@ export const ticketOperationTracer = traceManager.createTracer({
   ],
   relationSchemaName: 'ticket',
   variants: {
-    click: { timeout: 45_000 },
+    click: { timeout: 15_000 },
   },
-  // debounceWindow: 1_000,
   debounceOnSpans: [
     {
       name: 'TicketView',
