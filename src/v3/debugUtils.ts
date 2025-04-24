@@ -6,6 +6,7 @@ import type { SpanMatcherFn } from './matchSpan'
 import { createTraceRecording } from './recordingComputeUtils'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { FinalTransition, OnEnterStatePayload } from './Trace'
+import type { TraceRecording } from './traceRecordingTypes'
 import type {
   DraftTraceContext,
   RelationSchemasBase,
@@ -61,14 +62,11 @@ export function getComputedResults<RelationSchemasT>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   traceContext: TraceContext<any, RelationSchemasT, any>,
   finalTransition: FinalTransition<RelationSchemasT>,
-) {
-  if (!traceContext || !finalTransition) return {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Partial<TraceRecording<any, RelationSchemasT>> {
   try {
     const recording = createTraceRecording(traceContext, finalTransition)
-    return {
-      computedValues: recording.computedValues,
-      computedSpans: recording.computedSpans,
-    }
+    return recording
   } catch {
     return {}
   }
