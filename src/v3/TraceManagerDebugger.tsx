@@ -18,6 +18,7 @@ import type { ComputedRenderSpan, ComputedSpan } from './traceRecordingTypes'
 import type {
   RelationSchemasBase,
   TraceContext,
+  TraceDefinitionModifications,
   TraceInterruptionReason,
 } from './types'
 
@@ -52,7 +53,11 @@ interface TraceInfo<RelationSchemasT> {
   totalSpanCount?: number
   hasErrorSpan?: boolean
   hasSuppressedErrorSpan?: boolean
-  definitionModifications?: unknown[]
+  definitionModifications?: TraceDefinitionModifications<
+    keyof RelationSchemasT,
+    RelationSchemasT,
+    string
+  >[]
   computedSpans?: string[]
   computedValues?: string[]
 }
@@ -774,17 +779,177 @@ function RenderComputedSpan({ value }: { value: ComputedSpan }) {
   )
 }
 
-// Helper to render ComputedRenderSpan nicely
-function RenderComputedRenderSpan({ value }: { value: ComputedRenderSpan }) {
+// Visual timeline for ComputedRenderSpan (like the provided sketch)
+function RenderBeaconTimeline({
+  value,
+  name,
+}: {
+  value: ComputedRenderSpan
+  name: string
+}) {
   if (!value) return null
+
+  // Extract times (all relative to start)
+  const loading = value.firstRenderTillLoading
+  const data = value.firstRenderTillData
+  const content = value.firstRenderTillContent
+
+  // Colors: loading = orange, data = blue, content = green, overlap = purple
+  const labels = [
+    { label: 'loading', time: loading, color: '#ff9800' },
+    { label: 'data', time: data, color: '#1976d2' },
+    { label: 'content', time: content, color: '#2e7d32' },
+  ]
+  // Find all unique, defined breakpoints
+  const breakpoints = [loading, data, content].filter(
+    (v): v is number => typeof v === 'number',
+  )
+  const uniqueSorted = [...new Set(breakpoints)].sort((a, b) => a - b)
+  // Build segments
+  const segments: {
+    label: string
+    start: number
+    end: number
+    color: string
+  }[] = []
+  let last = 0
+
+  for (const t of uniqueSorted) {
+    // Which labels are active at this segment?
+    const active = labels.filter((l) => l.time === t)
+    const labelNames = active.map((l) => l.label)
+    const color =
+      labelNames.length > 1
+        ? '#8e24aa' // purple for overlap
+        : active[0]?.color ?? '#888'
+    segments.push({
+      label: labelNames.join(' & '),
+      start: last,
+      end: t,
+      color,
+    })
+    last = t
+  }
+  // If content is not the last, add a final segment
+  if (typeof content === 'number' && content > last) {
+    segments.push({
+      label: 'content',
+      start: last,
+      end: content,
+      color: '#2e7d32',
+    })
+  }
+
+  // Timeline bar width in px
+  const BAR_WIDTH = 320
+  const total = typeof content === 'number' ? content : 1
+  // Avoid division by zero
+  const safeTotal = total > 0 ? total : 1
+
   return (
-    <span style={{ marginLeft: 8, color: '#1976d2' }}>
-      start: {value.startOffset.toFixed(2)}ms, loading:{' '}
-      {value.firstRenderTillLoading.toFixed(2)}ms, data:{' '}
-      {value.firstRenderTillData.toFixed(2)}ms, content:{' '}
-      {value.firstRenderTillContent.toFixed(2)}ms, renders: {value.renderCount},
-      total: {value.sumOfRenderDurations.toFixed(2)}ms
-    </span>
+    <div style={{ margin: '10px 0 0 0' }}>
+      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
+        {name || 'Component'}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: 32,
+          position: 'relative',
+          background: '#fff',
+        }}
+      >
+        {/* Timeline bar */}
+        <div
+          style={{
+            display: 'flex',
+            width: BAR_WIDTH,
+            height: 20,
+            borderRadius: 8,
+            overflow: 'hidden',
+            border: '2px solid #222',
+            boxSizing: 'border-box',
+            background: '#fffde7',
+          }}
+        >
+          {segments.map((seg, i) => {
+            const width = ((seg.end - seg.start) / safeTotal) * BAR_WIDTH
+            return (
+              <div
+                key={i}
+                style={{
+                  width,
+                  background: seg.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRight:
+                    i < segments.length - 1 ? '2px solid #fff' : undefined,
+                  color: '#fff',
+                  fontWeight: 500,
+                  fontSize: 13,
+                  position: 'relative',
+                }}
+              >
+                <span style={{ position: 'absolute', left: 8, color: '#222' }}>
+                  {seg.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        {/* Markers for start and end */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            height: 32,
+            width: 2,
+            background: '#222',
+            borderRadius: 2,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: BAR_WIDTH,
+            top: 0,
+            height: 32,
+            width: 2,
+            background: '#2e7d32',
+            borderRadius: 2,
+          }}
+        />
+      </div>
+      {/* Time annotations below the bar */}
+      <div style={{ display: 'flex', width: BAR_WIDTH, marginTop: 2 }}>
+        <div
+          style={{ width: 0, textAlign: 'left', color: '#222', fontSize: 13 }}
+        >
+          start
+        </div>
+        {segments.map((seg, i) => (
+          <div
+            key={i}
+            style={{
+              width: ((seg.end - seg.start) / safeTotal) * BAR_WIDTH,
+              textAlign: 'center',
+              color: seg.color,
+              fontSize: 13,
+            }}
+          >
+            +{seg.end.toFixed(0)}ms
+          </div>
+        ))}
+      </div>
+      {/* Render count and sum of render durations */}
+      <div style={{ marginTop: 8, color: '#444', fontSize: 14 }}>
+        renders: {value.renderCount} &nbsp; sum of render durations:{' '}
+        {value.sumOfRenderDurations.toFixed(0)}ms
+      </div>
+    </div>
   )
 }
 
@@ -794,19 +959,14 @@ function RenderComputedRenderBeaconSpans({
 }: {
   computedRenderBeaconSpans: Record<string, ComputedRenderSpan>
 }) {
-  if (
-    !computedRenderBeaconSpans ||
-    Object.keys(computedRenderBeaconSpans).length === 0
-  )
-    return null
+  // if (Object.keys(computedRenderBeaconSpans).length === 0) return null
   return (
     <div style={styles.section}>
       <div style={styles.sectionTitle}>Computed Render Beacon Spans:</div>
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {Object.entries(computedRenderBeaconSpans).map(([name, value]) => (
           <li key={name} style={styles.listItem}>
-            {name}
-            <RenderComputedRenderSpan value={value} />
+            <RenderBeaconTimeline value={value} name={name} />
           </li>
         ))}
       </ul>
@@ -877,13 +1037,14 @@ function TraceItem<
   // Memoize computed results for this trace
   const computedResults = useMemo(() => {
     if (trace.traceContext && trace.finalTransition) {
-      return getComputedResults(trace.traceContext, trace.finalTransition)
+      const results = getComputedResults(
+        trace.traceContext,
+        trace.finalTransition,
+      )
+      console.log('Computed results:', results)
+      return results
     }
-    return {
-      computedSpans: {},
-      computedValues: {},
-      computedRenderBeaconSpans: {},
-    }
+    return {}
   }, [trace.traceContext, trace.finalTransition])
 
   // Handle download button click without triggering the expand/collapse
@@ -1092,9 +1253,7 @@ function TraceItem<
               })}
             </ul>
           </div>
-          {'computedRenderBeaconSpans' in computedResults &&
-          computedResults.computedRenderBeaconSpans &&
-          Object.keys(computedResults.computedRenderBeaconSpans).length > 0 ? (
+          {computedResults.computedRenderBeaconSpans ? (
             <RenderComputedRenderBeaconSpans
               computedRenderBeaconSpans={
                 computedResults.computedRenderBeaconSpans
@@ -1105,11 +1264,8 @@ function TraceItem<
             <div style={styles.sectionTitle}>Computed Values:</div>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {(trace.computedValues ?? []).map((name) => {
-                const value = getFromRecord<string | number | boolean>(
-                  computedResults.computedValues as Record<
-                    string,
-                    string | number | boolean
-                  >,
+                const value = getFromRecord(
+                  computedResults.computedValues,
                   name,
                 )
                 return (
@@ -1188,8 +1344,8 @@ export default function TraceManagerDebugger<
 
   // For floating panel functionality
   const [position, setPosition] = useState({ x: 10, y: 10 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const isDraggingRef = useRef(false)
+  const dragOffsetRef = useRef({ x: 0, y: 0 })
   const [isMinimized, setIsMinimized] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -1199,17 +1355,17 @@ export default function TraceManagerDebugger<
     // Prevent default browser behavior like text selection
     e.preventDefault()
 
-    setIsDragging(true)
+    isDraggingRef.current = true
 
     // Calculate the offset from cursor to container top-left corner
-    setDragOffset({
+    dragOffsetRef.current = {
       x: e.clientX - position.x,
       y: e.clientY - position.y,
-    })
+    }
   }
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging) return
+    if (!isDraggingRef.current) return
 
     // Prevent default behavior during dragging
     e.preventDefault()
@@ -1217,18 +1373,19 @@ export default function TraceManagerDebugger<
     // Calculate new position by subtracting the initial offset
     requestAnimationFrame(() => {
       setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y,
+        x: e.clientX - dragOffsetRef.current.x,
+        y: e.clientY - dragOffsetRef.current.y,
       })
     })
   }
 
   const handleMouseUp = (e: MouseEvent) => {
-    if (isDragging) {
+    if (isDraggingRef.current) {
       // Prevent default only if we were dragging
       e.preventDefault()
     }
-    setIsDragging(false)
+    isDraggingRef.current = false
+    dragOffsetRef.current = { x: 0, y: 0 }
   }
 
   useEffect(() => {
@@ -1242,7 +1399,7 @@ export default function TraceManagerDebugger<
       }
     }
     return undefined
-  }, [float, isDragging, dragOffset])
+  }, [float])
 
   useEffect(() => {
     // schedule updates asynchronously so we never call setState mid‐render
@@ -1278,7 +1435,7 @@ export default function TraceManagerDebugger<
           definition: trace.definition,
           input: trace.input,
           recordedItemsByLabel: trace.recordedItemsByLabel,
-          recordedItems: trace.recordedItems,
+          recordedItems: new Set(trace.recordedItems),
         },
         // New fields for live info
         liveDuration: 0,
@@ -1304,6 +1461,22 @@ export default function TraceManagerDebugger<
         const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
         const transition = event.stateTransition
 
+        const partialNewTrace = {
+          traceContext: {
+            definition: trace.definition,
+            input: trace.input,
+            recordedItemsByLabel: trace.recordedItemsByLabel,
+            recordedItems: new Set(trace.recordedItems),
+          },
+          state: transition.transitionToState,
+          attributes: trace.input.attributes
+            ? { ...trace.input.attributes }
+            : undefined,
+          relatedTo: trace.input.relatedTo
+            ? { ...trace.input.relatedTo }
+            : undefined,
+        } as const
+
         schedule(
           () =>
             void setCurrentTrace((prevTrace) => {
@@ -1312,13 +1485,7 @@ export default function TraceManagerDebugger<
 
               const updatedTrace: TraceInfo<RelationSchemasT> = {
                 ...prevTrace,
-                state: transition.transitionToState,
-                attributes: trace.input.attributes
-                  ? { ...trace.input.attributes }
-                  : undefined,
-                relatedTo: trace.input.relatedTo
-                  ? { ...trace.input.relatedTo }
-                  : undefined,
+                ...partialNewTrace,
               }
 
               if ('interruptionReason' in transition) {
@@ -1447,23 +1614,30 @@ export default function TraceManagerDebugger<
     // Subscribe to definition-modified for modification indicator
     const defModSub = traceManager
       .when('definition-modified')
-      .subscribe((event) => {
-        schedule(
-          () =>
-            void setCurrentTrace((prevTrace) => {
-              if (!prevTrace) return prevTrace
-              if (event.traceContext.input.id !== prevTrace.traceId)
-                return prevTrace
-              return {
-                ...prevTrace,
-                definitionModifications: [
-                  ...(prevTrace.definitionModifications ?? []),
-                  event.modifications,
-                ],
-              }
-            }),
-        )
-      })
+      .subscribe(
+        ({ traceContext: trace, modifications: eventModifications }) => {
+          schedule(
+            () =>
+              void setCurrentTrace((prevTrace) => {
+                if (!prevTrace) return prevTrace
+                if (trace.input.id !== prevTrace.traceId) return prevTrace
+                return {
+                  ...prevTrace,
+                  traceContext: {
+                    definition: trace.definition,
+                    input: trace.input,
+                    recordedItemsByLabel: trace.recordedItemsByLabel,
+                    recordedItems: new Set(trace.recordedItems),
+                  },
+                  definitionModifications: [
+                    ...(prevTrace.definitionModifications ?? []),
+                    eventModifications,
+                  ],
+                }
+              }),
+          )
+        },
+      )
 
     return () => {
       startSub.unsubscribe()
