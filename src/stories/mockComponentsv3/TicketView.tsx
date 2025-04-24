@@ -40,6 +40,8 @@ export const TicketView: React.FC<TicketViewProps> = ({
     renderedOutput: cached ? 'content' : 'loading',
     attributes: { exampleBeaconAttribute: true },
     isIdle: cached,
+    error:
+      cached && ticketId === 3 ? new Error('Error loading ticket') : undefined,
   })
 
   useEffect(

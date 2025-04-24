@@ -78,7 +78,7 @@ export const mockTickets: Ticket[] = [
   },
   {
     id: 3,
-    subject: 'Printer Only Prints in Pink',
+    subject: 'Simulated Error: Printer Only Prints in Pink',
     messages: [
       {
         message:
