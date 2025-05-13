@@ -7841,9 +7841,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@zendesk/react-measure-timing-hooks@workspace:.":
+"@zendesk/retrace@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@zendesk/react-measure-timing-hooks@workspace:."
+  resolution: "@zendesk/retrace@workspace:."
   dependencies:
     "@dnd-kit/core": "npm:^6.3.1"
     "@dnd-kit/modifiers": "npm:^9.0.0"
@@ -21232,9 +21232,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"webpack@patch:webpack@npm:5.98.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch::locator=%40zendesk%2Freact-measure-timing-hooks%40workspace%3A.":
+"webpack@patch:webpack@npm:5.98.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch::locator=%40zendesk%2Fretrace%40workspace%3A.":
   version: 5.98.0
-  resolution: "webpack@patch:webpack@npm%3A5.98.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch::version=5.98.0&hash=93f5a2&locator=%40zendesk%2Freact-measure-timing-hooks%40workspace%3A."
+  resolution: "webpack@patch:webpack@npm%3A5.98.0#.yarn/patches/webpack-npm-5.74.0-f5b838a00d.patch::version=5.98.0&hash=93f5a2&locator=%40zendesk%2Fretrace%40workspace%3A."
   dependencies:
     "@types/eslint-scope": "npm:^3.7.7"
     "@types/estree": "npm:^1.0.6"

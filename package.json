@@ -1,9 +1,14 @@
 {
-  "name": "@zendesk/react-measure-timing-hooks",
+  "name": "@zendesk/retrace",
   "version": "0.0.0",
-  "description": "react hooks for measuring time to interactive and time to render of components",
+  "description": "define and capture Product Operation Traces along with computed metrics with an optional friendly React beacon API",
   "keywords": [
     "headless",
+    "otel",
+    "opentelemetry",
+    "retrace",
+    "trace",
+    "tracing",
     "hook",
     "measure",
     "react",
@@ -14,17 +19,19 @@
     "zendesk"
   ],
   "bugs": {
-    "url": "https://github.com/zendesk/react-measure-timing-hooks/issues"
+    "url": "https://github.com/zendesk/retrace/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zendesk/react-measure-timing-hooks.git"
+    "url": "https://github.com/zendesk/retrace.git"
   },
   "sideEffects": false,
   "license": "Apache-2.0",
   "author": "Zendesk",
   "collaborators": [
-    "Bazyli Brzóska <bbrzoska@zendesk.com>"
+    "Bazyli Brzóska <bbrzoska@zendesk.com>",
+    "Evan Jenkins <evan.jenkins@zendesk.com>",
+    "Cynthia Ma <cma@zendesk.com>"
   ],
   "exports": {
     ".": {
