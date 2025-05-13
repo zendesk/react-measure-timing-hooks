@@ -25,6 +25,7 @@ import type {
 // Constants to avoid magic numbers
 const MAX_STRING_LENGTH = 20
 const LONG_STRING_THRESHOLD = 25
+const NAME = 'Retrace Debugger'
 
 interface RequiredSpan {
   name: string
@@ -554,6 +555,28 @@ const styles = {
   downloadIcon: {
     fontSize: '14px',
   },
+  // Render stats chip group
+  renderStatsGroup: {
+    display: 'inline-flex',
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
+    borderRadius: '12px',
+    border: '1px solid #e0e0e0', // Neutral border
+    backgroundColor: '#f5f5f5', // Neutral background
+    marginRight: '8px', // Add some margin if there are multiple groups
+  },
+  renderStatsLabel: {
+    color: '#555', // Darker grey for label
+    padding: '3px 8px',
+    fontSize: '12px',
+  },
+  renderStatsValue: {
+    backgroundColor: '#e0e0e0', // Slightly darker background for value
+    color: '#333', // Black for value text
+    padding: '3px 8px',
+    fontSize: '12px',
+    fontWeight: '500',
+  },
 } as const
 
 function getStateStyle(state: string) {
@@ -779,6 +802,44 @@ function RenderComputedSpan({ value }: { value: ComputedSpan }) {
   )
 }
 
+// Helper function to assign lanes to points to prevent text overlap
+const assignLanesToPoints = (
+  pointsToAssign: readonly { name: string; time: number; color: string }[],
+  currentScale: number,
+  separationPercent: number,
+): {
+  pointData: { name: string; time: number; color: string }
+  lane: number
+}[] => {
+  if (pointsToAssign.length === 0) return []
+
+  const sortedPoints = [...pointsToAssign].sort((a, b) => a.time - b.time)
+  const assignments: {
+    pointData: { name: string; time: number; color: string }
+    lane: number
+  }[] = []
+  // For each lane, stores the `leftPercent` of the last point added to it.
+  const laneLastOccupiedX: Record<number, number> = {}
+
+  for (const currentPoint of sortedPoints) {
+    const currentPointLeftPercent = currentPoint.time * currentScale
+    for (let l = 0; ; l++) {
+      // Iterate through lanes 0, 1, 2...
+      const lastXInLane = laneLastOccupiedX[l]
+      if (
+        lastXInLane === undefined ||
+        currentPointLeftPercent - lastXInLane >= separationPercent
+      ) {
+        // This point can fit in this lane (or it's a new lane)
+        assignments.push({ pointData: currentPoint, lane: l })
+        laneLastOccupiedX[l] = currentPointLeftPercent
+        break // Move to the next point
+      }
+    }
+  }
+  return assignments // This array is sorted by time due to the initial sort.
+}
+
 // Visual timeline for ComputedRenderSpan (like the provided sketch)
 function RenderBeaconTimeline({
   value,
@@ -790,164 +851,319 @@ function RenderBeaconTimeline({
   if (!value) return null
 
   // Extract times (all relative to start)
-  const loading = value.firstRenderTillLoading
-  const data = value.firstRenderTillData
-  const content = value.firstRenderTillContent
+  const {
+    firstRenderTillLoading: loading,
+    firstRenderTillData: data,
+    firstRenderTillContent: content,
+  } = value
 
-  // Colors: loading = orange, data = blue, content = green, overlap = purple
-  const labels = [
-    { label: 'loading', time: loading, color: '#ff9800' },
-    { label: 'data', time: data, color: '#1976d2' },
-    { label: 'content', time: content, color: '#2e7d32' },
-  ]
-  // Find all unique, defined breakpoints
-  const breakpoints = [loading, data, content].filter(
-    (v): v is number => typeof v === 'number',
+  // --- Base Constants ---
+  const BAR_HEIGHT = 25
+  const TEXT_AREA_HEIGHT = 22 // Height per lane of text
+  const MARKER_LINE_WIDTH = 2
+  const VERTICAL_PADDING_BETWEEN_AREAS = 2
+
+  // Thresholds for individual label/line alignment (percentages)
+  const LABEL_ALIGN_LOW_THRESHOLD = 1
+  const LABEL_ALIGN_HIGH_THRESHOLD = 99
+  const MARKER_LINE_ALIGN_LOW_THRESHOLD = 0.1
+  const MARKER_LINE_ALIGN_HIGH_THRESHOLD = 99.9
+  const MIN_SEGMENT_WIDTH_PRODUCT_THRESHOLD = 0.001
+  const MIN_TEXT_SEPARATION_PERCENT = 8 // Min horizontal separation (%) for text in the same lane
+
+  // --- Prepare Data for Rendering ---
+  const timePointsForDisplay: { name: string; time: number; color: string }[] =
+    []
+  timePointsForDisplay.push({ name: 'start', time: 0, color: '#757575' })
+  if (typeof loading === 'number')
+    timePointsForDisplay.push({
+      name: 'loading',
+      time: loading,
+      color: '#ff9800',
+    })
+  if (typeof data === 'number')
+    timePointsForDisplay.push({ name: 'data', time: data, color: '#1976d2' })
+  if (typeof content === 'number')
+    timePointsForDisplay.push({
+      name: 'content',
+      time: content,
+      color: '#2e7d32',
+    })
+
+  const allRelevantTimes = [0, loading, data, content].filter(
+    (t): t is number => typeof t === 'number',
   )
-  const uniqueSorted = [...new Set(breakpoints)].sort((a, b) => a - b)
-  // Build segments
-  const segments: {
-    label: string
+  const maxTime =
+    allRelevantTimes.length > 0 ? Math.max(...allRelevantTimes) : 0
+  const scale = maxTime > 0 ? 100 / maxTime : 0
+
+  // Assign lanes to points
+  const processedPointsForDisplay = assignLanesToPoints(
+    timePointsForDisplay,
+    scale,
+    MIN_TEXT_SEPARATION_PERCENT,
+  )
+  const numLanes =
+    processedPointsForDisplay.length > 0
+      ? Math.max(...processedPointsForDisplay.map((item) => item.lane)) + 1
+      : 1
+
+  // --- Dynamic Height and Offset Calculations based on lanes ---
+  const TOTAL_LABEL_AREA_HEIGHT = numLanes * TEXT_AREA_HEIGHT
+  const TOTAL_TIME_VALUE_AREA_HEIGHT = numLanes * TEXT_AREA_HEIGHT // Assuming same number of lanes for times
+
+  const TOTAL_VIS_CONTENT_HEIGHT =
+    TOTAL_LABEL_AREA_HEIGHT +
+    VERTICAL_PADDING_BETWEEN_AREAS +
+    BAR_HEIGHT +
+    VERTICAL_PADDING_BETWEEN_AREAS +
+    TOTAL_TIME_VALUE_AREA_HEIGHT
+
+  const BAR_TOP_OFFSET =
+    TOTAL_LABEL_AREA_HEIGHT + VERTICAL_PADDING_BETWEEN_AREAS
+  const TIME_VALUES_AREA_TOP =
+    BAR_TOP_OFFSET + BAR_HEIGHT + VERTICAL_PADDING_BETWEEN_AREAS
+
+  // Bar Segments (same logic as before)
+  const barSegments: {
     start: number
     end: number
     color: string
+    key: string
   }[] = []
-  let last = 0
-
-  for (const t of uniqueSorted) {
-    // Which labels are active at this segment?
-    const active = labels.filter((l) => l.time === t)
-    const labelNames = active.map((l) => l.label)
-    const color =
-      labelNames.length > 1
-        ? '#8e24aa' // purple for overlap
-        : active[0]?.color ?? '#888'
-    segments.push({
-      label: labelNames.join(' & '),
-      start: last,
-      end: t,
-      color,
-    })
-    last = t
+  let currentSegmentTime = 0
+  if (typeof loading === 'number') {
+    if (loading > currentSegmentTime) {
+      barSegments.push({
+        start: currentSegmentTime,
+        end: loading,
+        color: '#fff176',
+        key: 'segment-to-loading',
+      })
+    }
+    currentSegmentTime = Math.max(currentSegmentTime, loading)
   }
-  // If content is not the last, add a final segment
-  if (typeof content === 'number' && content > last) {
-    segments.push({
-      label: 'content',
-      start: last,
+  if (typeof data === 'number') {
+    if (data > currentSegmentTime) {
+      barSegments.push({
+        start: currentSegmentTime,
+        end: data,
+        color: '#90caf9',
+        key: 'segment-to-data',
+      })
+    }
+    currentSegmentTime = Math.max(currentSegmentTime, data)
+  }
+  if (typeof content === 'number' && content > currentSegmentTime) {
+    barSegments.push({
+      start: currentSegmentTime,
       end: content,
-      color: '#2e7d32',
+      color: '#a5d6a7',
+      key: 'segment-to-content',
     })
   }
+  if (barSegments.length === 0 && maxTime > 0) {
+    let singleSegmentColor = '#e0e0e0'
+    if (typeof content === 'number' && content === maxTime)
+      singleSegmentColor = '#a5d6a7'
+    else if (typeof data === 'number' && data === maxTime)
+      singleSegmentColor = '#90caf9'
+    else if (typeof loading === 'number' && loading === maxTime)
+      singleSegmentColor = '#fff176'
+    barSegments.push({
+      start: 0,
+      end: maxTime,
+      color: singleSegmentColor,
+      key: 'single-segment-fallback',
+    })
+  }
+  const validBarSegments = barSegments.filter(
+    (seg) =>
+      seg.end > seg.start &&
+      (seg.end - seg.start) * scale > MIN_SEGMENT_WIDTH_PRODUCT_THRESHOLD,
+  )
 
-  // Timeline bar width in px
-  const BAR_WIDTH = 320
-  const total = typeof content === 'number' ? content : 1
-  // Avoid division by zero
-  const safeTotal = total > 0 ? total : 1
+  // Unique times for vertical lines (based on original, unsorted list for consistency if order mattered)
+  const uniqueTimesForLines = [
+    ...new Set(timePointsForDisplay.map((p) => p.time)),
+  ].sort((a, b) => a - b)
 
   return (
-    <div style={{ margin: '10px 0 0 0' }}>
-      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
-        {name || 'Component'}
+    <div style={{ width: '100%' }}>
+      {/* Render count and sum of render durations */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ fontWeight: 600, fontSize: 16, marginRight: '10px' }}>
+          {name}
+        </div>
+        <div style={styles.renderStatsGroup}>
+          <span style={styles.renderStatsLabel}>Renders</span>
+          <span style={styles.renderStatsValue}>{value.renderCount}</span>
+        </div>
+        <div style={styles.renderStatsGroup}>
+          <span style={styles.renderStatsLabel}>Duration</span>
+          <span style={styles.renderStatsValue}>
+            {value.sumOfRenderDurations.toFixed(0)}ms
+          </span>
+        </div>
       </div>
+
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          height: 32,
           position: 'relative',
-          background: '#fff',
+          width: '100%',
+          height: TOTAL_VIS_CONTENT_HEIGHT,
         }}
       >
-        {/* Timeline bar */}
+        {/* Area for Text Labels (Above Bar) */}
         <div
           style={{
-            display: 'flex',
-            width: BAR_WIDTH,
-            height: 20,
-            borderRadius: 8,
-            overflow: 'hidden',
-            border: '2px solid #222',
-            boxSizing: 'border-box',
-            background: '#fffde7',
+            position: 'absolute',
+            top: 0,
+            width: '100%',
+            height: TOTAL_LABEL_AREA_HEIGHT, // Dynamic height
+            zIndex: 2,
           }}
         >
-          {segments.map((seg, i) => {
-            const width = ((seg.end - seg.start) / safeTotal) * BAR_WIDTH
+          {processedPointsForDisplay.map(
+            ({ pointData: point, lane: currentLane }) => {
+              const leftPercent = point.time * scale
+              let transform = 'translateX(-50%)'
+              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD)
+                transform = 'translateX(0%)'
+              else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD)
+                transform = 'translateX(-100%)'
+
+              return (
+                <div
+                  key={`${point.name}-label-${point.time}`} // Unique key
+                  style={{
+                    position: 'absolute',
+                    top: currentLane * TEXT_AREA_HEIGHT, // Position based on lane
+                    left: `${leftPercent}%`,
+                    transform,
+                    fontSize: 11,
+                    color: point.color,
+                    whiteSpace: 'nowrap',
+                    lineHeight: `${TEXT_AREA_HEIGHT}px`,
+                    padding: '0 5px',
+                  }}
+                >
+                  {point.name}
+                </div>
+              )
+            },
+          )}
+        </div>
+
+        {/* Timeline Bar */}
+        <div
+          style={{
+            position: 'absolute',
+            top: BAR_TOP_OFFSET, // Dynamic offset
+            width: '100%',
+            height: BAR_HEIGHT,
+            borderRadius: 3,
+            background: '#e0e0e0',
+            boxSizing: 'border-box',
+            zIndex: 1,
+            display: 'flex',
+          }}
+        >
+          {validBarSegments.map((seg) => {
+            const segmentWidthPercent = (seg.end - seg.start) * scale
+            const segmentLeftPercent = seg.start * scale
+            if (segmentWidthPercent <= 0) return null
             return (
               <div
-                key={i}
+                key={seg.key}
                 style={{
-                  width,
+                  position: 'absolute',
+                  left: `${segmentLeftPercent}%`,
+                  width: `${segmentWidthPercent}%`,
+                  height: '100%',
                   background: seg.color,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRight:
-                    i < segments.length - 1 ? '2px solid #fff' : undefined,
-                  color: '#fff',
-                  fontWeight: 500,
-                  fontSize: 13,
-                  position: 'relative',
                 }}
-              >
-                <span style={{ position: 'absolute', left: 8, color: '#222' }}>
-                  {seg.label}
-                </span>
-              </div>
+              />
             )
           })}
         </div>
-        {/* Markers for start and end */}
+
+        {/* Area for Time Values (Below Bar) */}
         <div
           style={{
             position: 'absolute',
-            left: 0,
-            top: 0,
-            height: 32,
-            width: 2,
-            background: '#222',
-            borderRadius: 2,
+            top: TIME_VALUES_AREA_TOP, // Dynamic offset
+            width: '100%',
+            height: TOTAL_TIME_VALUE_AREA_HEIGHT, // Dynamic height
+            zIndex: 2,
           }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            left: BAR_WIDTH,
-            top: 0,
-            height: 32,
-            width: 2,
-            background: '#2e7d32',
-            borderRadius: 2,
-          }}
-        />
-      </div>
-      {/* Time annotations below the bar */}
-      <div style={{ display: 'flex', width: BAR_WIDTH, marginTop: 2 }}>
-        <div
-          style={{ width: 0, textAlign: 'left', color: '#222', fontSize: 13 }}
         >
-          start
+          {processedPointsForDisplay.map(
+            ({ pointData: point, lane: currentLane }) => {
+              if (point.name === 'start' && point.time === 0) return null
+              const leftPercent = point.time * scale
+              let transform = 'translateX(-50%)'
+              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD)
+                transform = 'translateX(0%)'
+              else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD)
+                transform = 'translateX(-100%)'
+
+              return (
+                <div
+                  key={`${point.name}-time-${point.time}`} // Unique key
+                  style={{
+                    position: 'absolute',
+                    top: currentLane * TEXT_AREA_HEIGHT, // Position based on lane
+                    left: `${leftPercent}%`,
+                    transform,
+                    fontSize: 11,
+                    color: point.color,
+                    whiteSpace: 'nowrap',
+                    lineHeight: `${TEXT_AREA_HEIGHT}px`,
+                    padding: '0 5px',
+                  }}
+                >
+                  +{point.time.toFixed(0)}ms
+                </div>
+              )
+            },
+          )}
         </div>
-        {segments.map((seg, i) => (
-          <div
-            key={i}
-            style={{
-              width: ((seg.end - seg.start) / safeTotal) * BAR_WIDTH,
-              textAlign: 'center',
-              color: seg.color,
-              fontSize: 13,
-            }}
-          >
-            +{seg.end.toFixed(0)}ms
-          </div>
-        ))}
-      </div>
-      {/* Render count and sum of render durations */}
-      <div style={{ marginTop: 8, color: '#444', fontSize: 14 }}>
-        renders: {value.renderCount} &nbsp; sum of render durations:{' '}
-        {value.sumOfRenderDurations.toFixed(0)}ms
+
+        {/* Vertical Marker Lines spanning all areas */}
+        {uniqueTimesForLines.map((timeVal) => {
+          // Find any point config for color, preferably from original list for consistency
+          const pointConfig =
+            timePointsForDisplay.find((p) => p.time === timeVal) ??
+            timePointsForDisplay[0]!
+          const leftPercent = timeVal * scale
+          let lineLeftPositionStyle = `${leftPercent}%`
+          let lineTransformStyle = 'translateX(-50%)'
+
+          if (leftPercent < MARKER_LINE_ALIGN_LOW_THRESHOLD) {
+            lineLeftPositionStyle = '0%'
+            lineTransformStyle = 'translateX(0)'
+          } else if (leftPercent > MARKER_LINE_ALIGN_HIGH_THRESHOLD) {
+            lineLeftPositionStyle = `calc(100% - ${MARKER_LINE_WIDTH}px)`
+            lineTransformStyle = 'translateX(0)'
+          }
+
+          return (
+            <div
+              key={`line-${timeVal}`}
+              style={{
+                position: 'absolute',
+                left: lineLeftPositionStyle,
+                transform: lineTransformStyle,
+                top: 0,
+                width: MARKER_LINE_WIDTH,
+                background: pointConfig.color,
+                height: '100%', // Spans full TOTAL_VIS_CONTENT_HEIGHT
+                zIndex: 0,
+              }}
+            />
+          )
+        })}
       </div>
     </div>
   )
@@ -1027,6 +1243,8 @@ function TraceItem<
   isCurrentTrace?: boolean
 }) {
   const [isHovered, setIsHovered] = useState(false)
+  const [isDefinitionDetailsExpanded, setIsDefinitionDetailsExpanded] =
+    useState(false)
 
   // Determine if we can download a trace recording (only for completed/interrupted traces)
   const canDownloadRecording =
@@ -1041,7 +1259,6 @@ function TraceItem<
         trace.traceContext,
         trace.finalTransition,
       )
-      console.log('Computed results:', results)
       return results
     }
     return {}
@@ -1133,7 +1350,6 @@ function TraceItem<
           </span>
         </div>
       </div>
-
       {/* ROW 2: Main trace information */}
       <div style={styles.traceInfoRow}>
         {/* Variant in chip group */}
@@ -1175,37 +1391,7 @@ function TraceItem<
 
         {/* Span count chip */}
         <span style={styles.infoChip}>Spans: {trace.totalSpanCount ?? 0}</span>
-      </div>
-
-      {/* ROW 3: Trace configuration information */}
-      <div style={styles.configInfoRow}>
-        {/* Config summary chips */}
-        {(() => {
-          const { timeout, debounce, interactive } = trace.traceContext
-            ? getConfigSummary(trace.traceContext)
-            : {}
-          return (
-            <>
-              {timeout != null && (
-                <span style={styles.configChip}>
-                  Timeout: {formatMs(timeout)}
-                </span>
-              )}
-              {debounce != null && (
-                <span style={styles.configChip}>
-                  Debounce: {formatMs(debounce)}
-                </span>
-              )}
-              {interactive != null && (
-                <span style={styles.configChip}>
-                  Interactive: {formatMs(interactive)}
-                </span>
-              )}
-            </>
-          )
-        })()}
-      </div>
-
+      </div>{' '}
       {isExpanded && (
         <div
           style={styles.expandedHistory}
@@ -1283,23 +1469,78 @@ function TraceItem<
               })}
             </ul>
           </div>
+
+          {/* ROW 3: Definition details toggle */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              marginTop: '8px',
+              fontSize: '12px',
+              color: '#555',
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsDefinitionDetailsExpanded((prev) => !prev)
+            }}
+          >
+            <span style={{ marginRight: '5px' }}>
+              {isDefinitionDetailsExpanded ? '−' : '+'} Definition Details
+            </span>
+          </div>
           {/* Definition modifications details */}
-          {trace.definitionModifications &&
-            trace.definitionModifications.length > 0 && (
-              <div style={styles.section}>
-                <div style={styles.sectionTitle}>Definition Modifications:</div>
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                  {trace.definitionModifications.map((mod, i) => (
-                    <li key={i} style={styles.listItem}>
-                      {JSON.stringify(mod)}
-                    </li>
-                  ))}
-                </ul>
+          {isDefinitionDetailsExpanded && (
+            <div style={styles.section}>
+              {/* Trace configuration information */}
+              <div style={styles.sectionTitle}>Configuration:</div>
+              <div style={styles.configInfoRow}>
+                {(() => {
+                  const { timeout, debounce, interactive } = trace.traceContext
+                    ? getConfigSummary(trace.traceContext)
+                    : {}
+                  return (
+                    <>
+                      {timeout != null && (
+                        <span style={styles.configChip}>
+                          Timeout: {formatMs(timeout)}
+                        </span>
+                      )}
+                      {debounce != null && (
+                        <span style={styles.configChip}>
+                          Debounce: {formatMs(debounce)}
+                        </span>
+                      )}
+                      {interactive != null && (
+                        <span style={styles.configChip}>
+                          Interactive: {formatMs(interactive)}
+                        </span>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
-            )}
+
+              {/* Definition modifications list */}
+              {trace.definitionModifications &&
+                trace.definitionModifications.length > 0 && (
+                  <div>
+                    <div style={styles.sectionTitle}>
+                      Definition Modifications:
+                    </div>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                      {trace.definitionModifications.map((mod, i) => (
+                        <li key={i} style={styles.listItem}>
+                          {JSON.stringify(mod)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+            </div>
+          )}
         </div>
       )}
-
       {/* Expand/collapse arrow indicator */}
       <div
         style={{
@@ -1667,7 +1908,7 @@ export default function TraceManagerDebugger<
     <>
       {float && (
         <div style={styles.handle} onMouseDown={handleMouseDown}>
-          <h3 style={styles.handleTitle}>Trace Manager Debugger</h3>
+          <h3 style={styles.handleTitle}>{NAME}</h3>
           <div>
             <button
               style={styles.closeButton}
@@ -1681,7 +1922,7 @@ export default function TraceManagerDebugger<
 
       {!float && (
         <div style={styles.header}>
-          <h2 style={styles.title}>Trace Manager Debugger</h2>
+          <h2 style={styles.title}>{NAME}</h2>
         </div>
       )}
 
