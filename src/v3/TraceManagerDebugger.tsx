@@ -642,7 +642,9 @@ function TimeMarkers<RelationSchemasT>({
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {lastRequiredSpanOffset !== undefined && (
           <li style={styles.listItem}>
-            <span style={{ display: 'inline-block' }}>Last Required Span:</span>
+            <span style={{ display: 'inline-block' }}>
+              First Contentful Render (Last Required Span):
+            </span>
             <span
               style={{
                 fontFamily: 'monospace',
@@ -658,7 +660,9 @@ function TimeMarkers<RelationSchemasT>({
         )}
         {completeSpanOffset !== undefined && (
           <li style={styles.listItem}>
-            <span style={{ display: 'inline-block' }}>Complete Span:</span>
+            <span style={{ display: 'inline-block' }}>
+              Last Contentful Render (Trace Complete):
+            </span>
             <span
               style={{
                 fontFamily: 'monospace',
@@ -674,7 +678,9 @@ function TimeMarkers<RelationSchemasT>({
         )}
         {cpuIdleSpanOffset !== undefined && (
           <li style={styles.listItem}>
-            <span style={{ display: 'inline-block' }}>CPU Idle Span:</span>
+            <span style={{ display: 'inline-block' }}>
+              Time To Interactive (CPU Idle Span):
+            </span>
             <span
               style={{
                 fontFamily: 'monospace',
@@ -1409,36 +1415,51 @@ function TraceItem<
             cpuIdleSpanOffset={trace.cpuIdleSpanOffset}
           />
 
-          {/* Computed Spans/Values */}
-          <div style={styles.section}>
-            <div style={styles.sectionTitle}>Computed Spans:</div>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {(trace.computedSpans ?? []).map((name) => {
-                const value = getFromRecord(computedResults.computedSpans, name)
-                return (
-                  <li key={name} style={styles.listItem}>
-                    {name}
-                    {trace.state === 'complete' ||
-                    trace.state === 'interrupted' ? (
-                      value ? (
-                        <RenderComputedSpan value={value} />
+          {/* Computed Spans */}
+          {(trace.computedSpans?.length ?? 0) > 0 && (
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Computed Spans:</div>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {(trace.computedSpans ?? []).map((name) => {
+                  const value = getFromRecord(
+                    computedResults.computedSpans,
+                    name,
+                  )
+                  return (
+                    <li key={name} style={styles.listItem}>
+                      {name}
+                      {trace.state === 'complete' ||
+                      trace.state === 'interrupted' ? (
+                        value ? (
+                          <RenderComputedSpan value={value} />
+                        ) : (
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              color: 'red',
+                              fontWeight: 500,
+                            }}
+                          >
+                            missing
+                          </span>
+                        )
                       ) : (
                         <span
                           style={{
                             marginLeft: 8,
-                            color: 'red',
-                            fontWeight: 500,
+                            color: '#757575',
+                            fontStyle: 'italic',
                           }}
                         >
-                          missing
+                          pending
                         </span>
-                      )
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
           {computedResults.computedRenderBeaconSpans ? (
             <RenderComputedRenderBeaconSpans
               computedRenderBeaconSpans={
@@ -1446,29 +1467,53 @@ function TraceItem<
               }
             />
           ) : null}
-          <div style={styles.section}>
-            <div style={styles.sectionTitle}>Computed Values:</div>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {(trace.computedValues ?? []).map((name) => {
-                const value = getFromRecord(
-                  computedResults.computedValues,
-                  name,
-                )
-                return (
-                  <li key={name} style={styles.listItem}>
-                    {name}
-                    {trace.state === 'complete' || trace.state === 'interrupted'
-                      ? value !== undefined && (
+          {/* Computed Values */}
+          {(trace.computedValues?.length ?? 0) > 0 && (
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Computed Values:</div>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {(trace.computedValues ?? []).map((name) => {
+                  const value = getFromRecord(
+                    computedResults.computedValues,
+                    name,
+                  )
+                  return (
+                    <li key={name} style={styles.listItem}>
+                      {name}
+                      {trace.state === 'complete' ||
+                      trace.state === 'interrupted' ? (
+                        value !== undefined ? (
                           <span style={{ marginLeft: 8, color: '#1976d2' }}>
                             {String(value)}
                           </span>
+                        ) : (
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              color: 'red',
+                              fontWeight: 500,
+                            }}
+                          >
+                            N/A
+                          </span>
                         )
-                      : null}
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
+                      ) : (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            color: '#757575',
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          pending
+                        </span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
 
           {/* ROW 3: Definition details toggle */}
           <div
