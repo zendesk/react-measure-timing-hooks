@@ -804,6 +804,59 @@ describe('recordingComputeUtils', () => {
       expect('unused' in recording.attributes).toBe(false)
     })
 
+    it('should promote specified attributes from last matching spans when there is an attribute name collision to trace', () => {
+      const promotedAttributesTraceDefinitionWithOverrideAttributeNames = {
+        ...baseDefinitionFixture,
+        promoteSpanAttributes: [
+          {
+            span: { name: 'foo-span' },
+            attributes: ['foo', 'bar'],
+          },
+          {
+            span: { name: 'baz-span' },
+            attributes: ['foo', 'bar'],
+          },
+        ],
+      }
+
+      const recording = createTraceRecording(
+        {
+          definition:
+            promotedAttributesTraceDefinitionWithOverrideAttributeNames,
+          recordedItems: new Set([
+            createMockSpanAndAnnotation(200, {
+              name: 'foo-span',
+              attributes: { foo: 7, bar: 8 },
+            }),
+            createMockSpanAndAnnotation(300, {
+              name: 'baz-span',
+              // should replace the trace attributes from 'foo-span'
+              attributes: { foo: 'hello', bar: 'world' },
+            }),
+          ]),
+          input: {
+            id: 'test',
+            startTime: createTimestamp(0),
+            relatedTo: {},
+            variant: 'origin',
+          },
+          recordedItemsByLabel: {},
+        },
+        {
+          transitionFromState: 'active',
+          transitionToState: 'complete',
+          lastRelevantSpanAndAnnotation: undefined,
+          completeSpanAndAnnotation: undefined,
+          cpuIdleSpanAndAnnotation: undefined,
+          lastRequiredSpanAndAnnotation: undefined,
+        },
+      )
+      // Should select attributes from baz-span (timestamp 300)
+      expect(recording.attributes.foo).toBe('hello')
+      expect(recording.attributes.bar).toBe('world')
+      expect('unused' in recording.attributes).toBe(false)
+    })
+
     it('should not set unset promoted attributes if not found', () => {
       const partialAttrDefinition = {
         ...baseDefinitionFixture,
