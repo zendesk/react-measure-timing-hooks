@@ -1,5 +1,5 @@
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { Timeline } from '@zendeskgarden/react-accordions'
 import { Avatar } from '@zendeskgarden/react-avatars'
@@ -34,6 +34,8 @@ export const TicketView: React.FC<TicketViewProps> = ({
   cached = false,
   onLoaded,
 }) => {
+  const [stateX, setStateX] = useState(0)
+
   useBeacon({
     name: 'TicketView',
     relatedTo: { ticketId },
@@ -60,9 +62,19 @@ export const TicketView: React.FC<TicketViewProps> = ({
     const timer = setTimeout(() => {
       onLoaded?.()
       // eslint-disable-next-line no-magic-numbers
-    }, 1_500)
+    }, 500)
     return () => void clearTimeout(timer)
   }, [ticketId])
+
+  useEffect(() => {
+    if (!cached || stateX > 10) return undefined
+    const timer = setTimeout(() => {
+      // force trigger a re-render
+      setStateX((prev) => prev + 1)
+      // eslint-disable-next-line no-magic-numbers
+    }, 50)
+    return () => void clearTimeout(timer)
+  }, [stateX])
 
   if (!ticket) {
     return (

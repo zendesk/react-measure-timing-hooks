@@ -28,5 +28,30 @@ export const ticketOperationTracer = traceManager.createTracer({
       type: 'component-unmount',
     },
   ],
+  computedSpanDefinitions: {
+    time_to_start_loading: {
+      startSpan: 'operation-start',
+      endSpan: {
+        name: 'TicketView',
+        matchingRelations: true,
+        fn: (s) =>
+          s.span.type === 'component-render' &&
+          s.span.renderedOutput === 'loading',
+      },
+    },
+  },
+  computedValueDefinitions: {
+    had_error: {
+      matches: [{ name: 'TicketView', type: 'component-render', isIdle: true }],
+      computeValueFromMatches: (matches) => {
+        const error = matches.find(
+          (m) =>
+            m.span.type === 'component-render' &&
+            m.span.renderedOutput === 'error',
+        )
+        return !!error
+      },
+    },
+  },
   captureInteractive: true,
 })
