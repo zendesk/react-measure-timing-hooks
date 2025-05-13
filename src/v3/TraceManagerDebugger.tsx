@@ -1645,13 +1645,22 @@ export default function TraceManagerDebugger<
   useEffect(() => {
     // schedule updates asynchronously so we never call setState mid‐render
     const schedule = (fn: () => void) => void setTimeout(fn, 0)
+    // Create a map to store spans for each trace by ID
+    const traceEntriesMap = new Map<
+      string,
+      SpanAndAnnotation<RelationSchemasT>[]
+    >()
 
     // Subscribe to trace-start events
     const startSub = traceManager.when('trace-start').subscribe((event) => {
       const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
+      const traceId = trace.input.id
+
+      // Create a new entry array for this trace (or clear existing)
+      traceEntriesMap.set(traceId, [])
 
       const traceInfo: TraceInfo<RelationSchemasT> = {
-        traceId: trace.input.id,
+        traceId,
         traceName: trace.definition.name,
         variant: trace.input.variant as string,
         state: trace.stateMachine.currentState,
@@ -1805,23 +1814,29 @@ export default function TraceManagerDebugger<
             }),
         )
       })
-
-    const entries: SpanAndAnnotation<RelationSchemasT>[] = []
-
     // Subscribe to add-span-to-recording for live info
     const addSpanSub = traceManager
       .when('add-span-to-recording')
       .subscribe((event) => {
+        // Add the span to the trace entries map regardless of current UI state
+        const trace = event.traceContext
+        const traceId = trace.input.id
+
+        // Get or initialize entries array for this specific trace
+        if (!traceEntriesMap.has(traceId)) {
+          traceEntriesMap.set(traceId, [])
+        }
+        const entries = traceEntriesMap.get(traceId)!
+        entries.push(event.spanAndAnnotation)
+
+        // Now update the UI if this is the currently displayed trace
         schedule(
           () =>
             void setCurrentTrace((prevTrace) => {
               if (!prevTrace) return prevTrace
-              if (event.traceContext.input.id !== prevTrace.traceId) {
+              if (traceId !== prevTrace.traceId) {
                 return prevTrace
               }
-              // Calculate live info from traceContext
-              const trace = event.traceContext
-              entries.push(event.spanAndAnnotation)
 
               const liveDuration =
                 entries.length > 0
