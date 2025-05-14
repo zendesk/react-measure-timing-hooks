@@ -63,6 +63,10 @@ interface TraceInfo<RelationSchemasT> {
   computedValues?: string[]
 }
 
+const CSS_STYLES = /* language=CSS */ `
+
+`
+
 const styles = {
   container: {
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
@@ -248,7 +252,6 @@ const styles = {
     cursor: 'pointer',
     fontSize: '16px',
     padding: '2px 8px',
-    margin: '-2px -5px 0 5px',
     borderRadius: '50%',
     display: 'inline-flex',
     alignItems: 'center',
@@ -2023,6 +2026,7 @@ export default function TraceManagerDebugger<
 
   const content = (
     <>
+      <style>{CSS_STYLES}</style>
       {float && (
         <div style={styles.handle} onMouseDown={handleMouseDown}>
           <h3 style={styles.handleTitle}>{NAME}</h3>
