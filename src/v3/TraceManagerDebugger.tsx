@@ -186,6 +186,17 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+    justifyContent: 'space-between',
+  },
+  historyTitleLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  historyTitleRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
   },
   visualizerLink: {
     backgroundColor: '#1976d2',
@@ -196,6 +207,17 @@ const styles = {
     fontSize: '12px',
     cursor: 'pointer',
     textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
+  clearButton: {
+    backgroundColor: '#f44336',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '4px 10px',
+    fontSize: '12px',
+    cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
   },
@@ -218,6 +240,21 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '8px',
+  },
+  dismissButton: {
+    background: 'none',
+    border: 'none',
+    color: '#c62828',
+    cursor: 'pointer',
+    fontSize: '16px',
+    padding: '2px 8px',
+    margin: '-2px -5px 0 5px',
+    borderRadius: '50%',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '24px',
+    height: '24px',
   },
   expandArrow: {
     position: 'absolute',
@@ -1241,11 +1278,13 @@ function TraceItem<
   trace,
   isExpanded,
   onToggleExpand,
+  onDismiss,
   isCurrentTrace = false,
 }: {
   trace: TraceInfo<RelationSchemasT>
   isExpanded: boolean
   onToggleExpand: () => void
+  onDismiss: () => void
   isCurrentTrace?: boolean
 }) {
   const [isHovered, setIsHovered] = useState(false)
@@ -1274,6 +1313,12 @@ function TraceItem<
   const handleDownloadClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     downloadTraceRecording(trace)
+  }
+
+  // Handle dismiss button click without triggering the expand/collapse
+  const handleDismissClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDismiss()
   }
 
   return (
@@ -1354,6 +1399,13 @@ function TraceItem<
           <span style={styles.timeDisplay}>
             {new Date(trace.startTime).toLocaleTimeString()}
           </span>
+          <button
+            style={styles.dismissButton}
+            onClick={handleDismissClick}
+            title="Dismiss this trace"
+          >
+            ✕
+          </button>
         </div>
       </div>
       {/* ROW 2: Main trace information */}
@@ -1627,6 +1679,11 @@ export default function TraceManagerDebugger<
   const [expandedHistoryIndex, setExpandedHistoryIndex] = useState<
     number | null
   >(0)
+
+  // Function to remove a trace from history by traceId
+  const removeTraceFromHistory = (traceId: string) => {
+    setTraceHistory((prev) => prev.filter((t) => t.traceId !== traceId))
+  }
 
   // For floating panel functionality
   const [position, setPosition] = useState({ x: 10, y: 10 })
@@ -1989,15 +2046,25 @@ export default function TraceManagerDebugger<
       {allTraces.length > 0 ? (
         <div style={{ padding: '0 15px' }}>
           <h3 style={styles.historyTitle}>
-            Traces ({allTraces.length})
-            <a
-              href="https://zendesk.github.io/retrace/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.visualizerLink}
-            >
-              Trace Visualizer
-            </a>
+            <div style={styles.historyTitleLeft}>
+              Traces ({allTraces.length})
+              <a
+                href="https://zendesk.github.io/retrace/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.visualizerLink}
+              >
+                Trace Visualizer
+              </a>
+            </div>
+            <div style={styles.historyTitleRight}>
+              <button
+                style={styles.clearButton}
+                onClick={() => void setTraceHistory([])}
+              >
+                Clear
+              </button>
+            </div>
           </h3>
           {allTraces.map((trace, index) => (
             <TraceItem
@@ -2014,6 +2081,7 @@ export default function TraceManagerDebugger<
                   expandedHistoryIndex === index ? null : index,
                 )
               }
+              onDismiss={() => void removeTraceFromHistory(trace.traceId)}
             />
           ))}
         </div>
