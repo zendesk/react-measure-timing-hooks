@@ -123,7 +123,7 @@ metrics are:
   render, to the end of the last render (of the desired final stage), after which no more re-renders
   had occured during the specified debounce period.
 
-![Understanding useTiming hook](../../docs/useTiming.png)
+![Understanding useTiming hook](./docs/useTiming.png)
 
 <!-- NOTE: if you need to update the diagram, the PNG file contains an embedded source file that can be opened by excalidraw.com -->
 
