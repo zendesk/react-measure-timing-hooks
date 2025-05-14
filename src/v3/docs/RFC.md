@@ -45,14 +45,14 @@ Regardless of the tool, frontend performance monitoring is hindered by several c
 3. **Operational Inefficiencies**:
 
    - **Operational Costs**: Metrics are frequently added without proper evaluation, leading to an overwhelming number of mostly unutilized and redundant metrics and unnecessary increases in Datadog spending.
-   - **Complex Implementations**: Efforts to capture metrics are often bespoke. Even in Support, where [a custom metrics library](https://github.com/zendesk/react-measure-timing-hooks) is in use, we had to rely on hacks to make their starting point be a user interaction, resulting in complex and error-prone implementations.
+   - **Complex Implementations**: Efforts to capture metrics are often bespoke. Even in Support, where [a custom metrics library](https://github.com/zendesk/retrace) is in use, we had to rely on hacks to make their starting point be a user interaction, resulting in complex and error-prone implementations.
    - **Limited Impact on Performance Optimization**: The current metrics systems do not provide the granular insights required to effectively diagnose and optimize frontend performance, leading to prolonged incident response times and missed optimization opportunities.
 
 These challenges collectively prevent Zendesk from achieving comprehensive and effective frontend performance monitoring, hindering our ability to understand and optimize the customer's experience.
 
 ### React Timing Hooks library {#react-timing-hooks-library}
 
-The [React Timing Hooks library](https://github.com/zendesk/react-measure-timing-hooks) was developed as part of the [Early Problem Detection Initiative](https://zendeskdev.zendesk.com/hc/en-us/articles/1260807009070-What-is-the-EPD-initiative), driven by the [Reliability Roadmap 2021](https://zendesk.atlassian.net/wiki/spaces/ENG/pages/4972806773#ReliabilityRoadmap2021-ops-dashboards-20212021.4.Level1CoreFeatureshavemonitoringforrequestrateanderrorsonservicedashboards) to provide a consistent method for [tracking React component performance](https://zendesk.atlassian.net/wiki/spaces/PLRS/pages/5160961924/Metrics+and+Monitoring). It is the closest thing we have to a standard usage pattern for creating metrics, and is relied upon by many Support teams for long-term tracking in Datadog Metrics, and SLO alerting through Datadog Monitors.
+The [React Timing Hooks library](https://github.com/zendesk/retrace) was developed as part of the [Early Problem Detection Initiative](https://zendeskdev.zendesk.com/hc/en-us/articles/1260807009070-What-is-the-EPD-initiative), driven by the [Reliability Roadmap 2021](https://zendesk.atlassian.net/wiki/spaces/ENG/pages/4972806773#ReliabilityRoadmap2021-ops-dashboards-20212021.4.Level1CoreFeatureshavemonitoringforrequestrateanderrorsonservicedashboards) to provide a consistent method for [tracking React component performance](https://zendesk.atlassian.net/wiki/spaces/PLRS/pages/5160961924/Metrics+and+Monitoring). It is the closest thing we have to a standard usage pattern for creating metrics, and is relied upon by many Support teams for long-term tracking in Datadog Metrics, and SLO alerting through Datadog Monitors.
 
 Its adoption fostered a sense of ownership and accountability, as teams could regularly review, and act upon any performance anomalies around their component’s rendering duration. It has also enabled the creation of performance tests, helping prevent degradation at the pull request stage.
 
@@ -98,7 +98,7 @@ While this approach also opens possibilities for future integration with backend
 ## Stakeholders
 
 - **Frontend Engineering Teams**
-  - **Frontend Teams**: currently using the [React Timing hooks library](https://github.com/zendesk/react-measure-timing-hooks).
+  - **Frontend Teams**: currently using the [React Timing hooks library](https://github.com/zendesk/retrace).
   - **Other Frontend Teams:** not currently using any metrics tools or relying solely on Datadog Metrics and RUM.
   - **Platform Teams** focused on application performance.
   - **Product Teams** interested in understanding and improving the customer experience through performance metrics.

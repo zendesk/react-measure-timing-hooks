@@ -1991,7 +1991,7 @@ export default function TraceManagerDebugger<
           <h3 style={styles.historyTitle}>
             Traces ({allTraces.length})
             <a
-              href="https://zendesk.github.io/react-measure-timing-hooks/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
+              href="https://zendesk.github.io/retrace/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
               target="_blank"
               rel="noopener noreferrer"
               style={styles.visualizerLink}

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package",
-  "name": "@zendesk/react-measure-timing-hooks",
+  "name": "@zendesk/retrace",
   "version": "0.0.0",
   "type": "module"
 }
