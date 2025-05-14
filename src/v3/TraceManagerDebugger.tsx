@@ -63,532 +63,1067 @@ interface TraceInfo<RelationSchemasT> {
   computedValues?: string[]
 }
 
-const styles = {
-  container: {
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-    maxWidth: '800px',
-    margin: '20px auto',
-    padding: '20px',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-    backgroundColor: '#f9f9f9',
-  },
-  header: {
-    borderBottom: '1px solid #eee',
-    paddingBottom: '15px',
-    marginBottom: '20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    margin: '0',
-    fontSize: '20px',
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  activeTrace: {
-    padding: '20px',
-    backgroundColor: '#fff',
-    borderRadius: '8px',
-    marginBottom: '20px',
-    border: '1px solid #e0e0e0',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-  },
-  section: {
-    marginBottom: '15px',
-  },
-  sectionTitle: {
-    fontWeight: 'bold',
-    marginBottom: '10px',
-    fontSize: '14px',
-    color: '#555',
-  },
-  statusTag: {
-    display: 'inline-block',
-    padding: '4px 10px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: '500',
-    marginLeft: '10px',
-  },
-  activeTag: {
-    backgroundColor: '#e3f2fd',
-    color: '#1565c0',
-  },
-  completedTag: {
-    backgroundColor: '#e8f5e9',
-    color: '#2e7d32',
-  },
-  interruptedTag: {
-    backgroundColor: '#ffebee',
-    color: '#c62828',
-  },
-  draftTag: {
-    backgroundColor: '#f5f5f5',
-    color: '#616161',
-  },
-  listItem: {
-    padding: '5px 15px',
-    backgroundColor: '#f5f5f5',
-    borderRadius: '6px',
-    marginBottom: '3px',
-    fontSize: '13px',
-    display: 'flex',
-    justifyContent: 'space-between',
-  },
-  requiredSpan: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '10px 15px',
-    backgroundColor: '#f5f5f5',
-    borderRadius: '6px',
-    marginBottom: '8px',
-    fontSize: '13px',
-  },
-  matched: {
-    borderLeft: '4px solid #2e7d32',
-  },
-  unmatched: {
-    borderLeft: '4px solid #757575',
-  },
-  matchedIndicator: {
-    display: 'inline-block',
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-    marginRight: '10px',
-  },
-  matchedDot: {
-    backgroundColor: '#2e7d32',
-  },
-  unmatchedDot: {
-    backgroundColor: '#bdbdbd',
-  },
-  noTrace: {
-    padding: '30px',
-    textAlign: 'center' as const,
-    color: '#757575',
-    fontStyle: 'italic',
-    backgroundColor: '#fff',
-    borderRadius: '8px',
-    border: '1px solid #e0e0e0',
-  },
-  historyTitle: {
-    paddingTop: '20px',
-    marginBottom: '10px',
-    borderTop: '1px solid #eee',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#333',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-  visualizerLink: {
-    backgroundColor: '#1976d2',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '4px 10px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    textDecoration: 'none',
-    display: 'inline-flex',
-    alignItems: 'center',
-  },
-  historyItem: {
-    padding: '15px',
-    backgroundColor: '#fff',
-    borderRadius: '8px',
-    marginBottom: '12px',
-    border: '1px solid #e0e0e0',
-    cursor: 'pointer',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-    transition: 'box-shadow 0.2s ease',
-    position: 'relative', // For positioning the arrow
-  },
-  historyItemHover: {
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
-  },
-  historyHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '8px',
-  },
-  expandArrow: {
-    position: 'absolute',
-    bottom: '0px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: '24px',
-    height: '24px',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    transition: 'transform 0.2s ease',
-  },
-  expandArrowDown: {
-    transform: 'translateX(-50%) rotate(0deg)',
-  },
-  expandArrowUp: {
-    transform: 'translateX(-50%) rotate(180deg)',
-  },
-  expandedHistory: {
-    marginTop: '15px',
-    paddingTop: '15px',
-    borderTop: '1px dashed #e0e0e0',
-  },
-  timeDisplay: {
-    fontSize: '12px',
-    color: '#666',
-    fontWeight: '500',
-  },
-  keyInfo: {
-    display: 'flex',
-    gap: '8px',
-    flexWrap: 'wrap' as const,
-    marginBottom: '10px',
-  },
-  traceInfoRow: {
-    display: 'flex',
-    gap: '8px',
-    flexWrap: 'wrap' as const,
-    marginBottom: '10px',
-    padding: '8px 0',
-  },
-  configInfoRow: {
-    display: 'flex',
-    gap: '8px',
-    flexWrap: 'wrap' as const,
-    marginBottom: '2px',
-    fontSize: '90%',
-  },
-  infoChip: {
-    backgroundColor: '#f1f1f1',
-    padding: '3px 10px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    color: '#333',
-    border: '1px solid #e0e0e0',
-  },
-  configChip: {
-    backgroundColor: '#f8f8f8',
-    padding: '2px 8px',
-    borderRadius: '10px',
-    fontSize: '11px',
-    color: '#555',
-    border: '1px solid #e8e8e8',
-  },
-  idChip: {
-    backgroundColor: '#f5f5f5',
-    color: '#757575',
-    padding: '3px 10px',
-    borderRadius: '12px',
-    fontSize: '11px',
-    border: '1px solid #e0e0e0',
-  },
-  variantChip: {
-    backgroundColor: '#e8f5e9',
-    color: '#2e7d32',
-    padding: '3px 10px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    border: '1px solid #c8e6c9',
-    fontWeight: '500',
-  },
-  reasonChip: {
-    backgroundColor: '#ffebee',
-    color: '#c62828',
-    padding: '3px 10px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    border: '1px solid #ffcdd2',
-    fontWeight: '500',
-  },
-  relatedChip: {
-    backgroundColor: '#e3f2fd',
-    color: '#1565c0',
-    padding: '3px 10px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    border: '1px solid #bbdefb',
-  },
-  relatedGroup: {
-    display: 'inline-flex',
-    flexWrap: 'nowrap',
-    overflow: 'hidden',
-    borderRadius: '12px',
-    border: '1px solid #bbdefb',
-    backgroundColor: '#e3f2fd',
-  },
-  relatedLabel: {
-    color: '#1565c0',
-    padding: '3px 8px',
-    fontSize: '12px',
-  },
-  relatedItems: {
-    backgroundColor: '#1565c0',
-    display: 'flex',
-    gap: '2px',
-    padding: '0 6px',
-  },
-  relatedItem: {
-    backgroundColor: '#1565c0',
-    color: 'white',
-    padding: '3px 4px',
-    fontSize: '12px',
-  },
-  // Variant chip group
-  variantGroup: {
-    display: 'inline-flex',
-    flexWrap: 'nowrap',
-    overflow: 'hidden',
-    borderRadius: '12px',
-    border: '1px solid #c8e6c9',
-    backgroundColor: '#e8f5e9',
-  },
-  variantLabel: {
-    color: '#2e7d32',
-    padding: '3px 8px',
-    fontSize: '12px',
-  },
-  variantValue: {
-    backgroundColor: '#2e7d32',
-    color: 'white',
-    padding: '3px 8px',
-    fontSize: '12px',
-    fontWeight: '500',
-  },
-  // Required spans chip group
-  spansGroup: {
-    display: 'inline-flex',
-    flexWrap: 'nowrap',
-    overflow: 'hidden',
-    borderRadius: '12px',
-    border: '1px solid #ffe0b2',
-    backgroundColor: '#fff3e0',
-  },
-  spansLabel: {
-    color: '#e65100',
-    padding: '3px 8px',
-    fontSize: '12px',
-  },
-  spansValue: {
-    backgroundColor: '#e65100',
-    color: 'white',
-    padding: '3px 8px',
-    fontSize: '12px',
-    fontWeight: '500',
-  },
-  // Interruption reason chip group
-  reasonGroup: {
-    display: 'inline-flex',
-    flexWrap: 'nowrap',
-    overflow: 'hidden',
-    borderRadius: '12px',
-    border: '1px solid #ffcdd2',
-    backgroundColor: '#ffebee',
-  },
-  reasonLabel: {
-    color: '#c62828',
-    padding: '3px 8px',
-    fontSize: '12px',
-  },
-  reasonValue: {
-    backgroundColor: '#c62828',
-    color: 'white',
-    padding: '3px 8px',
-    fontSize: '12px',
-    fontWeight: '500',
-  },
-  spansChip: {
-    backgroundColor: '#fff3e0',
-    color: '#e65100',
-    padding: '3px 10px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    border: '1px solid #ffe0b2',
-    fontWeight: '500',
-  },
-  preWrap: {
-    whiteSpace: 'pre-wrap' as const,
-    fontSize: '12px',
-    backgroundColor: '#f5f5f5',
-    padding: '12px',
-    borderRadius: '6px',
-    overflowX: 'auto' as const,
-    maxHeight: '200px',
-    border: '1px solid #e0e0e0',
-  },
-  timeMarkerValue: {
-    fontFamily: 'monospace',
-    textAlign: 'right',
-    display: 'inline-block',
-    width: '80px',
-    fontWeight: '500',
-  },
-  floatingContainer: {
-    position: 'fixed' as const,
-    top: '10px',
-    right: '10px',
-    minWidth: '600px',
-    maxWidth: '750px',
-    width: '100%',
-    zIndex: 1_000,
-    resize: 'both' as const,
-    overflow: 'auto' as const,
-    maxHeight: '90vh',
-    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
-  },
-  handle: {
-    padding: '12px 15px',
-    backgroundColor: '#2a2a2a',
-    color: 'white',
-    cursor: 'move',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopLeftRadius: '8px',
-    borderTopRightRadius: '8px',
-  },
-  handleTitle: {
-    margin: 0,
-    fontSize: '14px',
-    fontWeight: 'bold' as const,
-  },
-  closeButton: {
-    background: 'none',
-    border: 'none',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: '18px',
-    padding: '2px 8px',
-  },
-  minimizedButton: {
-    position: 'fixed' as const,
-    bottom: '20px',
-    right: '20px',
-    backgroundColor: '#1565c0',
-    color: 'white',
-    border: 'none',
-    borderRadius: '50%',
-    width: '74px',
-    height: '74px',
-    opacity: 0.9,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    cursor: 'pointer',
-    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)',
-    zIndex: 1_000,
-    fontSize: '14px',
-    fontWeight: 'bold',
-  },
-  defChipContainer: {
-    display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: '5px',
-    alignItems: 'center',
-  },
-  defChip: {
-    backgroundColor: '#e3f2fd',
-    color: '#1565c0',
-    padding: '2px 8px',
-    borderRadius: '10px',
-    fontSize: '11px',
-    maxWidth: '200px',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    position: 'relative' as const,
-    border: '1px solid #90caf9',
-  },
-  defChipValue: {
-    fontWeight: 'bold' as const,
-  },
-  defChipTooltip: {
-    position: 'absolute' as const,
-    bottom: '100%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    color: '#fff',
-    padding: '5px 10px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    // eslint-disable-next-line no-magic-numbers
-    zIndex: 1_001 as const,
-    minWidth: '200px',
-    maxWidth: '300px',
-    wordBreak: 'break-word' as const,
-    pointerEvents: 'none' as const,
-    opacity: 0,
-    transition: 'opacity 0.3s ease',
-    visibility: 'hidden' as const,
-  },
-  defChipHoverable: {
-    cursor: 'help',
-  },
-  defChipHoverVisible: {
-    opacity: 1,
-    visibility: 'visible' as const,
-  },
-  spanContent: {
-    display: 'flex',
-    alignItems: 'center',
-    flex: 1,
-  },
-  downloadButton: {
-    backgroundColor: '#1976d2',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '4px 10px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    alignItems: 'center',
-    marginLeft: '10px',
-  },
-  downloadIcon: {
-    fontSize: '14px',
-  },
-  // Render stats chip group
-  renderStatsGroup: {
-    display: 'inline-flex',
-    flexWrap: 'nowrap',
-    overflow: 'hidden',
-    borderRadius: '12px',
-    border: '1px solid #e0e0e0', // Neutral border
-    backgroundColor: '#f5f5f5', // Neutral background
-    marginRight: '8px', // Add some margin if there are multiple groups
-  },
-  renderStatsLabel: {
-    color: '#555', // Darker grey for label
-    padding: '3px 8px',
-    fontSize: '12px',
-  },
-  renderStatsValue: {
-    backgroundColor: '#e0e0e0', // Slightly darker background for value
-    color: '#333', // Black for value text
-    padding: '3px 8px',
-    fontSize: '12px',
-    fontWeight: '500',
-  },
-} as const
+const CSS_STYLES = /* language=CSS */ `
+.tmdb-debugger-root {
+  --tmdb-font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
-function getStateStyle(state: string) {
-  if (state === 'complete') return styles.completedTag
-  if (state === 'interrupted') return styles.interruptedTag
-  if (state === 'draft') return styles.draftTag
-  return styles.activeTag
+  /* Colors - Base */
+  --tmdb-color-white: #fff;
+  --tmdb-color-black: #000;
+  --tmdb-color-text-primary: #333;
+  --tmdb-color-text-secondary: #555;
+  --tmdb-color-text-tertiary: #616161; /* draft text */
+  --tmdb-color-text-muted: #757575; /* noTrace, idChip text */
+  --tmdb-color-text-light: #666; /* timeDisplay */
+  --tmdb-color-text-error: #c62828; /* Interrupted, error icon */
+  --tmdb-color-text-success: #2e7d32; /* Completed */
+  --tmdb-color-text-info: #1565c0; /* Active */
+  --tmdb-color-text-warning: #e65100; /* Spans group text */
+
+  /* Colors - Backgrounds */
+  --tmdb-color-bg-main: #f9f9f9;
+  --tmdb-color-bg-content: #fff;
+  --tmdb-color-bg-light-gray: #f5f5f5; /* listItem, preWrap, idChip bg, draft bg */
+  --tmdb-color-bg-medium-gray: #f8f8f8; /* configChip bg */
+  --tmdb-color-bg-dark-gray: #e0e0e0; /* renderStatsValue bg */
+  --tmdb-color-bg-handle: #2a2a2a;
+  --tmdb-color-bg-handle-hover: #3a3a3a; /* Added for handle hover */
+
+  /* Colors - Borders */
+  --tmdb-color-border-light: #ddd;
+  --tmdb-color-border-medium: #eee;
+  --tmdb-color-border-dark: #e0e0e0; /* activeTrace, noTrace, historyItem, preWrap, idChip, infoChip, renderStatsGroup */
+  --tmdb-color-border-input: #e8e8e8; /* configChip */
+  --tmdb-color-border-muted: #bdbdbd; /* unmatchedDot */
+
+  /* Colors - Semantic & Accents */
+  --tmdb-color-active-primary: #1565c0;
+  --tmdb-color-active-primary-hover: #1976d2; /* Added for hover states */
+  --tmdb-color-active-bg: #e3f2fd;
+  --tmdb-color-active-bg-hover: #bbdefb; /* Added for hover states */
+  --tmdb-color-active-border: #bbdefb;
+  --tmdb-color-active-border-light: #90caf9;
+
+  --tmdb-color-completed-primary: #2e7d32;
+  --tmdb-color-completed-primary-hover: #388e3c; /* Added for hover states */
+  --tmdb-color-completed-bg: #e8f5e9;
+  --tmdb-color-completed-bg-hover: #c8e6c9; /* Added for hover states */
+  --tmdb-color-completed-border: #c8e6c9;
+
+  --tmdb-color-interrupted-primary: #c62828;
+  --tmdb-color-interrupted-primary-hover: #d32f2f; /* Added for hover states */
+  --tmdb-color-interrupted-bg: #ffebee;
+  --tmdb-color-interrupted-bg-hover: #ffcdd2; /* Added for hover states */
+  --tmdb-color-interrupted-border: #ffcdd2;
+
+  /* Time Marker Colors */
+  --tmdb-color-fcr-primary: #0277bd; /* Deep blue */
+  --tmdb-color-fcr-primary-hover: #0288d1;
+  --tmdb-color-fcr-bg: #e1f5fe;
+  --tmdb-color-fcr-bg-hover: #b3e5fc;
+  --tmdb-color-fcr-border: #b3e5fc;
+
+  --tmdb-color-lcr-primary: #00796b; /* Teal green */
+  --tmdb-color-lcr-primary-hover: #00897b;
+  --tmdb-color-lcr-bg: #e0f2f1;
+  --tmdb-color-lcr-bg-hover: #b2dfdb;
+  --tmdb-color-lcr-border: #b2dfdb;
+
+  --tmdb-color-tti-primary: #7b1fa2; /* Purple */
+  --tmdb-color-tti-primary-hover: #8e24aa;
+  --tmdb-color-tti-bg: #f3e5f5;
+  --tmdb-color-tti-bg-hover: #e1bee7;
+  --tmdb-color-tti-border: #e1bee7;
+
+  /* Spans Count Colors */
+  --tmdb-color-spans-primary: #546e7a; /* Blue gray */
+  --tmdb-color-spans-primary-hover: #607d8b;
+  --tmdb-color-spans-bg: #eceff1;
+  --tmdb-color-spans-bg-hover: #cfd8dc;
+  --tmdb-color-spans-border: #cfd8dc;
+
+  --tmdb-color-draft-primary: #616161;
+  --tmdb-color-draft-primary-hover: #757575; /* Added for hover states */
+  --tmdb-color-draft-bg: #f5f5f5;
+  --tmdb-color-draft-bg-hover: #e0e0e0; /* Added for hover states */
+
+  --tmdb-color-link-primary: #1976d2;
+  --tmdb-color-link-primary-hover: #1e88e5; /* Added for hover states */
+  --tmdb-color-button-danger-primary: #f44336;
+  --tmdb-color-button-danger-primary-hover: #e53935; /* Added for hover states */
+
+  --tmdb-color-warning-primary: #e65100;
+  --tmdb-color-warning-primary-hover: #ef6c00; /* Added for hover states */
+  --tmdb-color-warning-bg: #fff3e0;
+  --tmdb-color-warning-bg-hover: #ffe0b2; /* Added for hover states */
+  --tmdb-color-warning-border: #ffe0b2;
+
+  /* Colors - Timeline */
+  --tmdb-timeline-loading-marker: #e67e22;
+  --tmdb-timeline-loading-segment-bg: linear-gradient(to right, rgba(230, 126, 34, 0.15), rgba(230, 126, 34, 0.5));
+  --tmdb-timeline-data-marker: #3498db;
+  --tmdb-timeline-data-segment-bg: linear-gradient(to right, rgba(52, 152, 219, 0.15), rgba(52, 152, 219, 0.5));
+  --tmdb-timeline-content-marker: #27ae60;
+  --tmdb-timeline-content-segment-bg: linear-gradient(to right, rgba(39, 174, 96, 0.15), rgba(39, 174, 96, 0.5));
+  --tmdb-timeline-default-segment-bg: linear-gradient(to right, rgba(189, 195, 199, 0.2), rgba(189, 195, 199, 0.4));
+  --tmdb-timeline-start-marker: #7f8c8d;
+
+
+  /* Spacing */
+  --tmdb-space-xxs: 2px;
+  --tmdb-space-xs: 3px; /* chip vertical padding */
+  --tmdb-space-s: 4px;
+  --tmdb-space-ms: 5px;
+  --tmdb-space-m: 8px;
+  --tmdb-space-ml: 10px; /* chip horizontal padding */
+  --tmdb-space-l: 12px;
+  --tmdb-space-xl: 15px;
+  --tmdb-space-xxl: 20px;
+
+  /* Borders */
+  --tmdb-border-radius-small: 4px;
+  --tmdb-border-radius-medium: 6px;
+  --tmdb-border-radius-large: 8px;
+  --tmdb-border-radius-xlarge: 10px; /* configChip */
+  --tmdb-border-radius-pill: 12px; /* most chips */
+  --tmdb-border-radius-circle: 50%;
+
+  /* Font Sizes */
+  --tmdb-font-size-xxs: 11px; /* defChip, configChip, idChip */
+  --tmdb-font-size-xs: 12px; /* statusTag, buttons, infoChip, timeDisplay, timeline labels */
+  --tmdb-font-size-s: 13px; /* listItem, requiredSpan */
+  --tmdb-font-size-m: 14px; /* sectionTitle, handleTitle, minimizedButton */
+  --tmdb-font-size-l: 15px; /* history item strong title */
+  --tmdb-font-size-xl: 16px; /* dismissButton, RenderBeaconTimeline name */
+  --tmdb-font-size-xxl: 18px; /* historyTitle, error/wrench icon */
+  --tmdb-font-size-xxxl: 20px; /* title */
+
+  /* Font Weights */
+  --tmdb-font-weight-normal: 400;
+  --tmdb-font-weight-medium: 500;
+  --tmdb-font-weight-bold: 700; /* or 'bold' keyword */
+
+  /* Shadows */
+  --tmdb-shadow-small: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --tmdb-shadow-medium: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --tmdb-shadow-large: 0 4px 8px rgba(0, 0, 0, 0.15);
+  --tmdb-shadow-xlarge: 0 6px 20px rgba(0, 0, 0, 0.15); /* floating container */
+  --tmdb-shadow-button: 0 4px 10px rgba(0, 0, 0, 0.2); /* minimized button */
+  --tmdb-shadow-button-hover: 0 6px 14px rgba(0, 0, 0, 0.25); /* hover state for button */
+
+  /* Z-indices */
+  --tmdb-z-index-timeline-marker: 0;
+  --tmdb-z-index-timeline-bar: 1;
+  --tmdb-z-index-timeline-text: 2;
+  --tmdb-z-index-floating: 1000;
+  --tmdb-z-index-tooltip: 1001;
+
+  /* Timeline specific */
+  --tmdb-timeline-bar-height: 25px;
+  --tmdb-timeline-text-area-height: 18px;
+  --tmdb-timeline-text-height: 14px;
+  --tmdb-timeline-marker-line-width: 2px;
+  --tmdb-timeline-padding-between-areas: 2px;
+
+  /* Transitions */
+  --tmdb-transition-fast: 0.15s ease;
+  --tmdb-transition-medium: 0.2s ease;
+  --tmdb-transition-slow: 0.3s ease;
+
+  font-family: var(--tmdb-font-family);
+}
+
+.tmdb-container {
+  max-width: 800px;
+  margin: var(--tmdb-space-xxl) auto;
+  padding: var(--tmdb-space-xxl);
+  border: 1px solid var(--tmdb-color-border-light);
+  border-radius: var(--tmdb-border-radius-large);
+  box-shadow: var(--tmdb-shadow-medium);
+  background-color: var(--tmdb-color-bg-main);
+}
+
+.tmdb-header {
+  border-bottom: 1px solid var(--tmdb-color-border-medium);
+  padding-bottom: var(--tmdb-space-xl);
+  margin-bottom: var(--tmdb-space-xxl);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tmdb-title {
+  margin: 0;
+  font-size: var(--tmdb-font-size-xxxl);
+  font-weight: var(--tmdb-font-weight-bold);
+  color: var(--tmdb-color-text-primary);
+}
+
+/* Active trace container, though not explicitly used with this class name in the original JS */
+/* .tmdb-active-trace {
+  padding: var(--tmdb-space-xxl);
+  background-color: var(--tmdb-color-bg-content);
+  border-radius: var(--tmdb-border-radius-large);
+  margin-bottom: var(--tmdb-space-xxl);
+  border: 1px solid var(--tmdb-color-border-dark);
+  box-shadow: var(--tmdb-shadow-small);
+} */
+
+.tmdb-section {
+  margin-bottom: var(--tmdb-space-xl);
+}
+
+.tmdb-section-title {
+  font-weight: var(--tmdb-font-weight-bold);
+  margin-bottom: var(--tmdb-space-ml);
+  font-size: var(--tmdb-font-size-m);
+  color: var(--tmdb-color-text-secondary);
+}
+
+/* Add hover styles to status tags */
+.tmdb-status-tag {
+  display: inline-block;
+  padding: var(--tmdb-space-s) var(--tmdb-space-ml);
+  border-radius: var(--tmdb-border-radius-pill);
+  font-size: var(--tmdb-font-size-xs);
+  font-weight: var(--tmdb-font-weight-medium);
+  margin-left: var(--tmdb-space-ml);
+  transition: filter var(--tmdb-transition-fast), transform var(--tmdb-transition-fast);
+}
+.tmdb-status-tag:hover {
+  filter: brightness(0.95);
+}
+.tmdb-status-tag-active {
+  background-color: var(--tmdb-color-active-bg);
+  color: var(--tmdb-color-active-primary);
+}
+.tmdb-status-tag-active:hover {
+  background-color: var(--tmdb-color-active-bg-hover);
+}
+.tmdb-status-tag-completed {
+  background-color: var(--tmdb-color-completed-bg);
+  color: var(--tmdb-color-completed-primary);
+}
+.tmdb-status-tag-completed:hover {
+  background-color: var(--tmdb-color-completed-bg-hover);
+}
+.tmdb-status-tag-interrupted {
+  background-color: var(--tmdb-color-interrupted-bg);
+  color: var(--tmdb-color-interrupted-primary);
+}
+.tmdb-status-tag-interrupted:hover {
+  background-color: var(--tmdb-color-interrupted-bg-hover);
+}
+.tmdb-status-tag-draft {
+  background-color: var(--tmdb-color-draft-bg);
+  color: var(--tmdb-color-draft-primary);
+}
+.tmdb-status-tag-draft:hover {
+  background-color: var(--tmdb-color-draft-bg-hover);
+}
+
+.tmdb-list-item {
+  padding: var(--tmdb-space-ms) var(--tmdb-space-xl);
+  background-color: var(--tmdb-color-bg-light-gray);
+  border-radius: var(--tmdb-border-radius-medium);
+  margin-bottom: var(--tmdb-space-xs);
+  font-size: var(--tmdb-font-size-s);
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* Added for vertical alignment */
+}
+
+.tmdb-required-span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--tmdb-space-ml) var(--tmdb-space-xl);
+  background-color: var(--tmdb-color-bg-light-gray);
+  border-radius: var(--tmdb-border-radius-medium);
+  margin-bottom: var(--tmdb-space-m);
+  font-size: var(--tmdb-font-size-s);
+}
+.tmdb-required-span-matched {
+  border-left: 4px solid var(--tmdb-color-completed-primary);
+}
+.tmdb-required-span-unmatched {
+  border-left: 4px solid var(--tmdb-color-text-muted);
+}
+
+.tmdb-matched-indicator {
+  display: inline-block;
+  width: var(--tmdb-space-l);
+  height: var(--tmdb-space-l);
+  border-radius: var(--tmdb-border-radius-circle);
+  margin-right: var(--tmdb-space-ml);
+}
+.tmdb-matched-indicator-matched {
+  background-color: var(--tmdb-color-completed-primary);
+}
+.tmdb-matched-indicator-unmatched {
+  background-color: var(--tmdb-color-border-muted);
+}
+
+.tmdb-no-trace {
+  padding: 30px; /* Kept specific padding */
+  text-align: center;
+  color: var(--tmdb-color-text-muted);
+  font-style: italic;
+}
+
+.tmdb-history-title {
+  margin-top: var(--tmdb-space-ml);
+  margin-bottom: var(--tmdb-space-ml);
+  font-size: var(--tmdb-font-size-xxl);
+  font-weight: var(--tmdb-font-weight-bold);
+  color: var(--tmdb-color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--tmdb-space-ml);
+  justify-content: space-between;
+}
+.tmdb-history-title-left,
+.tmdb-history-title-right {
+  display: flex;
+  align-items: center;
+  gap: var(--tmdb-space-ml);
+}
+
+.tmdb-button { /* Base for buttons if commonality increases */
+  border: none;
+  border-radius: var(--tmdb-border-radius-small);
+  padding: var(--tmdb-space-s) var(--tmdb-space-ml);
+  font-size: var(--tmdb-font-size-xs);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  transition: background-color var(--tmdb-transition-fast),
+              box-shadow var(--tmdb-transition-fast),
+              transform var(--tmdb-transition-fast);
+}
+.tmdb-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+.tmdb-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.tmdb-visualizer-link {
+  background-color: var(--tmdb-color-link-primary);
+  color: var(--tmdb-color-white);
+}
+.tmdb-visualizer-link:hover {
+  background-color: var(--tmdb-color-link-primary-hover);
+}
+.tmdb-clear-button {
+  background-color: var(--tmdb-color-button-danger-primary);
+  color: var(--tmdb-color-white);
+}
+.tmdb-clear-button:hover {
+  background-color: var(--tmdb-color-button-danger-primary-hover);
+}
+.tmdb-download-button {
+  background-color: var(--tmdb-color-link-primary);
+  color: var(--tmdb-color-white);
+  margin-left: var(--tmdb-space-ml);
+}
+.tmdb-download-button:hover {
+  background-color: var(--tmdb-color-link-primary-hover);
+}
+.tmdb-download-icon {
+  font-size: var(--tmdb-font-size-m); /* Approximation */
+}
+
+
+.tmdb-history-item {
+  padding: var(--tmdb-space-xl);
+  background-color: var(--tmdb-color-bg-content);
+  border-radius: var(--tmdb-border-radius-large);
+  margin-bottom: var(--tmdb-space-l);
+  border: 1px solid var(--tmdb-color-border-dark);
+  box-shadow: var(--tmdb-shadow-small);
+  transition: box-shadow var(--tmdb-transition-medium);
+  position: relative; /* For positioning the arrow */
+}
+.tmdb-history-item:hover {
+  box-shadow: var(--tmdb-shadow-large);
+}
+
+.tmdb-history-header {
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  align-items: center;
+  margin-bottom: var(--tmdb-space-m);
+}
+
+.tmdb-dismiss-button {
+  background: none;
+  border: none;
+  color: var(--tmdb-color-interrupted-primary);
+  cursor: pointer;
+  font-size: var(--tmdb-font-size-xl);
+  padding: var(--tmdb-space-xxs) var(--tmdb-space-m);
+  border-radius: var(--tmdb-border-radius-circle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; /* Specific size */
+  height: 24px; /* Specific size */
+  transition: background-color var(--tmdb-transition-fast),
+              color var(--tmdb-transition-fast),
+              transform var(--tmdb-transition-fast);
+}
+.tmdb-dismiss-button:hover {
+  background-color: var(--tmdb-color-interrupted-bg);
+  transform: scale(1.1);
+}
+.tmdb-dismiss-button:active {
+  transform: scale(1);
+}
+
+.tmdb-expand-arrow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform var(--tmdb-transition-medium);
+  cursor: pointer;
+  color: var(--tmdb-color-text-secondary);
+  width: 24px;
+  height: 24px;
+}
+.tmdb-expand-arrow:hover {
+  color: var(--tmdb-color-text-primary);
+}
+.tmdb-expand-arrow-down {
+  transform: rotate(0deg);
+}
+.tmdb-expand-arrow-up {
+  transform: rotate(180deg);
+}
+
+.tmdb-expanded-history {
+  margin-top: var(--tmdb-space-xl);
+  padding-top: var(--tmdb-space-xl);
+  border-top: 1px dashed var(--tmdb-color-border-dark);
+}
+
+.tmdb-time-display {
+  font-size: var(--tmdb-font-size-xs);
+  color: var(--tmdb-color-text-light);
+  font-weight: var(--tmdb-font-weight-medium);
+}
+
+.tmdb-trace-info-row {
+  display: flex;
+  gap: var(--tmdb-space-m);
+  flex-wrap: nowrap;
+  margin-bottom: var(--tmdb-space-ml);
+  padding: var(--tmdb-space-m) 0;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tmdb-config-info-row {
+  display: flex;
+  gap: var(--tmdb-space-m);
+  flex-wrap: wrap;
+  margin-bottom: var(--tmdb-space-xxs);
+  font-size: 90%; /* Kept percentage */
+}
+
+.tmdb-chip { /* Base for chips */
+  padding: var(--tmdb-space-xs) var(--tmdb-space-ml);
+  border-radius: var(--tmdb-border-radius-pill);
+  font-size: var(--tmdb-font-size-xs);
+  border: 1px solid var(--tmdb-color-border-dark);
+}
+.tmdb-info-chip {
+  background-color: #f1f1f1; /* unique, kept */
+  color: var(--tmdb-color-text-primary);
+}
+.tmdb-config-chip {
+  background-color: var(--tmdb-color-bg-medium-gray);
+  padding: var(--tmdb-space-xxs) var(--tmdb-space-m);
+  border-radius: var(--tmdb-border-radius-xlarge);
+  font-size: var(--tmdb-font-size-xxs);
+  color: var(--tmdb-color-text-secondary);
+  border: 1px solid var(--tmdb-color-border-input);
+}
+.tmdb-id-chip {
+  background-color: var(--tmdb-color-bg-light-gray);
+  color: var(--tmdb-color-text-muted);
+  font-size: var(--tmdb-font-size-xxs);
+}
+
+/* Chip Groups (Label + Value pairs) */
+.tmdb-chip-group {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  border-radius: var(--tmdb-border-radius-pill);
+  transition: all var(--tmdb-transition-fast);
+}
+.tmdb-chip-group-label {
+  padding: var(--tmdb-space-xs) var(--tmdb-space-m);
+  font-size: var(--tmdb-font-size-xs);
+}
+.tmdb-chip-group-value {
+  color: var(--tmdb-color-white);
+  padding: var(--tmdb-space-xs) var(--tmdb-space-m);
+  font-size: var(--tmdb-font-size-xs);
+  font-weight: var(--tmdb-font-weight-medium);
+}
+
+.tmdb-variant-group {
+  border: 1px solid var(--tmdb-color-completed-border);
+  background-color: var(--tmdb-color-completed-bg);
+  & .tmdb-chip-group-label {
+    color: var(--tmdb-color-completed-primary);
+  }
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-completed-primary);
+  }
+}
+.tmdb-variant-group:hover {
+  background-color: var(--tmdb-color-completed-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-completed-primary-hover);
+  }
+}
+
+.tmdb-spans-group {
+  border: 1px solid var(--tmdb-color-warning-border);
+  background-color: var(--tmdb-color-warning-bg);
+  & .tmdb-chip-group-label {
+    color: var(--tmdb-color-warning-primary);
+  }
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-warning-primary);
+  }
+}
+.tmdb-spans-group:hover {
+  background-color: var(--tmdb-color-warning-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-warning-primary-hover);
+  }
+}
+
+.tmdb-reason-group {
+  border: 1px solid var(--tmdb-color-interrupted-border);
+  background-color: var(--tmdb-color-interrupted-bg);
+  & .tmdb-chip-group-label {
+    color: var(--tmdb-color-interrupted-primary);
+  }
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-interrupted-primary);
+  }
+}
+.tmdb-reason-group:hover {
+  background-color: var(--tmdb-color-interrupted-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-interrupted-primary-hover);
+  }
+}
+
+.tmdb-related-group {
+  border: 1px solid var(--tmdb-color-active-border);
+  background-color: var(--tmdb-color-active-bg);
+  & .tmdb-chip-group-label { /* relatedLabel */
+    color: var(--tmdb-color-active-primary);
+  }
+  & .tmdb-related-items { /* Container for multiple items */
+    background-color: var(--tmdb-color-active-primary);
+    display: flex;
+    gap: 2px;
+    padding: 0 6px;
+  }
+  & .tmdb-related-item {
+    background-color: var(--tmdb-color-active-primary); /* Should be same as relatedItems to blend */
+    color: var(--tmdb-color-white);
+    padding: var(--tmdb-space-xs) var(--tmdb-space-s);
+    font-size: var(--tmdb-font-size-xs);
+  }
+}
+.tmdb-related-group:hover {
+  background-color: var(--tmdb-color-active-bg-hover);
+  & .tmdb-related-items {
+    background-color: var(--tmdb-color-active-primary-hover);
+  }
+  & .tmdb-related-item {
+    background-color: var(--tmdb-color-active-primary-hover);
+  }
+}
+
+/* Time marker chip groups */
+.tmdb-fcr-group {
+  border: 1px solid var(--tmdb-color-fcr-border);
+  background-color: var(--tmdb-color-fcr-bg);
+  & .tmdb-chip-group-label {
+    color: var(--tmdb-color-fcr-primary);
+  }
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-fcr-primary);
+  }
+}
+.tmdb-fcr-group:hover {
+  background-color: var(--tmdb-color-fcr-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-fcr-primary-hover);
+  }
+}
+
+.tmdb-lcr-group {
+  border: 1px solid var(--tmdb-color-lcr-border);
+  background-color: var(--tmdb-color-lcr-bg);
+  & .tmdb-chip-group-label {
+    color: var(--tmdb-color-lcr-primary);
+  }
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-lcr-primary);
+  }
+}
+.tmdb-lcr-group:hover {
+  background-color: var(--tmdb-color-lcr-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-lcr-primary-hover);
+  }
+}
+
+.tmdb-tti-group {
+  border: 1px solid var(--tmdb-color-tti-border);
+  background-color: var(--tmdb-color-tti-bg);
+  & .tmdb-chip-group-label {
+    color: var(--tmdb-color-tti-primary);
+  }
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-tti-primary);
+  }
+}
+.tmdb-tti-group:hover {
+  background-color: var(--tmdb-color-tti-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-tti-primary-hover);
+  }
+}
+
+.tmdb-span-count-group {
+  border: 1px solid var(--tmdb-color-spans-border);
+  background-color: var(--tmdb-color-spans-bg);
+  & .tmdb-chip-group-label {
+    color: var(--tmdb-color-spans-primary);
+  }
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-spans-primary);
+  }
+}
+.tmdb-span-count-group:hover {
+  background-color: var(--tmdb-color-spans-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-spans-primary-hover);
+  }
+}
+
+.tmdb-pre-wrap {
+  white-space: pre-wrap;
+  font-size: var(--tmdb-font-size-xs);
+  background-color: var(--tmdb-color-bg-light-gray);
+  padding: var(--tmdb-space-l);
+  border-radius: var(--tmdb-border-radius-medium);
+  overflow-x: auto;
+  max-height: 200px;
+  border: 1px solid var(--tmdb-color-border-dark);
+}
+
+.tmdb-time-marker-value { /* Used within TimeMarkers component */
+  font-family: monospace;
+  text-align: right;
+  display: inline-block;
+  width: 80px; /* Specific width */
+  font-weight: var(--tmdb-font-weight-medium);
+}
+
+.tmdb-floating-container {
+  position: fixed;
+  /* top, left are dynamic */
+  min-width: 600px;
+  max-width: 750px;
+  width: 100%; /* Or some other logic if needed */
+  z-index: var(--tmdb-z-index-floating);
+  resize: both;
+  overflow: auto;
+  max-height: 90vh;
+  box-shadow: var(--tmdb-shadow-xlarge);
+  /* padding will be 0 for floating container itself */
+  background-color: var(--tmdb-color-bg-main); /* Match .tmdb-container */
+  border-radius: var(--tmdb-border-radius-large); /* Match .tmdb-container */
+}
+
+.tmdb-handle {
+  position: sticky;
+  top: 0;
+  padding: var(--tmdb-space-l) var(--tmdb-space-xl);
+  background-color: var(--tmdb-color-bg-handle);
+  color: var(--tmdb-color-white);
+  cursor: move;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top-left-radius: var(--tmdb-border-radius-large);
+  border-top-right-radius: var(--tmdb-border-radius-large);
+  transition: background-color var(--tmdb-transition-fast);
+}
+.tmdb-handle:hover {
+  background-color: var(--tmdb-color-bg-handle-hover);
+}
+
+.tmdb-handle-title {
+  margin: 0;
+  font-size: var(--tmdb-font-size-m);
+  font-weight: var(--tmdb-font-weight-bold);
+}
+
+.tmdb-close-button { /* Also used for minimize */
+  background: none;
+  border: none;
+  color: var(--tmdb-color-white);
+  cursor: pointer;
+  font-size: var(--tmdb-font-size-xxl); /* 18px */
+  padding: var(--tmdb-space-xxs) var(--tmdb-space-m);
+  border-radius: var(--tmdb-border-radius-circle);
+  transition: background-color var(--tmdb-transition-fast), transform var(--tmdb-transition-fast);
+}
+.tmdb-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+.tmdb-close-button:active {
+  transform: scale(1);
+}
+
+.tmdb-minimized-button {
+  position: fixed;
+  bottom: var(--tmdb-space-xxl);
+  right: var(--tmdb-space-xxl);
+  background-color: var(--tmdb-color-active-primary);
+  color: var(--tmdb-color-white);
+  border: none;
+  border-radius: var(--tmdb-border-radius-circle);
+  width: 74px; /* Specific */
+  height: 74px; /* Specific */
+  opacity: 0.9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: var(--tmdb-shadow-button);
+  z-index: var(--tmdb-z-index-floating);
+  font-size: var(--tmdb-font-size-m);
+  font-weight: var(--tmdb-font-weight-bold);
+  transition: opacity var(--tmdb-transition-fast),
+              transform var(--tmdb-transition-fast),
+              box-shadow var(--tmdb-transition-fast),
+              background-color var(--tmdb-transition-fast);
+}
+.tmdb-minimized-button:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: var(--tmdb-shadow-button-hover);
+  background-color: var(--tmdb-color-active-primary-hover);
+}
+.tmdb-minimized-button:active {
+  transform: scale(1);
+}
+
+.tmdb-def-chip-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tmdb-space-ms);
+  align-items: center;
+}
+
+.tmdb-def-chip {
+  background-color: var(--tmdb-color-active-bg);
+  color: var(--tmdb-color-active-primary);
+  padding: var(--tmdb-space-xxs) var(--tmdb-space-m);
+  border-radius: var(--tmdb-border-radius-xlarge);
+  font-size: var(--tmdb-font-size-xxs);
+  max-width: 200px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  position: relative;
+  border: 1px solid var(--tmdb-color-active-border-light);
+  transition: background-color var(--tmdb-transition-fast);
+}
+.tmdb-def-chip:hover {
+  background-color: var(--tmdb-color-active-bg-hover);
+}
+.tmdb-def-chip-value {
+  font-weight: var(--tmdb-font-weight-bold);
+}
+
+/* Variant-specific styles */
+.tmdb-def-chip-pending {
+  background-color: var(--tmdb-color-draft-bg);
+  color: var(--tmdb-color-draft-primary);
+  border-color: var(--tmdb-color-draft-primary);
+  font-style: italic;
+}
+.tmdb-def-chip-pending:hover {
+  background-color: var(--tmdb-color-draft-bg-hover);
+}
+
+.tmdb-def-chip-missing {
+  background-color: var(--tmdb-color-interrupted-bg);
+  color: var(--tmdb-color-interrupted-primary);
+  border-color: var(--tmdb-color-interrupted-border);
+}
+.tmdb-def-chip-missing:hover {
+  background-color: var(--tmdb-color-interrupted-bg-hover);
+}
+
+.tmdb-def-chip-success {
+  background-color: var(--tmdb-color-completed-bg);
+  color: var(--tmdb-color-completed-primary);
+  border-color: var(--tmdb-color-completed-border);
+}
+.tmdb-def-chip-success:hover {
+  background-color: var(--tmdb-color-completed-bg-hover);
+}
+
+.tmdb-def-chip-error {
+  background-color: var(--tmdb-color-interrupted-bg);
+  color: var(--tmdb-color-interrupted-primary);
+  border-color: var(--tmdb-color-interrupted-border);
+  font-weight: var(--tmdb-font-weight-bold);
+}
+.tmdb-def-chip-error:hover {
+  background-color: var(--tmdb-color-interrupted-bg-hover);
+}
+
+.tmdb-def-chip-hoverable {
+  cursor: help;
+}
+.tmdb-def-chip-hoverable:hover {
+  background-color: var(--tmdb-color-active-bg-hover);
+}
+.tmdb-def-chip-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0,0,0,0.8);
+  color: var(--tmdb-color-white);
+  padding: var(--tmdb-space-ms) var(--tmdb-space-ml);
+  border-radius: var(--tmdb-border-radius-small);
+  font-size: var(--tmdb-font-size-xxs);
+  z-index: var(--tmdb-z-index-tooltip);
+  min-width: 200px;
+  max-width: 300px;
+  word-break: break-word;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--tmdb-transition-slow), visibility var(--tmdb-transition-slow); /* Added visibility transition */
+  visibility: hidden;
+}
+.tmdb-def-chip-tooltip-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tmdb-span-content { /* In RequiredSpansList */
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+/* RenderBeaconTimeline specific classes */
+.tmdb-render-beacon-timeline-name {
+  font-weight: 600; /* Specific */
+  font-size: var(--tmdb-font-size-xl);
+  margin-right: var(--tmdb-space-ml);
+}
+.tmdb-render-stats-group {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  border-radius: var(--tmdb-border-radius-pill);
+  border: 1px solid var(--tmdb-color-border-dark);
+  background-color: var(--tmdb-color-bg-light-gray);
+  margin-right: var(--tmdb-space-m);
+  transition: border-color var(--tmdb-transition-fast);
+}
+.tmdb-render-stats-group:hover {
+  border-color: var(--tmdb-color-active-primary);
+}
+.tmdb-render-stats-label {
+  color: var(--tmdb-color-text-secondary);
+  padding: var(--tmdb-space-xs) var(--tmdb-space-m);
+  font-size: var(--tmdb-font-size-xs);
+}
+.tmdb-render-stats-value {
+  background-color: var(--tmdb-color-bg-dark-gray);
+  color: var(--tmdb-color-text-primary);
+  padding: var(--tmdb-space-xs) var(--tmdb-space-m);
+  font-size: var(--tmdb-font-size-xs);
+  font-weight: var(--tmdb-font-weight-medium);
+}
+
+.tmdb-timeline-point-label,
+.tmdb-timeline-point-time {
+  position: absolute;
+  font-size: var(--tmdb-font-size-xs); /* 12px for better readability */
+  white-space: nowrap;
+  padding: 2px var(--tmdb-space-m);
+  background-color: rgba(255, 255, 255, 0.85);
+  border-radius: var(--tmdb-border-radius-small);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  z-index: var(--tmdb-z-index-timeline-text);
+}
+
+.tmdb-timeline-bar {
+  position: relative;
+  width: 100%;
+  height: var(--tmdb-timeline-bar-height);
+  border-radius: 3px; /* Specific */
+  background: var(--tmdb-timeline-default-segment-bg);
+  box-sizing: border-box;
+  z-index: var(--tmdb-z-index-timeline-bar);
+  display: flex; /* For segments */
+  flex-shrink: 0; /* Prevent bar from shrinking */
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.tmdb-timeline-segment {
+  position: absolute;
+  height: 100%;
+  border-radius: 2px;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.tmdb-timeline-segment:hover {
+  opacity: 0.95;
+  transform: scaleY(1.05);
+}
+
+.tmdb-timeline-marker-line {
+  position: absolute;
+  top: 0;
+  width: var(--tmdb-timeline-marker-line-width);
+  height: 100%; /* Spans full TOTAL_VIS_CONTENT_HEIGHT */
+  z-index: var(--tmdb-z-index-timeline-marker);
+  border-left: var(--tmdb-timeline-marker-line-width) dashed;
+  border-right: none;
+  background: none;
+}
+
+.tmdb-error-indicator {
+  color: var(--tmdb-color-text-error);
+  font-size: var(--tmdb-font-size-xxl); /* 18px */
+}
+.tmdb-definition-modified-indicator {
+  color: var(--tmdb-color-link-primary);
+  font-size: var(--tmdb-font-size-xxl); /* 18px */
+}
+
+.tmdb-computed-span-missing {
+  margin-left: var(--tmdb-space-m);
+  color: red; /* Kept direct red */
+  font-weight: var(--tmdb-font-weight-medium);
+}
+.tmdb-computed-span-pending,
+.tmdb-computed-value-pending {
+  margin-left: var(--tmdb-space-m);
+  color: var(--tmdb-color-text-muted);
+  font-style: italic;
+}
+.tmdb-computed-value {
+  margin-left: var(--tmdb-space-m);
+  color: var(--tmdb-color-link-primary);
+}
+.tmdb-computed-value-na {
+  margin-left: var(--tmdb-space-m);
+  color: red; /* Kept direct red */
+  font-weight: var(--tmdb-font-weight-medium);
+}
+
+.tmdb-definition-details-toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-top: var(--tmdb-space-m);
+  font-size: var(--tmdb-font-size-xs);
+  color: var(--tmdb-color-text-secondary);
+  transition: color var(--tmdb-transition-fast);
+  & > span {
+    margin-right: var(--tmdb-space-ms);
+  }
+}
+.tmdb-definition-details-toggle:hover {
+  color: var(--tmdb-color-text-primary);
+  text-decoration: underline;
+}
+
+/* Ensure the root class is applied to the main div */
+.tmdb-container, .tmdb-floating-container {
+  font-family: var(--tmdb-font-family);
+}
+
+ul.tmdb-no-style-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* For the content within the floating container specifically */
+.tmdb-floating-content-wrapper {
+  padding: 0 var(--tmdb-space-xl); /* Original padding for non-handle/non-floater parts */
+}
+
+/* Add hover styles for clickable list items */
+.tmdb-list-item[onClick],
+.tmdb-list-item[role="button"],
+.tmdb-list-item a,
+.tmdb-list-item button {
+  cursor: pointer;
+  transition: background-color var(--tmdb-transition-fast), transform var(--tmdb-transition-fast);
+}
+.tmdb-list-item[onClick]:hover,
+.tmdb-list-item[role="button"]:hover,
+.tmdb-list-item a:hover,
+.tmdb-list-item button:hover {
+  background-color: var(--tmdb-color-bg-medium-gray);
+  transform: translateX(2px);
+}
+`
+
+function getDynamicStateStyle(state: string) {
+  let stateClass: string
+  switch (state) {
+    case 'complete': {
+      stateClass = 'tmdb-status-tag-completed'
+      break
+    }
+    case 'interrupted': {
+      stateClass = 'tmdb-status-tag-interrupted'
+      break
+    }
+    case 'draft': {
+      stateClass = 'tmdb-status-tag-draft'
+      // No default
+      break
+    }
+    default:
+      stateClass = 'tmdb-status-tag-active'
+  }
+
+  return `tmdb-status-tag ${stateClass}`
 }
 
 const TRACE_HISTORY_LIMIT = 15
 
-// Helper to safely get a value from a possibly empty object
 function getFromRecord<T>(
   record: Record<string, T> | undefined,
   key: string,
@@ -596,7 +1131,6 @@ function getFromRecord<T>(
   return record && Object.hasOwn(record, key) ? record[key] : undefined
 }
 
-// TraceAttributes component to display attributes as chips
 function TraceAttributes({
   attributes,
 }: {
@@ -605,19 +1139,23 @@ function TraceAttributes({
   if (!attributes || Object.keys(attributes).length === 0) return null
 
   return (
-    <div style={styles.section}>
-      <div style={styles.sectionTitle}>Attributes:</div>
-      <div style={styles.defChipContainer}>
+    <div className="tmdb-section">
+      <div className="tmdb-section-title">Attributes</div>
+      <div className="tmdb-def-chip-container">
         {Object.entries(attributes).map(([key, value]) => (
           // eslint-disable-next-line @typescript-eslint/no-use-before-define
-          <DefinitionChip key={key} keyName={key} value={value} />
+          <DefinitionChip
+            key={key}
+            keyName={key}
+            value={value}
+            variant="default"
+          />
         ))}
       </div>
     </div>
   )
 }
 
-// TimeMarkers component to display time markers
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TimeMarkers<RelationSchemasT>({
   lastRequiredSpanOffset,
@@ -637,60 +1175,30 @@ function TimeMarkers<RelationSchemasT>({
   }
 
   return (
-    <div style={styles.section}>
-      <div style={styles.sectionTitle}>Time Markers:</div>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+    <div className="tmdb-section">
+      <div className="tmdb-section-title">Time Markers</div>
+      <ul className="tmdb-no-style-list">
         {lastRequiredSpanOffset !== undefined && (
-          <li style={styles.listItem}>
-            <span style={{ display: 'inline-block' }}>
-              First Contentful Render (Last Required Span):
-            </span>
-            <span
-              style={{
-                fontFamily: 'monospace',
-                textAlign: 'right',
-                display: 'inline-block',
-                width: '80px',
-                fontWeight: '500',
-              }}
-            >
-              +{formatMs(lastRequiredSpanOffset)}
+          <li className="tmdb-list-item">
+            <span>First Contentful Render (Last Required Span):</span>
+            <span className="tmdb-time-marker-value">
+              @ {formatMs(lastRequiredSpanOffset)}
             </span>
           </li>
         )}
         {completeSpanOffset !== undefined && (
-          <li style={styles.listItem}>
-            <span style={{ display: 'inline-block' }}>
-              Last Contentful Render (Trace Complete):
-            </span>
-            <span
-              style={{
-                fontFamily: 'monospace',
-                textAlign: 'right',
-                display: 'inline-block',
-                width: '80px',
-                fontWeight: '500',
-              }}
-            >
-              +{formatMs(completeSpanOffset)}
+          <li className="tmdb-list-item">
+            <span>Last Contentful Render (Trace Complete):</span>
+            <span className="tmdb-time-marker-value">
+              @ {formatMs(completeSpanOffset)}
             </span>
           </li>
         )}
         {cpuIdleSpanOffset !== undefined && (
-          <li style={styles.listItem}>
-            <span style={{ display: 'inline-block' }}>
-              Time To Interactive (CPU Idle Span):
-            </span>
-            <span
-              style={{
-                fontFamily: 'monospace',
-                textAlign: 'right',
-                display: 'inline-block',
-                width: '80px',
-                fontWeight: '500',
-              }}
-            >
-              +{formatMs(cpuIdleSpanOffset)}
+          <li className="tmdb-list-item">
+            <span>Time To Interactive (CPU Idle Span):</span>
+            <span className="tmdb-time-marker-value">
+              @ {formatMs(cpuIdleSpanOffset)}
             </span>
           </li>
         )}
@@ -699,13 +1207,16 @@ function TimeMarkers<RelationSchemasT>({
   )
 }
 
-// DefinitionChip component for displaying matcher definition key/value pairs
+type ChipVariant = 'default' | 'pending' | 'missing' | 'success' | 'error'
+
 function DefinitionChip({
   keyName,
   value,
+  variant = 'default',
 }: {
   keyName: string
   value: unknown
+  variant?: ChipVariant
 }) {
   const [showTooltip, setShowTooltip] = useState(false)
   const valueIsComplex =
@@ -717,29 +1228,44 @@ function DefinitionChip({
   const needsTooltip =
     valueIsComplex || keyName.length + stringValue.length > MAX_STRING_LENGTH
 
-  // Create truncated display value
   const displayValue =
     stringValue.length > MAX_STRING_LENGTH
       ? `${stringValue.slice(0, MAX_STRING_LENGTH)}...`
       : stringValue
 
+  const getVariantClass = () => {
+    switch (variant) {
+      case 'pending':
+        return 'tmdb-def-chip-pending'
+      case 'missing':
+        return 'tmdb-def-chip-missing'
+      case 'success':
+        return 'tmdb-def-chip-success'
+      case 'error':
+        return 'tmdb-def-chip-error'
+      default:
+        return ''
+    }
+  }
+
+  const chipClassName = `tmdb-def-chip ${getVariantClass()} ${
+    needsTooltip ? 'tmdb-def-chip-hoverable' : ''
+  }`
+  const tooltipClassName = `tmdb-def-chip-tooltip ${
+    showTooltip ? 'tmdb-def-chip-tooltip-visible' : ''
+  }`
+
   return (
     <div
-      style={{
-        ...styles.defChip,
-        ...(needsTooltip ? styles.defChipHoverable : {}),
-      }}
+      className={chipClassName}
       onMouseEnter={() => void setShowTooltip(true)}
       onMouseLeave={() => void setShowTooltip(false)}
     >
-      {keyName}: <span style={styles.defChipValue}>{displayValue}</span>
+      {keyName}: <span className="tmdb-def-chip-value">{displayValue}</span>
       {needsTooltip && (
         <div
-          style={{
-            ...styles.defChipTooltip,
-            opacity: showTooltip ? 1 : 0,
-            visibility: showTooltip ? 'visible' : 'hidden',
-          }}
+          className={tooltipClassName}
+          // Opacity and visibility are handled by CSS classes now
         >
           {typeof value === 'object'
             ? JSON.stringify(value, null, 2)
@@ -750,7 +1276,6 @@ function DefinitionChip({
   )
 }
 
-// RequiredSpansList component to display required spans
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function RequiredSpansList<RelationSchemasT>({
   requiredSpans,
@@ -758,32 +1283,39 @@ function RequiredSpansList<RelationSchemasT>({
   requiredSpans: RequiredSpan[]
 }) {
   return (
-    <div style={styles.section}>
-      <div style={styles.sectionTitle}>
+    <div className="tmdb-section">
+      <div className="tmdb-section-title">
         Required Spans ({requiredSpans.filter((s) => s.isMatched).length}/
-        {requiredSpans.length}):
+        {requiredSpans.length})
       </div>
       <div>
         {requiredSpans.map((span, i) => (
           <div
             key={i}
-            style={{
-              ...styles.requiredSpan,
-              ...(span.isMatched ? styles.matched : styles.unmatched),
-            }}
+            className={`tmdb-required-span ${
+              span.isMatched
+                ? 'tmdb-required-span-matched'
+                : 'tmdb-required-span-unmatched'
+            }`}
           >
-            <div style={styles.spanContent}>
+            <div className="tmdb-span-content">
               <span
-                style={{
-                  ...styles.matchedIndicator,
-                  ...(span.isMatched ? styles.matchedDot : styles.unmatchedDot),
-                }}
+                className={`tmdb-matched-indicator ${
+                  span.isMatched
+                    ? 'tmdb-matched-indicator-matched'
+                    : 'tmdb-matched-indicator-unmatched'
+                }`}
                 title={span.isMatched ? 'Matched' : 'Pending'}
               />
               {span.definition ? (
-                <div style={styles.defChipContainer}>
+                <div className="tmdb-def-chip-container">
                   {Object.entries(span.definition).map(([key, value]) => (
-                    <DefinitionChip key={key} keyName={key} value={value} />
+                    <DefinitionChip
+                      key={key}
+                      keyName={key}
+                      value={value}
+                      variant={span.isMatched ? 'default' : 'pending'}
+                    />
                   ))}
                 </div>
               ) : (
@@ -797,56 +1329,64 @@ function RequiredSpansList<RelationSchemasT>({
   )
 }
 
-// Helper to render ComputedSpan nicely
 function RenderComputedSpan({ value }: { value: ComputedSpan }) {
   if (!value) return null
   return (
-    <span style={{ marginLeft: 8, color: '#1976d2' }}>
+    <span
+      style={{
+        marginLeft: 'var(--tmdb-space-m)',
+        color: 'var(--tmdb-color-link-primary)',
+      }}
+    >
       start: {value.startOffset.toFixed(2)}ms, duration:{' '}
       {value.duration.toFixed(2)}ms
     </span>
   )
 }
+// Define our timeline point type with all the properties we need
+interface TimelinePoint {
+  name: string
+  time: number
+  color: string
+  absoluteTime: number
+  relativeTime?: number
+  previousEvent?: string
+}
 
-// Helper function to assign lanes to points to prevent text overlap
 const assignLanesToPoints = (
-  pointsToAssign: readonly { name: string; time: number; color: string }[],
+  pointsToAssign: readonly TimelinePoint[],
   currentScale: number,
   separationPercent: number,
 ): {
-  pointData: { name: string; time: number; color: string }
+  pointData: TimelinePoint
   lane: number
 }[] => {
   if (pointsToAssign.length === 0) return []
 
   const sortedPoints = [...pointsToAssign].sort((a, b) => a.time - b.time)
   const assignments: {
-    pointData: { name: string; time: number; color: string }
+    pointData: TimelinePoint
     lane: number
   }[] = []
-  // For each lane, stores the `leftPercent` of the last point added to it.
   const laneLastOccupiedX: Record<number, number> = {}
 
   for (const currentPoint of sortedPoints) {
     const currentPointLeftPercent = currentPoint.time * currentScale
     for (let l = 0; ; l++) {
-      // Iterate through lanes 0, 1, 2...
       const lastXInLane = laneLastOccupiedX[l]
       if (
         lastXInLane === undefined ||
         currentPointLeftPercent - lastXInLane >= separationPercent
       ) {
-        // This point can fit in this lane (or it's a new lane)
         assignments.push({ pointData: currentPoint, lane: l })
         laneLastOccupiedX[l] = currentPointLeftPercent
-        break // Move to the next point
+        break
       }
     }
   }
-  return assignments // This array is sorted by time due to the initial sort.
+  return assignments
 }
 
-// Visual timeline for ComputedRenderSpan (like the provided sketch)
 function RenderBeaconTimeline({
   value,
   name,
@@ -856,44 +1396,69 @@ function RenderBeaconTimeline({
 }) {
   if (!value) return null
 
-  // Extract times (all relative to start)
   const {
     firstRenderTillLoading: loading,
     firstRenderTillData: data,
     firstRenderTillContent: content,
+    startOffset,
   } = value
 
-  // --- Base Constants ---
-  const BAR_HEIGHT = 25
-  const TEXT_AREA_HEIGHT = 22 // Height per lane of text
-  const MARKER_LINE_WIDTH = 2
-  const VERTICAL_PADDING_BETWEEN_AREAS = 2
-
-  // Thresholds for individual label/line alignment (percentages)
   const LABEL_ALIGN_LOW_THRESHOLD = 1
   const LABEL_ALIGN_HIGH_THRESHOLD = 99
   const MARKER_LINE_ALIGN_LOW_THRESHOLD = 0.1
   const MARKER_LINE_ALIGN_HIGH_THRESHOLD = 99.9
   const MIN_SEGMENT_WIDTH_PRODUCT_THRESHOLD = 0.001
-  const MIN_TEXT_SEPARATION_PERCENT = 8 // Min horizontal separation (%) for text in the same lane
+  const MIN_TEXT_SEPARATION_PERCENT = 8
+  const TIMELINE_MIDDLE_THRESHOLD = 50
 
-  // --- Prepare Data for Rendering ---
-  const timePointsForDisplay: { name: string; time: number; color: string }[] =
-    []
-  timePointsForDisplay.push({ name: 'start', time: 0, color: '#757575' })
+  const timePointsForDisplay: TimelinePoint[] = []
+
+  // Add start point with the startOffset value
+  timePointsForDisplay.push({
+    name: 'start',
+    time: 0,
+    absoluteTime: startOffset,
+    color: 'var(--tmdb-timeline-start-marker)',
+  })
+
   if (typeof loading === 'number')
     timePointsForDisplay.push({
       name: 'loading',
       time: loading,
-      color: '#ff9800',
+      absoluteTime: startOffset + loading,
+      relativeTime: loading,
+      previousEvent: 'start',
+      color: 'var(--tmdb-timeline-loading-marker)',
     })
+
   if (typeof data === 'number')
-    timePointsForDisplay.push({ name: 'data', time: data, color: '#1976d2' })
+    timePointsForDisplay.push({
+      name: 'data',
+      time: data,
+      absoluteTime: startOffset + data,
+      relativeTime: typeof loading === 'number' ? data - loading : data,
+      previousEvent: typeof loading === 'number' ? 'loading' : 'start',
+      color: 'var(--tmdb-timeline-data-marker)',
+    })
+
   if (typeof content === 'number')
     timePointsForDisplay.push({
       name: 'content',
       time: content,
-      color: '#2e7d32',
+      absoluteTime: startOffset + content,
+      relativeTime:
+        typeof data === 'number'
+          ? content - data
+          : typeof loading === 'number'
+          ? content - loading
+          : content,
+      previousEvent:
+        typeof data === 'number'
+          ? 'data'
+          : typeof loading === 'number'
+          ? 'loading'
+          : 'start',
+      color: 'var(--tmdb-timeline-content-marker)',
     })
 
   const allRelevantTimes = [0, loading, data, content].filter(
@@ -903,34 +1468,36 @@ function RenderBeaconTimeline({
     allRelevantTimes.length > 0 ? Math.max(...allRelevantTimes) : 0
   const scale = maxTime > 0 ? 100 / maxTime : 0
 
-  // Assign lanes to points
-  const processedPointsForDisplay = assignLanesToPoints(
-    timePointsForDisplay,
+  // Determine how many lanes we need for top and bottom areas
+  const topPoints = timePointsForDisplay.filter((_, index) => index % 2 === 0)
+  const bottomPoints = timePointsForDisplay.filter(
+    (_, index) => index % 2 !== 0,
+  )
+
+  // Cast the TimelinePoint arrays to the type expected by assignLanesToPoints
+  const processedTopPointsForDisplay = assignLanesToPoints(
+    topPoints,
     scale,
     MIN_TEXT_SEPARATION_PERCENT,
   )
-  const numLanes =
-    processedPointsForDisplay.length > 0
-      ? Math.max(...processedPointsForDisplay.map((item) => item.lane)) + 1
+  const processedBottomPointsForDisplay = assignLanesToPoints(
+    bottomPoints,
+    scale,
+    MIN_TEXT_SEPARATION_PERCENT,
+  )
+
+  const topLanes =
+    processedTopPointsForDisplay.length > 0
+      ? Math.max(...processedTopPointsForDisplay.map((item) => item.lane)) + 1
       : 1
 
-  // --- Dynamic Height and Offset Calculations based on lanes ---
-  const TOTAL_LABEL_AREA_HEIGHT = numLanes * TEXT_AREA_HEIGHT
-  const TOTAL_TIME_VALUE_AREA_HEIGHT = numLanes * TEXT_AREA_HEIGHT // Assuming same number of lanes for times
+  const bottomLanes =
+    processedBottomPointsForDisplay.length > 0
+      ? Math.max(...processedBottomPointsForDisplay.map((item) => item.lane)) +
+        1
+      : 1
 
-  const TOTAL_VIS_CONTENT_HEIGHT =
-    TOTAL_LABEL_AREA_HEIGHT +
-    VERTICAL_PADDING_BETWEEN_AREAS +
-    BAR_HEIGHT +
-    VERTICAL_PADDING_BETWEEN_AREAS +
-    TOTAL_TIME_VALUE_AREA_HEIGHT
-
-  const BAR_TOP_OFFSET =
-    TOTAL_LABEL_AREA_HEIGHT + VERTICAL_PADDING_BETWEEN_AREAS
-  const TIME_VALUES_AREA_TOP =
-    BAR_TOP_OFFSET + BAR_HEIGHT + VERTICAL_PADDING_BETWEEN_AREAS
-
-  // Bar Segments (same logic as before)
+  // Set up the bar segments
   const barSegments: {
     start: number
     end: number
@@ -943,7 +1510,7 @@ function RenderBeaconTimeline({
       barSegments.push({
         start: currentSegmentTime,
         end: loading,
-        color: '#fff176',
+        color: 'var(--tmdb-timeline-loading-segment-bg)',
         key: 'segment-to-loading',
       })
     }
@@ -954,7 +1521,7 @@ function RenderBeaconTimeline({
       barSegments.push({
         start: currentSegmentTime,
         end: data,
-        color: '#90caf9',
+        color: 'var(--tmdb-timeline-data-segment-bg)',
         key: 'segment-to-data',
       })
     }
@@ -964,18 +1531,18 @@ function RenderBeaconTimeline({
     barSegments.push({
       start: currentSegmentTime,
       end: content,
-      color: '#a5d6a7',
+      color: 'var(--tmdb-timeline-content-segment-bg)',
       key: 'segment-to-content',
     })
   }
   if (barSegments.length === 0 && maxTime > 0) {
-    let singleSegmentColor = '#e0e0e0'
+    let singleSegmentColor = 'var(--tmdb-timeline-default-segment-bg)'
     if (typeof content === 'number' && content === maxTime)
-      singleSegmentColor = '#a5d6a7'
+      singleSegmentColor = 'var(--tmdb-timeline-content-segment-bg)'
     else if (typeof data === 'number' && data === maxTime)
-      singleSegmentColor = '#90caf9'
+      singleSegmentColor = 'var(--tmdb-timeline-data-segment-bg)'
     else if (typeof loading === 'number' && loading === maxTime)
-      singleSegmentColor = '#fff176'
+      singleSegmentColor = 'var(--tmdb-timeline-loading-segment-bg)'
     barSegments.push({
       start: 0,
       end: maxTime,
@@ -989,90 +1556,129 @@ function RenderBeaconTimeline({
       (seg.end - seg.start) * scale > MIN_SEGMENT_WIDTH_PRODUCT_THRESHOLD,
   )
 
-  // Unique times for vertical lines (based on original, unsorted list for consistency if order mattered)
   const uniqueTimesForLines = [
     ...new Set(timePointsForDisplay.map((p) => p.time)),
   ].sort((a, b) => a - b)
 
+  // Calculate the height for each row based on lane count
+  const TEXT_AREA_HEIGHT = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      '--tmdb-timeline-text-area-height',
+    ) || '22',
+  )
+
+  const TIMELINE_PADDING_BETWEEN_AREAS = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      '--tmdb-timeline-padding-between-areas',
+    ) || '2',
+  )
+
+  const BAR_HEIGHT_VALUE = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      '--tmdb-timeline-bar-height',
+    ) || '25',
+  )
+
+  const topAreaHeight = topLanes * TEXT_AREA_HEIGHT
+  const bottomAreaHeight = bottomLanes * TEXT_AREA_HEIGHT
+
+  // Function to generate display text with relative timing
+  const getDisplayText = (point: TimelinePoint) => {
+    if (point.name === 'start') {
+      return `${point.name} @ ${startOffset.toFixed(0)}ms`
+    }
+    if (point.relativeTime !== undefined) {
+      return `${point.name} +${point.relativeTime.toFixed(0)}ms`
+    }
+    return `${point.name} @ ${point.time.toFixed(0)}ms`
+  }
+
   return (
     <div style={{ width: '100%' }}>
-      {/* Render count and sum of render durations */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <div style={{ fontWeight: 600, fontSize: 16, marginRight: '10px' }}>
-          {name}
+      <div
+        style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}
+      >
+        <div className="tmdb-render-beacon-timeline-name">{name}</div>
+        <div className="tmdb-render-stats-group">
+          <span className="tmdb-render-stats-label">Renders</span>
+          <span className="tmdb-render-stats-value">{value.renderCount}</span>
         </div>
-        <div style={styles.renderStatsGroup}>
-          <span style={styles.renderStatsLabel}>Renders</span>
-          <span style={styles.renderStatsValue}>{value.renderCount}</span>
-        </div>
-        <div style={styles.renderStatsGroup}>
-          <span style={styles.renderStatsLabel}>Duration</span>
-          <span style={styles.renderStatsValue}>
+        <div className="tmdb-render-stats-group">
+          <span className="tmdb-render-stats-label">
+            Sum of Render Durations
+          </span>
+          <span className="tmdb-render-stats-value">
             {value.sumOfRenderDurations.toFixed(0)}ms
           </span>
         </div>
       </div>
 
+      {/* Timeline container using flexbox */}
       <div
         style={{
-          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
           width: '100%',
-          height: TOTAL_VIS_CONTENT_HEIGHT,
+          position: 'relative', // For absolute positioned markers
         }}
       >
-        {/* Area for Text Labels (Above Bar) */}
+        {/* Top labels area */}
         <div
           style={{
-            position: 'absolute',
-            top: 0,
+            minHeight: topAreaHeight,
             width: '100%',
-            height: TOTAL_LABEL_AREA_HEIGHT, // Dynamic height
-            zIndex: 2,
+            position: 'relative',
+            marginBottom: '2px',
           }}
         >
-          {processedPointsForDisplay.map(
-            ({ pointData: point, lane: currentLane }) => {
+          {processedTopPointsForDisplay.map(
+            ({ pointData: point, lane: currentLane }, index) => {
               const leftPercent = point.time * scale
+
+              // Determine text positioning based on which half of the timeline it's on
               let transform = 'translateX(-50%)'
-              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD)
+
+              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD) {
                 transform = 'translateX(0%)'
-              else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD)
+              } else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD) {
                 transform = 'translateX(-100%)'
+              } else if (leftPercent < TIMELINE_MIDDLE_THRESHOLD) {
+                transform = 'translateX(5px)' // Add a small offset to the right
+              } else {
+                transform = 'translateX(calc(-100% - 5px))' // Offset to the left
+              }
 
               return (
                 <div
-                  key={`${point.name}-label-${point.time}`} // Unique key
+                  key={`${point.name}-combined-${point.time}`}
+                  className="tmdb-timeline-point-label"
                   style={{
                     position: 'absolute',
-                    top: currentLane * TEXT_AREA_HEIGHT, // Position based on lane
+                    top:
+                      TIMELINE_PADDING_BETWEEN_AREAS +
+                      currentLane * TEXT_AREA_HEIGHT,
                     left: `${leftPercent}%`,
                     transform,
-                    fontSize: 11,
                     color: point.color,
-                    whiteSpace: 'nowrap',
-                    lineHeight: `${TEXT_AREA_HEIGHT}px`,
-                    padding: '0 5px',
+                    lineHeight: `var(--tmdb-timeline-text-height)`,
+                    [leftPercent < TIMELINE_MIDDLE_THRESHOLD
+                      ? 'borderLeft'
+                      : 'borderRight']: `2px solid ${point.color}`,
                   }}
                 >
-                  {point.name}
+                  {getDisplayText(point)}
                 </div>
               )
             },
           )}
         </div>
 
-        {/* Timeline Bar */}
+        {/* Timeline bar area */}
         <div
+          className="tmdb-timeline-bar"
           style={{
-            position: 'absolute',
-            top: BAR_TOP_OFFSET, // Dynamic offset
-            width: '100%',
-            height: BAR_HEIGHT,
-            borderRadius: 3,
-            background: '#e0e0e0',
-            boxSizing: 'border-box',
-            zIndex: 1,
-            display: 'flex',
+            height: BAR_HEIGHT_VALUE,
+            position: 'relative', // Changed from absolute to relative
           }}
         >
           {validBarSegments.map((seg) => {
@@ -1082,92 +1688,135 @@ function RenderBeaconTimeline({
             return (
               <div
                 key={seg.key}
+                className="tmdb-timeline-segment"
                 style={{
-                  position: 'absolute',
                   left: `${segmentLeftPercent}%`,
                   width: `${segmentWidthPercent}%`,
-                  height: '100%',
                   background: seg.color,
                 }}
+                title={`${seg.key} (${seg.end - seg.start}ms)`}
               />
             )
           })}
         </div>
 
-        {/* Area for Time Values (Below Bar) */}
+        {/* Bottom labels area */}
         <div
           style={{
-            position: 'absolute',
-            top: TIME_VALUES_AREA_TOP, // Dynamic offset
+            minHeight: bottomAreaHeight,
             width: '100%',
-            height: TOTAL_TIME_VALUE_AREA_HEIGHT, // Dynamic height
-            zIndex: 2,
+            position: 'relative',
+            marginTop: '2px',
           }}
         >
-          {processedPointsForDisplay.map(
-            ({ pointData: point, lane: currentLane }) => {
-              if (point.name === 'start' && point.time === 0) return null
+          {processedBottomPointsForDisplay.map(
+            ({ pointData: point, lane: currentLane }, index) => {
               const leftPercent = point.time * scale
+
+              // Determine text positioning based on which half of the timeline it's on
               let transform = 'translateX(-50%)'
-              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD)
+
+              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD) {
                 transform = 'translateX(0%)'
-              else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD)
+              } else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD) {
                 transform = 'translateX(-100%)'
+              } else if (leftPercent < TIMELINE_MIDDLE_THRESHOLD) {
+                transform = 'translateX(5px)' // Add a small offset to the right
+              } else {
+                transform = 'translateX(calc(-100% - 5px))' // Offset to the left
+              }
 
               return (
                 <div
-                  key={`${point.name}-time-${point.time}`} // Unique key
+                  key={`${point.name}-combined-${point.time}`}
+                  className="tmdb-timeline-point-label"
                   style={{
                     position: 'absolute',
-                    top: currentLane * TEXT_AREA_HEIGHT, // Position based on lane
+                    top:
+                      TIMELINE_PADDING_BETWEEN_AREAS +
+                      currentLane * TEXT_AREA_HEIGHT,
                     left: `${leftPercent}%`,
                     transform,
-                    fontSize: 11,
                     color: point.color,
-                    whiteSpace: 'nowrap',
-                    lineHeight: `${TEXT_AREA_HEIGHT}px`,
-                    padding: '0 5px',
+                    lineHeight: `var(--tmdb-timeline-text-height)`,
+                    [leftPercent < TIMELINE_MIDDLE_THRESHOLD
+                      ? 'borderLeft'
+                      : 'borderRight']: `2px solid ${point.color}`,
                   }}
                 >
-                  +{point.time.toFixed(0)}ms
+                  {getDisplayText(point)}
                 </div>
               )
             },
           )}
         </div>
 
-        {/* Vertical Marker Lines spanning all areas */}
+        {/* Marker lines - positioned absolutely with correct direction */}
         {uniqueTimesForLines.map((timeVal) => {
-          // Find any point config for color, preferably from original list for consistency
           const pointConfig =
             timePointsForDisplay.find((p) => p.time === timeVal) ??
             timePointsForDisplay[0]!
           const leftPercent = timeVal * scale
           let lineLeftPositionStyle = `${leftPercent}%`
           let lineTransformStyle = 'translateX(-50%)'
+          const markerLineWidth = Number.parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue(
+              '--tmdb-timeline-marker-line-width',
+            ) || '2',
+          )
 
           if (leftPercent < MARKER_LINE_ALIGN_LOW_THRESHOLD) {
             lineLeftPositionStyle = '0%'
             lineTransformStyle = 'translateX(0)'
           } else if (leftPercent > MARKER_LINE_ALIGN_HIGH_THRESHOLD) {
-            lineLeftPositionStyle = `calc(100% - ${MARKER_LINE_WIDTH}px)`
+            lineLeftPositionStyle = `calc(100% - ${markerLineWidth}px)`
             lineTransformStyle = 'translateX(0)'
           }
 
+          // Determine if this marker needs top line, bottom line, or both
+          const pointIndex = timePointsForDisplay.findIndex(
+            (p) => p.time === timeVal,
+          )
+          const needsTopLine = pointIndex % 2 === 0 // Even indexes (0, 2) are in top area
+          const needsBottomLine = pointIndex % 2 !== 0 // Odd indexes (1, 3) are in bottom area
+
           return (
-            <div
-              key={`line-${timeVal}`}
-              style={{
-                position: 'absolute',
-                left: lineLeftPositionStyle,
-                transform: lineTransformStyle,
-                top: 0,
-                width: MARKER_LINE_WIDTH,
-                background: pointConfig.color,
-                height: '100%', // Spans full TOTAL_VIS_CONTENT_HEIGHT
-                zIndex: 0,
-              }}
-            />
+            <React.Fragment key={`line-${timeVal}`}>
+              {needsTopLine && (
+                <div
+                  className="tmdb-timeline-marker-line"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 'auto',
+                    left: lineLeftPositionStyle,
+                    transform: lineTransformStyle,
+                    borderColor: pointConfig.color,
+                    height: `calc(${topAreaHeight}px + 2px)`, // Extend to timeline bar with overlap
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                    borderTop: 'none',
+                  }}
+                />
+              )}
+              {needsBottomLine && (
+                <div
+                  className="tmdb-timeline-marker-line"
+                  style={{
+                    position: 'absolute',
+                    top: `calc(${topAreaHeight}px + ${BAR_HEIGHT_VALUE}px - 2px)`, // Start slightly inside the bar
+                    bottom: 0,
+                    left: lineLeftPositionStyle,
+                    transform: lineTransformStyle,
+                    borderColor: pointConfig.color,
+                    height: `calc(${bottomAreaHeight}px + 4px)`, // Extended height to ensure it covers full area
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                    borderTop: 'none',
+                  }}
+                />
+              )}
+            </React.Fragment>
           )
         })}
       </div>
@@ -1175,19 +1824,23 @@ function RenderBeaconTimeline({
   )
 }
 
-// Helper to render ComputedRenderBeaconSpans nicely
 function RenderComputedRenderBeaconSpans({
   computedRenderBeaconSpans,
 }: {
   computedRenderBeaconSpans: Record<string, ComputedRenderSpan>
 }) {
-  // if (Object.keys(computedRenderBeaconSpans).length === 0) return null
   return (
-    <div style={styles.section}>
-      <div style={styles.sectionTitle}>Computed Render Beacon Spans:</div>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+    <div className="tmdb-section">
+      <div className="tmdb-section-title">Computed Render Beacon Spans</div>
+      <ul className="tmdb-no-style-list">
         {Object.entries(computedRenderBeaconSpans).map(([name, value]) => (
-          <li key={name} style={styles.listItem}>
+          <li
+            key={name}
+            className="tmdb-list-item"
+            style={{ display: 'block' }}
+          >
+            {' '}
+            {/* Allow block for timeline */}
             <RenderBeaconTimeline value={value} name={name} />
           </li>
         ))}
@@ -1196,7 +1849,6 @@ function RenderComputedRenderBeaconSpans({
   )
 }
 
-// Function to download trace recording as a JSON file
 function downloadTraceRecording<
   RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
 >(trace: TraceInfo<RelationSchemasT>) {
@@ -1205,25 +1857,18 @@ function downloadTraceRecording<
   }
 
   try {
-    // Generate the trace recording
     const recording = createTraceRecording(
       trace.traceContext,
       trace.finalTransition,
     )
-
-    // Create a blob with the JSON data
     const recordingJson = JSON.stringify(recording, null, 2)
     const blob = new Blob([recordingJson], { type: 'application/json' })
-
-    // Create download link
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `trace-${trace.traceId}-${trace.traceName}.json`
     document.body.append(a)
     a.click()
-
-    // Clean up
     setTimeout(() => {
       a.remove()
       URL.revokeObjectURL(url)
@@ -1234,223 +1879,302 @@ function downloadTraceRecording<
   }
 }
 
-// TraceItem component to display a trace (used for both active and history traces)
 function TraceItem<
   RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
 >({
   trace,
   isExpanded,
   onToggleExpand,
+  onDismiss,
   isCurrentTrace = false,
 }: {
   trace: TraceInfo<RelationSchemasT>
   isExpanded: boolean
   onToggleExpand: () => void
+  onDismiss: () => void
   isCurrentTrace?: boolean
 }) {
-  const [isHovered, setIsHovered] = useState(false)
   const [isDefinitionDetailsExpanded, setIsDefinitionDetailsExpanded] =
     useState(false)
 
-  // Determine if we can download a trace recording (only for completed/interrupted traces)
   const canDownloadRecording =
     (trace.state === 'complete' || trace.state === 'interrupted') &&
     !!trace.traceContext &&
     !!trace.finalTransition
 
-  // Memoize computed results for this trace
   const computedResults = useMemo(() => {
     if (trace.traceContext && trace.finalTransition) {
-      const results = getComputedResults(
-        trace.traceContext,
-        trace.finalTransition,
-      )
-      return results
+      return getComputedResults(trace.traceContext, trace.finalTransition)
     }
     return {}
   }, [trace.traceContext, trace.finalTransition])
 
-  // Handle download button click without triggering the expand/collapse
   const handleDownloadClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     downloadTraceRecording(trace)
   }
 
+  const handleDismissClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDismiss()
+  }
+
+  const borderLeftColor = isCurrentTrace
+    ? 'var(--tmdb-color-active-primary)'
+    : trace.state === 'complete'
+    ? 'var(--tmdb-color-completed-primary)'
+    : trace.state === 'interrupted'
+    ? 'var(--tmdb-color-interrupted-primary)'
+    : 'var(--tmdb-color-border-dark)'
+
   return (
     <div
-      style={{
-        ...styles.historyItem,
-        ...(isHovered ? styles.historyItemHover : {}),
-        borderLeft: '3px solid',
-        borderLeftColor: isCurrentTrace
-          ? '#1565c0'
-          : trace.state === 'complete'
-          ? '#2e7d32'
-          : trace.state === 'interrupted'
-          ? '#c62828'
-          : '#e0e0e0',
-      }}
-      onMouseEnter={() => void setIsHovered(true)}
-      onMouseLeave={() => void setIsHovered(false)}
+      className="tmdb-history-item"
+      style={{ borderLeft: `3px solid ${borderLeftColor}` }}
     >
-      {/* ROW 1: Title, state, buttons, and IDs */}
-      <div style={styles.historyHeader} onClick={onToggleExpand}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <strong style={{ fontSize: '15px' }}>{trace.traceName}</strong>
-          <span
-            style={{
-              ...styles.statusTag,
-              ...getStateStyle(trace.state),
-            }}
-          >
+      <div className="tmdb-history-header" onClick={onToggleExpand}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--tmdb-space-m)',
+          }}
+        >
+          <strong style={{ fontSize: 'var(--tmdb-font-size-l)' }}>
+            {trace.traceName}
+          </strong>
+          <span className={getDynamicStateStyle(trace.state)}>
             {trace.state}
           </span>
           {canDownloadRecording && (
             <button
-              style={styles.downloadButton}
+              className="tmdb-button tmdb-download-button"
               onClick={handleDownloadClick}
               title="Download trace recording as JSON"
             >
-              <span style={styles.downloadIcon}>🔽 JSON</span>
+              <span className="tmdb-download-icon">🔽&nbsp;JSON</span>
             </button>
           )}
-          {/* Error indicator */}
           {(trace.hasErrorSpan || trace.hasSuppressedErrorSpan) && (
             <span
+              className="tmdb-error-indicator"
               title={
                 trace.hasSuppressedErrorSpan
                   ? 'Suppressed error span(s) seen'
                   : 'Error span(s) seen'
               }
-              style={{
-                color: '#c62828',
-                fontSize: '18px',
-              }}
             >
               ⚠️
             </span>
           )}
-          {/* Definition modification indicator */}
           {trace.definitionModifications &&
             trace.definitionModifications.length > 0 && (
               <span
+                className="tmdb-definition-modified-indicator"
                 title="Definition modified"
-                style={{
-                  color: '#1976d2',
-                  fontSize: '18px',
-                }}
               >
                 🔧
               </span>
             )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={styles.timeDisplay}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--tmdb-space-m)',
+          }}
+        >
+          <span className="tmdb-time-display">
             ({formatMs(trace.liveDuration)})
           </span>
-          <div style={styles.idChip} title="Trace ID">
+          <div className="tmdb-chip tmdb-id-chip" title="Trace ID">
             {trace.traceId}
           </div>
-          <span style={styles.timeDisplay}>
+          <span className="tmdb-time-display">
             {new Date(trace.startTime).toLocaleTimeString()}
           </span>
+          <button
+            className="tmdb-dismiss-button"
+            onClick={handleDismissClick}
+            title="Dismiss this trace"
+          >
+            ✕
+          </button>
         </div>
       </div>
-      {/* ROW 2: Main trace information */}
-      <div style={styles.traceInfoRow}>
-        {/* Variant in chip group */}
-        <div style={styles.variantGroup}>
-          <span style={styles.variantLabel}>Variant</span>
-          <span style={styles.variantValue}>{trace.variant}</span>
-        </div>
+      <div className="tmdb-trace-info-row">
+        <div
+          style={{
+            display: 'flex',
+            gap: 'var(--tmdb-space-m)',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}
+        >
+          <div className="tmdb-chip-group tmdb-variant-group">
+            <span className="tmdb-chip-group-label">Variant</span>
+            <span className="tmdb-chip-group-value">{trace.variant}</span>
+          </div>
 
-        {/* Required spans in chip group */}
-        <div style={styles.spansGroup}>
-          <span style={styles.spansLabel}>Required</span>
-          <span style={styles.spansValue}>
-            {trace.requiredSpans.filter((s) => s.isMatched).length}/
-            {trace.requiredSpans.length}
-          </span>
-        </div>
+          <div className="tmdb-chip-group tmdb-spans-group">
+            <span className="tmdb-chip-group-label">Required</span>
+            <span className="tmdb-chip-group-value">
+              {trace.requiredSpans.filter((s) => s.isMatched).length}/
+              {trace.requiredSpans.length}
+            </span>
+          </div>
 
-        {/* Group related items together */}
-        {trace.relatedTo && Object.keys(trace.relatedTo).length > 0 && (
-          <div style={styles.relatedGroup}>
-            <span style={styles.relatedLabel}>Related</span>
-            <div style={styles.relatedItems}>
-              {Object.entries(trace.relatedTo).map(([key, value]) => (
-                <span key={key} style={styles.relatedItem}>
-                  {key}: {JSON.stringify(value)}
-                </span>
-              ))}
+          {trace.relatedTo && Object.keys(trace.relatedTo).length > 0 && (
+            <div className="tmdb-chip-group tmdb-related-group">
+              <span className="tmdb-chip-group-label">Related</span>
+              <div className="tmdb-related-items">
+                {Object.entries(trace.relatedTo).map(([key, value]) => (
+                  <span key={key} className="tmdb-related-item">
+                    {key}: {JSON.stringify(value)}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Interruption reason in chip group */}
-        {trace.interruptionReason && (
-          <div style={styles.reasonGroup}>
-            <span style={styles.reasonLabel}>Reason</span>
-            <span style={styles.reasonValue}>{trace.interruptionReason}</span>
-          </div>
-        )}
+          {trace.interruptionReason && (
+            <div className="tmdb-chip-group tmdb-reason-group">
+              <span className="tmdb-chip-group-label">Reason</span>
+              <span className="tmdb-chip-group-value">
+                {trace.interruptionReason}
+              </span>
+            </div>
+          )}
 
-        {/* Span count chip */}
-        <span style={styles.infoChip}>Spans: {trace.totalSpanCount ?? 0}</span>
-      </div>{' '}
+          {trace.lastRequiredSpanOffset !== undefined && (
+            <div
+              className="tmdb-chip-group tmdb-fcr-group"
+              title="First Contentful Render (Last Required Span)"
+            >
+              <span className="tmdb-chip-group-label">FCR</span>
+              <span className="tmdb-chip-group-value">
+                {formatMs(trace.lastRequiredSpanOffset)}
+              </span>
+            </div>
+          )}
+
+          {trace.completeSpanOffset !== undefined && (
+            <div
+              className="tmdb-chip-group tmdb-lcr-group"
+              title="Last Contentful Render (Trace Complete)"
+            >
+              <span className="tmdb-chip-group-label">LCR</span>
+              <span className="tmdb-chip-group-value">
+                {formatMs(trace.completeSpanOffset)}
+              </span>
+            </div>
+          )}
+
+          {trace.cpuIdleSpanOffset !== undefined && (
+            <div
+              className="tmdb-chip-group tmdb-tti-group"
+              title="Time To Interactive (CPU Idle Span)"
+            >
+              <span className="tmdb-chip-group-label">TTI</span>
+              <span className="tmdb-chip-group-value">
+                {formatMs(trace.cpuIdleSpanOffset)}
+              </span>
+            </div>
+          )}
+
+          <div className="tmdb-chip-group tmdb-span-count-group">
+            <span className="tmdb-chip-group-label">Spans</span>
+            <span className="tmdb-chip-group-value">
+              {trace.totalSpanCount ?? 0}
+            </span>
+          </div>
+        </div>
+
+        <div
+          className={`tmdb-expand-arrow ${
+            isExpanded ? 'tmdb-expand-arrow-up' : 'tmdb-expand-arrow-down'
+          }`}
+          onClick={onToggleExpand}
+        >
+          ▼
+        </div>
+      </div>
+
       {isExpanded && (
         <div
-          style={styles.expandedHistory}
+          className="tmdb-expanded-history"
           onClick={(e) => {
             void e.stopPropagation()
           }}
         >
           <TraceAttributes attributes={trace.attributes} />
-
           <RequiredSpansList requiredSpans={trace.requiredSpans} />
+          {(trace.computedValues?.length ?? 0) > 0 && (
+            <div className="tmdb-section">
+              <div className="tmdb-section-title">Computed Values</div>
+              <div className="tmdb-def-chip-container">
+                {(trace.computedValues ?? []).map((name) => {
+                  const value = getFromRecord(
+                    computedResults.computedValues,
+                    name,
+                  )
 
-          <TimeMarkers
-            lastRequiredSpanOffset={trace.lastRequiredSpanOffset}
-            completeSpanOffset={trace.completeSpanOffset}
-            cpuIdleSpanOffset={trace.cpuIdleSpanOffset}
-          />
+                  // Determine variant and display value based on trace state and value availability
+                  let variant: ChipVariant = 'default'
+                  let displayValue: unknown
 
-          {/* Computed Spans */}
+                  if (
+                    trace.state === 'complete' ||
+                    trace.state === 'interrupted'
+                  ) {
+                    if (value !== undefined) {
+                      variant = 'success'
+                      displayValue = value
+                    } else {
+                      variant = 'missing'
+                      displayValue = 'N/A'
+                    }
+                  } else {
+                    variant = 'pending'
+                    displayValue = 'pending'
+                  }
+
+                  return (
+                    <DefinitionChip
+                      key={name}
+                      keyName={name}
+                      value={displayValue}
+                      variant={variant}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {(trace.computedSpans?.length ?? 0) > 0 && (
-            <div style={styles.section}>
-              <div style={styles.sectionTitle}>Computed Spans:</div>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            <div className="tmdb-section">
+              <div className="tmdb-section-title">Computed Spans</div>
+              <ul className="tmdb-no-style-list">
                 {(trace.computedSpans ?? []).map((name) => {
                   const value = getFromRecord(
                     computedResults.computedSpans,
                     name,
                   )
                   return (
-                    <li key={name} style={styles.listItem}>
+                    <li key={name} className="tmdb-list-item">
                       {name}
                       {trace.state === 'complete' ||
                       trace.state === 'interrupted' ? (
                         value ? (
                           <RenderComputedSpan value={value} />
                         ) : (
-                          <span
-                            style={{
-                              marginLeft: 8,
-                              color: 'red',
-                              fontWeight: 500,
-                            }}
-                          >
+                          <span className="tmdb-computed-span-missing">
                             missing
                           </span>
                         )
                       ) : (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            color: '#757575',
-                            fontStyle: 'italic',
-                          }}
-                        >
+                        <span className="tmdb-computed-span-pending">
                           pending
                         </span>
                       )}
@@ -1467,135 +2191,73 @@ function TraceItem<
               }
             />
           ) : null}
-          {/* Computed Values */}
-          {(trace.computedValues?.length ?? 0) > 0 && (
-            <div style={styles.section}>
-              <div style={styles.sectionTitle}>Computed Values:</div>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                {(trace.computedValues ?? []).map((name) => {
-                  const value = getFromRecord(
-                    computedResults.computedValues,
-                    name,
-                  )
-                  return (
-                    <li key={name} style={styles.listItem}>
-                      {name}
-                      {trace.state === 'complete' ||
-                      trace.state === 'interrupted' ? (
-                        value !== undefined ? (
-                          <span style={{ marginLeft: 8, color: '#1976d2' }}>
-                            {String(value)}
-                          </span>
-                        ) : (
-                          <span
-                            style={{
-                              marginLeft: 8,
-                              color: 'red',
-                              fontWeight: 500,
-                            }}
-                          >
-                            N/A
-                          </span>
-                        )
-                      ) : (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            color: '#757575',
-                            fontStyle: 'italic',
-                          }}
-                        >
-                          pending
-                        </span>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
-
-          {/* ROW 3: Definition details toggle */}
           <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              cursor: 'pointer',
-              marginTop: '8px',
-              fontSize: '12px',
-              color: '#555',
-            }}
+            className="tmdb-definition-details-toggle"
             onClick={(e) => {
               e.stopPropagation()
               setIsDefinitionDetailsExpanded((prev) => !prev)
             }}
           >
-            <span style={{ marginRight: '5px' }}>
-              {isDefinitionDetailsExpanded ? '−' : '+'} Definition Details
-            </span>
+            <span>{isDefinitionDetailsExpanded ? '−' : '+'}</span>
+            Definition Details
           </div>
-          {/* Definition modifications details */}
           {isDefinitionDetailsExpanded && (
-            <div style={styles.section}>
-              {/* Trace configuration information */}
-              <div style={styles.sectionTitle}>Configuration:</div>
-              <div style={styles.configInfoRow}>
-                {(() => {
-                  const { timeout, debounce, interactive } = trace.traceContext
-                    ? getConfigSummary(trace.traceContext)
-                    : {}
-                  return (
-                    <>
-                      {timeout != null && (
-                        <span style={styles.configChip}>
-                          Timeout: {formatMs(timeout)}
-                        </span>
-                      )}
-                      {debounce != null && (
-                        <span style={styles.configChip}>
-                          Debounce: {formatMs(debounce)}
-                        </span>
-                      )}
-                      {interactive != null && (
-                        <span style={styles.configChip}>
-                          Interactive: {formatMs(interactive)}
-                        </span>
-                      )}
-                    </>
-                  )
-                })()}
+            <>
+              <div className="tmdb-section">
+                <div className="tmdb-section-title">Trace Definition</div>
+                <div className="tmdb-def-chip-container">
+                  {(() => {
+                    const { timeout, debounce, interactive } =
+                      trace.traceContext
+                        ? getConfigSummary(trace.traceContext)
+                        : {}
+                    return (
+                      <>
+                        {timeout != null && (
+                          <DefinitionChip
+                            keyName="Timeout"
+                            value={`${formatMs(timeout)}`}
+                            variant="default"
+                          />
+                        )}
+                        {debounce != null && (
+                          <DefinitionChip
+                            keyName="Debounce"
+                            value={`${formatMs(debounce)}`}
+                            variant="default"
+                          />
+                        )}
+                        {interactive != null && (
+                          <DefinitionChip
+                            keyName="Interactive"
+                            value={`${formatMs(interactive)}`}
+                            variant="default"
+                          />
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
               </div>
-
-              {/* Definition modifications list */}
               {trace.definitionModifications &&
                 trace.definitionModifications.length > 0 && (
-                  <div>
-                    <div style={styles.sectionTitle}>
-                      Definition Modifications:
+                  <div className="tmdb-section">
+                    <div className="tmdb-section-title">
+                      Trace Definition Modifications
                     </div>
-                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                    <ul className="tmdb-no-style-list">
                       {trace.definitionModifications.map((mod, i) => (
-                        <li key={i} style={styles.listItem}>
+                        <li key={i} className="tmdb-list-item">
                           {JSON.stringify(mod)}
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
-            </div>
+            </>
           )}
         </div>
       )}
-      {/* Expand/collapse arrow indicator */}
-      <div
-        style={{
-          ...styles.expandArrow,
-          ...(isExpanded ? styles.expandArrowUp : styles.expandArrowDown),
-        }}
-        onClick={onToggleExpand}
-      >
-        ▼
-      </div>
     </div>
   )
 }
@@ -1628,7 +2290,10 @@ export default function TraceManagerDebugger<
     number | null
   >(0)
 
-  // For floating panel functionality
+  const removeTraceFromHistory = (traceId: string) => {
+    setTraceHistory((prev) => prev.filter((t) => t.traceId !== traceId))
+  }
+
   const [position, setPosition] = useState({ x: 10, y: 10 })
   const isDraggingRef = useRef(false)
   const dragOffsetRef = useRef({ x: 0, y: 0 })
@@ -1637,13 +2302,8 @@ export default function TraceManagerDebugger<
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!containerRef.current) return
-
-    // Prevent default browser behavior like text selection
     e.preventDefault()
-
     isDraggingRef.current = true
-
-    // Calculate the offset from cursor to container top-left corner
     dragOffsetRef.current = {
       x: e.clientX - position.x,
       y: e.clientY - position.y,
@@ -1652,11 +2312,7 @@ export default function TraceManagerDebugger<
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDraggingRef.current) return
-
-    // Prevent default behavior during dragging
     e.preventDefault()
-
-    // Calculate new position by subtracting the initial offset
     requestAnimationFrame(() => {
       setPosition({
         x: e.clientX - dragOffsetRef.current.x,
@@ -1667,7 +2323,6 @@ export default function TraceManagerDebugger<
 
   const handleMouseUp = (e: MouseEvent) => {
     if (isDraggingRef.current) {
-      // Prevent default only if we were dragging
       e.preventDefault()
     }
     isDraggingRef.current = false
@@ -1678,7 +2333,6 @@ export default function TraceManagerDebugger<
     if (float) {
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
-
       return () => {
         window.removeEventListener('mousemove', handleMouseMove)
         window.removeEventListener('mouseup', handleMouseUp)
@@ -1688,22 +2342,16 @@ export default function TraceManagerDebugger<
   }, [float])
 
   useEffect(() => {
-    // schedule updates asynchronously so we never call setState mid‐render
     const schedule = (fn: () => void) => void setTimeout(fn, 0)
-    // Create a map to store spans for each trace by ID
     const traceEntriesMap = new Map<
       string,
       SpanAndAnnotation<RelationSchemasT>[]
     >()
 
-    // Subscribe to trace-start events
     const startSub = traceManager.when('trace-start').subscribe((event) => {
       const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
       const traceId = trace.input.id
-
-      // Create a new entry array for this trace (or clear existing)
       traceEntriesMap.set(traceId, [])
-
       const traceInfo: TraceInfo<RelationSchemasT> = {
         traceId,
         traceName: trace.definition.name,
@@ -1718,7 +2366,6 @@ export default function TraceManagerDebugger<
           : undefined,
         requiredSpans: trace.definition.requiredSpans.map((matcher, index) => {
           const name = formatMatcher(matcher, index)
-
           return {
             name,
             isMatched: false,
@@ -1732,7 +2379,6 @@ export default function TraceManagerDebugger<
           recordedItemsByLabel: trace.recordedItemsByLabel,
           recordedItems: new Set(trace.recordedItems),
         },
-        // New fields for live info
         liveDuration: 0,
         totalSpanCount: 0,
         hasErrorSpan: false,
@@ -1745,17 +2391,14 @@ export default function TraceManagerDebugger<
           trace.definition.computedValueDefinitions ?? {},
         ),
       }
-
       schedule(() => void setCurrentTrace(traceInfo))
     })
 
-    // Subscribe to state transition events
     const stateSub = traceManager
       .when('state-transition')
       .subscribe((event) => {
         const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
         const transition = event.stateTransition
-
         const partialNewTrace = {
           traceContext: {
             definition: trace.definition,
@@ -1771,22 +2414,18 @@ export default function TraceManagerDebugger<
             ? { ...trace.input.relatedTo }
             : undefined,
         } as const
-
         schedule(
           () =>
             void setCurrentTrace((prevTrace) => {
               if (!prevTrace || prevTrace.traceId !== trace.input.id)
                 return prevTrace
-
               const updatedTrace: TraceInfo<RelationSchemasT> = {
                 ...prevTrace,
                 ...partialNewTrace,
               }
-
               if ('interruptionReason' in transition) {
                 updatedTrace.interruptionReason = transition.interruptionReason
               }
-
               if (
                 'lastRequiredSpanAndAnnotation' in transition &&
                 transition.lastRequiredSpanAndAnnotation
@@ -1794,7 +2433,6 @@ export default function TraceManagerDebugger<
                 updatedTrace.lastRequiredSpanOffset =
                   transition.lastRequiredSpanAndAnnotation.annotation.operationRelativeEndTime
               }
-
               if (
                 'completeSpanAndAnnotation' in transition &&
                 transition.completeSpanAndAnnotation
@@ -1802,7 +2440,6 @@ export default function TraceManagerDebugger<
                 updatedTrace.completeSpanOffset =
                   transition.completeSpanAndAnnotation.annotation.operationRelativeEndTime
               }
-
               if (
                 'cpuIdleSpanAndAnnotation' in transition &&
                 transition.cpuIdleSpanAndAnnotation
@@ -1810,8 +2447,6 @@ export default function TraceManagerDebugger<
                 updatedTrace.cpuIdleSpanOffset =
                   transition.cpuIdleSpanAndAnnotation.annotation.operationRelativeEndTime
               }
-
-              // Terminal states - add to history
               if (isTerminalState(transition.transitionToState)) {
                 setTraceHistory((prev) => {
                   updatedTrace.finalTransition =
@@ -1821,28 +2456,23 @@ export default function TraceManagerDebugger<
                 })
                 return null
               }
-
               return updatedTrace
             }),
         )
       })
 
-    // Subscribe to required span seen events
     const spanSeenSub = traceManager
       .when('required-span-seen')
       .subscribe((event) => {
         const trace = event.traceContext as AllPossibleTraces<RelationSchemasT>
-
         schedule(
           () =>
             void setCurrentTrace((prevTrace) => {
               if (!prevTrace || prevTrace.traceId !== trace.input.id) {
                 return prevTrace
               }
-              // Find which required span was matched by comparing against all matchers
               const updatedRequiredSpans = [...prevTrace.requiredSpans]
               const matchedSpan = event.spanAndAnnotation
-
               trace.definition.requiredSpans.forEach((matcher, index) => {
                 if (matcher(matchedSpan, trace)) {
                   updatedRequiredSpans[index] = {
@@ -1851,7 +2481,6 @@ export default function TraceManagerDebugger<
                   }
                 }
               })
-
               return {
                 ...prevTrace,
                 requiredSpans: updatedRequiredSpans,
@@ -1859,30 +2488,22 @@ export default function TraceManagerDebugger<
             }),
         )
       })
-    // Subscribe to add-span-to-recording for live info
     const addSpanSub = traceManager
       .when('add-span-to-recording')
       .subscribe((event) => {
-        // Add the span to the trace entries map regardless of current UI state
         const trace = event.traceContext
         const traceId = trace.input.id
-
-        // Get or initialize entries array for this specific trace
         if (!traceEntriesMap.has(traceId)) {
           traceEntriesMap.set(traceId, [])
         }
         const entries = traceEntriesMap.get(traceId)!
         entries.push(event.spanAndAnnotation)
-
-        // Now update the UI if this is the currently displayed trace
         schedule(
           () =>
             void setCurrentTrace((prevTrace) => {
-              if (!prevTrace) return prevTrace
-              if (traceId !== prevTrace.traceId) {
+              if (!prevTrace || traceId !== prevTrace.traceId) {
                 return prevTrace
               }
-
               const liveDuration =
                 entries.length > 0
                   ? Math.round(
@@ -1912,7 +2533,6 @@ export default function TraceManagerDebugger<
         )
       })
 
-    // Subscribe to definition-modified for modification indicator
     const defModSub = traceManager
       .when('definition-modified')
       .subscribe(
@@ -1920,8 +2540,8 @@ export default function TraceManagerDebugger<
           schedule(
             () =>
               void setCurrentTrace((prevTrace) => {
-                if (!prevTrace) return prevTrace
-                if (trace.input.id !== prevTrace.traceId) return prevTrace
+                if (!prevTrace || trace.input.id !== prevTrace.traceId)
+                  return prevTrace
                 return {
                   ...prevTrace,
                   traceContext: {
@@ -1953,92 +2573,136 @@ export default function TraceManagerDebugger<
     ? [currentTrace, ...traceHistory]
     : traceHistory
 
+  let content: JSX.Element
+
+  // eslint-disable-next-line unicorn/prefer-ternary
   if (float && isMinimized) {
-    return (
-      <button
-        style={styles.minimizedButton}
-        onClick={() => void setIsMinimized(false)}
-      >
-        Traces
-      </button>
+    content = (
+      <div className="tmdb-debugger-root">
+        <button
+          className="tmdb-minimized-button"
+          onClick={() => void setIsMinimized(false)}
+        >
+          Traces
+        </button>
+      </div>
+    )
+  } else {
+    content = (
+      <>
+        {float && (
+          <div className="tmdb-handle" onMouseDown={handleMouseDown}>
+            <h3 className="tmdb-handle-title">{NAME}</h3>
+            <div>
+              <button
+                className="tmdb-close-button"
+                onClick={() => void setIsMinimized(true)}
+              >
+                −
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!float && (
+          <div className="tmdb-header">
+            <h2 className="tmdb-title">{NAME}</h2>
+          </div>
+        )}
+
+        {/* Added a wrapper for padding when floating, as tmdb-floating-container itself has padding 0 */}
+        <div className={float ? 'tmdb-floating-content-wrapper' : ''}>
+          {allTraces.length > 0 ? (
+            // Removed specific padding here, rely on tmdb-floating-content-wrapper or tmdb-container
+            <div>
+              <h3 className="tmdb-history-title">
+                <div className="tmdb-history-title-left">
+                  Traces ({allTraces.length})
+                  <a
+                    href="https://zendesk.github.io/retrace/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tmdb-button tmdb-visualizer-link"
+                  >
+                    Trace Visualizer
+                  </a>
+                </div>
+                <div className="tmdb-history-title-right">
+                  <button
+                    className="tmdb-button tmdb-clear-button"
+                    onClick={() => {
+                      setCurrentTrace(null) // Clear current trace as well if it's completed/interrupted
+                      setTraceHistory([])
+                      setExpandedHistoryIndex(null)
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </h3>
+              {allTraces.map((trace, index) => (
+                <TraceItem
+                  key={trace.traceId}
+                  trace={trace}
+                  isExpanded={
+                    currentTrace?.traceId === trace.traceId ||
+                    expandedHistoryIndex === index
+                  }
+                  isCurrentTrace={currentTrace?.traceId === trace.traceId}
+                  onToggleExpand={() =>
+                    void setExpandedHistoryIndex(
+                      expandedHistoryIndex === index ? null : index,
+                    )
+                  }
+                  onDismiss={() => {
+                    if (currentTrace?.traceId === trace.traceId)
+                      setCurrentTrace(null)
+                    removeTraceFromHistory(trace.traceId)
+                    if (expandedHistoryIndex === index)
+                      setExpandedHistoryIndex(null)
+                    else if (
+                      expandedHistoryIndex !== null &&
+                      expandedHistoryIndex > index
+                    ) {
+                      setExpandedHistoryIndex(expandedHistoryIndex - 1)
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="tmdb-no-trace">No traces running or completed</div>
+          )}
+        </div>
+      </>
     )
   }
 
-  const content = (
-    <>
-      {float && (
-        <div style={styles.handle} onMouseDown={handleMouseDown}>
-          <h3 style={styles.handleTitle}>{NAME}</h3>
-          <div>
-            <button
-              style={styles.closeButton}
-              onClick={() => void setIsMinimized(true)}
-            >
-              −
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!float && (
-        <div style={styles.header}>
-          <h2 style={styles.title}>{NAME}</h2>
-        </div>
-      )}
-
-      {allTraces.length > 0 ? (
-        <div style={{ padding: '0 15px' }}>
-          <h3 style={styles.historyTitle}>
-            Traces ({allTraces.length})
-            <a
-              href="https://zendesk.github.io/retrace/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.visualizerLink}
-            >
-              Trace Visualizer
-            </a>
-          </h3>
-          {allTraces.map((trace, index) => (
-            <TraceItem
-              key={trace.traceId}
-              trace={trace}
-              isExpanded={
-                // Auto-expand current trace or selected history trace
-                currentTrace?.traceId === trace.traceId ||
-                expandedHistoryIndex === index
-              }
-              isCurrentTrace={currentTrace?.traceId === trace.traceId}
-              onToggleExpand={() =>
-                void setExpandedHistoryIndex(
-                  expandedHistoryIndex === index ? null : index,
-                )
-              }
-            />
-          ))}
-        </div>
-      ) : (
-        <div style={styles.noTrace}>No traces running or completed</div>
-      )}
-    </>
-  )
-
+  // wrap
+  // eslint-disable-next-line unicorn/prefer-ternary
   if (float) {
-    return (
+    content = (
       <div
         ref={containerRef}
+        className="tmdb-floating-container tmdb-debugger-root" // Base styles from CSS
         style={{
-          ...styles.container,
-          ...styles.floatingContainer,
           top: `${position.y}px`,
           left: `${position.x}px`,
-          padding: 0,
+          // padding: 0, // Explicitly set by tmdb-floating-container or its content wrapper
         }}
       >
         {content}
       </div>
     )
+  } else {
+    content = <div className="tmdb-container tmdb-debugger-root">{content}</div>
   }
 
-  return <div style={styles.container}>{content}</div>
+  // Apply root class for CSS variables to take effect
+  return (
+    <>
+      <style>{CSS_STYLES}</style>
+      {content}
+    </>
+  )
 }
