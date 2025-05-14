@@ -2,7 +2,7 @@ import {
   DEFAULT_DEBOUNCE_DURATION,
   DEFAULT_INTERACTIVE_TIMEOUT_DURATION,
 } from './constants'
-import type { SpanMatcherFn } from './matchSpan'
+import type { SpanMatchDefinitionCombinator, SpanMatcherFn } from './matchSpan'
 import { createTraceRecording } from './recordingComputeUtils'
 import type { SpanAndAnnotation } from './spanAnnotationTypes'
 import type { FinalTransition, OnEnterStatePayload } from './Trace'
@@ -111,6 +111,133 @@ export const extractTimingOffsets = <RelationSchemasT>(
 }
 
 /**
+ * Attempt to create a more descriptive name from the definition
+ * This part needs customization based on how 'fromDefinition' is structured.
+ * Example: Check for specific properties like 'name', 'type', 'label' etc.
+ */
+export function getMatcherLabelFromCombinator<
+  RelationSchemasT extends RelationSchemasBase<RelationSchemasT>,
+  SelectedRelationNameT extends keyof RelationSchemasT,
+  VariantsT extends string,
+>(
+  def: SpanMatchDefinitionCombinator<
+    SelectedRelationNameT,
+    RelationSchemasT,
+    VariantsT
+  >,
+  index?: number,
+): string {
+  const parts: string[] = []
+
+  // Example: Prioritize 'label' if it exists
+  if ('label' in def && typeof def.label === 'string') {
+    return `label="${def.label}"`
+  }
+  // Example: Use 'name' if it exists
+  if ('name' in def) {
+    if (typeof def.name === 'string') {
+      parts.push(`name="${def.name}"`)
+    } else if (def.name instanceof RegExp) {
+      parts.push(`name=/${def.name.source}/${def.name.flags}`)
+    }
+  }
+  // Example: Add type if present
+  if ('type' in def && typeof def.type === 'string') {
+    parts.push(`type="${def.type}"`)
+  }
+
+  // Add other relevant properties from your definition structure
+  if ('oneOf' in def && Array.isArray(def.oneOf)) {
+    parts.push(
+      `( ${def.oneOf
+        .map((item, i) => getMatcherLabelFromCombinator(item, i))
+        .join(' OR ')} )`,
+    )
+  }
+
+  // performanceEntryName
+  if ('performanceEntryName' in def && def.performanceEntryName !== undefined) {
+    if (typeof def.performanceEntryName === 'string') {
+      parts.push(`performanceEntryName="${def.performanceEntryName}"`)
+    } else if (def.performanceEntryName instanceof RegExp) {
+      parts.push(
+        `performanceEntryName=/${def.performanceEntryName.source}/${def.performanceEntryName.flags}`,
+      )
+    }
+  }
+
+  // status
+  if ('status' in def && typeof def.status === 'string') {
+    parts.push(`status="${def.status}"`)
+  }
+
+  // attributes
+  if (
+    'attributes' in def &&
+    typeof def.attributes === 'object' &&
+    def.attributes !== null
+  ) {
+    const attrStr = Object.entries(def.attributes)
+      .map(([k, v]) => `${k}:${JSON.stringify(v)}`)
+      .join(', ')
+    if (attrStr) parts.push(`attributes={${attrStr}}`)
+  }
+
+  // matchingRelations
+  if ('matchingRelations' in def && def.matchingRelations !== undefined) {
+    if (Array.isArray(def.matchingRelations)) {
+      parts.push(`matchingRelations=[${def.matchingRelations.join(', ')}]`)
+    } else if (
+      typeof def.matchingRelations === 'boolean' &&
+      def.matchingRelations
+    ) {
+      parts.push(`matchingRelations`)
+    }
+  }
+
+  // occurrence
+  if ('occurrence' in def && def.occurrence !== undefined) {
+    if (typeof def.occurrence === 'number') {
+      parts.push(`occurrence=${def.occurrence}`)
+    } else if (typeof def.occurrence === 'function') {
+      parts.push('occurrence=<fn>')
+    }
+  }
+
+  // isIdle
+  if ('isIdle' in def && typeof def.isIdle === 'boolean' && def.isIdle) {
+    parts.push(`isIdle`)
+  }
+
+  // fn
+  if ('fn' in def && typeof def.fn === 'function') {
+    parts.push('<customMatcherFn>')
+  }
+
+  // matchingIndex
+  if ('matchingIndex' in def && typeof def.matchingIndex === 'number') {
+    parts.push(`matchingIndex=${def.matchingIndex}`)
+  }
+
+  if (parts.length > 0) {
+    return parts.join(' AND ')
+  }
+
+  // Fallback: Stringify the definition (can be verbose)
+  try {
+    const defString = JSON.stringify(def)
+    // Limit length to avoid overly long strings
+    return defString.length > 100
+      ? // eslint-disable-next-line no-magic-numbers
+        `${defString.slice(0, 97)}...`
+      : defString
+  } catch {
+    // Fallback if stringify fails
+    return `<matcher#${index ?? '?'}>`
+  }
+}
+
+/**
  * Formats a SpanMatcherFn into a more readable string representation.
  * This is a basic implementation and can be significantly improved
  * based on the actual structure of `matcher.fromDefinition`.
@@ -129,50 +256,12 @@ export function formatMatcher<
 ): string {
   // Check if the matcher has attached definition info
   if (matcher.fromDefinition) {
-    // Attempt to create a more descriptive name from the definition
-    // This part needs customization based on how 'fromDefinition' is structured.
-    // Example: Check for specific properties like 'name', 'type', 'label' etc.
     const def = matcher.fromDefinition
-    const parts: string[] = []
-
-    if (typeof def === 'object' && def !== null) {
-      // Example: Prioritize 'label' if it exists
-      if ('label' in def && typeof def.label === 'string') {
-        return `Label: "${def.label}"`
-      }
-      // Example: Use 'name' if it exists
-      if ('name' in def) {
-        if (typeof def.name === 'string') {
-          parts.push(`Name: "${def.name}"`)
-        } else if (def.name instanceof RegExp) {
-          parts.push(`Name: /${def.name.source}/${def.name.flags}`)
-        }
-      }
-      // Example: Add type if present
-      if ('type' in def && typeof def.type === 'string') {
-        parts.push(`Type: ${def.type}`)
-      }
-      // Add other relevant properties from your definition structure
-    }
-
-    if (parts.length > 0) {
-      return parts.join(', ')
-    }
-
-    // Fallback: Stringify the definition (can be verbose)
-    try {
-      const defString = JSON.stringify(def)
-      // Limit length to avoid overly long strings
-      return defString.length > 100
-        ? // eslint-disable-next-line no-magic-numbers
-          `${defString.slice(0, 97)}...`
-        : defString
-    } catch {
-      // Fallback if stringify fails
-      return `Matcher Definition #${index ?? '?'}`
+    if (def && typeof def === 'object') {
+      return getMatcherLabelFromCombinator(def, index)
     }
   }
 
   // Fallback if no definition info is available
-  return `Matcher #${index ?? '?'}`
+  return `<matcher#${index ?? '?'}>`
 }
