@@ -839,16 +839,17 @@ const CSS_STYLES = /* language=CSS */ `
 .tmdb-timeline-point-label,
 .tmdb-timeline-point-time {
   position: absolute;
-  font-size: var(--tmdb-font-size-xxs); /* 11px */
+  font-size: var(--tmdb-font-size-xs); /* 12px for better readability */
   white-space: nowrap;
-  padding: 0 var(--tmdb-space-xs);
-  background-color: rgba(255, 255, 255, 0.7);
+  padding: 2px var(--tmdb-space-m);
+  background-color: rgba(255, 255, 255, 0.85);
   border-radius: var(--tmdb-border-radius-small);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  z-index: var(--tmdb-z-index-timeline-text);
 }
 
 .tmdb-timeline-bar {
-  position: absolute;
+  position: relative;
   width: 100%;
   height: var(--tmdb-timeline-bar-height);
   border-radius: 3px; /* Specific */
@@ -856,6 +857,7 @@ const CSS_STYLES = /* language=CSS */ `
   box-sizing: border-box;
   z-index: var(--tmdb-z-index-timeline-bar);
   display: flex; /* For segments */
+  flex-shrink: 0; /* Prevent bar from shrinking */
 }
 
 .tmdb-timeline-segment {
@@ -1260,46 +1262,36 @@ function RenderBeaconTimeline({
     allRelevantTimes.length > 0 ? Math.max(...allRelevantTimes) : 0
   const scale = maxTime > 0 ? 100 / maxTime : 0
 
-  const processedPointsForDisplay = assignLanesToPoints(
-    timePointsForDisplay,
+  // Determine how many lanes we need for top and bottom areas
+  const topPoints = timePointsForDisplay.filter(
+    (_, index) => index % 2 === 0,
+  )
+  const bottomPoints = timePointsForDisplay.filter(
+    (_, index) => index % 2 !== 0,
+  )
+
+  const processedTopPointsForDisplay = assignLanesToPoints(
+    topPoints,
     scale,
     MIN_TEXT_SEPARATION_PERCENT,
   )
-  const numLanes =
-    processedPointsForDisplay.length > 0
-      ? Math.max(...processedPointsForDisplay.map((item) => item.lane))
+  const processedBottomPointsForDisplay = assignLanesToPoints(
+    bottomPoints,
+    scale,
+    MIN_TEXT_SEPARATION_PERCENT,
+  )
+
+  const topLanes =
+    processedTopPointsForDisplay.length > 0
+      ? Math.max(...processedTopPointsForDisplay.map((item) => item.lane)) + 1
       : 1
 
-  const TEXT_AREA_HEIGHT = Number.parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue(
-      '--tmdb-timeline-text-area-height',
-    ) || '22',
-  )
+  const bottomLanes =
+    processedBottomPointsForDisplay.length > 0
+      ? Math.max(...processedBottomPointsForDisplay.map((item) => item.lane)) + 1
+      : 1
 
-  const PADDING_BETWEEN_AREAS = Number.parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue(
-      '--tmdb-timeline-padding-between-areas',
-    ) || '2',
-  )
-
-  const BAR_HEIGHT_VALUE = Number.parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue(
-      '--tmdb-timeline-bar-height',
-    ) || '25',
-  )
-
-  // We'll have equal space for top and bottom areas now
-  const TOTAL_AREA_PER_SIDE = numLanes * TEXT_AREA_HEIGHT
-
-  const TOTAL_VIS_CONTENT_HEIGHT =
-    TOTAL_AREA_PER_SIDE + // top area
-    PADDING_BETWEEN_AREAS +
-    BAR_HEIGHT_VALUE +
-    PADDING_BETWEEN_AREAS +
-    TOTAL_AREA_PER_SIDE // bottom area
-
-  const BAR_TOP_OFFSET = TOTAL_AREA_PER_SIDE + PADDING_BETWEEN_AREAS
-
+  // Set up the bar segments
   const barSegments: {
     start: number
     end: number
@@ -1362,9 +1354,33 @@ function RenderBeaconTimeline({
     ...new Set(timePointsForDisplay.map((p) => p.time)),
   ].sort((a, b) => a - b)
 
+  // Calculate the height for each row based on lane count
+  const TEXT_AREA_HEIGHT = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      '--tmdb-timeline-text-area-height',
+    ) || '22',
+  )
+
+  const TIMELINE_PADDING_BETWEEN_AREAS = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      '--tmdb-timeline-padding-between-areas',
+    ) || '2',
+  )
+
+  const BAR_HEIGHT_VALUE = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      '--tmdb-timeline-bar-height',
+    ) || '25',
+  )
+
+  const topAreaHeight = topLanes * TEXT_AREA_HEIGHT
+  const bottomAreaHeight = bottomLanes * TEXT_AREA_HEIGHT
+
   return (
     <div style={{ width: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}
+      >
         <div className="tmdb-render-beacon-timeline-name">{name}</div>
         <div className="tmdb-render-stats-group">
           <span className="tmdb-render-stats-label">Renders</span>
@@ -1378,32 +1394,26 @@ function RenderBeaconTimeline({
         </div>
       </div>
 
+      {/* Timeline container using flexbox */}
       <div
         style={{
-          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
           width: '100%',
-          height: TOTAL_VIS_CONTENT_HEIGHT,
+          position: 'relative', // For absolute positioned markers
         }}
       >
-        {/* Top area for odd-indexed points (start, data) */}
+        {/* Top labels area */}
         <div
           style={{
-            position: 'absolute',
-            top: 0,
+            minHeight: topAreaHeight,
             width: '100%',
-            height: TOTAL_AREA_PER_SIDE,
-            zIndex: Number.parseFloat(
-              getComputedStyle(document.documentElement).getPropertyValue(
-                '--tmdb-z-index-timeline-text',
-              ) || '2',
-            ),
+            position: 'relative',
+            marginBottom: '2px',
           }}
         >
-          {processedPointsForDisplay.map(
+          {processedTopPointsForDisplay.map(
             ({ pointData: point, lane: currentLane }, index) => {
-              // Show only odd-indexed points in top area (start at 0, data at 2)
-              if (index % 2 !== 0) return null
-
               const leftPercent = point.time * scale
 
               // Determine text positioning based on which half of the timeline it's on
@@ -1430,7 +1440,8 @@ function RenderBeaconTimeline({
                   key={`${point.name}-combined-${point.time}`}
                   className="tmdb-timeline-point-label"
                   style={{
-                    top: currentLane * TEXT_AREA_HEIGHT,
+                    position: 'absolute',
+                    top: TIMELINE_PADDING_BETWEEN_AREAS + (currentLane * TEXT_AREA_HEIGHT),
                     left: `${leftPercent}%`,
                     transform,
                     color: point.color,
@@ -1447,10 +1458,12 @@ function RenderBeaconTimeline({
           )}
         </div>
 
+        {/* Timeline bar area */}
         <div
           className="tmdb-timeline-bar"
           style={{
-            top: BAR_TOP_OFFSET,
+            height: BAR_HEIGHT_VALUE,
+            position: 'relative', // Changed from absolute to relative
           }}
         >
           {validBarSegments.map((seg) => {
@@ -1471,27 +1484,17 @@ function RenderBeaconTimeline({
           })}
         </div>
 
-        {/* Bottom area for even-indexed points (loading at 1, content at 3) */}
+        {/* Bottom labels area */}
         <div
           style={{
-            position: 'absolute',
-            top: BAR_TOP_OFFSET + BAR_HEIGHT_VALUE + PADDING_BETWEEN_AREAS,
+            minHeight: bottomAreaHeight,
             width: '100%',
-            height: TOTAL_AREA_PER_SIDE,
-            zIndex: Number.parseFloat(
-              getComputedStyle(document.documentElement).getPropertyValue(
-                '--tmdb-z-index-timeline-text',
-              ) || '2',
-            ),
+            position: 'relative',
+            marginTop: '2px',
           }}
         >
-          {processedPointsForDisplay.map(
+          {processedBottomPointsForDisplay.map(
             ({ pointData: point, lane: currentLane }, index) => {
-              // Skip first point (start) which is always at 0
-              if (index === 0) return null
-              // Show only even-indexed points in bottom area (loading at 1, content at 3)
-              if (index % 2 === 0) return null
-
               const leftPercent = point.time * scale
 
               // Determine text positioning based on which half of the timeline it's on
@@ -1515,7 +1518,8 @@ function RenderBeaconTimeline({
                   key={`${point.name}-combined-${point.time}`}
                   className="tmdb-timeline-point-label"
                   style={{
-                    top: currentLane * TEXT_AREA_HEIGHT,
+                    position: 'absolute',
+                    top: TIMELINE_PADDING_BETWEEN_AREAS + (currentLane * TEXT_AREA_HEIGHT),
                     left: `${leftPercent}%`,
                     transform,
                     color: point.color,
@@ -1532,6 +1536,7 @@ function RenderBeaconTimeline({
           )}
         </div>
 
+        {/* Marker lines - positioned absolutely over the entire timeline */}
         {uniqueTimesForLines.map((timeVal) => {
           const pointConfig =
             timePointsForDisplay.find((p) => p.time === timeVal) ??
@@ -1558,9 +1563,13 @@ function RenderBeaconTimeline({
               key={`line-${timeVal}`}
               className="tmdb-timeline-marker-line"
               style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
                 left: lineLeftPositionStyle,
                 transform: lineTransformStyle,
                 borderColor: pointConfig.color,
+                height: '100%',
               }}
             />
           )
