@@ -194,7 +194,8 @@ const CSS_STYLES = /* language=CSS */ `
 
   /* Timeline specific */
   --tmdb-timeline-bar-height: 25px;
-  --tmdb-timeline-text-area-height: 22px;
+  --tmdb-timeline-text-area-height: 18px;
+  --tmdb-timeline-text-height: 14px;
   --tmdb-timeline-marker-line-width: 2px;
   --tmdb-timeline-padding-between-areas: 2px;
 
@@ -840,7 +841,10 @@ const CSS_STYLES = /* language=CSS */ `
   position: absolute;
   font-size: var(--tmdb-font-size-xxs); /* 11px */
   white-space: nowrap;
-  padding: 0 var(--tmdb-space-ms);
+  padding: 0 var(--tmdb-space-xs);
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: var(--tmdb-border-radius-small);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tmdb-timeline-bar {
@@ -1434,7 +1438,8 @@ function RenderBeaconTimeline({
                     left: `${leftPercent}%`,
                     transform,
                     color: point.color,
-                    lineHeight: `var(--tmdb-timeline-text-area-height)`,
+                    lineHeight: `var(--tmdb-timeline-text-height)`,
+                    borderLeft: `2px solid ${point.color}`,
                   }}
                 >
                   {point.name}
@@ -1517,7 +1522,7 @@ function RenderBeaconTimeline({
                     left: `${leftPercent}%`,
                     transform,
                     color: point.color,
-                    lineHeight: `var(--tmdb-timeline-text-area-height)`,
+                    lineHeight: `var(--tmdb-timeline-text-height)`,
                   }}
                 >
                   +{point.time.toFixed(0)}ms
