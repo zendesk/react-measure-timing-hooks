@@ -1249,20 +1249,29 @@ function RenderComputedSpan({ value }: { value: ComputedSpan }) {
     </span>
   )
 }
+// Define our timeline point type with all the properties we need
+interface TimelinePoint {
+  name: string
+  time: number
+  color: string
+  absoluteTime: number
+  relativeTime?: number
+  previousEvent?: string
+}
 
 const assignLanesToPoints = (
-  pointsToAssign: readonly { name: string; time: number; color: string }[],
+  pointsToAssign: readonly TimelinePoint[],
   currentScale: number,
   separationPercent: number,
 ): {
-  pointData: { name: string; time: number; color: string }
+  pointData: TimelinePoint
   lane: number
 }[] => {
   if (pointsToAssign.length === 0) return []
 
   const sortedPoints = [...pointsToAssign].sort((a, b) => a.time - b.time)
   const assignments: {
-    pointData: { name: string; time: number; color: string }
+    pointData: TimelinePoint
     lane: number
   }[] = []
   const laneLastOccupiedX: Record<number, number> = {}
@@ -1297,6 +1306,7 @@ function RenderBeaconTimeline({
     firstRenderTillLoading: loading,
     firstRenderTillData: data,
     firstRenderTillContent: content,
+    startOffset,
   } = value
 
   const LABEL_ALIGN_LOW_THRESHOLD = 1
@@ -1307,29 +1317,53 @@ function RenderBeaconTimeline({
   const MIN_TEXT_SEPARATION_PERCENT = 8
   const TIMELINE_MIDDLE_THRESHOLD = 50
 
-  const timePointsForDisplay: { name: string; time: number; color: string }[] =
-    []
+  const timePointsForDisplay: TimelinePoint[] = []
+
+  // Add start point with the startOffset value
   timePointsForDisplay.push({
     name: 'start',
     time: 0,
+    absoluteTime: startOffset,
     color: 'var(--tmdb-timeline-start-marker)',
   })
+
   if (typeof loading === 'number')
     timePointsForDisplay.push({
       name: 'loading',
       time: loading,
+      absoluteTime: startOffset + loading,
+      relativeTime: loading,
+      previousEvent: 'start',
       color: 'var(--tmdb-timeline-loading-marker)',
     })
+
   if (typeof data === 'number')
     timePointsForDisplay.push({
       name: 'data',
       time: data,
+      absoluteTime: startOffset + data,
+      relativeTime: typeof loading === 'number' ? data - loading : data,
+      previousEvent: typeof loading === 'number' ? 'loading' : 'start',
       color: 'var(--tmdb-timeline-data-marker)',
     })
+
   if (typeof content === 'number')
     timePointsForDisplay.push({
       name: 'content',
       time: content,
+      absoluteTime: startOffset + content,
+      relativeTime:
+        typeof data === 'number'
+          ? content - data
+          : typeof loading === 'number'
+          ? content - loading
+          : content,
+      previousEvent:
+        typeof data === 'number'
+          ? 'data'
+          : typeof loading === 'number'
+          ? 'loading'
+          : 'start',
       color: 'var(--tmdb-timeline-content-marker)',
     })
 
@@ -1346,6 +1380,7 @@ function RenderBeaconTimeline({
     (_, index) => index % 2 !== 0,
   )
 
+  // Cast the TimelinePoint arrays to the type expected by assignLanesToPoints
   const processedTopPointsForDisplay = assignLanesToPoints(
     topPoints,
     scale,
@@ -1453,6 +1488,17 @@ function RenderBeaconTimeline({
   const topAreaHeight = topLanes * TEXT_AREA_HEIGHT
   const bottomAreaHeight = bottomLanes * TEXT_AREA_HEIGHT
 
+  // Function to generate display text with relative timing
+  const getDisplayText = (point: TimelinePoint) => {
+    if (point.name === 'start') {
+      return `${point.name} @ ${startOffset.toFixed(0)}ms`
+    }
+    if (point.relativeTime !== undefined) {
+      return `${point.name} +${point.relativeTime.toFixed(0)}ms`
+    }
+    return `${point.name} @ ${point.time.toFixed(0)}ms`
+  }
+
   return (
     <div style={{ width: '100%' }}>
       <div
@@ -1508,12 +1554,6 @@ function RenderBeaconTimeline({
                 transform = 'translateX(calc(-100% - 5px))' // Offset to the left
               }
 
-              // Combined text for label and value (except start)
-              const displayText =
-                point.name === 'start'
-                  ? point.name
-                  : `${point.name} @ ${point.time.toFixed(0)}ms`
-
               return (
                 <div
                   key={`${point.name}-combined-${point.time}`}
@@ -1532,7 +1572,7 @@ function RenderBeaconTimeline({
                       : 'borderRight']: `2px solid ${point.color}`,
                   }}
                 >
-                  {displayText}
+                  {getDisplayText(point)}
                 </div>
               )
             },
@@ -1592,9 +1632,6 @@ function RenderBeaconTimeline({
                 transform = 'translateX(calc(-100% - 5px))' // Offset to the left
               }
 
-              // Combined text for label and value
-              const displayText = `${point.name} @ ${point.time.toFixed(0)}ms`
-
               return (
                 <div
                   key={`${point.name}-combined-${point.time}`}
@@ -1613,7 +1650,7 @@ function RenderBeaconTimeline({
                       : 'borderRight']: `2px solid ${point.color}`,
                   }}
                 >
-                  {displayText}
+                  {getDisplayText(point)}
                 </div>
               )
             },
@@ -2365,7 +2402,8 @@ export default function TraceManagerDebugger<
           schedule(
             () =>
               void setCurrentTrace((prevTrace) => {
-                if (!prevTrace || trace.input.id !== prevTrace.traceId) return prevTrace
+                if (!prevTrace || trace.input.id !== prevTrace.traceId)
+                  return prevTrace
                 return {
                   ...prevTrace,
                   traceContext: {
@@ -2412,92 +2450,94 @@ export default function TraceManagerDebugger<
       </div>
     )
   } else {
-  content = (
-    <>
-      {float && (
-        <div className="tmdb-handle" onMouseDown={handleMouseDown}>
-          <h3 className="tmdb-handle-title">{NAME}</h3>
-          <div>
-            <button
-              className="tmdb-close-button"
-              onClick={() => void setIsMinimized(true)}
-            >
-              −
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!float && (
-        <div className="tmdb-header">
-          <h2 className="tmdb-title">{NAME}</h2>
-        </div>
-      )}
-
-      {/* Added a wrapper for padding when floating, as tmdb-floating-container itself has padding 0 */}
-      <div className={float ? "tmdb-floating-content-wrapper" : ""}>
-        {allTraces.length > 0 ? (
-          // Removed specific padding here, rely on tmdb-floating-content-wrapper or tmdb-container
-          <div>
-            <h3 className="tmdb-history-title">
-              <div className="tmdb-history-title-left">
-                Traces ({allTraces.length})
-                <a
-                  href="https://zendesk.github.io/retrace/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="tmdb-button tmdb-visualizer-link"
-                >
-                  Trace Visualizer
-                </a>
-              </div>
-              <div className="tmdb-history-title-right">
-                <button
-                  className="tmdb-button tmdb-clear-button"
-                  onClick={() => {
-                     setCurrentTrace(null); // Clear current trace as well if it's completed/interrupted
-                     setTraceHistory([]);
-                     setExpandedHistoryIndex(null);
-                    }}
-                >
-                  Clear
-                </button>
-              </div>
-            </h3>
-            {allTraces.map((trace, index) => (
-              <TraceItem
-                key={trace.traceId}
-                trace={trace}
-                isExpanded={
-                  currentTrace?.traceId === trace.traceId ||
-                  expandedHistoryIndex === index
-                }
-                isCurrentTrace={currentTrace?.traceId === trace.traceId}
-                onToggleExpand={() =>
-                  void setExpandedHistoryIndex(
-                    expandedHistoryIndex === index ? null : index,
-                  )
-                }
-                onDismiss={() => {
-                  if (currentTrace?.traceId === trace.traceId) setCurrentTrace(null);
-                  removeTraceFromHistory(trace.traceId);
-                  if (expandedHistoryIndex === index) setExpandedHistoryIndex(null);
-                  else if (expandedHistoryIndex !== null && expandedHistoryIndex > index) {
-                    setExpandedHistoryIndex(expandedHistoryIndex -1);
-                  }
-                }}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="tmdb-no-trace">
-            No traces running or completed
+    content = (
+      <>
+        {float && (
+          <div className="tmdb-handle" onMouseDown={handleMouseDown}>
+            <h3 className="tmdb-handle-title">{NAME}</h3>
+            <div>
+              <button
+                className="tmdb-close-button"
+                onClick={() => void setIsMinimized(true)}
+              >
+                −
+              </button>
+            </div>
           </div>
         )}
-      </div>
-    </>
-  )
 
+        {!float && (
+          <div className="tmdb-header">
+            <h2 className="tmdb-title">{NAME}</h2>
+          </div>
+        )}
+
+        {/* Added a wrapper for padding when floating, as tmdb-floating-container itself has padding 0 */}
+        <div className={float ? 'tmdb-floating-content-wrapper' : ''}>
+          {allTraces.length > 0 ? (
+            // Removed specific padding here, rely on tmdb-floating-content-wrapper or tmdb-container
+            <div>
+              <h3 className="tmdb-history-title">
+                <div className="tmdb-history-title-left">
+                  Traces ({allTraces.length})
+                  <a
+                    href="https://zendesk.github.io/retrace/iframe.html?globals=&id=stories-visualizer-viz--operation-visualizer-story&viewMode=story"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tmdb-button tmdb-visualizer-link"
+                  >
+                    Trace Visualizer
+                  </a>
+                </div>
+                <div className="tmdb-history-title-right">
+                  <button
+                    className="tmdb-button tmdb-clear-button"
+                    onClick={() => {
+                      setCurrentTrace(null) // Clear current trace as well if it's completed/interrupted
+                      setTraceHistory([])
+                      setExpandedHistoryIndex(null)
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </h3>
+              {allTraces.map((trace, index) => (
+                <TraceItem
+                  key={trace.traceId}
+                  trace={trace}
+                  isExpanded={
+                    currentTrace?.traceId === trace.traceId ||
+                    expandedHistoryIndex === index
+                  }
+                  isCurrentTrace={currentTrace?.traceId === trace.traceId}
+                  onToggleExpand={() =>
+                    void setExpandedHistoryIndex(
+                      expandedHistoryIndex === index ? null : index,
+                    )
+                  }
+                  onDismiss={() => {
+                    if (currentTrace?.traceId === trace.traceId)
+                      setCurrentTrace(null)
+                    removeTraceFromHistory(trace.traceId)
+                    if (expandedHistoryIndex === index)
+                      setExpandedHistoryIndex(null)
+                    else if (
+                      expandedHistoryIndex !== null &&
+                      expandedHistoryIndex > index
+                    ) {
+                      setExpandedHistoryIndex(expandedHistoryIndex - 1)
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="tmdb-no-trace">No traces running or completed</div>
+          )}
+        </div>
+      </>
+    )
   }
 
   // wrap
@@ -2517,15 +2557,14 @@ export default function TraceManagerDebugger<
       </div>
     )
   } else {
-    content = (
-      <div className="tmdb-container tmdb-debugger-root">{content}</div>
-    )
+    content = <div className="tmdb-container tmdb-debugger-root">{content}</div>
   }
 
-
   // Apply root class for CSS variables to take effect
-  return <>
-    <style>{CSS_STYLES}</style>
-    {content}
-  </>
+  return (
+    <>
+      <style>{CSS_STYLES}</style>
+      {content}
+    </>
+  )
 }
