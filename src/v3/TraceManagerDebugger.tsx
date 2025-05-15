@@ -1042,7 +1042,7 @@ function TimeMarkers<RelationSchemasT>({
           <li className="tmdb-list-item">
             <span>First Contentful Render (Last Required Span):</span>
             <span className="tmdb-time-marker-value">
-              +{formatMs(lastRequiredSpanOffset)}
+              @ {formatMs(lastRequiredSpanOffset)}
             </span>
           </li>
         )}
@@ -1050,7 +1050,7 @@ function TimeMarkers<RelationSchemasT>({
           <li className="tmdb-list-item">
             <span>Last Contentful Render (Trace Complete):</span>
             <span className="tmdb-time-marker-value">
-              +{formatMs(completeSpanOffset)}
+              @ {formatMs(completeSpanOffset)}
             </span>
           </li>
         )}
@@ -1058,7 +1058,7 @@ function TimeMarkers<RelationSchemasT>({
           <li className="tmdb-list-item">
             <span>Time To Interactive (CPU Idle Span):</span>
             <span className="tmdb-time-marker-value">
-              +{formatMs(cpuIdleSpanOffset)}
+              @ {formatMs(cpuIdleSpanOffset)}
             </span>
           </li>
         )}
@@ -1440,7 +1440,7 @@ function RenderBeaconTimeline({
               const displayText =
                 point.name === 'start'
                   ? point.name
-                  : `${point.name} +${point.time.toFixed(0)}ms`
+                  : `${point.name} @ ${point.time.toFixed(0)}ms`
 
               return (
                 <div
@@ -1521,7 +1521,7 @@ function RenderBeaconTimeline({
               }
 
               // Combined text for label and value
-              const displayText = `${point.name} +${point.time.toFixed(0)}ms`
+              const displayText = `${point.name} @ ${point.time.toFixed(0)}ms`
 
               return (
                 <div
