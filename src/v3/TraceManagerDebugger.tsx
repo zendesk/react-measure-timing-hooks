@@ -1468,7 +1468,7 @@ function RenderBeaconTimeline({
         </div>
 
         {/* Timeline bar area */}
-        ;<div
+        <div
           className="tmdb-timeline-bar"
           style={{
             height: BAR_HEIGHT_VALUE,
@@ -1494,10 +1494,8 @@ function RenderBeaconTimeline({
           })}
         </div>
 
-        {
-          /* Bottom labels area */
-        }
-        ;<div
+        {/* Bottom labels area */}
+        <div
           style={{
             minHeight: bottomAreaHeight,
             width: '100%',
@@ -1550,7 +1548,7 @@ function RenderBeaconTimeline({
           )}
         </div>
 
-        {/* Marker lines - positioned absolutely over the entire timeline */}
+        {/* Marker lines - positioned absolutely with correct direction */}
         {uniqueTimesForLines.map((timeVal) => {
           const pointConfig =
             timePointsForDisplay.find((p) => p.time === timeVal) ??
@@ -1572,20 +1570,50 @@ function RenderBeaconTimeline({
             lineTransformStyle = 'translateX(0)'
           }
 
+          // Determine if this marker needs top line, bottom line, or both
+          const pointIndex = timePointsForDisplay.findIndex(
+            (p) => p.time === timeVal,
+          )
+          const needsTopLine = pointIndex % 2 === 0 // Even indexes (0, 2) are in top area
+          const needsBottomLine = pointIndex % 2 !== 0 // Odd indexes (1, 3) are in bottom area
+
           return (
-            <div
-              key={`line-${timeVal}`}
-              className="tmdb-timeline-marker-line"
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: lineLeftPositionStyle,
-                transform: lineTransformStyle,
-                borderColor: pointConfig.color,
-                height: '100%',
-              }}
-            />
+            <React.Fragment key={`line-${timeVal}`}>
+              {needsTopLine && (
+                <div
+                  className="tmdb-timeline-marker-line"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 'auto',
+                    left: lineLeftPositionStyle,
+                    transform: lineTransformStyle,
+                    borderColor: pointConfig.color,
+                    height: `calc(${topAreaHeight}px + 2px)`, // Extend to timeline bar with overlap
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                    borderTop: 'none',
+                  }}
+                />
+              )}
+              {needsBottomLine && (
+                <div
+                  className="tmdb-timeline-marker-line"
+                  style={{
+                    position: 'absolute',
+                    top: `calc(${topAreaHeight}px + ${BAR_HEIGHT_VALUE}px - 2px)`, // Start slightly inside the bar
+                    bottom: 0,
+                    left: lineLeftPositionStyle,
+                    transform: lineTransformStyle,
+                    borderColor: pointConfig.color,
+                    height: `calc(${bottomAreaHeight}px + 4px)`, // Extended height to ensure it covers full area
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                    borderTop: 'none',
+                  }}
+                />
+              )}
+            </React.Fragment>
           )
         })}
       </div>
