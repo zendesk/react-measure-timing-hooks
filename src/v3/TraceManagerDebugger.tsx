@@ -1840,6 +1840,15 @@ function TraceItem<
           Spans: {trace.totalSpanCount ?? 0}
         </span>
       </div>
+      <div
+        className={`tmdb-expand-arrow ${
+          isExpanded ? 'tmdb-expand-arrow-up' : 'tmdb-expand-arrow-down'
+        }`}
+        onClick={onToggleExpand}
+      >
+        ▼
+      </div>
+      
       {isExpanded && (
         <div
           className="tmdb-expanded-history"
@@ -1985,14 +1994,6 @@ function TraceItem<
           )}
         </div>
       )}
-      <div
-        className={`tmdb-expand-arrow ${
-          isExpanded ? 'tmdb-expand-arrow-up' : 'tmdb-expand-arrow-down'
-        }`}
-        onClick={onToggleExpand}
-      >
-        ▼
-      </div>
     </div>
   )
 }
