@@ -865,6 +865,9 @@ const CSS_STYLES = /* language=CSS */ `
   width: var(--tmdb-timeline-marker-line-width);
   height: 100%; /* Spans full TOTAL_VIS_CONTENT_HEIGHT */
   z-index: var(--tmdb-z-index-timeline-marker);
+  border-left: var(--tmdb-timeline-marker-line-width) dashed;
+  border-right: none;
+  background: none;
 }
 
 .tmdb-error-indicator {
@@ -950,21 +953,21 @@ ul.tmdb-no-style-list {
 function getDynamicStateStyle(state: string) {
   let stateClass: string
   switch (state) {
-  case 'complete': {
-  stateClass = 'tmdb-status-tag-completed'
-  break;
-  }
-  case 'interrupted': {
-  stateClass = 'tmdb-status-tag-interrupted'
-  break;
-  }
-  case 'draft': {
-  stateClass = 'tmdb-status-tag-draft'
-  // No default
-  break;
-  }
-  default:
-  stateClass = 'tmdb-status-tag-active'
+    case 'complete': {
+      stateClass = 'tmdb-status-tag-completed'
+      break
+    }
+    case 'interrupted': {
+      stateClass = 'tmdb-status-tag-interrupted'
+      break
+    }
+    case 'draft': {
+      stateClass = 'tmdb-status-tag-draft'
+      // No default
+      break
+    }
+    default:
+      stateClass = 'tmdb-status-tag-active'
   }
 
   return `tmdb-status-tag ${stateClass}`
@@ -1072,8 +1075,12 @@ function DefinitionChip({
       ? `${stringValue.slice(0, MAX_STRING_LENGTH)}...`
       : stringValue
 
-  const chipClassName = `tmdb-def-chip ${needsTooltip ? 'tmdb-def-chip-hoverable' : ''}`;
-  const tooltipClassName = `tmdb-def-chip-tooltip ${showTooltip ? 'tmdb-def-chip-tooltip-visible' : ''}`;
+  const chipClassName = `tmdb-def-chip ${
+    needsTooltip ? 'tmdb-def-chip-hoverable' : ''
+  }`
+  const tooltipClassName = `tmdb-def-chip-tooltip ${
+    showTooltip ? 'tmdb-def-chip-tooltip-visible' : ''
+  }`
 
   return (
     <div
@@ -1112,11 +1119,19 @@ function RequiredSpansList<RelationSchemasT>({
         {requiredSpans.map((span, i) => (
           <div
             key={i}
-            className={`tmdb-required-span ${span.isMatched ? 'tmdb-required-span-matched' : 'tmdb-required-span-unmatched'}`}
+            className={`tmdb-required-span ${
+              span.isMatched
+                ? 'tmdb-required-span-matched'
+                : 'tmdb-required-span-unmatched'
+            }`}
           >
             <div className="tmdb-span-content">
               <span
-                className={`tmdb-matched-indicator ${span.isMatched ? 'tmdb-matched-indicator-matched' : 'tmdb-matched-indicator-unmatched'}`}
+                className={`tmdb-matched-indicator ${
+                  span.isMatched
+                    ? 'tmdb-matched-indicator-matched'
+                    : 'tmdb-matched-indicator-unmatched'
+                }`}
                 title={span.isMatched ? 'Matched' : 'Pending'}
               />
               {span.definition ? (
@@ -1139,7 +1154,12 @@ function RequiredSpansList<RelationSchemasT>({
 function RenderComputedSpan({ value }: { value: ComputedSpan }) {
   if (!value) return null
   return (
-    <span style={{ marginLeft: 'var(--tmdb-space-m)', color: 'var(--tmdb-color-link-primary)' }}>
+    <span
+      style={{
+        marginLeft: 'var(--tmdb-space-m)',
+        color: 'var(--tmdb-color-link-primary)',
+      }}
+    >
       start: {value.startOffset.toFixed(2)}ms, duration:{' '}
       {value.duration.toFixed(2)}ms
     </span>
@@ -1204,7 +1224,11 @@ function RenderBeaconTimeline({
 
   const timePointsForDisplay: { name: string; time: number; color: string }[] =
     []
-  timePointsForDisplay.push({ name: 'start', time: 0, color: 'var(--tmdb-timeline-start-marker)' })
+  timePointsForDisplay.push({
+    name: 'start',
+    time: 0,
+    color: 'var(--tmdb-timeline-start-marker)',
+  })
   if (typeof loading === 'number')
     timePointsForDisplay.push({
       name: 'loading',
@@ -1212,7 +1236,11 @@ function RenderBeaconTimeline({
       color: 'var(--tmdb-timeline-loading-marker)',
     })
   if (typeof data === 'number')
-    timePointsForDisplay.push({ name: 'data', time: data, color: 'var(--tmdb-timeline-data-marker)' })
+    timePointsForDisplay.push({
+      name: 'data',
+      time: data,
+      color: 'var(--tmdb-timeline-data-marker)',
+    })
   if (typeof content === 'number')
     timePointsForDisplay.push({
       name: 'content',
@@ -1237,11 +1265,30 @@ function RenderBeaconTimeline({
       ? Math.max(...processedPointsForDisplay.map((item) => item.lane)) + 1
       : 1
 
-  const TOTAL_LABEL_AREA_HEIGHT = numLanes * Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-timeline-text-area-height') || '22')
-  const TOTAL_TIME_VALUE_AREA_HEIGHT = numLanes * Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-timeline-text-area-height') || '22')
-  const PADDING_BETWEEN_AREAS = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-timeline-padding-between-areas') || '2')
-  const BAR_HEIGHT_VALUE = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-timeline-bar-height') || '25')
-
+  const TOTAL_LABEL_AREA_HEIGHT =
+    numLanes *
+    Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        '--tmdb-timeline-text-area-height',
+      ) || '22',
+    )
+  const TOTAL_TIME_VALUE_AREA_HEIGHT =
+    numLanes *
+    Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        '--tmdb-timeline-text-area-height',
+      ) || '22',
+    )
+  const PADDING_BETWEEN_AREAS = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      '--tmdb-timeline-padding-between-areas',
+    ) || '2',
+  )
+  const BAR_HEIGHT_VALUE = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      '--tmdb-timeline-bar-height',
+    ) || '25',
+  )
 
   const TOTAL_VIS_CONTENT_HEIGHT =
     TOTAL_LABEL_AREA_HEIGHT +
@@ -1250,8 +1297,7 @@ function RenderBeaconTimeline({
     PADDING_BETWEEN_AREAS +
     TOTAL_TIME_VALUE_AREA_HEIGHT
 
-  const BAR_TOP_OFFSET =
-    TOTAL_LABEL_AREA_HEIGHT + PADDING_BETWEEN_AREAS
+  const BAR_TOP_OFFSET = TOTAL_LABEL_AREA_HEIGHT + PADDING_BETWEEN_AREAS
   const TIME_VALUES_AREA_TOP =
     BAR_TOP_OFFSET + BAR_HEIGHT_VALUE + PADDING_BETWEEN_AREAS
 
@@ -1346,24 +1392,45 @@ function RenderBeaconTimeline({
             top: 0,
             width: '100%',
             height: TOTAL_LABEL_AREA_HEIGHT,
-            zIndex: Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-z-index-timeline-text') || '2'),
+            zIndex: Number.parseFloat(
+              getComputedStyle(document.documentElement).getPropertyValue(
+                '--tmdb-z-index-timeline-text',
+              ) || '2',
+            ),
           }}
         >
           {processedPointsForDisplay.map(
             ({ pointData: point, lane: currentLane }) => {
               const leftPercent = point.time * scale
+              const TIMELINE_MIDDLE_THRESHOLD = 50
+
+              // Determine text positioning based on which half of the timeline it's on
               let transform = 'translateX(-50%)'
-              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD)
+
+              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD) {
                 transform = 'translateX(0%)'
-              else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD)
+              } else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD) {
                 transform = 'translateX(-100%)'
+              } else if (leftPercent < TIMELINE_MIDDLE_THRESHOLD) {
+                transform = 'translateX(5px)' // Add a small offset to the right
+              } else {
+                transform = 'translateX(calc(-100% - 5px))' // Offset to the left
+              }
 
               return (
                 <div
                   key={`${point.name}-label-${point.time}`}
                   className="tmdb-timeline-point-label"
                   style={{
-                    top: currentLane * Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-timeline-text-area-height') || '22'),
+                    top:
+                      currentLane *
+                      Number.parseFloat(
+                        getComputedStyle(
+                          document.documentElement,
+                        ).getPropertyValue(
+                          '--tmdb-timeline-text-area-height',
+                        ) || '22',
+                      ),
                     left: `${leftPercent}%`,
                     transform,
                     color: point.color,
@@ -1407,29 +1474,50 @@ function RenderBeaconTimeline({
             top: TIME_VALUES_AREA_TOP,
             width: '100%',
             height: TOTAL_TIME_VALUE_AREA_HEIGHT,
-            zIndex: Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-z-index-timeline-text') || '2'),
+            zIndex: Number.parseFloat(
+              getComputedStyle(document.documentElement).getPropertyValue(
+                '--tmdb-z-index-timeline-text',
+              ) || '2',
+            ),
           }}
         >
           {processedPointsForDisplay.map(
             ({ pointData: point, lane: currentLane }) => {
               if (point.name === 'start' && point.time === 0) return null
               const leftPercent = point.time * scale
+              const TIMELINE_MIDDLE_THRESHOLD = 50
+
+              // Determine text positioning based on which half of the timeline it's on
               let transform = 'translateX(-50%)'
-              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD)
+
+              if (leftPercent < LABEL_ALIGN_LOW_THRESHOLD) {
                 transform = 'translateX(0%)'
-              else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD)
+              } else if (leftPercent > LABEL_ALIGN_HIGH_THRESHOLD) {
                 transform = 'translateX(-100%)'
+              } else if (leftPercent < TIMELINE_MIDDLE_THRESHOLD) {
+                transform = 'translateX(5px)' // Add a small offset to the right
+              } else {
+                transform = 'translateX(calc(-100% - 5px))' // Offset to the left
+              }
 
               return (
                 <div
                   key={`${point.name}-time-${point.time}`}
                   className="tmdb-timeline-point-time"
                   style={{
-                    top: currentLane * Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-timeline-text-area-height') || '22'),
+                    top:
+                      currentLane *
+                      Number.parseFloat(
+                        getComputedStyle(
+                          document.documentElement,
+                        ).getPropertyValue(
+                          '--tmdb-timeline-text-area-height',
+                        ) || '22',
+                      ),
                     left: `${leftPercent}%`,
                     transform,
                     color: point.color,
-                     lineHeight: `var(--tmdb-timeline-text-area-height)`,
+                    lineHeight: `var(--tmdb-timeline-text-area-height)`,
                   }}
                 >
                   +{point.time.toFixed(0)}ms
@@ -1446,8 +1534,11 @@ function RenderBeaconTimeline({
           const leftPercent = timeVal * scale
           let lineLeftPositionStyle = `${leftPercent}%`
           let lineTransformStyle = 'translateX(-50%)'
-          const markerLineWidth = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tmdb-timeline-marker-line-width') || '2')
-
+          const markerLineWidth = Number.parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue(
+              '--tmdb-timeline-marker-line-width',
+            ) || '2',
+          )
 
           if (leftPercent < MARKER_LINE_ALIGN_LOW_THRESHOLD) {
             lineLeftPositionStyle = '0%'
@@ -1464,7 +1555,7 @@ function RenderBeaconTimeline({
               style={{
                 left: lineLeftPositionStyle,
                 transform: lineTransformStyle,
-                background: pointConfig.color,
+                borderColor: pointConfig.color,
               }}
             />
           )
