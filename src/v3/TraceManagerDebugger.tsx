@@ -133,14 +133,14 @@ const CSS_STYLES = /* language=CSS */ `
   --tmdb-color-warning-border: #ffe0b2;
 
   /* Colors - Timeline */
-  --tmdb-timeline-loading-marker: #ff9800;
-  --tmdb-timeline-loading-segment-bg: #fff176;
-  --tmdb-timeline-data-marker: #1976d2;
-  --tmdb-timeline-data-segment-bg: #90caf9;
-  --tmdb-timeline-content-marker: #2e7d32;
-  --tmdb-timeline-content-segment-bg: #a5d6a7;
-  --tmdb-timeline-default-segment-bg: #e0e0e0;
-  --tmdb-timeline-start-marker: #757575;
+  --tmdb-timeline-loading-marker: #e67e22;
+  --tmdb-timeline-loading-segment-bg: linear-gradient(to right, rgba(230, 126, 34, 0.15), rgba(230, 126, 34, 0.5));
+  --tmdb-timeline-data-marker: #3498db;
+  --tmdb-timeline-data-segment-bg: linear-gradient(to right, rgba(52, 152, 219, 0.15), rgba(52, 152, 219, 0.5));
+  --tmdb-timeline-content-marker: #27ae60;
+  --tmdb-timeline-content-segment-bg: linear-gradient(to right, rgba(39, 174, 96, 0.15), rgba(39, 174, 96, 0.5));
+  --tmdb-timeline-default-segment-bg: linear-gradient(to right, rgba(189, 195, 199, 0.2), rgba(189, 195, 199, 0.4));
+  --tmdb-timeline-start-marker: #7f8c8d;
 
 
   /* Spacing */
@@ -858,11 +858,19 @@ const CSS_STYLES = /* language=CSS */ `
   z-index: var(--tmdb-z-index-timeline-bar);
   display: flex; /* For segments */
   flex-shrink: 0; /* Prevent bar from shrinking */
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tmdb-timeline-segment {
   position: absolute;
   height: 100%;
+  border-radius: 2px;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.tmdb-timeline-segment:hover {
+  opacity: 0.95;
+  transform: scaleY(1.05);
 }
 
 .tmdb-timeline-marker-line {
@@ -1263,9 +1271,7 @@ function RenderBeaconTimeline({
   const scale = maxTime > 0 ? 100 / maxTime : 0
 
   // Determine how many lanes we need for top and bottom areas
-  const topPoints = timePointsForDisplay.filter(
-    (_, index) => index % 2 === 0,
-  )
+  const topPoints = timePointsForDisplay.filter((_, index) => index % 2 === 0)
   const bottomPoints = timePointsForDisplay.filter(
     (_, index) => index % 2 !== 0,
   )
@@ -1288,7 +1294,8 @@ function RenderBeaconTimeline({
 
   const bottomLanes =
     processedBottomPointsForDisplay.length > 0
-      ? Math.max(...processedBottomPointsForDisplay.map((item) => item.lane)) + 1
+      ? Math.max(...processedBottomPointsForDisplay.map((item) => item.lane)) +
+        1
       : 1
 
   // Set up the bar segments
@@ -1441,7 +1448,9 @@ function RenderBeaconTimeline({
                   className="tmdb-timeline-point-label"
                   style={{
                     position: 'absolute',
-                    top: TIMELINE_PADDING_BETWEEN_AREAS + (currentLane * TEXT_AREA_HEIGHT),
+                    top:
+                      TIMELINE_PADDING_BETWEEN_AREAS +
+                      currentLane * TEXT_AREA_HEIGHT,
                     left: `${leftPercent}%`,
                     transform,
                     color: point.color,
@@ -1459,7 +1468,7 @@ function RenderBeaconTimeline({
         </div>
 
         {/* Timeline bar area */}
-        <div
+        ;<div
           className="tmdb-timeline-bar"
           style={{
             height: BAR_HEIGHT_VALUE,
@@ -1479,13 +1488,16 @@ function RenderBeaconTimeline({
                   width: `${segmentWidthPercent}%`,
                   background: seg.color,
                 }}
+                title={`${seg.key} (${seg.end - seg.start}ms)`}
               />
             )
           })}
         </div>
 
-        {/* Bottom labels area */}
-        <div
+        {
+          /* Bottom labels area */
+        }
+        ;<div
           style={{
             minHeight: bottomAreaHeight,
             width: '100%',
@@ -1519,7 +1531,9 @@ function RenderBeaconTimeline({
                   className="tmdb-timeline-point-label"
                   style={{
                     position: 'absolute',
-                    top: TIMELINE_PADDING_BETWEEN_AREAS + (currentLane * TEXT_AREA_HEIGHT),
+                    top:
+                      TIMELINE_PADDING_BETWEEN_AREAS +
+                      currentLane * TEXT_AREA_HEIGHT,
                     left: `${leftPercent}%`,
                     transform,
                     color: point.color,
