@@ -116,6 +116,25 @@ const CSS_STYLES = /* language=CSS */ `
   --tmdb-color-interrupted-bg-hover: #ffcdd2; /* Added for hover states */
   --tmdb-color-interrupted-border: #ffcdd2;
 
+  /* Time Marker Colors */
+  --tmdb-color-fcr-primary: #0277bd; /* Deep blue */
+  --tmdb-color-fcr-primary-hover: #0288d1;
+  --tmdb-color-fcr-bg: #e1f5fe;
+  --tmdb-color-fcr-bg-hover: #b3e5fc;
+  --tmdb-color-fcr-border: #b3e5fc;
+
+  --tmdb-color-lcr-primary: #00796b; /* Teal green */
+  --tmdb-color-lcr-primary-hover: #00897b;
+  --tmdb-color-lcr-bg: #e0f2f1;
+  --tmdb-color-lcr-bg-hover: #b2dfdb;
+  --tmdb-color-lcr-border: #b2dfdb;
+
+  --tmdb-color-tti-primary: #7b1fa2; /* Purple */
+  --tmdb-color-tti-primary-hover: #8e24aa;
+  --tmdb-color-tti-bg: #f3e5f5;
+  --tmdb-color-tti-bg-hover: #e1bee7;
+  --tmdb-color-tti-border: #e1bee7;
+
   --tmdb-color-draft-primary: #616161;
   --tmdb-color-draft-primary-hover: #757575; /* Added for hover states */
   --tmdb-color-draft-bg: #f5f5f5;
@@ -633,53 +652,53 @@ const CSS_STYLES = /* language=CSS */ `
 
 /* Time marker chip groups */
 .tmdb-fcr-group {
-  border: 1px solid #bbdefb;
-  background-color: #e3f2fd;
+  border: 1px solid var(--tmdb-color-fcr-border);
+  background-color: var(--tmdb-color-fcr-bg);
   & .tmdb-chip-group-label {
-    color: #1565c0;
+    color: var(--tmdb-color-fcr-primary);
   }
   & .tmdb-chip-group-value {
-    background-color: #1565c0;
+    background-color: var(--tmdb-color-fcr-primary);
   }
 }
 .tmdb-fcr-group:hover {
-  background-color: #bbdefb;
+  background-color: var(--tmdb-color-fcr-bg-hover);
   & .tmdb-chip-group-value {
-    background-color: #1976d2;
+    background-color: var(--tmdb-color-fcr-primary-hover);
   }
 }
 
 .tmdb-lcr-group {
-  border: 1px solid #c8e6c9;
-  background-color: #e8f5e9;
+  border: 1px solid var(--tmdb-color-lcr-border);
+  background-color: var(--tmdb-color-lcr-bg);
   & .tmdb-chip-group-label {
-    color: #2e7d32;
+    color: var(--tmdb-color-lcr-primary);
   }
   & .tmdb-chip-group-value {
-    background-color: #2e7d32;
+    background-color: var(--tmdb-color-lcr-primary);
   }
 }
 .tmdb-lcr-group:hover {
-  background-color: #c8e6c9;
+  background-color: var(--tmdb-color-lcr-bg-hover);
   & .tmdb-chip-group-value {
-    background-color: #388e3c;
+    background-color: var(--tmdb-color-lcr-primary-hover);
   }
 }
 
 .tmdb-tti-group {
-  border: 1px solid #ffe0b2;
-  background-color: #fff3e0;
+  border: 1px solid var(--tmdb-color-tti-border);
+  background-color: var(--tmdb-color-tti-bg);
   & .tmdb-chip-group-label {
-    color: #e65100;
+    color: var(--tmdb-color-tti-primary);
   }
   & .tmdb-chip-group-value {
-    background-color: #e65100;
+    background-color: var(--tmdb-color-tti-primary);
   }
 }
 .tmdb-tti-group:hover {
-  background-color: #ffe0b2;
+  background-color: var(--tmdb-color-tti-bg-hover);
   & .tmdb-chip-group-value {
-    background-color: #ef6c00;
+    background-color: var(--tmdb-color-tti-primary-hover);
   }
 }
 
