@@ -1464,7 +1464,9 @@ function RenderBeaconTimeline({
           <span className="tmdb-render-stats-value">{value.renderCount}</span>
         </div>
         <div className="tmdb-render-stats-group">
-          <span className="tmdb-render-stats-label">Duration</span>
+          <span className="tmdb-render-stats-label">
+            Sum of Render Durations
+          </span>
           <span className="tmdb-render-stats-value">
             {value.sumOfRenderDurations.toFixed(0)}ms
           </span>
@@ -2025,38 +2027,46 @@ function TraceItem<
             Definition Details
           </div>
           {isDefinitionDetailsExpanded && (
-            <div className="tmdb-section">
-              <div className="tmdb-section-title">Trace Definition</div>
-              <div className="tmdb-config-info-row">
-                {(() => {
-                  const { timeout, debounce, interactive } = trace.traceContext
-                    ? getConfigSummary(trace.traceContext)
-                    : {}
-                  return (
-                    <>
-                      {timeout != null && (
-                        <span className="tmdb-chip tmdb-config-chip">
-                          Timeout: {formatMs(timeout)}
-                        </span>
-                      )}
-                      {debounce != null && (
-                        <span className="tmdb-chip tmdb-config-chip">
-                          Debounce: {formatMs(debounce)}
-                        </span>
-                      )}
-                      {interactive != null && (
-                        <span className="tmdb-chip tmdb-config-chip">
-                          Interactive: {formatMs(interactive)}
-                        </span>
-                      )}
-                    </>
-                  )
-                })()}
+            <>
+              <div className="tmdb-section">
+                <div className="tmdb-section-title">Trace Definition</div>
+                <div className="tmdb-def-chip-container">
+                  {(() => {
+                    const { timeout, debounce, interactive } =
+                      trace.traceContext
+                        ? getConfigSummary(trace.traceContext)
+                        : {}
+                    return (
+                      <>
+                        {timeout != null && (
+                          <DefinitionChip
+                            keyName="Timeout"
+                            value={`${formatMs(timeout)}`}
+                            variant="default"
+                          />
+                        )}
+                        {debounce != null && (
+                          <DefinitionChip
+                            keyName="Debounce"
+                            value={`${formatMs(debounce)}`}
+                            variant="default"
+                          />
+                        )}
+                        {interactive != null && (
+                          <DefinitionChip
+                            keyName="Interactive"
+                            value={`${formatMs(interactive)}`}
+                            variant="default"
+                          />
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
               </div>
-
               {trace.definitionModifications &&
                 trace.definitionModifications.length > 0 && (
-                  <div>
+                  <div className="tmdb-section">
                     <div className="tmdb-section-title">
                       Trace Definition Modifications
                     </div>
@@ -2069,7 +2079,7 @@ function TraceItem<
                     </ul>
                   </div>
                 )}
-            </div>
+            </>
           )}
         </div>
       )}
