@@ -346,6 +346,7 @@ const CSS_STYLES = /* language=CSS */ `
 }
 
 .tmdb-history-title {
+  margin-top: var(--tmdb-space-ml);
   margin-bottom: var(--tmdb-space-ml);
   font-size: var(--tmdb-font-size-xxl);
   font-weight: var(--tmdb-font-weight-bold);
@@ -416,7 +417,6 @@ const CSS_STYLES = /* language=CSS */ `
   border-radius: var(--tmdb-border-radius-large);
   margin-bottom: var(--tmdb-space-l);
   border: 1px solid var(--tmdb-color-border-dark);
-  cursor: pointer;
   box-shadow: var(--tmdb-shadow-small);
   transition: box-shadow var(--tmdb-transition-medium);
   position: relative; /* For positioning the arrow */
@@ -428,6 +428,7 @@ const CSS_STYLES = /* language=CSS */ `
 .tmdb-history-header {
   display: flex;
   justify-content: space-between;
+  cursor: pointer;
   align-items: center;
   margin-bottom: var(--tmdb-space-m);
 }
@@ -1005,7 +1006,7 @@ function TraceAttributes({
 
   return (
     <div className="tmdb-section">
-      <div className="tmdb-section-title">Attributes:</div>
+      <div className="tmdb-section-title">Attributes</div>
       <div className="tmdb-def-chip-container">
         {Object.entries(attributes).map(([key, value]) => (
           // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -1036,7 +1037,7 @@ function TimeMarkers<RelationSchemasT>({
 
   return (
     <div className="tmdb-section">
-      <div className="tmdb-section-title">Time Markers:</div>
+      <div className="tmdb-section-title">Time Markers</div>
       <ul className="tmdb-no-style-list">
         {lastRequiredSpanOffset !== undefined && (
           <li className="tmdb-list-item">
@@ -1127,7 +1128,7 @@ function RequiredSpansList<RelationSchemasT>({
     <div className="tmdb-section">
       <div className="tmdb-section-title">
         Required Spans ({requiredSpans.filter((s) => s.isMatched).length}/
-        {requiredSpans.length}):
+        {requiredSpans.length})
       </div>
       <div>
         {requiredSpans.map((span, i) => (
@@ -1628,10 +1629,16 @@ function RenderComputedRenderBeaconSpans({
 }) {
   return (
     <div className="tmdb-section">
-      <div className="tmdb-section-title">Computed Render Beacon Spans:</div>
+      <div className="tmdb-section-title">Computed Render Beacon Spans</div>
       <ul className="tmdb-no-style-list">
         {Object.entries(computedRenderBeaconSpans).map(([name, value]) => (
-          <li key={name} className="tmdb-list-item" style={{ display: 'block' }}> {/* Allow block for timeline */}
+          <li
+            key={name}
+            className="tmdb-list-item"
+            style={{ display: 'block' }}
+          >
+            {' '}
+            {/* Allow block for timeline */}
             <RenderBeaconTimeline value={value} name={name} />
           </li>
         ))}
@@ -1695,10 +1702,7 @@ function TraceItem<
 
   const computedResults = useMemo(() => {
     if (trace.traceContext && trace.finalTransition) {
-      return getComputedResults(
-        trace.traceContext,
-        trace.finalTransition,
-      )
+      return getComputedResults(trace.traceContext, trace.finalTransition)
     }
     return {}
   }, [trace.traceContext, trace.finalTransition])
@@ -1719,8 +1723,7 @@ function TraceItem<
     ? 'var(--tmdb-color-completed-primary)'
     : trace.state === 'interrupted'
     ? 'var(--tmdb-color-interrupted-primary)'
-    : 'var(--tmdb-color-border-dark)';
-
+    : 'var(--tmdb-color-border-dark)'
 
   return (
     <div
@@ -1728,8 +1731,16 @@ function TraceItem<
       style={{ borderLeft: `3px solid ${borderLeftColor}` }}
     >
       <div className="tmdb-history-header" onClick={onToggleExpand}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tmdb-space-m)' }}>
-          <strong style={{ fontSize: 'var(--tmdb-font-size-l)' }}>{trace.traceName}</strong>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--tmdb-space-m)',
+          }}
+        >
+          <strong style={{ fontSize: 'var(--tmdb-font-size-l)' }}>
+            {trace.traceName}
+          </strong>
           <span className={getDynamicStateStyle(trace.state)}>
             {trace.state}
           </span>
@@ -1764,7 +1775,13 @@ function TraceItem<
               </span>
             )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tmdb-space-m)' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--tmdb-space-m)',
+          }}
+        >
           <span className="tmdb-time-display">
             ({formatMs(trace.liveDuration)})
           </span>
@@ -1813,11 +1830,15 @@ function TraceItem<
         {trace.interruptionReason && (
           <div className="tmdb-chip-group tmdb-reason-group">
             <span className="tmdb-chip-group-label">Reason</span>
-            <span className="tmdb-chip-group-value">{trace.interruptionReason}</span>
+            <span className="tmdb-chip-group-value">
+              {trace.interruptionReason}
+            </span>
           </div>
         )}
 
-        <span className="tmdb-chip tmdb-info-chip">Spans: {trace.totalSpanCount ?? 0}</span>
+        <span className="tmdb-chip tmdb-info-chip">
+          Spans: {trace.totalSpanCount ?? 0}
+        </span>
       </div>
       {isExpanded && (
         <div
@@ -1833,10 +1854,42 @@ function TraceItem<
             completeSpanOffset={trace.completeSpanOffset}
             cpuIdleSpanOffset={trace.cpuIdleSpanOffset}
           />
+          {(trace.computedValues?.length ?? 0) > 0 && (
+            <div className="tmdb-section">
+              <div className="tmdb-section-title">Computed Values</div>
+              <ul className="tmdb-no-style-list">
+                {(trace.computedValues ?? []).map((name) => {
+                  const value = getFromRecord(
+                    computedResults.computedValues,
+                    name,
+                  )
+                  return (
+                    <li key={name} className="tmdb-list-item">
+                      {name}
+                      {trace.state === 'complete' ||
+                      trace.state === 'interrupted' ? (
+                        value !== undefined ? (
+                          <span className="tmdb-computed-value">
+                            {String(value)}
+                          </span>
+                        ) : (
+                          <span className="tmdb-computed-value-na">N/A</span>
+                        )
+                      ) : (
+                        <span className="tmdb-computed-value-pending">
+                          pending
+                        </span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
 
           {(trace.computedSpans?.length ?? 0) > 0 && (
             <div className="tmdb-section">
-              <div className="tmdb-section-title">Computed Spans:</div>
+              <div className="tmdb-section-title">Computed Spans</div>
               <ul className="tmdb-no-style-list">
                 {(trace.computedSpans ?? []).map((name) => {
                   const value = getFromRecord(
@@ -1873,41 +1926,6 @@ function TraceItem<
               }
             />
           ) : null}
-          {(trace.computedValues?.length ?? 0) > 0 && (
-            <div className="tmdb-section">
-              <div className="tmdb-section-title">Computed Values:</div>
-              <ul className="tmdb-no-style-list">
-                {(trace.computedValues ?? []).map((name) => {
-                  const value = getFromRecord(
-                    computedResults.computedValues,
-                    name,
-                  )
-                  return (
-                    <li key={name} className="tmdb-list-item">
-                      {name}
-                      {trace.state === 'complete' ||
-                      trace.state === 'interrupted' ? (
-                        value !== undefined ? (
-                          <span className="tmdb-computed-value">
-                            {String(value)}
-                          </span>
-                        ) : (
-                          <span className="tmdb-computed-value-na">
-                            N/A
-                          </span>
-                        )
-                      ) : (
-                        <span className="tmdb-computed-value-pending">
-                          pending
-                        </span>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
-
           <div
             className="tmdb-definition-details-toggle"
             onClick={(e) => {
@@ -1915,14 +1933,12 @@ function TraceItem<
               setIsDefinitionDetailsExpanded((prev) => !prev)
             }}
           >
-            <span>
-              {isDefinitionDetailsExpanded ? '−' : '+'}
-            </span>
-             Definition Details
+            <span>{isDefinitionDetailsExpanded ? '−' : '+'}</span>
+            Definition Details
           </div>
           {isDefinitionDetailsExpanded && (
             <div className="tmdb-section">
-              <div className="tmdb-section-title">Configuration:</div>
+              <div className="tmdb-section-title">Trace Definition</div>
               <div className="tmdb-config-info-row">
                 {(() => {
                   const { timeout, debounce, interactive } = trace.traceContext
@@ -1954,7 +1970,7 @@ function TraceItem<
                 trace.definitionModifications.length > 0 && (
                   <div>
                     <div className="tmdb-section-title">
-                      Definition Modifications:
+                      Trace Definition Modifications
                     </div>
                     <ul className="tmdb-no-style-list">
                       {trace.definitionModifications.map((mod, i) => (
@@ -1970,7 +1986,9 @@ function TraceItem<
         </div>
       )}
       <div
-        className={`tmdb-expand-arrow ${isExpanded ? 'tmdb-expand-arrow-up' : 'tmdb-expand-arrow-down'}`}
+        className={`tmdb-expand-arrow ${
+          isExpanded ? 'tmdb-expand-arrow-up' : 'tmdb-expand-arrow-down'
+        }`}
         onClick={onToggleExpand}
       >
         ▼
