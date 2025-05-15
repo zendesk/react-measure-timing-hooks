@@ -459,27 +459,23 @@ const CSS_STYLES = /* language=CSS */ `
 }
 
 .tmdb-expand-arrow {
-  position: absolute;
-  bottom: 0px;
-  left: 50%;
-  /* transform: translateX(-50%); // Base transform applied by specific classes */
-  width: 24px;
-  height: 24px;
   display: flex;
   justify-content: center;
   align-items: center;
   transition: transform var(--tmdb-transition-medium);
   cursor: pointer;
   color: var(--tmdb-color-text-secondary);
+  width: 24px;
+  height: 24px;
 }
 .tmdb-expand-arrow:hover {
   color: var(--tmdb-color-text-primary);
 }
 .tmdb-expand-arrow-down {
-  transform: translateX(-50%) rotate(0deg);
+  transform: rotate(0deg);
 }
 .tmdb-expand-arrow-up {
-  transform: translateX(-50%) rotate(180deg);
+  transform: rotate(180deg);
 }
 
 .tmdb-expanded-history {
@@ -497,9 +493,11 @@ const CSS_STYLES = /* language=CSS */ `
 .tmdb-trace-info-row {
   display: flex;
   gap: var(--tmdb-space-m);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-bottom: var(--tmdb-space-ml);
   padding: var(--tmdb-space-m) 0;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .tmdb-config-info-row {
@@ -633,6 +631,57 @@ const CSS_STYLES = /* language=CSS */ `
   }
 }
 
+/* Time marker chip groups */
+.tmdb-fcr-group {
+  border: 1px solid #bbdefb;
+  background-color: #e3f2fd;
+  & .tmdb-chip-group-label {
+    color: #1565c0;
+  }
+  & .tmdb-chip-group-value {
+    background-color: #1565c0;
+  }
+}
+.tmdb-fcr-group:hover {
+  background-color: #bbdefb;
+  & .tmdb-chip-group-value {
+    background-color: #1976d2;
+  }
+}
+
+.tmdb-lcr-group {
+  border: 1px solid #c8e6c9;
+  background-color: #e8f5e9;
+  & .tmdb-chip-group-label {
+    color: #2e7d32;
+  }
+  & .tmdb-chip-group-value {
+    background-color: #2e7d32;
+  }
+}
+.tmdb-lcr-group:hover {
+  background-color: #c8e6c9;
+  & .tmdb-chip-group-value {
+    background-color: #388e3c;
+  }
+}
+
+.tmdb-tti-group {
+  border: 1px solid #ffe0b2;
+  background-color: #fff3e0;
+  & .tmdb-chip-group-label {
+    color: #e65100;
+  }
+  & .tmdb-chip-group-value {
+    background-color: #e65100;
+  }
+}
+.tmdb-tti-group:hover {
+  background-color: #ffe0b2;
+  & .tmdb-chip-group-value {
+    background-color: #ef6c00;
+  }
+}
 
 .tmdb-pre-wrap {
   white-space: pre-wrap;
@@ -670,6 +719,8 @@ const CSS_STYLES = /* language=CSS */ `
 }
 
 .tmdb-handle {
+  position: sticky;
+  top: 0;
   padding: var(--tmdb-space-l) var(--tmdb-space-xl);
   background-color: var(--tmdb-color-bg-handle);
   color: var(--tmdb-color-white);
@@ -1858,7 +1909,7 @@ function TraceItem<
               onClick={handleDownloadClick}
               title="Download trace recording as JSON"
             >
-              <span className="tmdb-download-icon">🔽 JSON</span>
+              <span className="tmdb-download-icon">🔽&nbsp;JSON</span>
             </button>
           )}
           {(trace.hasErrorSpan || trace.hasSuppressedErrorSpan) && (
@@ -1909,52 +1960,98 @@ function TraceItem<
         </div>
       </div>
       <div className="tmdb-trace-info-row">
-        <div className="tmdb-chip-group tmdb-variant-group">
-          <span className="tmdb-chip-group-label">Variant</span>
-          <span className="tmdb-chip-group-value">{trace.variant}</span>
-        </div>
+        <div
+          style={{
+            display: 'flex',
+            gap: 'var(--tmdb-space-m)',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}
+        >
+          <div className="tmdb-chip-group tmdb-variant-group">
+            <span className="tmdb-chip-group-label">Variant</span>
+            <span className="tmdb-chip-group-value">{trace.variant}</span>
+          </div>
 
-        <div className="tmdb-chip-group tmdb-spans-group">
-          <span className="tmdb-chip-group-label">Required</span>
-          <span className="tmdb-chip-group-value">
-            {trace.requiredSpans.filter((s) => s.isMatched).length}/
-            {trace.requiredSpans.length}
+          <div className="tmdb-chip-group tmdb-spans-group">
+            <span className="tmdb-chip-group-label">Required</span>
+            <span className="tmdb-chip-group-value">
+              {trace.requiredSpans.filter((s) => s.isMatched).length}/
+              {trace.requiredSpans.length}
+            </span>
+          </div>
+
+          {trace.relatedTo && Object.keys(trace.relatedTo).length > 0 && (
+            <div className="tmdb-chip-group tmdb-related-group">
+              <span className="tmdb-chip-group-label">Related</span>
+              <div className="tmdb-related-items">
+                {Object.entries(trace.relatedTo).map(([key, value]) => (
+                  <span key={key} className="tmdb-related-item">
+                    {key}: {JSON.stringify(value)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {trace.interruptionReason && (
+            <div className="tmdb-chip-group tmdb-reason-group">
+              <span className="tmdb-chip-group-label">Reason</span>
+              <span className="tmdb-chip-group-value">
+                {trace.interruptionReason}
+              </span>
+            </div>
+          )}
+
+          {trace.lastRequiredSpanOffset !== undefined && (
+            <div
+              className="tmdb-chip-group tmdb-fcr-group"
+              title="First Contentful Render (Last Required Span)"
+            >
+              <span className="tmdb-chip-group-label">FCR</span>
+              <span className="tmdb-chip-group-value">
+                {formatMs(trace.lastRequiredSpanOffset)}
+              </span>
+            </div>
+          )}
+
+          {trace.completeSpanOffset !== undefined && (
+            <div
+              className="tmdb-chip-group tmdb-lcr-group"
+              title="Last Contentful Render (Trace Complete)"
+            >
+              <span className="tmdb-chip-group-label">LCR</span>
+              <span className="tmdb-chip-group-value">
+                {formatMs(trace.completeSpanOffset)}
+              </span>
+            </div>
+          )}
+
+          {trace.cpuIdleSpanOffset !== undefined && (
+            <div
+              className="tmdb-chip-group tmdb-tti-group"
+              title="Time To Interactive (CPU Idle Span)"
+            >
+              <span className="tmdb-chip-group-label">TTI</span>
+              <span className="tmdb-chip-group-value">
+                {formatMs(trace.cpuIdleSpanOffset)}
+              </span>
+            </div>
+          )}
+
+          <span className="tmdb-chip tmdb-info-chip">
+            Spans: {trace.totalSpanCount ?? 0}
           </span>
         </div>
 
-        {trace.relatedTo && Object.keys(trace.relatedTo).length > 0 && (
-          <div className="tmdb-chip-group tmdb-related-group">
-            <span className="tmdb-chip-group-label">Related</span>
-            <div className="tmdb-related-items">
-              {Object.entries(trace.relatedTo).map(([key, value]) => (
-                <span key={key} className="tmdb-related-item">
-                  {key}: {JSON.stringify(value)}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {trace.interruptionReason && (
-          <div className="tmdb-chip-group tmdb-reason-group">
-            <span className="tmdb-chip-group-label">Reason</span>
-            <span className="tmdb-chip-group-value">
-              {trace.interruptionReason}
-            </span>
-          </div>
-        )}
-
-        <span className="tmdb-chip tmdb-info-chip">
-          Spans: {trace.totalSpanCount ?? 0}
-        </span>
-      </div>
-      <div
-        className={`tmdb-expand-arrow ${
-          isExpanded ? 'tmdb-expand-arrow-up' : 'tmdb-expand-arrow-down'
-        }`}
-        onClick={onToggleExpand}
-      >
-        ▼
+        <div
+          className={`tmdb-expand-arrow ${
+            isExpanded ? 'tmdb-expand-arrow-up' : 'tmdb-expand-arrow-down'
+          }`}
+          onClick={onToggleExpand}
+        >
+          ▼
+        </div>
       </div>
 
       {isExpanded && (
@@ -1966,11 +2063,6 @@ function TraceItem<
         >
           <TraceAttributes attributes={trace.attributes} />
           <RequiredSpansList requiredSpans={trace.requiredSpans} />
-          <TimeMarkers
-            lastRequiredSpanOffset={trace.lastRequiredSpanOffset}
-            completeSpanOffset={trace.completeSpanOffset}
-            cpuIdleSpanOffset={trace.cpuIdleSpanOffset}
-          />
           {(trace.computedValues?.length ?? 0) > 0 && (
             <div className="tmdb-section">
               <div className="tmdb-section-title">Computed Values</div>
