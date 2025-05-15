@@ -135,6 +135,13 @@ const CSS_STYLES = /* language=CSS */ `
   --tmdb-color-tti-bg-hover: #e1bee7;
   --tmdb-color-tti-border: #e1bee7;
 
+  /* Spans Count Colors */
+  --tmdb-color-spans-primary: #546e7a; /* Blue gray */
+  --tmdb-color-spans-primary-hover: #607d8b;
+  --tmdb-color-spans-bg: #eceff1;
+  --tmdb-color-spans-bg-hover: #cfd8dc;
+  --tmdb-color-spans-border: #cfd8dc;
+
   --tmdb-color-draft-primary: #616161;
   --tmdb-color-draft-primary-hover: #757575; /* Added for hover states */
   --tmdb-color-draft-bg: #f5f5f5;
@@ -699,6 +706,23 @@ const CSS_STYLES = /* language=CSS */ `
   background-color: var(--tmdb-color-tti-bg-hover);
   & .tmdb-chip-group-value {
     background-color: var(--tmdb-color-tti-primary-hover);
+  }
+}
+
+.tmdb-span-count-group {
+  border: 1px solid var(--tmdb-color-spans-border);
+  background-color: var(--tmdb-color-spans-bg);
+  & .tmdb-chip-group-label {
+    color: var(--tmdb-color-spans-primary);
+  }
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-spans-primary);
+  }
+}
+.tmdb-span-count-group:hover {
+  background-color: var(--tmdb-color-spans-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-spans-primary-hover);
   }
 }
 
@@ -2058,9 +2082,12 @@ function TraceItem<
             </div>
           )}
 
-          <span className="tmdb-chip tmdb-info-chip">
-            Spans: {trace.totalSpanCount ?? 0}
-          </span>
+          <div className="tmdb-chip-group tmdb-span-count-group">
+            <span className="tmdb-chip-group-label">Spans</span>
+            <span className="tmdb-chip-group-value">
+              {trace.totalSpanCount ?? 0}
+            </span>
+          </div>
         </div>
 
         <div
