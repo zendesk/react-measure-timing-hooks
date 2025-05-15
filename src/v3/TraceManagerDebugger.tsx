@@ -769,6 +769,46 @@ const CSS_STYLES = /* language=CSS */ `
 .tmdb-def-chip-value {
   font-weight: var(--tmdb-font-weight-bold);
 }
+
+/* Variant-specific styles */
+.tmdb-def-chip-pending {
+  background-color: var(--tmdb-color-draft-bg);
+  color: var(--tmdb-color-draft-primary);
+  border-color: var(--tmdb-color-draft-primary);
+  font-style: italic;
+}
+.tmdb-def-chip-pending:hover {
+  background-color: var(--tmdb-color-draft-bg-hover);
+}
+
+.tmdb-def-chip-missing {
+  background-color: var(--tmdb-color-interrupted-bg);
+  color: var(--tmdb-color-interrupted-primary);
+  border-color: var(--tmdb-color-interrupted-border);
+}
+.tmdb-def-chip-missing:hover {
+  background-color: var(--tmdb-color-interrupted-bg-hover);
+}
+
+.tmdb-def-chip-success {
+  background-color: var(--tmdb-color-completed-bg);
+  color: var(--tmdb-color-completed-primary);
+  border-color: var(--tmdb-color-completed-border);
+}
+.tmdb-def-chip-success:hover {
+  background-color: var(--tmdb-color-completed-bg-hover);
+}
+
+.tmdb-def-chip-error {
+  background-color: var(--tmdb-color-interrupted-bg);
+  color: var(--tmdb-color-interrupted-primary);
+  border-color: var(--tmdb-color-interrupted-border);
+  font-weight: var(--tmdb-font-weight-bold);
+}
+.tmdb-def-chip-error:hover {
+  background-color: var(--tmdb-color-interrupted-bg-hover);
+}
+
 .tmdb-def-chip-hoverable {
   cursor: help;
 }
@@ -1010,7 +1050,12 @@ function TraceAttributes({
       <div className="tmdb-def-chip-container">
         {Object.entries(attributes).map(([key, value]) => (
           // eslint-disable-next-line @typescript-eslint/no-use-before-define
-          <DefinitionChip key={key} keyName={key} value={value} />
+          <DefinitionChip
+            key={key}
+            keyName={key}
+            value={value}
+            variant="default"
+          />
         ))}
       </div>
     </div>
@@ -1068,12 +1113,16 @@ function TimeMarkers<RelationSchemasT>({
   )
 }
 
+type ChipVariant = 'default' | 'pending' | 'missing' | 'success' | 'error'
+
 function DefinitionChip({
   keyName,
   value,
+  variant = 'default',
 }: {
   keyName: string
   value: unknown
+  variant?: ChipVariant
 }) {
   const [showTooltip, setShowTooltip] = useState(false)
   const valueIsComplex =
@@ -1090,7 +1139,22 @@ function DefinitionChip({
       ? `${stringValue.slice(0, MAX_STRING_LENGTH)}...`
       : stringValue
 
-  const chipClassName = `tmdb-def-chip ${
+  const getVariantClass = () => {
+    switch (variant) {
+      case 'pending':
+        return 'tmdb-def-chip-pending'
+      case 'missing':
+        return 'tmdb-def-chip-missing'
+      case 'success':
+        return 'tmdb-def-chip-success'
+      case 'error':
+        return 'tmdb-def-chip-error'
+      default:
+        return ''
+    }
+  }
+
+  const chipClassName = `tmdb-def-chip ${getVariantClass()} ${
     needsTooltip ? 'tmdb-def-chip-hoverable' : ''
   }`
   const tooltipClassName = `tmdb-def-chip-tooltip ${
@@ -1152,7 +1216,12 @@ function RequiredSpansList<RelationSchemasT>({
               {span.definition ? (
                 <div className="tmdb-def-chip-container">
                   {Object.entries(span.definition).map(([key, value]) => (
-                    <DefinitionChip key={key} keyName={key} value={value} />
+                    <DefinitionChip
+                      key={key}
+                      keyName={key}
+                      value={value}
+                      variant={span.isMatched ? 'default' : 'pending'}
+                    />
                   ))}
                 </div>
               ) : (
@@ -1848,7 +1917,7 @@ function TraceItem<
       >
         ▼
       </div>
-      
+
       {isExpanded && (
         <div
           className="tmdb-expanded-history"
@@ -1866,33 +1935,43 @@ function TraceItem<
           {(trace.computedValues?.length ?? 0) > 0 && (
             <div className="tmdb-section">
               <div className="tmdb-section-title">Computed Values</div>
-              <ul className="tmdb-no-style-list">
+              <div className="tmdb-def-chip-container">
                 {(trace.computedValues ?? []).map((name) => {
                   const value = getFromRecord(
                     computedResults.computedValues,
                     name,
                   )
+
+                  // Determine variant and display value based on trace state and value availability
+                  let variant: ChipVariant = 'default'
+                  let displayValue: unknown
+
+                  if (
+                    trace.state === 'complete' ||
+                    trace.state === 'interrupted'
+                  ) {
+                    if (value !== undefined) {
+                      variant = 'success'
+                      displayValue = value
+                    } else {
+                      variant = 'missing'
+                      displayValue = 'N/A'
+                    }
+                  } else {
+                    variant = 'pending'
+                    displayValue = 'pending'
+                  }
+
                   return (
-                    <li key={name} className="tmdb-list-item">
-                      {name}
-                      {trace.state === 'complete' ||
-                      trace.state === 'interrupted' ? (
-                        value !== undefined ? (
-                          <span className="tmdb-computed-value">
-                            {String(value)}
-                          </span>
-                        ) : (
-                          <span className="tmdb-computed-value-na">N/A</span>
-                        )
-                      ) : (
-                        <span className="tmdb-computed-value-pending">
-                          pending
-                        </span>
-                      )}
-                    </li>
+                    <DefinitionChip
+                      key={name}
+                      keyName={name}
+                      value={displayValue}
+                      variant={variant}
+                    />
                   )
                 })}
-              </ul>
+              </div>
             </div>
           )}
 
