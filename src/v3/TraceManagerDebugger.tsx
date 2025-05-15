@@ -345,9 +345,7 @@ const CSS_STYLES = /* language=CSS */ `
 }
 
 .tmdb-history-title {
-  padding-top: var(--tmdb-space-xxl);
   margin-bottom: var(--tmdb-space-ml);
-  border-top: 1px solid var(--tmdb-color-border-medium);
   font-size: var(--tmdb-font-size-xxl);
   font-weight: var(--tmdb-font-weight-bold);
   color: var(--tmdb-color-text-primary);
@@ -494,7 +492,6 @@ const CSS_STYLES = /* language=CSS */ `
   font-weight: var(--tmdb-font-weight-medium);
 }
 
-.tmdb-key-info, /* Not directly used, but similar to traceInfoRow */
 .tmdb-trace-info-row {
   display: flex;
   gap: var(--tmdb-space-m);
