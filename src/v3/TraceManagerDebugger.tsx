@@ -87,6 +87,7 @@ const CSS_STYLES = /* language=CSS */ `
   --tmdb-color-bg-medium-gray: #f8f8f8; /* configChip bg */
   --tmdb-color-bg-dark-gray: #e0e0e0; /* renderStatsValue bg */
   --tmdb-color-bg-handle: #2a2a2a;
+  --tmdb-color-bg-handle-hover: #3a3a3a; /* Added for handle hover */
 
   /* Colors - Borders */
   --tmdb-color-border-light: #ddd;
@@ -97,26 +98,38 @@ const CSS_STYLES = /* language=CSS */ `
 
   /* Colors - Semantic & Accents */
   --tmdb-color-active-primary: #1565c0;
+  --tmdb-color-active-primary-hover: #1976d2; /* Added for hover states */
   --tmdb-color-active-bg: #e3f2fd;
+  --tmdb-color-active-bg-hover: #bbdefb; /* Added for hover states */
   --tmdb-color-active-border: #bbdefb;
   --tmdb-color-active-border-light: #90caf9;
 
   --tmdb-color-completed-primary: #2e7d32;
+  --tmdb-color-completed-primary-hover: #388e3c; /* Added for hover states */
   --tmdb-color-completed-bg: #e8f5e9;
+  --tmdb-color-completed-bg-hover: #c8e6c9; /* Added for hover states */
   --tmdb-color-completed-border: #c8e6c9;
 
   --tmdb-color-interrupted-primary: #c62828;
+  --tmdb-color-interrupted-primary-hover: #d32f2f; /* Added for hover states */
   --tmdb-color-interrupted-bg: #ffebee;
+  --tmdb-color-interrupted-bg-hover: #ffcdd2; /* Added for hover states */
   --tmdb-color-interrupted-border: #ffcdd2;
 
   --tmdb-color-draft-primary: #616161;
+  --tmdb-color-draft-primary-hover: #757575; /* Added for hover states */
   --tmdb-color-draft-bg: #f5f5f5;
+  --tmdb-color-draft-bg-hover: #e0e0e0; /* Added for hover states */
 
   --tmdb-color-link-primary: #1976d2;
+  --tmdb-color-link-primary-hover: #1e88e5; /* Added for hover states */
   --tmdb-color-button-danger-primary: #f44336;
+  --tmdb-color-button-danger-primary-hover: #e53935; /* Added for hover states */
 
   --tmdb-color-warning-primary: #e65100;
+  --tmdb-color-warning-primary-hover: #ef6c00; /* Added for hover states */
   --tmdb-color-warning-bg: #fff3e0;
+  --tmdb-color-warning-bg-hover: #ffe0b2; /* Added for hover states */
   --tmdb-color-warning-border: #ffe0b2;
 
   /* Colors - Timeline */
@@ -170,6 +183,7 @@ const CSS_STYLES = /* language=CSS */ `
   --tmdb-shadow-large: 0 4px 8px rgba(0, 0, 0, 0.15);
   --tmdb-shadow-xlarge: 0 6px 20px rgba(0, 0, 0, 0.15); /* floating container */
   --tmdb-shadow-button: 0 4px 10px rgba(0, 0, 0, 0.2); /* minimized button */
+  --tmdb-shadow-button-hover: 0 6px 14px rgba(0, 0, 0, 0.25); /* hover state for button */
 
   /* Z-indices */
   --tmdb-z-index-timeline-marker: 0;
@@ -183,6 +197,11 @@ const CSS_STYLES = /* language=CSS */ `
   --tmdb-timeline-text-area-height: 22px;
   --tmdb-timeline-marker-line-width: 2px;
   --tmdb-timeline-padding-between-areas: 2px;
+
+  /* Transitions */
+  --tmdb-transition-fast: 0.15s ease;
+  --tmdb-transition-medium: 0.2s ease;
+  --tmdb-transition-slow: 0.3s ease;
 
   font-family: var(--tmdb-font-family);
 }
@@ -234,6 +253,7 @@ const CSS_STYLES = /* language=CSS */ `
   color: var(--tmdb-color-text-secondary);
 }
 
+/* Add hover styles to status tags */
 .tmdb-status-tag {
   display: inline-block;
   padding: var(--tmdb-space-s) var(--tmdb-space-ml);
@@ -241,22 +261,38 @@ const CSS_STYLES = /* language=CSS */ `
   font-size: var(--tmdb-font-size-xs);
   font-weight: var(--tmdb-font-weight-medium);
   margin-left: var(--tmdb-space-ml);
+  transition: filter var(--tmdb-transition-fast), transform var(--tmdb-transition-fast);
+}
+.tmdb-status-tag:hover {
+  filter: brightness(0.95);
 }
 .tmdb-status-tag-active {
   background-color: var(--tmdb-color-active-bg);
   color: var(--tmdb-color-active-primary);
 }
+.tmdb-status-tag-active:hover {
+  background-color: var(--tmdb-color-active-bg-hover);
+}
 .tmdb-status-tag-completed {
   background-color: var(--tmdb-color-completed-bg);
   color: var(--tmdb-color-completed-primary);
+}
+.tmdb-status-tag-completed:hover {
+  background-color: var(--tmdb-color-completed-bg-hover);
 }
 .tmdb-status-tag-interrupted {
   background-color: var(--tmdb-color-interrupted-bg);
   color: var(--tmdb-color-interrupted-primary);
 }
+.tmdb-status-tag-interrupted:hover {
+  background-color: var(--tmdb-color-interrupted-bg-hover);
+}
 .tmdb-status-tag-draft {
   background-color: var(--tmdb-color-draft-bg);
   color: var(--tmdb-color-draft-primary);
+}
+.tmdb-status-tag-draft:hover {
+  background-color: var(--tmdb-color-draft-bg-hover);
 }
 
 .tmdb-list-item {
@@ -336,19 +372,39 @@ const CSS_STYLES = /* language=CSS */ `
   display: inline-flex;
   align-items: center;
   text-decoration: none;
+  transition: background-color var(--tmdb-transition-fast),
+              box-shadow var(--tmdb-transition-fast),
+              transform var(--tmdb-transition-fast);
+}
+.tmdb-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+.tmdb-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 .tmdb-visualizer-link {
   background-color: var(--tmdb-color-link-primary);
   color: var(--tmdb-color-white);
 }
+.tmdb-visualizer-link:hover {
+  background-color: var(--tmdb-color-link-primary-hover);
+}
 .tmdb-clear-button {
   background-color: var(--tmdb-color-button-danger-primary);
   color: var(--tmdb-color-white);
+}
+.tmdb-clear-button:hover {
+  background-color: var(--tmdb-color-button-danger-primary-hover);
 }
 .tmdb-download-button {
   background-color: var(--tmdb-color-link-primary);
   color: var(--tmdb-color-white);
   margin-left: var(--tmdb-space-ml);
+}
+.tmdb-download-button:hover {
+  background-color: var(--tmdb-color-link-primary-hover);
 }
 .tmdb-download-icon {
   font-size: var(--tmdb-font-size-m); /* Approximation */
@@ -363,7 +419,7 @@ const CSS_STYLES = /* language=CSS */ `
   border: 1px solid var(--tmdb-color-border-dark);
   cursor: pointer;
   box-shadow: var(--tmdb-shadow-small);
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow var(--tmdb-transition-medium);
   position: relative; /* For positioning the arrow */
 }
 .tmdb-history-item:hover {
@@ -390,6 +446,16 @@ const CSS_STYLES = /* language=CSS */ `
   justify-content: center;
   width: 24px; /* Specific size */
   height: 24px; /* Specific size */
+  transition: background-color var(--tmdb-transition-fast),
+              color var(--tmdb-transition-fast),
+              transform var(--tmdb-transition-fast);
+}
+.tmdb-dismiss-button:hover {
+  background-color: var(--tmdb-color-interrupted-bg);
+  transform: scale(1.1);
+}
+.tmdb-dismiss-button:active {
+  transform: scale(1);
 }
 
 .tmdb-expand-arrow {
@@ -402,7 +468,12 @@ const CSS_STYLES = /* language=CSS */ `
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: transform 0.2s ease;
+  transition: transform var(--tmdb-transition-medium);
+  cursor: pointer;
+  color: var(--tmdb-color-text-secondary);
+}
+.tmdb-expand-arrow:hover {
+  color: var(--tmdb-color-text-primary);
 }
 .tmdb-expand-arrow-down {
   transform: translateX(-50%) rotate(0deg);
@@ -470,6 +541,7 @@ const CSS_STYLES = /* language=CSS */ `
   flex-wrap: nowrap;
   overflow: hidden;
   border-radius: var(--tmdb-border-radius-pill);
+  transition: all var(--tmdb-transition-fast);
 }
 .tmdb-chip-group-label {
   padding: var(--tmdb-space-xs) var(--tmdb-space-m);
@@ -492,6 +564,12 @@ const CSS_STYLES = /* language=CSS */ `
     background-color: var(--tmdb-color-completed-primary);
   }
 }
+.tmdb-variant-group:hover {
+  background-color: var(--tmdb-color-completed-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-completed-primary-hover);
+  }
+}
 
 .tmdb-spans-group {
   border: 1px solid var(--tmdb-color-warning-border);
@@ -503,6 +581,12 @@ const CSS_STYLES = /* language=CSS */ `
     background-color: var(--tmdb-color-warning-primary);
   }
 }
+.tmdb-spans-group:hover {
+  background-color: var(--tmdb-color-warning-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-warning-primary-hover);
+  }
+}
 
 .tmdb-reason-group {
   border: 1px solid var(--tmdb-color-interrupted-border);
@@ -512,6 +596,12 @@ const CSS_STYLES = /* language=CSS */ `
   }
   & .tmdb-chip-group-value {
     background-color: var(--tmdb-color-interrupted-primary);
+  }
+}
+.tmdb-reason-group:hover {
+  background-color: var(--tmdb-color-interrupted-bg-hover);
+  & .tmdb-chip-group-value {
+    background-color: var(--tmdb-color-interrupted-primary-hover);
   }
 }
 
@@ -532,6 +622,15 @@ const CSS_STYLES = /* language=CSS */ `
     color: var(--tmdb-color-white);
     padding: var(--tmdb-space-xs) var(--tmdb-space-s);
     font-size: var(--tmdb-font-size-xs);
+  }
+}
+.tmdb-related-group:hover {
+  background-color: var(--tmdb-color-active-bg-hover);
+  & .tmdb-related-items {
+    background-color: var(--tmdb-color-active-primary-hover);
+  }
+  & .tmdb-related-item {
+    background-color: var(--tmdb-color-active-primary-hover);
   }
 }
 
@@ -581,6 +680,10 @@ const CSS_STYLES = /* language=CSS */ `
   align-items: center;
   border-top-left-radius: var(--tmdb-border-radius-large);
   border-top-right-radius: var(--tmdb-border-radius-large);
+  transition: background-color var(--tmdb-transition-fast);
+}
+.tmdb-handle:hover {
+  background-color: var(--tmdb-color-bg-handle-hover);
 }
 
 .tmdb-handle-title {
@@ -596,6 +699,15 @@ const CSS_STYLES = /* language=CSS */ `
   cursor: pointer;
   font-size: var(--tmdb-font-size-xxl); /* 18px */
   padding: var(--tmdb-space-xxs) var(--tmdb-space-m);
+  border-radius: var(--tmdb-border-radius-circle);
+  transition: background-color var(--tmdb-transition-fast), transform var(--tmdb-transition-fast);
+}
+.tmdb-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+.tmdb-close-button:active {
+  transform: scale(1);
 }
 
 .tmdb-minimized-button {
@@ -617,6 +729,19 @@ const CSS_STYLES = /* language=CSS */ `
   z-index: var(--tmdb-z-index-floating);
   font-size: var(--tmdb-font-size-m);
   font-weight: var(--tmdb-font-weight-bold);
+  transition: opacity var(--tmdb-transition-fast),
+              transform var(--tmdb-transition-fast),
+              box-shadow var(--tmdb-transition-fast),
+              background-color var(--tmdb-transition-fast);
+}
+.tmdb-minimized-button:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: var(--tmdb-shadow-button-hover);
+  background-color: var(--tmdb-color-active-primary-hover);
+}
+.tmdb-minimized-button:active {
+  transform: scale(1);
 }
 
 .tmdb-def-chip-container {
@@ -637,12 +762,19 @@ const CSS_STYLES = /* language=CSS */ `
   white-space: nowrap;
   position: relative;
   border: 1px solid var(--tmdb-color-active-border-light);
+  transition: background-color var(--tmdb-transition-fast);
+}
+.tmdb-def-chip:hover {
+  background-color: var(--tmdb-color-active-bg-hover);
 }
 .tmdb-def-chip-value {
   font-weight: var(--tmdb-font-weight-bold);
 }
 .tmdb-def-chip-hoverable {
   cursor: help;
+}
+.tmdb-def-chip-hoverable:hover {
+  background-color: var(--tmdb-color-active-bg-hover);
 }
 .tmdb-def-chip-tooltip {
   position: absolute;
@@ -660,7 +792,7 @@ const CSS_STYLES = /* language=CSS */ `
   word-break: break-word;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s ease, visibility 0.3s ease; /* Added visibility transition */
+  transition: opacity var(--tmdb-transition-slow), visibility var(--tmdb-transition-slow); /* Added visibility transition */
   visibility: hidden;
 }
 .tmdb-def-chip-tooltip-visible {
@@ -688,6 +820,10 @@ const CSS_STYLES = /* language=CSS */ `
   border: 1px solid var(--tmdb-color-border-dark);
   background-color: var(--tmdb-color-bg-light-gray);
   margin-right: var(--tmdb-space-m);
+  transition: border-color var(--tmdb-transition-fast);
+}
+.tmdb-render-stats-group:hover {
+  border-color: var(--tmdb-color-active-primary);
 }
 .tmdb-render-stats-label {
   color: var(--tmdb-color-text-secondary);
@@ -771,9 +907,14 @@ const CSS_STYLES = /* language=CSS */ `
   margin-top: var(--tmdb-space-m);
   font-size: var(--tmdb-font-size-xs);
   color: var(--tmdb-color-text-secondary);
+  transition: color var(--tmdb-transition-fast);
   & > span {
     margin-right: var(--tmdb-space-ms);
   }
+}
+.tmdb-definition-details-toggle:hover {
+  color: var(--tmdb-color-text-primary);
+  text-decoration: underline;
 }
 
 /* Ensure the root class is applied to the main div */
@@ -792,7 +933,21 @@ ul.tmdb-no-style-list {
   padding: 0 var(--tmdb-space-xl); /* Original padding for non-handle/non-floater parts */
 }
 
-
+/* Add hover styles for clickable list items */
+.tmdb-list-item[onClick],
+.tmdb-list-item[role="button"],
+.tmdb-list-item a,
+.tmdb-list-item button {
+  cursor: pointer;
+  transition: background-color var(--tmdb-transition-fast), transform var(--tmdb-transition-fast);
+}
+.tmdb-list-item[onClick]:hover,
+.tmdb-list-item[role="button"]:hover,
+.tmdb-list-item a:hover,
+.tmdb-list-item button:hover {
+  background-color: var(--tmdb-color-bg-medium-gray);
+  transform: translateX(2px);
+}
 `
 
 function getDynamicStateStyle(state: string) {
